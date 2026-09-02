@@ -19,6 +19,11 @@ export interface BookkeepingContactInput {
   customer_id?: string;
   chamber_of_commerce?: string;
   vat_number?: string;
+  /**
+   * Language the provider should use for this customer's documents and
+   * correspondence (ISO 639-1, e.g. 'nl' | 'de' | 'en').
+   */
+  language?: string;
 }
 
 export interface BookkeepingLineItem {
@@ -57,6 +62,12 @@ export interface BookkeepingProvider {
   /** Look up an existing contact by its company name (case-insensitive). */
   findContactByCompanyName(name: string): Promise<BookkeepingContact | null>;
 
+  /** Patch an existing contact with the given fields. */
+  updateContact(
+    contactId: string | number,
+    payload: Partial<BookkeepingContactInput>
+  ): Promise<BookkeepingContact | null>;
+
   /**
    * Find an existing sales-invoice VAT rate for (percentage, country).
    * Returns undefined if no matching rate exists. MoneyBird's tax_rates
@@ -80,6 +91,8 @@ export interface BookkeepingProvider {
     reference: string;
     invoiceDate: string;
     items: BookkeepingLineItem[];
+    /** Language for the provider's own invoice labels (ISO 639-1). */
+    language?: string;
   }): Promise<BookkeepingInvoice>;
 
   /** Download the PDF for a sales invoice as a Buffer. */

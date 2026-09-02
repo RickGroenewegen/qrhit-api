@@ -120,6 +120,13 @@ class Bookkeeping {
     return this.provider.findContactByCompanyName(name);
   }
 
+  public async updateContact(
+    contactId: string | number,
+    payload: Partial<BookkeepingContactInput>
+  ): Promise<BookkeepingContact | null> {
+    return this.provider.updateContact(contactId, payload);
+  }
+
   public async findTaxRateId(args: {
     percentage: number;
     countryCode?: string;
@@ -168,10 +175,11 @@ class Bookkeeping {
     reference: string;
     invoiceDate: string;
     items: BookkeepingLineItem[];
+    language?: string;
   }): Promise<BookkeepingInvoice> {
     this.info(
       'create invoice ',
-      `ref="${args.reference}" contact_id=${args.contactId} lines=${args.items.length}`
+      `ref="${args.reference}" contact_id=${args.contactId} lines=${args.items.length} language=${args.language || 'default'}`
     );
     try {
       const inv = await this.provider.createInvoice(args);

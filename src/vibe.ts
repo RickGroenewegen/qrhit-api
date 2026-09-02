@@ -148,7 +148,14 @@ class Vibe {
       marketingEmails,
       honeypot,
       source,
+      locale: submittedLocale,
     } = body || {};
+
+    // Language the lead filled the form in. Drives the company's document
+    // language, the new user's locale and the welcome email.
+    const formLocale = this.translation.isValidLocale(submittedLocale)
+      ? submittedLocale
+      : 'nl';
 
     if (!fullname || !company || !email) {
       return {
@@ -225,6 +232,9 @@ class Vibe {
         contact: fullname,
         contactemail: email,
         contactphone: phone,
+        // So their quotation and technical instructions come out right from
+        // the first contact.
+        locale: formLocale,
         message,
       });
       if (!companyResult.success) {
@@ -283,7 +293,7 @@ class Vibe {
             salt: salt,
             hash: userHash,
             companyId: companyId,
-            locale: 'nl',
+            locale: formLocale,
             marketingEmails: !!marketingEmails,
             sync: false,
             verificationHash: verificationHash,
@@ -359,8 +369,8 @@ class Vibe {
         };
       }
 
-      // Use 'nl' as default locale for now, or allow override
-      const locale = 'nl';
+      // Welcome mail follows the language the form was filled in.
+      const locale = formLocale;
 
       // Construct the portal URL (example, adjust as needed)
       const portalUrl = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}`;
@@ -1178,6 +1188,7 @@ class Vibe {
     contact?: string;
     contactemail?: string;
     contactphone?: string;
+    locale?: string;
     message?: string;
   }): Promise<any> {
     try {
@@ -1211,6 +1222,7 @@ class Vibe {
           contact: companyData.contact,
           contactemail: companyData.contactemail,
           contactphone: companyData.contactphone,
+          locale: companyData.locale || 'nl',
           message: companyData.message,
         },
       });
@@ -3572,16 +3584,21 @@ class Vibe {
       const cardPricePerUnit = round2(cardPrice / quantity);
 
       // Calculate extras
-      const extras: { name: string; price: number }[] = [];
+      const extras: {
+        key?: string;
+        keyVars?: Record<string, any>;
+        name: string;
+        price: number;
+      }[] = [];
       let extrasTotal = 0;
 
       if (includeStansmestekening) {
-        extras.push({ name: 'Stansmestekening + dummy', price: 150.0 });
+        extras.push({ key: 'dielineDrawing', name: 'Stansmestekening + dummy', price: 150.0 });
         extrasTotal += 150.0;
       }
 
       if (includeStansvorm) {
-        extras.push({ name: 'Stansvorm', price: 425.0 });
+        extras.push({ key: 'cuttingDie', name: 'Stansvorm', price: 425.0 });
         extrasTotal += 425.0;
       }
 
@@ -3767,12 +3784,19 @@ class Vibe {
       }
 
       // Calculate extras
-      const extras: { name: string; price: number }[] = [];
+      const extras: {
+        key?: string;
+        keyVars?: Record<string, any>;
+        name: string;
+        price: number;
+      }[] = [];
       let extrasTotal = 0;
 
       // Stansmes only applies to 144 and 192 cards
       if (includeStansmes && cardCount !== 48 && cardCount !== 96 && stansmesPrice > 0) {
         extras.push({
+          key: 'cuttingDieBox',
+          keyVars: { compartments: cardCount === 192 ? 4 : 2 },
           name: `Stansmes ${cardCount === 192 ? '4' : '2'}-vaks doosje`,
           price: stansmesPrice
         });
@@ -3792,13 +3816,13 @@ class Vibe {
       // Add custom app fee (one-time)
       const customAppFee = includeCustomApp ? 350 : 0;
       if (includeCustomApp) {
-        extras.push({ name: 'App in eigen stijl', price: customAppFee });
+        extras.push({ key: 'customApp', name: 'App in eigen stijl', price: customAppFee });
       }
 
       // Add voting portal fee (one-time)
       const votingPortalFee = includeVotingPortal ? 500 : 0;
       if (includeVotingPortal) {
-        extras.push({ name: 'Voting Portal', price: votingPortalFee });
+        extras.push({ key: 'votingPortal', name: 'Voting Portal', price: votingPortalFee });
       }
 
       const clientPrice = round2(pricePerBox * quantity + extrasTotal + customAppFee + votingPortalFee);
@@ -3928,6 +3952,11 @@ class Vibe {
         queryParams.set('listId', String(listId));
       }
 
+      // The Lambda that renders this URL has no session, so the company's
+      // business language has to travel in the query string.
+      const locale = this.translation.resolveBusinessLocale(company.locale);
+      queryParams.set('locale', locale);
+
       const queryString = queryParams.toString();
       const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;
 
@@ -3949,7 +3978,11 @@ class Vibe {
       const pdfBuffer = await fs.readFile(filePath);
 
       // Generate filename for download - never include printer names like 'tromp' or 'schneider'
-      const downloadFilename = `Offerte_${company.name.replace(
+      const quotationT = await this.translation.getBusinessTranslator(
+        locale,
+        'quotation'
+      );
+      const downloadFilename = `${quotationT('fileName')}_${company.name.replace(
         /[^a-zA-Z0-9]/g,
         '_'
       )}_${quotationNumber}.pdf`;
@@ -4024,6 +4057,7 @@ class Vibe {
             includePersonalization: !!state.includePersonalization,
             isReseller: !!(pricingOptions?.isReseller ?? state.isReseller),
             manualDiscountPercent: Number(state.manualDiscountPercent) || 0,
+            locale,
             payload: JSON.stringify({
               state,
               pricingOptions: pricingOptions ?? null,
@@ -4095,7 +4129,13 @@ class Vibe {
       }
 
       const pdfBuffer = await fs.readFile(pdfPath);
-      const downloadFilename = `Offerte_${company.name.replace(
+      // Name the re-download after the language the quotation was issued in,
+      // not the company's current one — the archived PDF cannot change.
+      const quotationT = await this.translation.getBusinessTranslator(
+        this.translation.resolveBusinessLocale(quotation.locale),
+        'quotation'
+      );
+      const downloadFilename = `${quotationT('fileName')}_${company.name.replace(
         /[^a-zA-Z0-9]/g,
         '_'
       )}_${quotation.quotationNumber}.pdf`;
@@ -4111,6 +4151,39 @@ class Vibe {
       );
       return { success: false, error: 'Failed to fetch quotation' };
     }
+  }
+
+  /**
+   * MoneyBird invoice references for a list, in the company's language.
+   * Invoice creation and the "is this already invoiced?" lookup MUST derive
+   * their references from here, or the dashboard reports a down payment as
+   * un-invoiced and an admin bills the customer twice.
+   *
+   * `legacyDown`/`legacyRemaining` are the Dutch, em-dashed format used before
+   * these documents were translated, so invoices booked back then still
+   * resolve.
+   */
+  public async buildInvoiceReferences(
+    listName: string,
+    locale?: string | null
+  ): Promise<{
+    full: string;
+    down: string;
+    remaining: string;
+    legacyDown: string;
+    legacyRemaining: string;
+  }> {
+    const t = await this.translation.getBusinessTranslator(
+      this.translation.resolveBusinessLocale(locale),
+      'invoice_lines'
+    );
+    return {
+      full: listName,
+      down: `${listName} - ${t('downPayment')}`,
+      remaining: `${listName} - ${t('remainingPayment')}`,
+      legacyDown: `${listName} \u2014 Aanbetaling 30%`,
+      legacyRemaining: `${listName} \u2014 Slottermijn 70%`,
+    };
   }
 
   /**
@@ -4137,6 +4210,8 @@ class Vibe {
     company?: any;
     list?: any;
     reference?: string;
+    /** Business locale the line items were rendered in. */
+    locale?: string;
     totals?: {
       subtotalExclVat: number;
       discountAmount: number;
@@ -4154,6 +4229,23 @@ class Vibe {
         where: { id: companyId },
       });
       if (!company) return { success: false, error: 'Company not found' };
+
+      // Invoice line text is free text we supply, so it has to be translated
+      // here; MoneyBird's own labels are handled by the `language` we send
+      // along with the invoice.
+      const locale = this.translation.resolveBusinessLocale(company.locale);
+      const t = await this.translation.getBusinessTranslator(
+        locale,
+        'invoice_lines'
+      );
+      // Extras are named by the pricing calculators and shared with the
+      // quotation, so they live under their own prefix.
+      const tExtra = await this.translation.getBusinessTranslator(
+        locale,
+        'extras'
+      );
+      const extraName = (e: any): string =>
+        e.key ? tExtra(e.key, e.keyVars) : e.name;
 
       // Pull manualDiscountPercent from the LIST's per-type calculation
       // (calculation / calculationTromp / calculationSchneider). Each printer
@@ -4202,11 +4294,11 @@ class Vibe {
 
         let itemDescription: string;
         if (calc.printingType === 'luxe') {
-          itemDescription = 'QRSong! Luxe doos — Luxe doos met 200 kaarten en bedrukte chips';
+          itemDescription = t('luxeBox');
         } else if (calc.printingType === 'klein') {
-          itemDescription = 'QRSong! muziekkaarten set — Klein voorbedrukt doosje met 100 kaarten';
+          itemDescription = t('smallBox');
         } else {
-          itemDescription = 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
+          itemDescription = t('standardBox');
         }
 
         items.push({
@@ -4217,10 +4309,9 @@ class Vibe {
 
         if (Array.isArray(cr.extras)) {
           for (const e of cr.extras) {
-            const lower = (e.name || '').toLowerCase();
-            if (lower.includes('app') || lower.includes('voting')) continue;
+            if (e.key === 'customApp' || e.key === 'votingPortal') continue;
             items.push({
-              description: `${e.name} (eenmalige kosten)`,
+              description: t('extraOneOff', { name: extraName(e) }),
               amount: '1',
               price: Number(e.price).toFixed(2),
             });
@@ -4228,14 +4319,14 @@ class Vibe {
         }
         if (cr.customAppFee > 0) {
           items.push({
-            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            description: t('customApp'),
             amount: '1',
             price: '350.00',
           });
         }
         if (cr.votingPortalFee > 0) {
           items.push({
-            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            description: t('votingPortal'),
             amount: '1',
             price: '500.00',
           });
@@ -4244,10 +4335,9 @@ class Vibe {
         subtotalExclVat =
           pricePerUnit * quantity +
           (cr.extras
-            ?.filter((e: any) => {
-              const l = (e.name || '').toLowerCase();
-              return !l.includes('app') && !l.includes('voting');
-            })
+            ?.filter(
+              (e: any) => e.key !== 'customApp' && e.key !== 'votingPortal'
+            )
             .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
           (cr.customAppFee || 0) +
           (cr.votingPortalFee || 0);
@@ -4273,17 +4363,16 @@ class Vibe {
         const cardCount = calc.cardCount || 48;
 
         items.push({
-          description: `QRSong! Box - ${cardCount} kaarten`,
+          description: t('qrsongBox', { count: cardCount }),
           amount: String(quantity),
           price: pricePerUnit.toFixed(2),
         });
 
         if (Array.isArray(cr.extras)) {
           for (const e of cr.extras) {
-            const lower = (e.name || '').toLowerCase();
-            if (lower.includes('app') || lower.includes('voting')) continue;
+            if (e.key === 'customApp' || e.key === 'votingPortal') continue;
             items.push({
-              description: `${e.name} (eenmalige kosten)`,
+              description: t('extraOneOff', { name: extraName(e) }),
               amount: '1',
               price: Number(e.price).toFixed(2),
             });
@@ -4291,14 +4380,14 @@ class Vibe {
         }
         if (cr.customAppFee > 0) {
           items.push({
-            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            description: t('customApp'),
             amount: '1',
             price: '350.00',
           });
         }
         if (cr.votingPortalFee > 0) {
           items.push({
-            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            description: t('votingPortal'),
             amount: '1',
             price: '500.00',
           });
@@ -4307,10 +4396,9 @@ class Vibe {
         subtotalExclVat =
           pricePerUnit * quantity +
           (cr.extras
-            ?.filter((e: any) => {
-              const l = (e.name || '').toLowerCase();
-              return !l.includes('app') && !l.includes('voting');
-            })
+            ?.filter(
+              (e: any) => e.key !== 'customApp' && e.key !== 'votingPortal'
+            )
             .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
           (cr.customAppFee || 0) +
           (cr.votingPortalFee || 0);
@@ -4344,26 +4432,26 @@ class Vibe {
         const quantity = cr.quantity;
 
         const detailParts: string[] = [];
-        if (calc.includePersonalization) detailParts.push('inclusief personalisatie');
-        else detailParts.push('geen personalisatie');
-        if (calc.shipmentOnLocation) detailParts.push('levering op één locatie');
+        if (calc.includePersonalization) detailParts.push(t('detailPersonalization'));
+        else detailParts.push(t('detailNoPersonalization'));
+        if (calc.shipmentOnLocation) detailParts.push(t('detailSingleLocation'));
 
         items.push({
-          description: `OnzeVibe box met 200 QR muziekkaarten (${detailParts.join(', ')})`,
+          description: t('vibeBox', { details: detailParts.join(', ') }),
           amount: String(quantity),
           price: pricePerUnit.toFixed(2),
         });
 
         if (cr.pricing.customAppFee > 0) {
           items.push({
-            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            description: t('customApp'),
             amount: '1',
             price: '350.00',
           });
         }
         if (cr.pricing.votingPortalFee > 0) {
           items.push({
-            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            description: t('votingPortal'),
             amount: '1',
             price: '500.00',
           });
@@ -4381,7 +4469,7 @@ class Vibe {
       const discountAmount = subtotalExclVat * (discountPct / 100);
       if (discountPct > 0) {
         items.push({
-          description: `Korting (${discountPct}%)`,
+          description: t('discount', { percent: discountPct }),
           amount: '1',
           price: (-discountAmount).toFixed(2),
         });
@@ -4395,8 +4483,8 @@ class Vibe {
         const fraction = paymentOption === 'down' ? 0.3 : 0.7;
         const label =
           paymentOption === 'down'
-            ? `Aanbetaling 30% — ${list.name}`
-            : `Slottermijn 70% — ${list.name}`;
+            ? `${t('downPayment')} - ${list.name}`
+            : `${t('remainingPayment')} - ${list.name}`;
         const collapsed = [
           {
             description: label,
@@ -4410,6 +4498,7 @@ class Vibe {
           company,
           list,
           reference,
+          locale,
           totals: {
             subtotalExclVat,
             discountAmount,
@@ -4424,6 +4513,7 @@ class Vibe {
         company,
         list,
         reference,
+        locale,
         totals: { subtotalExclVat, discountAmount, totalAfterDiscount },
       };
     } catch (error: any) {

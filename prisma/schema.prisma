@@ -907,7 +907,7 @@ model Company {
   contact              String?
   contactemail         String?
   contactphone         String?
-  locale               String?
+  locale               String?        @default("nl")
   message              String?        @db.Text
   calculation          String?        @db.Text
   calculationTromp     String?        @db.Text
@@ -941,6 +941,7 @@ model Quotation {
   includePersonalization Boolean  @default(false)
   isReseller             Boolean  @default(false)
   manualDiscountPercent  Float    @default(0)
+  locale                 String   @default("nl")
   payload                String?  @db.Text
   createdAt              DateTime @default(now())
 

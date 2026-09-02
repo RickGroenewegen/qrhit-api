@@ -246,8 +246,8 @@ describe('calculateTrompPricing', () => {
     expect(c.boxPrice).toBeCloseTo(116.5, 6);
     expect(c.cardPrice).toBeCloseTo(840, 6);
     expect(c.extras).toEqual([
-      { name: 'Stansmestekening + dummy', price: 150 },
-      { name: 'Stansvorm', price: 425 },
+      { key: 'dielineDrawing', name: 'Stansmestekening + dummy', price: 150 },
+      { key: 'cuttingDie', name: 'Stansvorm', price: 425 },
     ]);
     expect(c.extrasTotal).toBe(575);
     expect(c.pricePerSet).toBe(10.07);
@@ -351,7 +351,14 @@ describe('calculateSchneiderPricing', () => {
     });
     const c = res.calculation;
     expect(c.boxType).toBe('2-vaks luxe dekseldoosje');
-    expect(c.extras).toEqual([{ name: 'Stansmes 2-vaks doosje', price: 325 }]);
+    expect(c.extras).toEqual([
+      {
+        key: 'cuttingDieBox',
+        keyVars: { compartments: 2 },
+        name: 'Stansmes 2-vaks doosje',
+        price: 325,
+      },
+    ]);
     expect(c.pricePerBox).toBe(107.65);
     expect(c.clientPrice).toBe(1401.5);
     expect(c.schneiderCost).toBe(1351.5);
@@ -369,7 +376,14 @@ describe('calculateSchneiderPricing', () => {
     expect(c.boxType).toBe('4-vaks luxe dekseldoosje');
     expect(c.fixedCost).toBe(1350);
     expect(c.pricePerPiece).toBe(3.73);
-    expect(c.extras).toEqual([{ name: 'Stansmes 4-vaks doosje', price: 375 }]);
+    expect(c.extras).toEqual([
+      {
+        key: 'cuttingDieBox',
+        keyVars: { compartments: 4 },
+        name: 'Stansmes 4-vaks doosje',
+        price: 375,
+      },
+    ]);
   });
 
   it('lists app/voting portal fees as extras and counts them in totals', async () => {
@@ -379,8 +393,8 @@ describe('calculateSchneiderPricing', () => {
     });
     const c = res.calculation;
     expect(c.extras).toEqual([
-      { name: 'App in eigen stijl', price: 350 },
-      { name: 'Voting Portal', price: 500 },
+      { key: 'customApp', name: 'App in eigen stijl', price: 350 },
+      { key: 'votingPortal', name: 'Voting Portal', price: 500 },
     ]);
     expect(c.extrasTotal).toBe(850);
     expect(c.clientPrice).toBe(1322); // 472 + 850
@@ -424,7 +438,7 @@ describe('buildInvoiceLineItems', () => {
         manualDiscountPercent: 10,
       }),
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.success).toBe(true);
@@ -432,13 +446,13 @@ describe('buildInvoiceLineItems', () => {
     expect(res.items).toEqual([
       {
         description:
-          'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)',
+          'QRSong! muziekkaarten set - Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)',
         amount: '1000',
         price: '9.32',
       },
       {
         description:
-          'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+          'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
         amount: '1',
         price: '350.00',
       },
@@ -462,12 +476,12 @@ describe('buildInvoiceLineItems', () => {
         manualDiscountPercent: 10,
       }),
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
     expect(res.items).toEqual([
       {
-        description: 'Aanbetaling 30% — Feest 2026',
+        description: 'Aanbetaling 30% - Feest 2026',
         amount: '1',
         price: '2610.90',
       },
@@ -486,9 +500,9 @@ describe('buildInvoiceLineItems', () => {
         profitMargin: 2,
       }),
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
-    expect(res.items![0].description).toBe('Slottermijn 70% — Feest 2026');
+    expect(res.items![0].description).toBe('Slottermijn 70% - Feest 2026');
     expect(res.items![0].price).toBe('6524.00'); // 9320 * 0.7, no discount
   });
 
@@ -504,7 +518,7 @@ describe('buildInvoiceLineItems', () => {
         profitMargin: 5,
       }),
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toEqual([
@@ -528,6 +542,7 @@ describe('buildInvoiceLineItems', () => {
     h.prisma.company.findUnique.mockResolvedValue({
       id: 1,
       name: 'Acme',
+      locale: 'nl',
       calculation: JSON.stringify({
         quantity: 100,
         includePersonalization: true,
@@ -545,7 +560,7 @@ describe('buildInvoiceLineItems', () => {
         price: '39.95',
       },
       {
-        description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+        description: 'Voting Portal - eenmalige kosten, gebruik stemportaal',
         amount: '1',
         price: '500.00',
       },
@@ -565,11 +580,143 @@ describe('buildInvoiceLineItems', () => {
         shipmentOnLocation: true,
       }),
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
     expect(res.items![0].description).toBe(
       'OnzeVibe box met 200 QR muziekkaarten (geen personalisatie, levering op één locatie)'
     );
+  });
+
+  it('renders the line items in the company language, not always Dutch', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name: 'Feier 2026',
+      calculationTromp: JSON.stringify({
+        quantity: 1000,
+        printingType: 'eigen',
+        profitMargin: 2,
+        includeCustomApp: true,
+      }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({
+      id: 1,
+      name: 'Muster GmbH',
+      locale: 'de',
+    });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    expect(res.locale).toBe('de');
+    expect(res.items![0].description).toBe('Anzahlung 30 % - Feier 2026');
+  });
+
+  it('falls back to English for a company language we do not write documents in', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name: 'Fete 2026',
+      calculationTromp: JSON.stringify({ quantity: 1000, printingType: 'eigen', profitMargin: 2 }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({
+      id: 1,
+      name: 'Exemple SARL',
+      locale: 'fr',
+    });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
+    expect(res.locale).toBe('en');
+    expect(res.items![0].description).toBe('Final instalment 70% - Fete 2026');
+  });
+
+  it('falls back to English for a company that has no language set at all', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name: 'Party',
+      calculationTromp: JSON.stringify({ quantity: 1000, printingType: 'eigen', profitMargin: 2 }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Legacy BV', locale: null });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    expect(res.locale).toBe('en');
+    expect(res.items![0].description).toBe('Down payment 30% - Party');
+  });
+
+  it('translates extras that come from the pricing calculator', async () => {
+    // Extras are named in Dutch by the calculators; the invoice must show the
+    // company's language, driven by the extra's key rather than its text.
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name: 'Feier',
+      calculationSchneider: JSON.stringify({
+        quantity: 100,
+        cardCount: 192,
+        includeStansmes: true,
+        profitMargin: 5,
+      }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({
+      id: 1,
+      name: 'Muster GmbH',
+      locale: 'de',
+    });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const descriptions = res.items!.map((i) => i.description);
+    expect(descriptions).toContain(
+      'Stanzform, 4-Fach-Schachtel (einmalige Kosten)'
+    );
+    expect(descriptions.join(' ')).not.toContain('Stansmes');
+  });
+
+  it('still excludes app and voting portal extras from the generic extra lines', async () => {
+    // They have dedicated translated lines, so counting them twice would
+    // overcharge. The filter keys off `key`, not the Dutch display name.
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name: 'Feest',
+      calculationSchneider: JSON.stringify({
+        quantity: 100,
+        cardCount: 192,
+        includeStansmes: true,
+        includeCustomApp: true,
+        includeVotingPortal: true,
+        profitMargin: 5,
+      }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const descriptions = res.items!.map((i) => i.description);
+    // Exactly one line each, from the dedicated translated keys.
+    expect(descriptions.filter((d) => d.includes('App in eigen stijl'))).toHaveLength(1);
+    expect(descriptions.filter((d) => d.includes('Voting Portal'))).toHaveLength(1);
+    expect(descriptions).not.toContain('App in eigen stijl (eenmalige kosten)');
+  });
+
+  it('derives invoice references from the company language, with a legacy fallback', async () => {
+    // Creation and the "already invoiced?" lookup both call this. If they ever
+    // disagree, the dashboard shows a booked down payment as un-invoiced and
+    // an admin bills the customer a second time.
+    const nl = await vibe.buildInvoiceReferences('Feest 2026', 'nl');
+    expect(nl.full).toBe('Feest 2026');
+    expect(nl.down).toBe('Feest 2026 - Aanbetaling 30%');
+    expect(nl.remaining).toBe('Feest 2026 - Slottermijn 70%');
+
+    const de = await vibe.buildInvoiceReferences('Feier 2026', 'de');
+    expect(de.down).toBe('Feier 2026 - Anzahlung 30 %');
+    expect(de.remaining).toBe('Feier 2026 - Schlussrate 70 %');
+
+    // Unknown/blank locales fall back to English like every other document.
+    const fallback = await vibe.buildInvoiceReferences('Party', null);
+    expect(fallback.down).toBe('Party - Down payment 30%');
+
+    // Invoices booked before these documents were translated used the Dutch
+    // em-dash format; the lookup still has to find them.
+    expect(nl.legacyDown).toBe('Feest 2026 \u2014 Aanbetaling 30%');
+    expect(de.legacyRemaining).toBe('Feier 2026 \u2014 Slottermijn 70%');
   });
 
   it('surfaces thrown errors', async () => {

@@ -20,6 +20,8 @@ export default async function vibeRoutes(
   const vibe = Vibe.getInstance();
   const mollie = new Mollie();
   const bookkeeping = Bookkeeping.getInstance();
+  const translation = new Translation();
+
 
   // Pull the optional order metrics (sent along by the calculators) out of a
   // calculation save body. Only returns the fields that were provided.
@@ -95,17 +97,28 @@ export default async function vibeRoutes(
           reply.status(404).send({ error: 'List not found' });
           return;
         }
-        const refs = {
-          full: list.name,
-          down: `${list.name} — Aanbetaling 30%`,
-          remaining: `${list.name} — Slottermijn 70%`,
-        };
-        const [full, down, remaining] = await Promise.all([
-          bookkeeping.findInvoiceByReference(refs.full),
-          bookkeeping.findInvoiceByReference(refs.down),
-          bookkeeping.findInvoiceByReference(refs.remaining),
-        ]);
-        reply.send({ connected: true, full, down, remaining });
+        const company = await (prisma as any).company.findUnique({
+          where: { id: companyId },
+          select: { locale: true },
+        });
+        const refs = await vibe.buildInvoiceReferences(
+          list.name,
+          company?.locale
+        );
+        const [full, down, remaining, legacyDown, legacyRemaining] =
+          await Promise.all([
+            bookkeeping.findInvoiceByReference(refs.full),
+            bookkeeping.findInvoiceByReference(refs.down),
+            bookkeeping.findInvoiceByReference(refs.remaining),
+            bookkeeping.findInvoiceByReference(refs.legacyDown),
+            bookkeeping.findInvoiceByReference(refs.legacyRemaining),
+          ]);
+        reply.send({
+          connected: true,
+          full,
+          down: down || legacyDown,
+          remaining: remaining || legacyRemaining,
+        });
       } catch (error: any) {
         console.error('Error listing invoices:', error?.message || error);
         reply.status(500).send({ error: 'Failed to list invoices' });
@@ -198,6 +211,12 @@ export default async function vibeRoutes(
         const [firstname, ...rest] = fullName.split(/\s+/);
         const lastname = rest.join(' ').trim();
 
+        // The line items came back rendered in the company's business
+        // language; MoneyBird's own labels follow the same one.
+        const invoiceLocale = translation.resolveBusinessLocale(
+          built.locale || company.locale
+        );
+
         const contactPayload = {
           company_name: company.name,
           firstname: firstname || undefined,
@@ -211,6 +230,7 @@ export default async function vibeRoutes(
           phone: company.contactphone || undefined,
           send_invoices_to_email: company.contactemail || undefined,
           send_estimates_to_email: company.contactemail || undefined,
+          language: invoiceLocale,
         };
 
         const customerKey = `qrhit-${company.id}`;
@@ -225,19 +245,16 @@ export default async function vibeRoutes(
           return;
         }
 
-        const refSuffix =
-          po === 'down'
-            ? ' — Aanbetaling 30%'
-            : po === 'remaining'
-              ? ' — Slottermijn 70%'
-              : '';
-        const reference = `${list.name}${refSuffix}`;
+        const refs = await vibe.buildInvoiceReferences(list.name, invoiceLocale);
+        const reference =
+          po === 'down' ? refs.down : po === 'remaining' ? refs.remaining : refs.full;
 
         const draft = await bookkeeping.createInvoice({
           contactId: contact.id,
           reference,
           invoiceDate: new Date().toISOString().slice(0, 10),
           items: built.items,
+          language: invoiceLocale,
         });
 
         // Finalize so the invoice is no longer in "Concept" state.
@@ -374,6 +391,7 @@ export default async function vibeRoutes(
         contactemail,
         contactphone,
         locale,
+        message,
       } = request.body;
 
       if (isNaN(companyId)) {
@@ -399,6 +417,7 @@ export default async function vibeRoutes(
         contactemail,
         contactphone,
         locale,
+        message,
       });
 
       if (!result.success) {
@@ -1651,6 +1670,25 @@ export default async function vibeRoutes(
           return;
         }
 
+        // Lambda screenshots this route to produce the PDF and carries no
+        // session, so the language arrives in the query string; a direct visit
+        // falls back to the company's own language.
+        const locale = translation.resolveBusinessLocale(
+          request.query.locale || company.locale
+        );
+        const intlTag = translation.getIntlTag(locale);
+        const quotationT = await translation.getBusinessTranslator(
+          locale,
+          'quotation'
+        );
+        // Extras (die-line drawing, cutting die) are named by the pricing
+        // calculators and shared between the quotation and the invoice, so
+        // they live under their own prefix.
+        const extrasT = await translation.getBusinessTranslator(
+          locale,
+          'extras'
+        );
+
         // If a list was specified, load its per-list calculation so per-list
         // toggles (e.g. includeVotingPortal) override the company defaults.
         let listCalc: {
@@ -1731,14 +1769,14 @@ export default async function vibeRoutes(
 
           // Set product description for Tromp
           if (calculation.printingType === 'luxe') {
-            productDescription = 'QRSong! Luxe doos';
-            productDetails = 'Luxe doos met 200 kaarten en bedrukte chips';
+            productDescription = quotationT('productLuxeBox');
+            productDetails = quotationT('productLuxeBoxDetails');
           } else if (calculation.printingType === 'klein') {
-            productDescription = 'QRSong! muziekkaarten set';
-            productDetails = 'Klein voorbedrukt doosje met 100 kaarten';
+            productDescription = quotationT('productCardSet');
+            productDetails = quotationT('productSmallBoxDetails');
           } else {
-            productDescription = 'QRSong! muziekkaarten set';
-            productDetails = 'Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
+            productDescription = quotationT('productCardSet');
+            productDetails = quotationT('productStandardBoxDetails');
           }
         } else if (type === 'schneider') {
           // Schneider calculation
@@ -1779,23 +1817,27 @@ export default async function vibeRoutes(
 
           // Set product description based on card count
           const cardCount = calculation.cardCount || 48;
-          productDescription = `QRSong! Box - ${cardCount} kaarten`;
+          productDescription = quotationT('productSchneiderBox', {
+            count: cardCount,
+          });
 
           switch (cardCount) {
             case 48:
-              productDetails = 'Doos met 1 vakje, 48 kaarten';
+              productDetails = quotationT('schneider48Details');
               break;
             case 96:
-              productDetails = 'Luxe doos met 2 vakjes, 2x 48 kaarten';
+              productDetails = quotationT('schneider96Details');
               break;
             case 144:
-              productDetails = 'Luxe doos met 2 vakjes, 2x 72 kaarten';
+              productDetails = quotationT('schneider144Details');
               break;
             case 192:
-              productDetails = 'Luxe doos met 4 vakjes, 4x 48 kaarten';
+              productDetails = quotationT('schneider192Details');
               break;
             default:
-              productDetails = `Luxe doos met ${cardCount} kaarten`;
+              productDetails = quotationT('schneiderDefaultDetails', {
+                count: cardCount,
+              });
           }
         } else {
           // OnzeVibe calculation
@@ -1841,30 +1883,32 @@ export default async function vibeRoutes(
             calculationResult = pricingResult.calculation;
           }
 
-          productDescription = 'QRSong! HappiBox';
-          productDetails = 'Doos en kaarten in eigen stijl';
+          productDescription = quotationT('productHappiBox');
+          productDetails = quotationT('productHappiBoxDetails');
         }
 
-        // Date formatting functions
+        // Date formatting functions, driven by the company's business locale.
+        // The BCP47 tag carries the country conventions: de-DE renders
+        // 1. September 2026 and 1.234,56, en-GB 1 September 2026 and 1,234.56.
         const formatDate = (date: Date) => {
           const options: Intl.DateTimeFormatOptions = {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
           };
-          return date.toLocaleDateString('nl-NL', options);
+          return date.toLocaleDateString(intlTag, options);
         };
 
         const formatCurrency = (value: number) => {
-          return new Intl.NumberFormat('nl-NL', {
+          return new Intl.NumberFormat(intlTag, {
             style: 'currency',
             currency: 'EUR',
           }).format(value);
         };
 
-        // Format number with Dutch locale (dot as thousand separator, comma as decimal)
+        // Amount only — the templates print the € sign themselves.
         const formatEuro = (value: number) => {
-          return value.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          return value.toLocaleString(intlTag, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
         const today = new Date();
@@ -1875,6 +1919,9 @@ export default async function vibeRoutes(
         const template = (type === 'qrsong' || type === 'schneider') ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
 
         await reply.view(template, {
+          locale,
+          t: quotationT,
+          tExtra: extrasT,
           company,
           calculation,
           calculationResult,
@@ -1974,6 +2021,14 @@ export default async function vibeRoutes(
           return;
         }
 
+        // The PDF is rendered by screenshotting this route from Lambda, which
+        // carries no session — so the language travels in the query string,
+        // with the company's own language as the fallback for direct visits.
+        const locale = translation.resolveBusinessLocale(
+          request.query.locale || company.locale
+        );
+        const intlTag = translation.getIntlTag(locale);
+
         // Date formatting function
         const formatDate = (date: Date) => {
           const options: Intl.DateTimeFormatOptions = {
@@ -1981,7 +2036,7 @@ export default async function vibeRoutes(
             month: 'long',
             day: 'numeric',
           };
-          return date.toLocaleDateString('nl-NL', options);
+          return date.toLocaleDateString(intlTag, options);
         };
 
         // Get base URL for assets
@@ -1993,6 +2048,8 @@ export default async function vibeRoutes(
           baseUrl,
           formatDate,
           printer,
+          locale,
+          t: await translation.getBusinessTranslator(locale, 'instructions'),
         });
       } catch (error) {
         console.error('Error rendering technical instructions:', error);
@@ -2037,7 +2094,8 @@ export default async function vibeRoutes(
         // Create the URL for the HTML rendering
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
         const printer = request.body?.printer || 'tromp';
-        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}?printer=${printer}`;
+        const locale = translation.resolveBusinessLocale(company.locale);
+        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`;
 
         // Generate PDF
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -2056,7 +2114,11 @@ export default async function vibeRoutes(
         await fs.unlink(filePath).catch(() => {});
 
         // Generate filename for download
-        const downloadFilename = `Technische_Instructies_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        const instructionsT = await translation.getBusinessTranslator(
+          locale,
+          'instructions'
+        );
+        const downloadFilename = `${instructionsT('fileName')}_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
 
         // Set response headers for PDF download
         reply.header('Content-Type', 'application/pdf');
@@ -2342,6 +2404,8 @@ export default async function vibeRoutes(
           contact,
           contactemail,
           contactphone,
+          locale,
+          message,
         } = request.body;
 
         if (!name) {
@@ -2362,6 +2426,8 @@ export default async function vibeRoutes(
           contact,
           contactemail,
           contactphone,
+          locale,
+          message,
         });
 
         if (!result.success) {
@@ -2731,20 +2797,38 @@ export default async function vibeRoutes(
           return profitMatrix[productId]?.[qty] || { reseller: 0, qrsong: 0 };
         };
 
+        // Lambda screenshots this route to produce the PDF and carries no
+        // session, so the language arrives in the query string.
+        const locale = translation.resolveBusinessLocale(request.query.locale);
+        const intlTag = translation.getIntlTag(locale);
+        const pricingT = await translation.getBusinessTranslator(
+          locale,
+          'pricing'
+        );
+
         // Format helpers
         const formatCurrency = (value: number) => {
-          return new Intl.NumberFormat('nl-NL', {
+          return new Intl.NumberFormat(intlTag, {
             style: 'currency',
             currency: 'EUR',
           }).format(value);
         };
 
         const formatNumber = (value: number) => {
-          return new Intl.NumberFormat('nl-NL').format(value);
+          return new Intl.NumberFormat(intlTag).format(value);
+        };
+
+        // German writes 39,3 % (comma, non-breaking space before the sign).
+        const formatPercent = (value: number) => {
+          return new Intl.NumberFormat(intlTag, {
+            style: 'percent',
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }).format(value / 100);
         };
 
         const formatDate = (date: Date) => {
-          return new Intl.DateTimeFormat('nl-NL', {
+          return new Intl.DateTimeFormat(intlTag, {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
@@ -2758,9 +2842,9 @@ export default async function vibeRoutes(
           {
             name: 'QRSong! Box',
             products: [
-              { id: 'schneider-48', name: '48 kaarten', cardCount: 48 },
-              { id: 'schneider-96', name: '96 kaarten', cardCount: 96 },
-              { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
+              { id: 'schneider-48', name: `48 ${pricingT('variantCards')}`, cardCount: 48 },
+              { id: 'schneider-96', name: `96 ${pricingT('variantCards')}`, cardCount: 96 },
+              { id: 'schneider-192', name: `192 ${pricingT('variantCards')}`, cardCount: 192 },
             ],
           },
         ];
@@ -2840,12 +2924,15 @@ export default async function vibeRoutes(
         const version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
 
         await reply.view('reseller_pricing.ejs', {
+          locale,
+          t: pricingT,
           groups,
           quantities,
           prices,
           profitMatrix,
           formatCurrency,
           formatNumber,
+          formatPercent,
           formatDate,
           baseUrl,
           version,
@@ -2869,7 +2956,10 @@ export default async function vibeRoutes(
         const fs = require('fs').promises;
 
         // Get profit matrix from request body (per-product, per-tier percentages)
-        const { profitMatrix } = request.body || {};
+        // `locale` is sent by the company Documents tab (the company's own
+        // language) and by the pricing-tables page (an explicit choice).
+        const { profitMatrix, locale: requestedLocale } = request.body || {};
+        const locale = translation.resolveBusinessLocale(requestedLocale);
 
         const tempDir = '/tmp';
         const fileName = `reseller_pricing_${Date.now()}.pdf`;
@@ -2877,10 +2967,9 @@ export default async function vibeRoutes(
 
         // Create the URL for the HTML rendering with profit matrix
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const profitMatrixParam = profitMatrix
-          ? `?profitMatrix=${encodeURIComponent(JSON.stringify(profitMatrix))}`
-          : '';
-        const htmlUrl = `${baseUrl}/vibe/reseller-pricing${profitMatrixParam}`;
+        const params = new URLSearchParams({ locale });
+        if (profitMatrix) params.set('profitMatrix', JSON.stringify(profitMatrix));
+        const htmlUrl = `${baseUrl}/vibe/reseller-pricing?${params.toString()}`;
 
         // Generate PDF - let CSS @page rules control orientation
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -2901,7 +2990,8 @@ export default async function vibeRoutes(
           console.warn('Failed to delete temp file:', unlinkError);
         }
 
-        const downloadFilename = `Reseller_Prijslijst_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
+        const downloadFilename = `${pricingT('editionReseller').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
         // Set response headers for PDF download
         reply.header('Content-Type', 'application/pdf');
@@ -2933,20 +3023,38 @@ export default async function vibeRoutes(
           return profitMatrix[productId]?.[qty] || { reseller: 0, qrsong: 0 };
         };
 
+        // Lambda screenshots this route to produce the PDF and carries no
+        // session, so the language arrives in the query string.
+        const locale = translation.resolveBusinessLocale(request.query.locale);
+        const intlTag = translation.getIntlTag(locale);
+        const pricingT = await translation.getBusinessTranslator(
+          locale,
+          'pricing'
+        );
+
         // Format helpers
         const formatCurrency = (value: number) => {
-          return new Intl.NumberFormat('nl-NL', {
+          return new Intl.NumberFormat(intlTag, {
             style: 'currency',
             currency: 'EUR',
           }).format(value);
         };
 
         const formatNumber = (value: number) => {
-          return new Intl.NumberFormat('nl-NL').format(value);
+          return new Intl.NumberFormat(intlTag).format(value);
+        };
+
+        // German writes 39,3 % (comma, non-breaking space before the sign).
+        const formatPercent = (value: number) => {
+          return new Intl.NumberFormat(intlTag, {
+            style: 'percent',
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }).format(value / 100);
         };
 
         const formatDate = (date: Date) => {
-          return new Intl.DateTimeFormat('nl-NL', {
+          return new Intl.DateTimeFormat(intlTag, {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
@@ -2960,9 +3068,9 @@ export default async function vibeRoutes(
           {
             name: 'QRSong! Box',
             products: [
-              { id: 'schneider-48', name: '48 kaarten', cardCount: 48 },
-              { id: 'schneider-96', name: '96 kaarten', cardCount: 96 },
-              { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
+              { id: 'schneider-48', name: `48 ${pricingT('variantCards')}`, cardCount: 48 },
+              { id: 'schneider-96', name: `96 ${pricingT('variantCards')}`, cardCount: 96 },
+              { id: 'schneider-192', name: `192 ${pricingT('variantCards')}`, cardCount: 192 },
             ],
           },
         ];
@@ -3024,11 +3132,14 @@ export default async function vibeRoutes(
         }
 
         await reply.view('retail_pricing.ejs', {
+          locale,
+          t: pricingT,
           groups,
           quantities,
           prices,
           formatCurrency,
           formatNumber,
+          formatPercent,
           formatDate,
           baseUrl,
         });
@@ -3050,17 +3161,17 @@ export default async function vibeRoutes(
         const path = require('path');
         const fs = require('fs').promises;
 
-        const { profitMatrix } = request.body || {};
+        const { profitMatrix, locale: requestedLocale } = request.body || {};
+        const locale = translation.resolveBusinessLocale(requestedLocale);
 
         const tempDir = '/tmp';
         const fileName = `retail_pricing_${Date.now()}.pdf`;
         const filePath = path.join(tempDir, fileName);
 
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const profitMatrixParam = profitMatrix
-          ? `?profitMatrix=${encodeURIComponent(JSON.stringify(profitMatrix))}`
-          : '';
-        const htmlUrl = `${baseUrl}/vibe/retail-pricing${profitMatrixParam}`;
+        const params = new URLSearchParams({ locale });
+        if (profitMatrix) params.set('profitMatrix', JSON.stringify(profitMatrix));
+        const htmlUrl = `${baseUrl}/vibe/retail-pricing?${params.toString()}`;
 
         // Generate PDF - let CSS @page rules control orientation
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -3079,7 +3190,8 @@ export default async function vibeRoutes(
           console.warn('Failed to delete temp file:', unlinkError);
         }
 
-        const downloadFilename = `Retail_Prijslijst_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
+        const downloadFilename = `${pricingT('editionRetail').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
         reply.header('Content-Type', 'application/pdf');
         reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);

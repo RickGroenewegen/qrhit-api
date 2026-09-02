@@ -212,12 +212,47 @@ class Moneybird implements BookkeepingProvider {
     return data;
   }
 
+  public async updateContact(
+    contactId: string | number,
+    payload: Partial<BookkeepingContactInput>
+  ): Promise<BookkeepingContact | null> {
+    try {
+      const data = await this.authedRequest<any>(
+        'PATCH',
+        `contacts/${contactId}.json`,
+        { contact: payload }
+      );
+      this.success('contact updated ', `id=${contactId}`);
+      return data as BookkeepingContact;
+    } catch {
+      // Non-fatal: a failed patch must not block invoicing.
+      return null;
+    }
+  }
+
   public async findOrCreateContact(
     customerId: string,
     payload: BookkeepingContactInput
   ): Promise<BookkeepingContact> {
     const existing = await this.findContactByCustomerId(customerId);
-    if (existing) return existing as BookkeepingContact;
+    if (existing) {
+      // Every existing customer predates the language field, so without this
+      // patch the company's language would only ever apply to brand-new
+      // contacts. Only the language is synced — the rest of the contact may
+      // have been edited by hand in MoneyBird.
+      const want = payload.language;
+      if (want && (existing as any).language !== want) {
+        this.info(
+          'syncing contact language ',
+          `id=${existing.id} ${(existing as any).language || '-'} → ${want}`
+        );
+        const updated = await this.updateContact(existing.id, {
+          language: want,
+        });
+        if (updated) return updated;
+      }
+      return existing as BookkeepingContact;
+    }
     return (await this.createContact({
       ...payload,
       customer_id: customerId,
@@ -441,6 +476,7 @@ class Moneybird implements BookkeepingProvider {
     reference: string;
     invoiceDate: string;
     items: BookkeepingLineItem[];
+    language?: string;
   }): Promise<BookkeepingInvoice> {
     const fallbackTaxRateId = await this.getStandardVatRateId();
     const details_attributes: InvoiceLineItem[] = args.items.map((it) => {
@@ -458,7 +494,7 @@ class Moneybird implements BookkeepingProvider {
 
     this.info(
       'creating sales invoice ',
-      `ref=${args.reference} contact_id=${args.contactId} lines=${details_attributes.length}`
+      `ref=${args.reference} contact_id=${args.contactId} lines=${details_attributes.length} language=${args.language || 'default'}`
     );
     for (const it of details_attributes) {
       this.info(
@@ -474,6 +510,10 @@ class Moneybird implements BookkeepingProvider {
         invoice_date: args.invoiceDate,
         document_style_id: this.qrsongDocumentStyleId,
         identity_id: this.qrsongIdentityId,
+        // Drives MoneyBird's own labels on the PDF (Factuur / Rechnung /
+        // Invoice, BTW / USt. / VAT). Omitted means the administration
+        // default, which is Dutch.
+        ...(args.language ? { language: args.language } : {}),
         details_attributes,
       },
     })) as BookkeepingInvoice;

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="<%= locale %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Technische Instructies</title>
+    <title><%= t('title') %></title>
     <style>
         @media print {
             @page {
@@ -288,8 +288,8 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <h1 class="header-title">Technische Instructies</h1>
-                <p class="header-subtitle">Aanlevering artwork en bestanden</p>
+                <h1 class="header-title"><%= t('title') %></h1>
+                <p class="header-subtitle"><%= t('subtitle') %></p>
             </div>
             <div class="company-section">
             </div>
@@ -299,47 +299,47 @@
         <div class="section">
             <h2 class="section-title">
                 <span class="section-icon">1</span>
-                Instructies Dozen / AI Bestanden
+                <%= t('section1Title') %>
             </h2>
 
             <ul class="instructions-list">
-                <li>Aanlevering als <strong>PDF</strong></li>
-                <li><strong>3mm bleed/afloop</strong> aanbrengen bij aflopende druk</li>
-                <li>Stansmestekeningen <strong>niet verschalen</strong></li>
-                <li>Stansmestekeningen op <strong>overdruk laten staan</strong> in de separate lagen (dus niet integreren in de full colour)</li>
-                <li><strong>Geen PMS-kleuren</strong> gebruiken, in full colour opmaken</li>
-                <li><strong>Trimbox laten staan</strong>, niet vergroten/verplaatsen</li>
+                <li><%- t('boxPdf') %></li>
+                <li><%- t('boxBleed') %></li>
+                <li><%- t('boxDieline') %></li>
+                <li><%- t('boxOverprint') %></li>
+                <li><%- t('boxNoPms') %></li>
+                <li><%- t('boxTrimbox') %></li>
                 <% if (printer === 'tromp') { %>
-                <li>Aanleveren als <strong>drie aparte PDF's</strong> (tenzij de bedrukking voor de kleine doosjes identiek is)</li>
+                <li><%- t('boxThreePdfs') %></li>
                 <% } %>
-                <li>Resolutie minimaal <em>150 dpi</em></li>
+                <li><%- t('boxResolution') %></li>
             </ul>
 
             <% if (printer === 'tromp') { %>
             <div class="warning-box">
                 <span class="icon">!</span>
                 <div class="text">
-                    <strong>Let op:</strong> De voorzijde van de kleine doosjes is de zijde met de twee inkepingen.
+                    <strong><%= t('warnLabel') %></strong> <%= t('warnFrontSmallBoxes') %>
                 </div>
             </div>
 
             <div class="warning-box">
                 <span class="icon">!</span>
                 <div class="text">
-                    <strong>Let op:</strong> Wanneer bij het omdoosje teksten op de zijkant en rug geplaatst worden, controleer dan of deze niet op z'n kop staan na het vouwen.
+                    <strong><%= t('warnLabel') %></strong> <%= t('warnSleeveOrientation') %>
                 </div>
             </div>
             <% } %>
 
             <div class="highlight-box">
-                <div class="title">Uitleg voor de eindgebruiker</div>
+                <div class="title"><%= t('endUserTitle') %></div>
                 <div class="content">
-                    Wilt u uitleg bij het spel leveren? Dan zijn er meerdere mogelijkheden:
+                    <%= t('endUserIntro') %>
                     <ul style="margin: 6px 0 0 18px; padding: 0;">
-                        <li>Verwerk de <strong>tekstuele uitleg direct in het ontwerp van de doos</strong>, bijvoorbeeld op de achterkant of aan de binnenzijde van het deksel</li>
-                        <li>Plaats een <strong>QR code op de doos</strong> die verwijst naar <a href="https://www.qrsong.io/en/how-to">https://www.qrsong.io/en/how-to</a></li>
-                        <li>Maak een <strong>eigen uitlegpagina</strong> op uw eigen website en plaats een QR code op de doos die daarnaar verwijst</li>
-                        <li>Of 'offer' één kaart op uit de set en vervang deze door een zelf ontworpen <strong>Uitleg-kaart</strong> (deze moet aan dezelfde richtlijnen voldoen als de overige QR kaarten, zie sectie 2)</li>
+                        <li><%- t('endUserOption1') %></li>
+                        <li><%- t('endUserOption2') %></li>
+                        <li><%- t('endUserOption3') %></li>
+                        <li><%- t('endUserOption4') %></li>
                     </ul>
                 </div>
             </div>
@@ -349,34 +349,34 @@
         <div class="section">
             <h2 class="section-title">
                 <span class="section-icon">2</span>
-                Instructies Kaarten
+                <%= t('section2Title') %>
             </h2>
 
             <ul class="instructions-list">
-                <li>De kaarten hebben een formaat van <strong><% if (printer === 'tromp') { %>60x60mm<% } else { %>56x56mm<% } %></strong> (eindformaat na snijden)</li>
-                <li>De buitenste <strong>3mm rondom</strong> wordt beschouwd als <strong>bleed/afloop</strong> en wordt van de kaart gesneden</li>
-                <li>Houd er rekening mee dat er ook <strong>na het snijden nog een verschuiving van 1-2mm</strong> kan optreden. Houd belangrijke tekst, randen en elementen daarom <strong>minimaal 5mm (3mm bleed + 2mm tolerantie) van de buitenrand</strong></li>
-                <li>QR codes zullen <strong>in het midden van de kaart</strong> geplaatst worden</li>
-                <li>Voor de voor- en achterkant een <strong>vierkante afbeelding</strong> aanleveren van minstens <em>1600x1600 pixels</em>, <strong>aanleveren als PSD</strong></li>
-                <li>De QR scanner werkt het beste met een <strong>donkerdere QR code op een lichtere achtergrond</strong></li>
-                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een <strong>aparte layer</strong> zodat deze uit te zetten is</li>
-                <li>Plaats ook de <strong>artiest, titel en jaartal op de achterkant in een aparte layer</strong>, zodat deze indien gewenst uitgezet kan worden</li>
-                <li>Wanneer er de wens is voor een ander font dient er gekozen te worden uit de <strong>Google Fonts</strong></li>
+                <li><%- t('cardSize', { size: printer === 'tromp' ? '60x60mm' : '56x56mm' }) %></li>
+                <li><%- t('cardBleed') %></li>
+                <li><%- t('cardShift') %></li>
+                <li><%- t('cardQrCenter') %></li>
+                <li><%- t('cardImages') %></li>
+                <li><%- t('cardContrast') %></li>
+                <li><%- t('cardPsd') %></li>
+                <li><%- t('cardMetaLayer') %></li>
+                <li><%- t('cardFont') %></li>
             </ul>
 
             <div class="highlight-box">
-                <div class="title">Tip voor optimale scanbaarheid</div>
-                <div class="content">Zorg voor voldoende contrast tussen de QR code en de achtergrond. Een donkere QR code (zwart, donkerblauw, donkergroen) op een lichte achtergrond (wit, crème, lichtgrijs) geeft de beste resultaten.</div>
+                <div class="title"><%= t('tipTitle') %></div>
+                <div class="content"><%= t('tipContent') %></div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
             <div class="footer-content">
-                Vragen over deze instructies? Neem contact op met uw contactpersoon.
+                <%= t('footerContact') %>
             </div>
             <div class="date-generated">
-                Document gegenereerd op <%= formatDate(new Date()) %>
+                <%= t('generatedOn') %> <%= formatDate(new Date()) %>
             </div>
         </div>
     </div>

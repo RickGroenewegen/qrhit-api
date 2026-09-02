@@ -148,6 +148,52 @@ describe('contacts', () => {
     expect(axiosRequest.mock.calls[0][0]).toMatchObject({ method: 'GET' });
   });
 
+  it('findOrCreateContact patches an existing contact whose language is out of date', async () => {
+    const mb = fresh();
+    axiosRequest
+      .mockResolvedValueOnce({ data: { id: 5, language: 'nl' } } as any) // lookup hit
+      .mockResolvedValueOnce({ data: { id: 5, language: 'de' } } as any); // patch
+
+    const contact = await mb.findOrCreateContact('cust-5', {
+      company_name: 'Existing BV',
+      language: 'de',
+    } as any);
+
+    expect(contact).toEqual({ id: 5, language: 'de' });
+    expect(axiosRequest.mock.calls[1][0]).toMatchObject({
+      method: 'PATCH',
+      url: `${API}/admin1/contacts/5.json`,
+      data: { contact: { language: 'de' } },
+    });
+  });
+
+  it('findOrCreateContact leaves an existing contact alone when the language already matches', async () => {
+    const mb = fresh();
+    axiosRequest.mockResolvedValue({ data: { id: 5, language: 'de' } } as any);
+
+    await mb.findOrCreateContact('cust-5', {
+      company_name: 'Existing BV',
+      language: 'de',
+    } as any);
+
+    expect(axiosRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('findOrCreateContact still returns the contact when the language patch fails', async () => {
+    const mb = fresh();
+    axiosRequest
+      .mockResolvedValueOnce({ data: { id: 5, language: 'nl' } } as any)
+      .mockRejectedValueOnce({ response: { status: 500 } });
+
+    // A failed patch must never block invoicing.
+    expect(
+      await mb.findOrCreateContact('cust-5', {
+        company_name: 'Existing BV',
+        language: 'de',
+      } as any)
+    ).toEqual({ id: 5, language: 'nl' });
+  });
+
   it('findOrCreateContact creates with the customer_id merged in when missing', async () => {
     const mb = fresh();
     axiosRequest
@@ -354,6 +400,7 @@ describe('sales invoices', () => {
       contactId: 'c1',
       reference: 'QR123456',
       invoiceDate: '2026-06-01',
+      language: 'de',
       items: [
         // No tax_rate_id → falls back to the resolved 21% rate.
         { description: 'QR cards', amount: '2', price: '25.00', ledger_account_id: 'led1' },
@@ -378,6 +425,7 @@ describe('sales invoices', () => {
         invoice_date: '2026-06-01',
         document_style_id: '483050618946061479',
         identity_id: '483052548427613969',
+        language: 'de',
         details_attributes: [
           {
             description: 'QR cards',
@@ -403,6 +451,26 @@ describe('sales invoices', () => {
       total_price_incl_tax: '60.50',
       url: 'https://moneybird.com/admin1/sales_invoices/555',
     });
+  });
+
+  it('createInvoice omits language entirely when none is given, leaving the administration default', async () => {
+    const mb = fresh();
+    axiosRequest.mockImplementation(async (cfg: any) => {
+      if (cfg.url.endsWith('/tax_rates.json')) return { data: [] } as any;
+      return { data: { id: 1 } } as any;
+    });
+
+    await mb.createInvoice({
+      contactId: 2,
+      reference: 'R',
+      invoiceDate: '2026-06-01',
+      items: [{ description: 'Cards', amount: '1', price: '10.00' }] as any,
+    });
+
+    const post = axiosRequest.mock.calls.find(
+      (c: any[]) => c[0].method === 'POST'
+    )![0] as any;
+    expect(post.data.sales_invoice).not.toHaveProperty('language');
   });
 
   it('createInvoice omits tax_rate_id entirely when neither line nor fallback provides one', async () => {

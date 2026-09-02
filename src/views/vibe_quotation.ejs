@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="<%= locale %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Offerte - <%= company.name %></title>
+    <title><%= t('title') %> - <%= company.name %></title>
     <style>
         @media print {
             @page {
@@ -434,17 +434,17 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <h1 class="quotation-title">Offerte</h1>
+                <h1 class="quotation-title"><%= t('title') %></h1>
             </div>
             <div class="company-section">
-                <div class="label">Offerte door</div>
+                <div class="label"><%= t('issuedBy') %></div>
                 <img src="<%= baseUrl %>/assets/images/onzevibe_logo2.png" alt="OnzeVibe" class="logo" />
                 <div class="company-details">
                     Prinsenhof 1<br>
                     2171XZ Sassenheim<br>
                     info@onzevibe.nl<br>
-                    KVK: 99311917<br>
-                    BTW: 8689.27.764.B.01
+                    <%= t('senderCoc') %>: 99311917<br>
+                    <%= t('senderVat') %>: <%= locale === 'nl' ? '8689.27.764.B.01' : 'NL868927764B01' %>
                 </div>
             </div>
         </div>
@@ -452,7 +452,7 @@
         <!-- Contact Info and Quote Details -->
         <div class="info-section">
             <div class="info-box">
-                <div class="info-label">Offerte gericht aan</div>
+                <div class="info-label"><%= t('addressedTo') %></div>
                 <div class="info-content">
                     <div class="name"><%= company.name %></div>
                     <div class="details">
@@ -468,19 +468,19 @@
                         
                         <% if (company.contact) { %>
                             <div class="info-field">
-                                <span class="field-label">Contact</span>
+                                <span class="field-label"><%= t('labelContact') %></span>
                                 <span><%= company.contact %></span>
                             </div>
                         <% } %>
                         <% if (company.contactphone) { %>
                             <div class="info-field">
-                                <span class="field-label">Tel</span>
+                                <span class="field-label"><%= t('labelPhone') %></span>
                                 <span><%= company.contactphone %></span>
                             </div>
                         <% } %>
                         <% if (company.contactemail) { %>
                             <div class="info-field">
-                                <span class="field-label">Email</span>
+                                <span class="field-label"><%= t('labelEmail') %></span>
                                 <span><%= company.contactemail %></span>
                             </div>
                         <% } %>
@@ -489,18 +489,18 @@
             </div>
             
             <div class="info-box">
-                <div class="info-label">Offerte Details</div>
+                <div class="info-label"><%= t('detailsTitle') %></div>
                 <div class="quotation-details">
                     <div class="detail-row">
-                        <span class="detail-label">Offerte #</span>
+                        <span class="detail-label"><%= t('number') %></span>
                         <span class="detail-value"><%= quotationNumber %></span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">Offerte Datum</span>
+                        <span class="detail-label"><%= t('date') %></span>
                         <span class="detail-value"><%= formatDate(new Date()) %></span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">Geldig tot</span>
+                        <span class="detail-label"><%= t('validUntil') %></span>
                         <span class="detail-value"><%= formatDate(validUntil) %></span>
                     </div>
                 </div>
@@ -512,51 +512,51 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 50%">Omschrijving</th>
-                        <th style="width: 15%">Aantal</th>
-                        <th style="width: 17.5%">Prijs excl. BTW</th>
-                        <th style="width: 17.5%">Bedrag excl. BTW</th>
+                        <th style="width: 50%"><%= t('thDescription') %></th>
+                        <th style="width: 15%"><%= t('thQuantity') %></th>
+                        <th style="width: 17.5%"><%= t('thUnitPrice') %></th>
+                        <th style="width: 17.5%"><%= t('thAmount') %></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>
-                            <span class="item-description">OnzeVibe box met 200 QR muziekkaarten</span>
+                            <span class="item-description"><%= t('itemVibeBox') %></span>
                             <span class="item-details">
                                 <% if (calculation.includePersonalization) { %>
-                                    Inclusief personalisatie
+                                    <%= t('itemWithPersonalization') %>
                                 <% } else { %>
-                                    Geen personalisatie
+                                    <%= t('itemNoPersonalization') %>
                                 <% } %>
                                 <% if (calculation.shipmentOnLocation) { %>
-                                    • Levering op één locatie
+                                    • <%= t('itemSingleLocation') %>
                                 <% } %>
                             </span>
                         </td>
                         <td><%= calculation.quantity %></td>
-                        <td>€&nbsp;<%= formatEuro(calculationResult.pricing.commercialPricePerBox) %></td>
-                        <td>€&nbsp;<%= formatEuro(calculationResult.pricing.commercialPricePerBox * calculation.quantity) %></td>
+                        <td><%= formatCurrency(calculationResult.pricing.commercialPricePerBox) %></td>
+                        <td><%= formatCurrency(calculationResult.pricing.commercialPricePerBox * calculation.quantity) %></td>
                     </tr>
                     <% if (calculationResult.pricing.customAppFee > 0) { %>
                     <tr>
                         <td>
-                            <span class="item-description">App in eigen stijl</span>
-                            <span class="item-details">Eenmalige kosten - maatwerk app ontwikkeling</span>
+                            <span class="item-description"><%= t('itemCustomApp') %></span>
+                            <span class="item-details"><%= t('itemCustomAppDetails') %></span>
                         </td>
                         <td>1</td>
-                        <td>€&nbsp;350,00</td>
-                        <td>€&nbsp;350,00</td>
+                        <td><%= formatCurrency(350) %></td>
+                        <td><%= formatCurrency(350) %></td>
                     </tr>
                     <% } %>
                     <% if (calculationResult.pricing.votingPortalFee > 0) { %>
                     <tr>
                         <td>
-                            <span class="item-description">Voting Portal</span>
-                            <span class="item-details">Eenmalige kosten - Gebruik stemportaal</span>
+                            <span class="item-description"><%= t('itemVotingPortal') %></span>
+                            <span class="item-details"><%= t('itemVotingPortalDetails') %></span>
                         </td>
                         <td>1</td>
-                        <td>€&nbsp;500,00</td>
-                        <td>€&nbsp;500,00</td>
+                        <td><%= formatCurrency(500) %></td>
+                        <td><%= formatCurrency(500) %></td>
                     </tr>
                     <% } %>
                 </tbody>
@@ -575,30 +575,30 @@
         <div class="totals-container">
             <table class="totals-table">
                 <tr class="total-row subtotal">
-                    <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= formatEuro(subtotalExclVat) %></td>
+                    <td colspan="3"><%= t('subtotal') %></td>
+                    <td><%= formatCurrency(subtotalExclVat) %></td>
                 </tr>
 
                 <% if (manualDiscountPct > 0) { %>
                 <tr class="total-row discount">
-                    <td colspan="3">Korting (<%= manualDiscountPct %>%)</td>
-                    <td>-€&nbsp;<%= formatEuro(discountAmount) %></td>
+                    <td colspan="3"><%= t('discount', { percent: manualDiscountPct }) %></td>
+                    <td><%= formatCurrency(-(discountAmount)) %></td>
                 </tr>
                 <% } %>
 
                 <tr class="total-row grand-total">
-                    <td colspan="3">Totaal excl. BTW</td>
-                    <td>€&nbsp;<%= formatEuro(totalAfterDiscount) %></td>
+                    <td colspan="3"><%= t('totalExclVat') %></td>
+                    <td><%= formatCurrency(totalAfterDiscount) %></td>
                 </tr>
 
                 <tr class="total-row vat">
-                    <td colspan="3">BTW 21%</td>
-                    <td>€&nbsp;<%= formatEuro(vatAmount) %></td>
+                    <td colspan="3"><%= t('vat', { percent: 21 }) %></td>
+                    <td><%= formatCurrency(vatAmount) %></td>
                 </tr>
 
                 <tr class="total-row grand-total-incl">
-                    <td colspan="3">Totaal incl. BTW</td>
-                    <td>€&nbsp;<%= formatEuro(totalInclVatFinal) %></td>
+                    <td colspan="3"><%= t('totalInclVat') %></td>
+                    <td><%= formatCurrency(totalInclVatFinal) %></td>
                 </tr>
             </table>
         </div>
@@ -606,39 +606,39 @@
         <!-- Signature Section -->
         <div style="margin-top: 12px;">
             <div style="font-size: 10px; color: #666; margin-bottom: 6px; line-height: 1.4;">
-                Door ondertekening gaat Opdrachtgever akkoord met deze offerte en verklaart Opdrachtgever uitdrukkelijk in te stemmen met de Algemene Voorwaarden en met de bepalingen inzake Intellectueel Eigendom en Vrijwaring, zoals opgenomen in deze offerte.
+                <%= t('signatureIntro') %>
             </div>
             <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; width: 50%;">
-                <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Voor akkoord namens <%= company.name %></div>
+                <div style="font-size: 11px; color: #666; margin-bottom: 4px;"><%= t('signatureFor') %> <%= company.name %></div>
                 <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
             </div>
         </div>
 
         <!-- Deposit Notice -->
         <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #f0f7f9; border-left: 4px solid #214b53; border-radius: 4px;">
-            <strong style="color: #214b53; font-size: 12px;">Aanbetaling</strong>
+            <strong style="color: #214b53; font-size: 12px;"><%= t('depositTitle') %></strong>
             <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; line-height: 1.3;">
-                Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.
+                <%= t('depositText') %>
             </p>
         </div>
 
         <!-- Notes Section (Page 2) -->
         <div class="notes-section">
-            <h2 class="section-title">Productinformatie</h2>
+            <h2 class="section-title"><%= t('productInfoTitle') %></h2>
             <div class="notes-content">
-                <strong>Wat wordt geleverd:</strong><br>
-                • <%= calculationResult.quantity %> complete QRSong! HappiBox sets<br>
-                • Elke set bevat: Een box met <%= calculationResult.cardsPerBox %> QR-muziekkaarten<br>
-                • Totaal: <%= calculationResult.quantity %> boxen en <%= calculationResult.quantity * calculationResult.cardsPerBox %> kaarten<br><br>
+                <strong><%= t('piWhatIsDelivered') %></strong><br>
+                • <%= t('piVibeSets', { quantity: calculationResult.quantity }) %><br>
+                • <%= t('piVibeSetContains', { cards: calculationResult.cardsPerBox }) %><br>
+                • <%= t('piVibeTotal', { boxes: calculationResult.quantity, cards: calculationResult.quantity * calculationResult.cardsPerBox }) %><br><br>
 
-                <strong>Specificaties Box:</strong><br>
-                • Hoogwaardig karton met full-colour bedrukking<br>
-                • Persoonlijke branding mogelijk<br><br>
+                <strong><%= t('piSpecsBox') %></strong><br>
+                • <%= t('piVibeBoxSpec1') %><br>
+                • <%= t('piVibeBoxSpec2') %><br><br>
 
-                <strong>Specificaties Kaarten:</strong><br>
-                • Dubbelzijdig full-colour geprint<br>
-                • Formaat: 6 x 6 cm<br>
-                • Unieke QR-code per kaart die linkt naar Spotify
+                <strong><%= t('piSpecsCards') %></strong><br>
+                • <%= t('piVibeCardSpec1') %><br>
+                • <%= t('piVibeCardSpec2') %><br>
+                • <%= t('piVibeCardSpec3') %>
             </div>
         </div>
 
@@ -647,7 +647,7 @@
         <!-- Footer -->
         <div class="footer">
             <div class="footer-content">
-                Voor vragen over deze offerte kunt u contact opnemen via <a href="mailto:info@onzevibe.nl">info@onzevibe.nl</a>
+                <%= t('footerContact') %> <a href="mailto:info@onzevibe.nl">info@onzevibe.nl</a>
             </div>
         </div>
     </div>

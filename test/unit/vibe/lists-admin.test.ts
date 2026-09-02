@@ -546,11 +546,12 @@ describe('getOrderEmail', () => {
 });
 
 describe('getQuotationPDF', () => {
-  function arrangeQuotation() {
+  function arrangeQuotation(locale = 'nl') {
     h.prisma.quotation.findUnique.mockResolvedValue({
       id: 4,
       companyId: 1,
       quotationNumber: 'QRS12345678',
+      locale,
     });
     h.prisma.company.findMany.mockResolvedValue([
       { id: 1, name: 'Acme Co!', test: false, _count: { CompanyList: 0 } },
@@ -583,6 +584,17 @@ describe('getQuotationPDF', () => {
       success: false,
       error: 'Archived PDF not found',
     });
+  });
+
+  it('names the re-download after the language the quotation was issued in', async () => {
+    // The archived PDF cannot change, so the filename must follow the stored
+    // quotation locale rather than the company's current one.
+    arrangeQuotation('de');
+    h.fs.access.mockResolvedValue(undefined);
+    h.fs.readFile.mockResolvedValue(Buffer.from('%PDF-fake'));
+
+    const res = await vibe.getQuotationPDF(1, 4, ['admin']);
+    expect(res.filename).toBe('Angebot_Acme_Co__QRS12345678.pdf');
   });
 
   it('streams the archived PDF with a sanitized filename', async () => {

@@ -242,6 +242,118 @@ describe('vibe pricing and quotation views', () => {
       });
       expect(res.statusCode).toBe(404);
     });
+
+    it('renders the quotation in the language from the query string', async () => {
+      // This is the URL the PDF Lambda fetches, so the ?locale it carries is
+      // what decides the language of the customer's quotation.
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-103?locale=de`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="de"');
+      expect(res.body).toContain('Angebotsnummer');
+      expect(res.body).toContain('Gültig bis');
+      expect(res.body).toContain('USt-IdNr.');
+      // German business convention puts the euro sign after the amount.
+      expect(res.body).toMatch(/\d,\d{2}\s*€/);
+      expect(res.body).not.toContain('Offerte');
+    });
+
+    it('falls back to the company language when the query string omits it', async () => {
+      await prisma().company.update({
+        where: { id: companyId },
+        data: { locale: 'de' },
+      });
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/qrsong/${companyId}/Q-2026-104`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('lang="de"');
+        expect(res.body).toContain('Angebot');
+      } finally {
+        await prisma().company.update({
+          where: { id: companyId },
+          data: { locale: 'nl' },
+        });
+      }
+    });
+
+    it('translates the Schneider product description, not just the chrome', async () => {
+      // Regression: the Schneider branch builds its own product description in
+      // the route, and was still emitting Dutch on a German quotation.
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/quotation/schneider/${companyId}/Q-2026-107?locale=de`,
+      });
+      expect(res.statusCode).toBe(200);
+      // The card count depends on whatever calculation an earlier test stored,
+      // so assert on the language rather than a specific size.
+      expect(res.body).toMatch(/QRSong! Box - \d+ Karten/);
+      expect(res.body).toMatch(/Schachtel mit \d+ Fach|Luxusschachtel mit \d+ Fächern/);
+      expect(res.body).not.toContain('vakje');
+      expect(res.body).not.toContain('kaarten');
+      expect(res.body).not.toContain('Doos met');
+    });
+
+    it('falls back to English for a language we do not write quotations in', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-105?locale=fr`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="en"');
+      expect(res.body).toContain('Valid until');
+    });
+
+    it('still renders Dutch, unchanged, for a Dutch company', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-106?locale=nl`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="nl"');
+      expect(res.body).toContain('Geldig tot');
+      expect(res.body).toContain('Algemene Voorwaarden');
+      expect(res.body).toContain('KVK');
+    });
+  });
+
+  describe('technical instructions HTML view', () => {
+    it('renders in the language from the query string', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/technical-instructions/${companyId}?printer=tromp&locale=de`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="de"');
+      expect(res.body).toContain('Technische Anweisungen');
+      // Formal register: never the informal du form.
+      expect(res.body).not.toMatch(/\bdu\b/i);
+      // Printer-specific branching must survive translation.
+      expect(res.body).toContain('60x60mm');
+    });
+
+    it('keeps the schneider card size when translated', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/technical-instructions/${companyId}?printer=schneider&locale=de`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('56x56mm');
+    });
+
+    it('falls back to English for an unsupported language', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/technical-instructions/${companyId}?locale=jp`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="en"');
+      expect(res.body).toContain('Technical Instructions');
+    });
   });
 
   describe('technical instructions and pricing views', () => {
@@ -281,6 +393,67 @@ describe('vibe pricing and quotation views', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
+    });
+
+    it('renders the reseller price list in the requested language', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/reseller-pricing?locale=de',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="de"');
+      expect(res.body).toContain('Händlerausgabe');
+      expect(res.body).toContain('Einkauf, Empfehlung');
+      expect(res.body).toContain('QRSong! für Unternehmen');
+      // Product column names come from the route, not the template.
+      expect(res.body).toContain('48 Karten');
+      // Formal register only.
+      expect(res.body).not.toMatch(/>\s*Inkoop\s*</);
+    });
+
+    it('renders the retail price list in the requested language', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/retail-pricing?locale=de',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="de"');
+      expect(res.body).toContain('Preisliste');
+      expect(res.body).toContain('Empfohlene Preise pro Box');
+      expect(res.body).toContain('zzgl. 21 % MwSt.');
+    });
+
+    it('falls back to English for a language we do not produce price lists in', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/retail-pricing?locale=fr',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="en"');
+      expect(res.body).toContain('Recommended prices per box');
+    });
+
+    it('defaults the price list to English when no language is given', async () => {
+      // These routes carry no company context, so there is nothing to infer
+      // from; the caller has to say which language it wants.
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/retail-pricing',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="en"');
+    });
+
+    it('still renders the Dutch price list unchanged', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/reseller-pricing?locale=nl',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('lang="nl"');
+      expect(res.body).toContain('Inkoop, advies');
+      expect(res.body).toContain('Reseller editie');
+      expect(res.body).toContain('48 kaarten');
     });
 
     it('renders the vibe poster page', async () => {

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="<%= locale %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Informatie &amp; Prijzen (Resellers) - <%= formatDate(new Date()) %></title>
+    <title><%= t('docTitleReseller') %> - <%= formatDate(new Date()) %></title>
 
     <%
         // Both editions share the brand palette; only the sticker label differs.
-        var editionName = 'Reseller editie';
+        var editionName = t('editionReseller');
     %>
 
     <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
@@ -77,8 +77,8 @@
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
         formatDate: formatDate,
-        title: 'Informatie & Prijzen',
-        subtitle: 'Voor resellers',
+        title: t('docTitle'),
+        subtitle: t('subtitleReseller'),
         editionName: editionName,
         version: version
     }) %>
@@ -102,20 +102,20 @@
 
         <div class="sheet-body">
             <div class="section-title">
-                <h2>Inkoop, advies &amp; opslag</h2>
+                <h2><%= t('resellerSectionTitle') %></h2>
                 <div class="bar"></div>
-                <div class="section-meta">Per box, excl. 21% BTW</div>
+                <div class="section-meta"><%= t('resellerSectionMeta', { percent: 21 }) %></div>
             </div>
 
             <div class="price-panel">
                 <table class="pricing-table">
                     <thead>
                         <tr>
-                            <th class="qty-header">Aantal</th>
+                            <th class="qty-header"><%= t('thQuantity') %></th>
                             <% boxGroup.products.forEach((product) => { %>
                             <th>
                                 <span class="col-name"><%= product.name %></span>
-                                <span class="col-sub">per box</span>
+                                <span class="col-sub"><%= t('perBox') %></span>
                             </th>
                             <% }); %>
                         </tr>
@@ -125,7 +125,7 @@
                         <tr>
                             <td class="qty-cell">
                                 <%= formatNumber(qty) %>
-                                <span class="qty-unit">boxen</span>
+                                <span class="qty-unit"><%= t('boxesUnit') %></span>
                             </td>
                             <% boxGroup.products.forEach((product) => {
                                 const priceData = prices[product.id]?.[qty];
@@ -133,22 +133,22 @@
                             <td class="price-cell<%= priceData ? '' : ' price-empty' %>">
                                 <% if (priceData) { %>
                                 <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
-                                <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
+                                <% const marginPercent = formatPercent(priceData.resellerPrice > 0 ? (margin / priceData.resellerPrice) * 100 : 0); %>
                                 <table class="price-stack">
                                     <tr class="row-buy">
-                                        <td class="stack-label">Inkoop</td>
+                                        <td class="stack-label"><%= t('stackPurchase') %></td>
                                         <td class="stack-value"><%= formatCurrency(priceData.resellerPrice) %></td>
                                         <td class="stack-pct"></td>
                                     </tr>
                                     <tr class="row-rrp">
-                                        <td class="stack-label">Advies</td>
+                                        <td class="stack-label"><%= t('stackRecommended') %></td>
                                         <td class="stack-value"><%= formatCurrency(priceData.retailPrice) %></td>
                                         <td class="stack-pct"></td>
                                     </tr>
                                     <tr class="row-margin">
-                                        <td class="stack-label">Opslag</td>
+                                        <td class="stack-label"><%= t('stackMargin') %></td>
                                         <td class="stack-value"><%= formatCurrency(margin) %></td>
-                                        <td class="stack-pct"><%= marginPercent %>%</td>
+                                        <td class="stack-pct"><%= marginPercent %></td>
                                     </tr>
                                 </table>
                                 <% } else { %>
@@ -165,11 +165,11 @@
 
         <div class="sheet-foot">
             <div class="legend">
-                <span class="legend-item"><span class="legend-key" style="background: var(--disco);"></span> Inkoop</span>
-                <span class="legend-item"><span class="legend-key" style="background: var(--disco-45);"></span> Advies</span>
-                <span class="legend-item"><span class="legend-key" style="background: var(--pop);"></span> Opslag</span>
+                <span class="legend-item"><span class="legend-key" style="background: var(--disco);"></span> <%= t('stackPurchase') %></span>
+                <span class="legend-item"><span class="legend-key" style="background: var(--disco-45);"></span> <%= t('stackRecommended') %></span>
+                <span class="legend-item"><span class="legend-key" style="background: var(--pop);"></span> <%= t('stackMargin') %></span>
             </div>
-            <div class="sheet-foot-note">Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.</div>
+            <div class="sheet-foot-note"><%= t('priceDisclaimer') %></div>
         </div>
     </div>
     <% } %>

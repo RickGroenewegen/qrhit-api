@@ -28,6 +28,27 @@ const LOCALE_DATA: LocaleInfo[] = [
   { code: 'no', name: 'Norwegian', greeting: 'Hei', storefront: 'no' },
 ];
 
+/**
+ * Locales we produce formal B2B documents in (quotations, technical
+ * instructions, MoneyBird invoices). Deliberately smaller than LOCALE_DATA:
+ * these documents are commercial correspondence that has to read correctly in
+ * formal register, so every other company locale falls back to English.
+ */
+export const BUSINESS_LOCALES = ['nl', 'de', 'en'] as const;
+export type BusinessLocale = (typeof BUSINESS_LOCALES)[number];
+
+/**
+ * BCP47 tags used for Intl date/number formatting in those documents. These
+ * carry the country conventions for free — de-DE puts the euro sign after the
+ * amount (1.234,56 €) and formats dates as 1. September 2026, where nl-NL puts
+ * it in front (€ 1.234,56).
+ */
+const BUSINESS_INTL_TAGS: Record<BusinessLocale, string> = {
+  nl: 'nl-NL',
+  de: 'de-DE',
+  en: 'en-GB',
+};
+
 class Translation {
   private i18n: I18n;
   private memoryCache: Map<string, Record<string, string>> = new Map();
@@ -122,6 +143,97 @@ class Translation {
     } catch {
       throw new Error(`Locale file for ${locale} not found.`);
     }
+  }
+
+  /**
+   * Narrow any company locale down to one we actually produce business
+   * documents in. Null, unknown and unsupported locales all become English —
+   * this is the single fallback point, so callers never have to guess.
+   */
+  public resolveBusinessLocale(locale?: string | null): BusinessLocale {
+    const code = (locale || '').trim().toLowerCase();
+    return (BUSINESS_LOCALES as readonly string[]).includes(code)
+      ? (code as BusinessLocale)
+      : 'en';
+  }
+
+  /** BCP47 tag for Intl formatters in business documents. */
+  public getIntlTag(locale?: string | null): string {
+    return BUSINESS_INTL_TAGS[this.resolveBusinessLocale(locale)];
+  }
+
+  /**
+   * Same contract as getTranslationsByPrefix, but reads the formal B2B bundle
+   * at locales/business/<locale>.json instead of the (informal) main bundle.
+   * Missing keys fall back to English so a half-translated bundle never
+   * renders "undefined" into a PDF.
+   */
+  public async getBusinessTranslations(
+    locale: string,
+    prefix: string
+  ): Promise<Record<string, string>> {
+    const resolved = this.resolveBusinessLocale(locale);
+    const english = await this.readBusinessBundle('en', prefix);
+    if (resolved === 'en') return english;
+    return { ...english, ...(await this.readBusinessBundle(resolved, prefix)) };
+  }
+
+  /**
+   * Returns a ready-to-use `t(key, vars)` for an EJS view. Templates read far
+   * better as `t('validUntil')` than as raw dictionary lookups, and this keeps
+   * the {{placeholder}} interpolation in one place. An unknown key renders as
+   * the key itself, which is loud in a PDF but never crashes the render.
+   */
+  public async getBusinessTranslator(
+    locale: string,
+    prefix: string
+  ): Promise<(key: string, vars?: Record<string, any>) => string> {
+    const bundle = await this.getBusinessTranslations(locale, prefix);
+    return (key: string, vars?: Record<string, any>) =>
+      Translation.interpolate(bundle[key] ?? key, vars);
+  }
+
+  /** Replace {{name}} placeholders with values from `vars`. */
+  public static interpolate(
+    text: string,
+    vars?: Record<string, any>
+  ): string {
+    if (!vars) return text;
+    return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name) =>
+      vars[name] != null ? String(vars[name]) : match
+    );
+  }
+
+  private async readBusinessBundle(
+    locale: BusinessLocale,
+    prefix: string
+  ): Promise<Record<string, string>> {
+    const cacheKey = `business:${locale}:${prefix}`;
+    const cached = this.memoryCache.get(cacheKey);
+    if (cached) return cached;
+
+    const bundlePath = path.join(
+      `${process.env['APP_ROOT']}/locales/business`,
+      `${locale}.json`
+    );
+
+    const filtered: Record<string, string> = {};
+    try {
+      const translations = JSON.parse(await fs.readFile(bundlePath, 'utf-8'));
+      for (const key in translations) {
+        if (key.startsWith(`${prefix}.`)) {
+          filtered[key.slice(prefix.length + 1)] = translations[key];
+        }
+      }
+    } catch {
+      new Logger().log(
+        color.red.bold('Business locale bundle missing or invalid: ') +
+          white.bold(bundlePath)
+      );
+    }
+
+    this.memoryCache.set(cacheKey, filtered);
+    return filtered;
   }
 
   /**

@@ -5,39 +5,54 @@ const path = require('path');
 const colors = require('colors');
 require('dotenv').config();
 
-const baseDirPath = path.join(__dirname, '/src/locales');
-const inputFile = path.join(baseDirPath, 'en.json');
-const cacheFile = path.join(baseDirPath, 'translated.cache');
-const languages = [
-  'nl',
-  'de',
-  'fr',
-  'es',
-  'it',
-  'pt',
-  'pl',
-  //'hin',
-  'jp',
-  'cn',
-  'sv',
-  'no',
-  //'ru',
+// Translation bundles. The `main` bundle drives the app's own (informal)
+// copy; `business` holds the formal B2B document copy used by quotations,
+// technical instructions and MoneyBird invoice lines, which has to be written
+// in polite register (German Sie, Dutch u) and must never inherit the
+// informal tone of the main bundle.
+const bundles = [
+  {
+    name: 'main',
+    baseDir: path.join(__dirname, '/src/locales'),
+    languages: ['nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no'],
+    languagesFull: [
+      'Dutch',
+      'German',
+      'French',
+      'Spanish',
+      'Italian',
+      'Portuguese',
+      'Polish',
+      'Japanese',
+      'Chinese', // (Simplified)
+      'Swedish',
+      'Norwegian',
+    ],
+    style:
+      '. Be informal. ',
+  },
+  {
+    name: 'business',
+    baseDir: path.join(__dirname, '/src/locales/business'),
+    languages: ['nl', 'de'],
+    languagesFull: ['Dutch', 'German'],
+    style:
+      '. This is formal written business correspondence for a B2B quotation, ' +
+      'invoice or technical specification sheet. Use the formal register ' +
+      'throughout: German must use the Sie form and never du; Dutch must use ' +
+      'the u form. Use each language\'s standard commercial vocabulary ' +
+      '(Angebot, Rechnung, zzgl. MwSt., Gültig bis, Mit freundlichen Grüßen). ' +
+      'Preserve any HTML tags and {{placeholders}} exactly as they appear. ',
+  },
 ];
-const languagesFull = [
-  'Dutch',
-  'German',
-  'French',
-  'Spanish',
-  'Italian',
-  'Portuguese',
-  'Polish',
-  //'Hindi',
-  'Japanese',
-  'Chinese', // (Simplified)
-  //'Russian',
-  'Swedish',
-  'Norwegian',
-];
+
+// Reassigned per bundle by main().
+let baseDirPath = bundles[0].baseDir;
+let inputFile = path.join(baseDirPath, 'en.json');
+let cacheFile = path.join(baseDirPath, 'translated.cache');
+let languages = bundles[0].languages;
+let languagesFull = bundles[0].languagesFull;
+let promptStyle = bundles[0].style;
 
 // Initialize rate limiter with desired limits
 const limiter = new Bottleneck({
@@ -86,7 +101,8 @@ const translate = async (texts, currentPaths, translatedCache) => {
   const prompt =
     'I want you to translate the following texts into ' +
     untranslatedLanguagesFull.join(', ') +
-    '. Be informal. You should return a JSON object where each key is the index of the text (starting from 0), and the value is another object with the keys (' +
+    promptStyle +
+    'You should return a JSON object where each key is the index of the text (starting from 0), and the value is another object with the keys (' +
     untranslatedLanguages.join(',') +
     ') which contain the translations for those languages. Try to keep the translation length the same as the original and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a application that takes Spotify playlists and converts them into physical QR playing cards. The texts you should translate are:\n\n' +
     texts.map((text, index) => `${index}: "${text}"`).join('\n');
@@ -279,7 +295,7 @@ const translateJson = async (
   return languageFiles;
 };
 
-const main = async () => {
+const runBundle = async () => {
   const existingFiles = await checkExistingFiles();
 
   let translatedCache = {};
@@ -309,12 +325,26 @@ const main = async () => {
     languageFiles[lang] = languageData;
   }
 
-  const translatedJson = await translateJson(
-    json,
-    translatedCache,
-    '',
-    languageFiles
-  );
+  await translateJson(json, translatedCache, '', languageFiles);
+};
+
+const main = async () => {
+  // Optional bundle filter: `node translate.js business`
+  const only = process.argv[2];
+  for (const bundle of bundles) {
+    if (only && bundle.name !== only) continue;
+
+    baseDirPath = bundle.baseDir;
+    inputFile = path.join(baseDirPath, 'en.json');
+    cacheFile = path.join(baseDirPath, 'translated.cache');
+    languages = bundle.languages;
+    languagesFull = bundle.languagesFull;
+    promptStyle = bundle.style;
+
+    console.log();
+    console.log('Bundle: '.blue.bold + bundle.name.white.bold);
+    await runBundle();
+  }
 };
 
 main().catch(console.error);

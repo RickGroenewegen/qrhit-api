@@ -201,3 +201,111 @@ describe('translateEmptyFields', () => {
     });
   });
 });
+
+describe('business locales', () => {
+  it('resolves the locales we produce business documents in', () => {
+    expect(translation.resolveBusinessLocale('nl')).toBe('nl');
+    expect(translation.resolveBusinessLocale('de')).toBe('de');
+    expect(translation.resolveBusinessLocale('en')).toBe('en');
+  });
+
+  it('falls back to English for null, empty and non-business locales', () => {
+    // A company row that predates the field, or one set to a language we
+    // support in the app but do not write quotations in.
+    expect(translation.resolveBusinessLocale(null)).toBe('en');
+    expect(translation.resolveBusinessLocale(undefined)).toBe('en');
+    expect(translation.resolveBusinessLocale('')).toBe('en');
+    expect(translation.resolveBusinessLocale('fr')).toBe('en');
+    expect(translation.resolveBusinessLocale('jp')).toBe('en');
+    expect(translation.resolveBusinessLocale('nonsense')).toBe('en');
+  });
+
+  it('normalises case and surrounding whitespace', () => {
+    expect(translation.resolveBusinessLocale(' DE ')).toBe('de');
+  });
+
+  it('maps business locales to their Intl tag', () => {
+    expect(translation.getIntlTag('nl')).toBe('nl-NL');
+    expect(translation.getIntlTag('de')).toBe('de-DE');
+    expect(translation.getIntlTag('en')).toBe('en-GB');
+    expect(translation.getIntlTag('fr')).toBe('en-GB');
+  });
+
+  it('loads a prefixed slice of the business bundle with the prefix stripped', async () => {
+    const t = await translation.getBusinessTranslations('de', 'quotation');
+    expect(t['title']).toBe('Angebot');
+    expect(t['validUntil']).toBe('Gültig bis');
+    // Keys from other prefixes must not leak in.
+    expect(t['boxPdf']).toBeUndefined();
+    expect(Object.keys(t).some((k) => k.startsWith('quotation.'))).toBe(false);
+  });
+
+  const PREFIXES = ['quotation', 'instructions', 'invoice_lines', 'pricing'];
+
+  it.each(PREFIXES)(
+    'keeps German formal in the %s bundle: no informal du/dein',
+    async (prefix) => {
+      // The main app bundle is deliberately informal; business documents must
+      // never inherit that tone.
+      const all = await translation.getBusinessTranslations('de', prefix);
+      const informal = Object.entries(all).filter(([, v]) =>
+        /\b(du|dich|dir|dein|deine|deinem|deiner)\b/i.test(v)
+      );
+      expect(informal).toEqual([]);
+    }
+  );
+
+  it.each(PREFIXES)(
+    'has every %s key in all three business bundles',
+    async (prefix) => {
+      // Guards against a half-translated bundle rendering "undefined" into a PDF.
+      const en = await translation.getBusinessTranslations('en', prefix);
+      expect(Object.keys(en).length).toBeGreaterThan(0);
+      for (const locale of ['nl', 'de']) {
+        const bundle = await translation.getBusinessTranslations(locale, prefix);
+        for (const key of Object.keys(en)) {
+          expect(bundle[key], `${locale} missing ${prefix}.${key}`).toBeTruthy();
+        }
+      }
+    }
+  );
+
+  it('never leaves a {{placeholder}} undeclared in a translated string', async () => {
+    // A placeholder present in a translation but not in the English source
+    // would silently render as literal {{...}} in a customer PDF.
+    for (const prefix of PREFIXES) {
+      const en = await translation.getBusinessTranslations('en', prefix);
+      for (const locale of ['nl', 'de']) {
+        const bundle = await translation.getBusinessTranslations(locale, prefix);
+        for (const [key, value] of Object.entries(bundle)) {
+          const vars = (value.match(/\{\{\s*\w+\s*\}\}/g) || []).sort();
+          const enVars = ((en[key] || '').match(/\{\{\s*\w+\s*\}\}/g) || []).sort();
+          expect(vars, `${locale} ${prefix}.${key}`).toEqual(enVars);
+        }
+      }
+    }
+  });
+
+  it('returns a translator that interpolates placeholders', async () => {
+    const t = await translation.getBusinessTranslator('de', 'quotation');
+    expect(t('discount', { percent: 10 })).toBe('Rabatt (10 %)');
+    expect(t('validUntil')).toBe('Gültig bis');
+  });
+
+  it('renders an unknown key as the key itself rather than undefined', async () => {
+    const t = await translation.getBusinessTranslator('nl', 'quotation');
+    expect(t('doesNotExist')).toBe('doesNotExist');
+  });
+
+  it('leaves placeholders alone when no value is supplied', () => {
+    expect(Translation.interpolate('Total {{a}} of {{b}}', { a: '1' })).toBe(
+      'Total 1 of {{b}}'
+    );
+    expect(Translation.interpolate('No vars here')).toBe('No vars here');
+  });
+
+  it('serves an empty bundle instead of throwing when the locale file is unreadable', async () => {
+    const t = await translation.getBusinessTranslations('en', 'no_such_prefix');
+    expect(t).toEqual({});
+  });
+});

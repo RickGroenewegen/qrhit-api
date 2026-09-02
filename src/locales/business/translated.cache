@@ -1,0 +1,1058 @@
+{
+  "instructions.title": [
+    "nl",
+    "de"
+  ],
+  "instructions.subtitle": [
+    "nl",
+    "de"
+  ],
+  "instructions.fileName": [
+    "nl",
+    "de"
+  ],
+  "instructions.section1Title": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxPdf": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxBleed": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxDieline": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxOverprint": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxNoPms": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxTrimbox": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxThreePdfs": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxResolution": [
+    "nl",
+    "de"
+  ],
+  "instructions.warnLabel": [
+    "nl",
+    "de"
+  ],
+  "instructions.warnFrontSmallBoxes": [
+    "nl",
+    "de"
+  ],
+  "instructions.warnSleeveOrientation": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserTitle": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserIntro": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption1": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption2": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption3": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption4": [
+    "nl",
+    "de"
+  ],
+  "instructions.section2Title": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardSize": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardBleed": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardShift": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardQrCenter": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardImages": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardContrast": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardPsd": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardMetaLayer": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardFont": [
+    "nl",
+    "de"
+  ],
+  "instructions.tipTitle": [
+    "nl",
+    "de"
+  ],
+  "instructions.tipContent": [
+    "nl",
+    "de"
+  ],
+  "instructions.footerContact": [
+    "nl",
+    "de"
+  ],
+  "instructions.generatedOn": [
+    "nl",
+    "de"
+  ],
+  "quotation.title": [
+    "nl",
+    "de"
+  ],
+  "quotation.fileName": [
+    "nl",
+    "de"
+  ],
+  "quotation.issuedBy": [
+    "nl",
+    "de"
+  ],
+  "quotation.addressedTo": [
+    "nl",
+    "de"
+  ],
+  "quotation.labelContact": [
+    "nl",
+    "de"
+  ],
+  "quotation.labelPhone": [
+    "nl",
+    "de"
+  ],
+  "quotation.labelEmail": [
+    "nl",
+    "de"
+  ],
+  "quotation.detailsTitle": [
+    "nl",
+    "de"
+  ],
+  "quotation.number": [
+    "nl",
+    "de"
+  ],
+  "quotation.date": [
+    "nl",
+    "de"
+  ],
+  "quotation.validUntil": [
+    "nl",
+    "de"
+  ],
+  "quotation.thDescription": [
+    "nl",
+    "de"
+  ],
+  "quotation.thQuantity": [
+    "nl",
+    "de"
+  ],
+  "quotation.thUnitPrice": [
+    "nl",
+    "de"
+  ],
+  "quotation.thAmount": [
+    "nl",
+    "de"
+  ],
+  "quotation.subtotal": [
+    "nl",
+    "de"
+  ],
+  "quotation.discount": [
+    "nl",
+    "de"
+  ],
+  "quotation.totalExclVat": [
+    "nl",
+    "de"
+  ],
+  "quotation.vat": [
+    "nl",
+    "de"
+  ],
+  "quotation.totalInclVat": [
+    "nl",
+    "de"
+  ],
+  "quotation.signatureIntro": [
+    "nl",
+    "de"
+  ],
+  "quotation.signatureFor": [
+    "nl",
+    "de"
+  ],
+  "quotation.depositTitle": [
+    "nl",
+    "de"
+  ],
+  "quotation.depositText": [
+    "nl",
+    "de"
+  ],
+  "quotation.footerContact": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemOneOff": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemCustomApp": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemCustomAppDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemVotingPortal": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemVotingPortalDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemVibeBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemWithPersonalization": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemNoPersonalization": [
+    "nl",
+    "de"
+  ],
+  "quotation.itemSingleLocation": [
+    "nl",
+    "de"
+  ],
+  "quotation.productLuxeBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.productLuxeBoxDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.productCardSet": [
+    "nl",
+    "de"
+  ],
+  "quotation.productSmallBoxDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.productStandardBoxDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.productHappiBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.productHappiBoxDetails": [
+    "nl",
+    "de"
+  ],
+  "quotation.productInfoTitle": [
+    "nl",
+    "de"
+  ],
+  "quotation.piWhatIsDelivered": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSpecsBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSpecsBoxes": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSpecsCards": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeSets": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeSetContains": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeTotal": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeBoxSpec1": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeBoxSpec2": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeCardSpec1": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeCardSpec2": [
+    "nl",
+    "de"
+  ],
+  "quotation.piVibeCardSpec3": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderBoxes": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderCardsPerBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderTotal": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneider48a": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneider48b": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneider96": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneider144": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderOther": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderBoard": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderCard1": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderCard2": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderCard3": [
+    "nl",
+    "de"
+  ],
+  "quotation.piSchneiderCard4": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompSets": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompSetContains": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompTotal": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox1": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox2": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox3": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox4": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox5": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompBox6": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompCard1": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompCard2": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompCard3": [
+    "nl",
+    "de"
+  ],
+  "quotation.piTrompCard4": [
+    "nl",
+    "de"
+  ],
+  "quotation.termsTitle": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms01": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms02": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms03": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms04": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms05": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms06": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms07": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms08": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms09": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms10": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms11": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms12": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms13": [
+    "nl",
+    "de"
+  ],
+  "quotation.terms14": [
+    "nl",
+    "de"
+  ],
+  "quotation.ipTitle": [
+    "nl",
+    "de"
+  ],
+  "quotation.ip1": [
+    "nl",
+    "de"
+  ],
+  "quotation.ip2": [
+    "nl",
+    "de"
+  ],
+  "quotation.ip3": [
+    "nl",
+    "de"
+  ],
+  "quotation.ip4": [
+    "nl",
+    "de"
+  ],
+  "quotation.ip5": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.qrsongBox": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.vibeBox": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.extraOneOff": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.customApp": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.votingPortal": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.discount": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.downPayment": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.remainingPayment": [
+    "nl",
+    "de"
+  ],
+  "quotation.senderCoc": [
+    "nl",
+    "de"
+  ],
+  "quotation.senderVat": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.luxeBox": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.smallBox": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.standardBox": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.detailPersonalization": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.detailNoPersonalization": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.detailSingleLocation": [
+    "nl",
+    "de"
+  ],
+  "pricing.docTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.docTitleReseller": [
+    "nl",
+    "de"
+  ],
+  "pricing.editionRetail": [
+    "nl",
+    "de"
+  ],
+  "pricing.editionReseller": [
+    "nl",
+    "de"
+  ],
+  "pricing.subtitleReseller": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverKicker": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTagline": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverContents": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack1": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack1Note": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack2": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack2Note": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack3": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverTrack3Note": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverEdition": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverVersion": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverContact": [
+    "nl",
+    "de"
+  ],
+  "pricing.productSheetTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.howItWorks": [
+    "nl",
+    "de"
+  ],
+  "pricing.leadStrong": [
+    "nl",
+    "de"
+  ],
+  "pricing.leadBody": [
+    "nl",
+    "de"
+  ],
+  "pricing.serviceSpotifyNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.serviceAllPlans": [
+    "nl",
+    "de"
+  ],
+  "pricing.productIntro": [
+    "nl",
+    "de"
+  ],
+  "pricing.specCardFormat": [
+    "nl",
+    "de"
+  ],
+  "pricing.specCardFormatValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMaterial": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMaterialValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMinimumOrder": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMinimumOrderValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.specLeadTime": [
+    "nl",
+    "de"
+  ],
+  "pricing.specLeadTimeValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.threeFormats": [
+    "nl",
+    "de"
+  ],
+  "pricing.variantCards": [
+    "nl",
+    "de"
+  ],
+  "pricing.variantAlt": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant48Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant48Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant96Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant96Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant192Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.variant192Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.productFootNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.orderingSheetTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.extraOptions": [
+    "nl",
+    "de"
+  ],
+  "pricing.oneOffCosts": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonAppName": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonAppCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonPortalName": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonPortalCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonDesignName": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonDesignPrice": [
+    "nl",
+    "de"
+  ],
+  "pricing.addonDesignCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.orderProcess": [
+    "nl",
+    "de"
+  ],
+  "pricing.fiveSteps": [
+    "nl",
+    "de"
+  ],
+  "pricing.step1Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.step1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.step2Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.step2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.step3Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.step3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.step4Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.step4Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.step5Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.step5Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.designAndPlaylist": [
+    "nl",
+    "de"
+  ],
+  "pricing.choosePerItem": [
+    "nl",
+    "de"
+  ],
+  "pricing.designOptions": [
+    "nl",
+    "de"
+  ],
+  "pricing.design1Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.design1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.design2Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.design2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.design3Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.design3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlistOptions": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist1Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist2Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist3Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.playlist3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.deliveryLabel": [
+    "nl",
+    "de"
+  ],
+  "pricing.deliveryValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.orderingFootLabel": [
+    "nl",
+    "de"
+  ],
+  "pricing.orderingFootNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.retailSectionTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.retailSectionMeta": [
+    "nl",
+    "de"
+  ],
+  "pricing.retailFootTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.resellerSectionTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.resellerSectionMeta": [
+    "nl",
+    "de"
+  ],
+  "pricing.thQuantity": [
+    "nl",
+    "de"
+  ],
+  "pricing.perBox": [
+    "nl",
+    "de"
+  ],
+  "pricing.boxesUnit": [
+    "nl",
+    "de"
+  ],
+  "pricing.stackPurchase": [
+    "nl",
+    "de"
+  ],
+  "pricing.stackRecommended": [
+    "nl",
+    "de"
+  ],
+  "pricing.stackMargin": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceDisclaimer": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingKicker": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingEmail": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingWebsite": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingSample": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingSampleValue": [
+    "nl",
+    "de"
+  ],
+  "quotation.productSchneiderBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.schneider48Details": [
+    "nl",
+    "de"
+  ],
+  "quotation.schneider96Details": [
+    "nl",
+    "de"
+  ],
+  "quotation.schneider144Details": [
+    "nl",
+    "de"
+  ],
+  "quotation.schneider192Details": [
+    "nl",
+    "de"
+  ],
+  "quotation.schneiderDefaultDetails": [
+    "nl",
+    "de"
+  ],
+  "extras.dielineDrawing": [
+    "nl",
+    "de"
+  ],
+  "extras.cuttingDie": [
+    "nl",
+    "de"
+  ],
+  "extras.cuttingDieBox": [
+    "nl",
+    "de"
+  ]
+}

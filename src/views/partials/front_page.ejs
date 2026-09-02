@@ -206,41 +206,41 @@
                 <div class="sticker"><%= editionName %></div>
             </div>
 
-            <div class="cover-kicker">QRSong! voor bedrijven</div>
+            <div class="cover-kicker"><%= t('coverKicker') %></div>
             <div class="cover-title"><%= title %></div>
             <div class="cover-rule"></div>
-            <div class="cover-tagline">Your vibe. Your music. Het muzikale cadeau dat echt van jullie is.</div>
+            <div class="cover-tagline"><%= t('coverTagline') %></div>
 
             <div class="cover-tracks">
-                <div class="cover-tracks-label">In deze uitgave</div>
+                <div class="cover-tracks-label"><%= t('coverContents') %></div>
                 <div class="cover-track">
                     <span class="cover-track-num">01</span>
-                    <span class="cover-track-name">Het product</span>
-                    <span class="cover-track-note">Formaten &amp; specificaties</span>
+                    <span class="cover-track-name"><%= t('coverTrack1') %></span>
+                    <span class="cover-track-note"><%= t('coverTrack1Note') %></span>
                 </div>
                 <div class="cover-track">
                     <span class="cover-track-num">02</span>
-                    <span class="cover-track-name">Bestellen &amp; opties</span>
-                    <span class="cover-track-note">Proces, design &amp; playlist</span>
+                    <span class="cover-track-name"><%= t('coverTrack2') %></span>
+                    <span class="cover-track-note"><%= t('coverTrack2Note') %></span>
                 </div>
                 <div class="cover-track">
                     <span class="cover-track-num">03</span>
-                    <span class="cover-track-name">Prijzen</span>
-                    <span class="cover-track-note">Per staffel, per box</span>
+                    <span class="cover-track-name"><%= t('coverTrack3') %></span>
+                    <span class="cover-track-note"><%= t('coverTrack3Note') %></span>
                 </div>
             </div>
 
             <div class="cover-foot">
                 <div class="cover-foot-item">
-                    <div class="cover-foot-label">Uitgave</div>
+                    <div class="cover-foot-label"><%= t('coverEdition') %></div>
                     <div class="cover-foot-value"><%= formatDate(new Date()) %></div>
                 </div>
                 <div class="cover-foot-item">
-                    <div class="cover-foot-label">Versie</div>
+                    <div class="cover-foot-label"><%= t('coverVersion') %></div>
                     <div class="cover-foot-value"><%= version %></div>
                 </div>
                 <div class="cover-foot-item">
-                    <div class="cover-foot-label">Contact</div>
+                    <div class="cover-foot-label"><%= t('coverContact') %></div>
                     <div class="cover-foot-value pop">www.qrsong.io</div>
                 </div>
             </div>

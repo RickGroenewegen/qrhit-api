@@ -361,7 +361,7 @@ describe('finalizeList — edge cases', () => {
 
 describe('buildInvoiceLineItems — description and extras variants', () => {
   beforeEach(() => {
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme' });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
   });
 
   it('qrsong luxe description with extras and voting portal lines', async () => {
@@ -380,7 +380,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.success).toBe(true);
     expect(res.items![0].description).toBe(
-      'QRSong! Luxe doos — Luxe doos met 200 kaarten en bedrukte chips'
+      'QRSong! Luxe doos - Luxe doos met 200 kaarten en bedrukte chips'
     );
     expect(res.items).toContainEqual({
       description: 'Stansvorm (eenmalige kosten)',
@@ -388,7 +388,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
       price: '425.00',
     });
     expect(res.items).toContainEqual({
-      description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+      description: 'Voting Portal - eenmalige kosten, gebruik stemportaal',
       amount: '1',
       price: '500.00',
     });
@@ -409,7 +409,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.items![0].description).toBe(
-      'QRSong! muziekkaarten set — Klein voorbedrukt doosje met 100 kaarten'
+      'QRSong! muziekkaarten set - Klein voorbedrukt doosje met 100 kaarten'
     );
   });
 
@@ -431,8 +431,8 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     const descriptions = res.items!.map((i) => i.description);
     expect(descriptions).toEqual([
       'QRSong! Box - 48 kaarten',
-      'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
-      'Voting Portal — eenmalige kosten, gebruik stemportaal',
+      'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
+      'Voting Portal - eenmalige kosten, gebruik stemportaal',
     ]);
     // No duplicated "(eenmalige kosten)" lines for app/voting extras
     expect(descriptions.filter((d) => d.includes('eenmalige kosten'))).toHaveLength(2);
@@ -452,7 +452,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
     expect(res.items).toContainEqual({
-      description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+      description: 'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
       amount: '1',
       price: '350.00',
     });

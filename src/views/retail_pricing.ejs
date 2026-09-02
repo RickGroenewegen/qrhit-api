@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="<%= locale %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Informatie &amp; Prijzen - <%= formatDate(new Date()) %></title>
+    <title><%= t('docTitle') %> - <%= formatDate(new Date()) %></title>
 
     <%
         // Both editions share the brand palette; only the sticker label differs.
-        var editionName = 'Prijslijst';
+        var editionName = t('editionRetail');
         var version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
     %>
 
@@ -18,7 +18,7 @@
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
         formatDate: formatDate,
-        title: 'Informatie & Prijzen',
+        title: t('docTitle'),
         subtitle: '',
         editionName: editionName,
         version: version
@@ -43,20 +43,20 @@
 
         <div class="sheet-body">
             <div class="section-title">
-                <h2>Adviesprijzen per box</h2>
+                <h2><%= t('retailSectionTitle') %></h2>
                 <div class="bar"></div>
-                <div class="section-meta">Excl. 21% BTW, incl. verzending</div>
+                <div class="section-meta"><%= t('retailSectionMeta', { percent: 21 }) %></div>
             </div>
 
             <div class="price-panel">
                 <table class="pricing-table">
                     <thead>
                         <tr>
-                            <th class="qty-header">Aantal</th>
+                            <th class="qty-header"><%= t('thQuantity') %></th>
                             <% boxGroup.products.forEach((product) => { %>
                             <th>
                                 <span class="col-name"><%= product.name %></span>
-                                <span class="col-sub">per box</span>
+                                <span class="col-sub"><%= t('perBox') %></span>
                             </th>
                             <% }); %>
                         </tr>
@@ -66,7 +66,7 @@
                         <tr>
                             <td class="qty-cell">
                                 <%= formatNumber(qty) %>
-                                <span class="qty-unit">boxen</span>
+                                <span class="qty-unit"><%= t('boxesUnit') %></span>
                             </td>
                             <% boxGroup.products.forEach((product) => {
                                 const priceData = prices[product.id]?.[qty];
@@ -83,8 +83,8 @@
         </div>
 
         <div class="sheet-foot">
-            <div><strong>QRSong! Box</strong> &nbsp;Adviesprijzen per box</div>
-            <div class="sheet-foot-note">Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.</div>
+            <div><strong>QRSong! Box</strong> &nbsp;<%= t('retailFootTitle') %></div>
+            <div class="sheet-foot-note"><%= t('priceDisclaimer') %></div>
         </div>
     </div>
     <% } %>

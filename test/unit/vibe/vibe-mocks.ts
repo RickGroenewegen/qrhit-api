@@ -14,6 +14,9 @@
  *   );
  */
 import { vi } from 'vitest';
+// node: prefixed so these keep working in suites that mock 'fs/promises'.
+import { readFileSync } from 'node:fs';
+import { join as joinPath } from 'node:path';
 
 function model(...methods: string[]): Record<string, ReturnType<typeof vi.fn>> {
   const m: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -203,9 +206,55 @@ export function generatorModule() {
 }
 
 export function translationModule() {
+  // The business-locale helpers read the real locales/business/*.json
+  // bundles rather than returning canned strings, so a key that goes missing
+  // from a bundle shows up as a failing vibe test instead of a broken PDF.
+  const businessLocales = ['nl', 'de', 'en'];
+  const intlTags: Record<string, string> = {
+    nl: 'nl-NL',
+    de: 'de-DE',
+    en: 'en-GB',
+  };
+  const resolve = (locale?: string | null) => {
+    const code = (locale || '').trim().toLowerCase();
+    return businessLocales.includes(code) ? code : 'en';
+  };
+  const readBundle = (locale: string, prefix: string) => {
+    const raw = JSON.parse(
+      readFileSync(
+        joinPath(process.env['APP_ROOT']!, 'locales', 'business', `${locale}.json`),
+        'utf-8'
+      )
+    ) as Record<string, string>;
+    const out: Record<string, string> = {};
+    for (const key of Object.keys(raw)) {
+      if (key.startsWith(`${prefix}.`)) out[key.slice(prefix.length + 1)] = raw[key]!;
+    }
+    return out;
+  };
+
   return {
     default: class {
       allLocales = TEST_LOCALES;
+      isValidLocale = (locale: string) => TEST_LOCALES.includes(locale);
+      resolveBusinessLocale = resolve;
+      getIntlTag = (locale?: string | null) => intlTags[resolve(locale)]!;
+      getBusinessTranslations = async (locale: string, prefix: string) => {
+        const resolved = resolve(locale);
+        const en = readBundle('en', prefix);
+        return resolved === 'en' ? en : { ...en, ...readBundle(resolved, prefix) };
+      };
+      getBusinessTranslator = async (locale: string, prefix: string) => {
+        const bundle = await this.getBusinessTranslations(locale, prefix);
+        return (key: string, vars?: Record<string, any>) => {
+          const text = bundle[key] ?? key;
+          return vars
+            ? text.replace(/\{\{\s*(\w+)\s*\}\}/g, (m: string, n: string) =>
+                vars[n] != null ? String(vars[n]) : m
+              )
+            : text;
+        };
+      };
     },
   };
 }

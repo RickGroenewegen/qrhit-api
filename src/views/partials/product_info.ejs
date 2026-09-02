@@ -383,7 +383,7 @@
     <div class="sheet-head">
         <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
         <div class="sheet-head-right">
-            <div class="sheet-head-title">Het product</div>
+            <div class="sheet-head-title"><%= t('productSheetTitle') %></div>
             <div class="sticker"><%= editionName %></div>
         </div>
     </div>
@@ -391,23 +391,21 @@
     <div class="sheet-body spread">
         <div class="block">
         <div class="section-title">
-            <h2>Hoe werkt het</h2>
+            <h2><%= t('howItWorks') %></h2>
                 <div class="bar"></div>
         </div>
 
         <p class="lead">
-            <strong>QRSong! is een persoonlijk muziekspel met QR-muziekkaarten.</strong>
-            Scan met de gratis QRSong! app, speel het muziekfragment af en raad samen het nummer.
-            De muziek speelt verborgen binnen de app, via het bestaande muziekabonnement van de
-            speler. Wij ondersteunen alle populaire streamingdiensten.
+            <strong><%= t('leadStrong') %></strong>
+            <%= t('leadBody') %>
         </p>
 
         <div class="services">
-            <div class="service"><span class="service-name">Spotify</span><span class="service-note">Premium &amp; Free</span></div>
-            <div class="service"><span class="service-name">Apple Music</span><span class="service-note">Alle abonnementen</span></div>
-            <div class="service"><span class="service-name">YouTube Music</span><span class="service-note">Alle abonnementen</span></div>
-            <div class="service"><span class="service-name">Deezer</span><span class="service-note">Alle abonnementen</span></div>
-            <div class="service"><span class="service-name">Tidal</span><span class="service-note">Alle abonnementen</span></div>
+            <div class="service"><span class="service-name">Spotify</span><span class="service-note"><%= t('serviceSpotifyNote') %></span></div>
+            <div class="service"><span class="service-name">Apple Music</span><span class="service-note"><%= t('serviceAllPlans') %></span></div>
+            <div class="service"><span class="service-name">YouTube Music</span><span class="service-note"><%= t('serviceAllPlans') %></span></div>
+            <div class="service"><span class="service-name">Deezer</span><span class="service-note"><%= t('serviceAllPlans') %></span></div>
+            <div class="service"><span class="service-name">Tidal</span><span class="service-note"><%= t('serviceAllPlans') %></span></div>
         </div>
         </div>
 
@@ -417,27 +415,24 @@
             <div class="product-rule"></div>
         </div>
 
-        <p class="product-intro">
-            Verkrijgbaar in drie formaten, van compact geschenkje tot volledig spel.
-            Alle varianten zijn volledig te bedrukken in uw huisstijl.
-        </p>
+        <p class="product-intro"><%= t('productIntro') %></p>
 
         <div class="specs">
             <div class="spec">
-                <div class="spec-label">Kaartformaat</div>
-                <div class="spec-value">56 x 56 mm<br>afgeronde hoeken</div>
+                <div class="spec-label"><%= t('specCardFormat') %></div>
+                <div class="spec-value"><%- t('specCardFormatValue') %></div>
             </div>
             <div class="spec">
-                <div class="spec-label">Materiaal</div>
-                <div class="spec-value">350 grams karton<br>met glanslaminaat</div>
+                <div class="spec-label"><%= t('specMaterial') %></div>
+                <div class="spec-value"><%- t('specMaterialValue') %></div>
             </div>
             <div class="spec">
-                <div class="spec-label">Minimale afname</div>
-                <div class="spec-value">100 boxen</div>
+                <div class="spec-label"><%= t('specMinimumOrder') %></div>
+                <div class="spec-value"><%= t('specMinimumOrderValue') %></div>
             </div>
             <div class="spec">
-                <div class="spec-label">Levertijd</div>
-                <div class="spec-value">Circa 3 weken</div>
+                <div class="spec-label"><%= t('specLeadTime') %></div>
+                <div class="spec-value"><%= t('specLeadTimeValue') %></div>
             </div>
         </div>
 
@@ -445,50 +440,50 @@
 
         <div class="block">
         <div class="section-title">
-            <h2>Drie formaten</h2>
+            <h2><%= t('threeFormats') %></h2>
                 <div class="bar"></div>
         </div>
 
         <div class="variants">
             <div class="variant">
                 <div class="variant-shot">
-                    <img src="<%= baseUrl %>/assets/images/1x1.jpeg" alt="Box met 48 kaarten" />
+                    <img src="<%= baseUrl %>/assets/images/1x1.jpeg" alt="<%= t('variantAlt', { count: 48 }) %>" />
                 </div>
                 <div class="variant-head">
                     <span class="variant-count">48</span>
-                    <span class="variant-unit">kaarten</span>
+                    <span class="variant-unit"><%= t('variantCards') %></span>
                 </div>
-                <div class="variant-spec">Gelamineerde doos met zijklepje</div>
-                <div class="variant-copy">Compact en betaalbaar. Ideaal als bedankje, relatiegeschenk of voor de Dag van de Zorg.</div>
+                <div class="variant-spec"><%= t('variant48Spec') %></div>
+                <div class="variant-copy"><%= t('variant48Copy') %></div>
             </div>
             <div class="variant">
                 <div class="variant-shot">
-                    <img src="<%= baseUrl %>/assets/images/2x1.jpeg" alt="Box met 96 kaarten" />
+                    <img src="<%= baseUrl %>/assets/images/2x1.jpeg" alt="<%= t('variantAlt', { count: 96 }) %>" />
                 </div>
                 <div class="variant-head">
                     <span class="variant-count">96</span>
-                    <span class="variant-unit">kaarten</span>
+                    <span class="variant-unit"><%= t('variantCards') %></span>
                 </div>
-                <div class="variant-spec">Stevig SK2 karton, binnen en buiten bedrukbaar</div>
-                <div class="variant-copy">2 x 48 in banderol, 2-vaks doos met los dekseltje. De populaire tussenweg.</div>
+                <div class="variant-spec"><%= t('variant96Spec') %></div>
+                <div class="variant-copy"><%= t('variant96Copy') %></div>
             </div>
             <div class="variant">
                 <div class="variant-shot">
-                    <img src="<%= baseUrl %>/assets/images/2x2.jpeg" alt="Box met 192 kaarten" />
+                    <img src="<%= baseUrl %>/assets/images/2x2.jpeg" alt="<%= t('variantAlt', { count: 192 }) %>" />
                 </div>
                 <div class="variant-head">
                     <span class="variant-count">192</span>
-                    <span class="variant-unit">kaarten</span>
+                    <span class="variant-unit"><%= t('variantCards') %></span>
                 </div>
-                <div class="variant-spec">Stevig SK2 karton, binnen en buiten bedrukbaar</div>
-                <div class="variant-copy">4 x 48 in banderol, 4-vaks doos met los dekseltje. Vergelijkbaar met winkelspellen.</div>
+                <div class="variant-spec"><%= t('variant96Spec') %></div>
+                <div class="variant-copy"><%= t('variant192Copy') %></div>
             </div>
         </div>
         </div>
     </div>
 
     <div class="sheet-foot">
-        <div><strong>QRSong! Box</strong> &nbsp;Het muzikale cadeau dat echt van jullie is.</div>
+        <div><strong>QRSong! Box</strong> &nbsp;<%= t('productFootNote') %></div>
         <div class="sheet-foot-note">www.qrsong.io</div>
     </div>
 </div>
@@ -498,7 +493,7 @@
     <div class="sheet-head">
         <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
         <div class="sheet-head-right">
-            <div class="sheet-head-title">Bestellen &amp; opties</div>
+            <div class="sheet-head-title"><%= t('orderingSheetTitle') %></div>
             <div class="sticker"><%= editionName %></div>
         </div>
     </div>
@@ -506,32 +501,32 @@
     <div class="sheet-body spread">
         <div class="block">
         <div class="section-title">
-            <h2>Extra opties</h2>
+            <h2><%= t('extraOptions') %></h2>
                 <div class="bar"></div>
-            <div class="section-meta">Eenmalige kosten</div>
+            <div class="section-meta"><%= t('oneOffCosts') %></div>
         </div>
 
         <div class="addons">
             <div class="addon">
                 <div class="addon-head">
-                    <span class="addon-name">Eigen app</span>
+                    <span class="addon-name"><%= t('addonAppName') %></span>
                     <span class="addon-price">&euro; 350</span>
                 </div>
-                <div class="addon-copy">De scan-ervaring volledig in uw huisstijl. Uw logo en kleuren bij het afspelen van de muziek.</div>
+                <div class="addon-copy"><%= t('addonAppCopy') %></div>
             </div>
             <div class="addon">
                 <div class="addon-head">
-                    <span class="addon-name">Stemportaal</span>
+                    <span class="addon-name"><%= t('addonPortalName') %></span>
                     <span class="addon-price">&euro; 500</span>
                 </div>
-                <div class="addon-copy">Laat medewerkers stemmen op hun favoriete nummers. Volledig branded in uw huisstijl.</div>
+                <div class="addon-copy"><%= t('addonPortalCopy') %></div>
             </div>
             <div class="addon">
                 <div class="addon-head">
-                    <span class="addon-name">Design service</span>
-                    <span class="addon-price">Op offerte</span>
+                    <span class="addon-name"><%= t('addonDesignName') %></span>
+                    <span class="addon-price"><%= t('addonDesignPrice') %></span>
                 </div>
-                <div class="addon-copy">Onze designers maken een uniek ontwerp voor uw box en kaarten.</div>
+                <div class="addon-copy"><%= t('addonDesignCopy') %></div>
             </div>
         </div>
 
@@ -539,36 +534,36 @@
 
         <div class="block">
         <div class="section-title">
-            <h2>Bestelproces</h2>
+            <h2><%= t('orderProcess') %></h2>
                 <div class="bar"></div>
-            <div class="section-meta">Vijf stappen</div>
+            <div class="section-meta"><%= t('fiveSteps') %></div>
         </div>
 
         <div class="steps">
             <div class="step">
                 <div class="step-num">01</div>
-                <div class="step-title">Offerte</div>
-                <div class="step-copy">Vraag vrijblijvend een offerte aan via onze website.</div>
+                <div class="step-title"><%= t('step1Title') %></div>
+                <div class="step-copy"><%= t('step1Copy') %></div>
             </div>
             <div class="step">
                 <div class="step-num">02</div>
-                <div class="step-title">Aanleveren</div>
-                <div class="step-copy">Lever artwork en playlist aan, of kies een standaard set.</div>
+                <div class="step-title"><%= t('step2Title') %></div>
+                <div class="step-copy"><%= t('step2Copy') %></div>
             </div>
             <div class="step">
                 <div class="step-num">03</div>
-                <div class="step-title">Proofing</div>
-                <div class="step-copy">U ontvangt een digitale proof ter goedkeuring.</div>
+                <div class="step-title"><%= t('step3Title') %></div>
+                <div class="step-copy"><%= t('step3Copy') %></div>
             </div>
             <div class="step">
                 <div class="step-num">04</div>
-                <div class="step-title">Productie</div>
-                <div class="step-copy">Na uw goedkeuring start de productie.</div>
+                <div class="step-title"><%= t('step4Title') %></div>
+                <div class="step-copy"><%= t('step4Copy') %></div>
             </div>
             <div class="step">
                 <div class="step-num">05</div>
-                <div class="step-title">Levering</div>
-                <div class="step-copy">Bezorging op locatie, op het afgesproken moment.</div>
+                <div class="step-title"><%= t('step5Title') %></div>
+                <div class="step-copy"><%= t('step5Copy') %></div>
             </div>
         </div>
 
@@ -576,57 +571,57 @@
 
         <div class="block">
         <div class="section-title">
-            <h2>Design &amp; playlist</h2>
+            <h2><%= t('designAndPlaylist') %></h2>
                 <div class="bar"></div>
-            <div class="section-meta">U kiest per onderdeel</div>
+            <div class="section-meta"><%= t('choosePerItem') %></div>
         </div>
 
         <div class="choices">
             <div class="choice-col">
-                <div class="choice-head">Design opties</div>
+                <div class="choice-head"><%= t('designOptions') %></div>
                 <div class="choice">
                     <div class="choice-idx">01</div>
                     <div class="choice-body">
-                        <div class="choice-name">Eigen design aanleveren</div>
-                        <div class="choice-copy">Lever uw artwork aan volgens onze technische specificaties: PDF voor dozen, PSD voor kaarten.</div>
+                        <div class="choice-name"><%= t('design1Name') %></div>
+                        <div class="choice-copy"><%= t('design1Copy') %></div>
                     </div>
                 </div>
                 <div class="choice">
                     <div class="choice-idx">02</div>
                     <div class="choice-body">
-                        <div class="choice-name">Onze designers</div>
-                        <div class="choice-copy">Wij maken een uniek ontwerp voor u. Meerprijs op offertebasis.</div>
+                        <div class="choice-name"><%= t('design2Name') %></div>
+                        <div class="choice-copy"><%= t('design2Copy') %></div>
                     </div>
                 </div>
                 <div class="choice">
                     <div class="choice-idx">03</div>
                     <div class="choice-body">
-                        <div class="choice-name">Standaard design</div>
-                        <div class="choice-copy">Kies ons neutrale standaard ontwerp, zonder branding.</div>
+                        <div class="choice-name"><%= t('design3Name') %></div>
+                        <div class="choice-copy"><%= t('design3Copy') %></div>
                     </div>
                 </div>
             </div>
             <div class="choice-col">
-                <div class="choice-head">Playlist opties</div>
+                <div class="choice-head"><%= t('playlistOptions') %></div>
                 <div class="choice">
                     <div class="choice-idx">01</div>
                     <div class="choice-body">
-                        <div class="choice-name">Eigen playlist</div>
-                        <div class="choice-copy">Lever een Spotify playlist link aan met uw gekozen nummers.</div>
+                        <div class="choice-name"><%= t('playlist1Name') %></div>
+                        <div class="choice-copy"><%= t('playlist1Copy') %></div>
                     </div>
                 </div>
                 <div class="choice">
                     <div class="choice-idx">02</div>
                     <div class="choice-body">
-                        <div class="choice-name">Stemportaal</div>
-                        <div class="choice-copy">Laat medewerkers stemmen op hun favoriete nummers. Meerprijs.</div>
+                        <div class="choice-name"><%= t('playlist2Name') %></div>
+                        <div class="choice-copy"><%= t('playlist2Copy') %></div>
                     </div>
                 </div>
                 <div class="choice">
                     <div class="choice-idx">03</div>
                     <div class="choice-body">
-                        <div class="choice-name">Thema-playlists</div>
-                        <div class="choice-copy">Kies uit honderden kant-en-klare playlists met diverse thema's.</div>
+                        <div class="choice-name"><%= t('playlist3Name') %></div>
+                        <div class="choice-copy"><%= t('playlist3Copy') %></div>
                     </div>
                 </div>
             </div>
@@ -640,25 +635,25 @@
                 <img src="<%= baseUrl %>/assets/images/brand/note8_pop.png" alt="" />
             </div>
             <div class="delivery-item">
-                <div class="delivery-label">Levertijd</div>
-                <div class="delivery-value">Circa 3 weken</div>
+                <div class="delivery-label"><%= t('specLeadTime') %></div>
+                <div class="delivery-value"><%= t('specLeadTimeValue') %></div>
             </div>
             <div class="delivery-sep"></div>
             <div class="delivery-item">
-                <div class="delivery-label">Minimale afname</div>
-                <div class="delivery-value">100 boxen</div>
+                <div class="delivery-label"><%= t('specMinimumOrder') %></div>
+                <div class="delivery-value"><%= t('specMinimumOrderValue') %></div>
             </div>
             <div class="delivery-sep"></div>
             <div class="delivery-item">
-                <div class="delivery-label">Levering</div>
-                <div class="delivery-value">Op locatie</div>
+                <div class="delivery-label"><%= t('deliveryLabel') %></div>
+                <div class="delivery-value"><%= t('deliveryValue') %></div>
             </div>
         </div>
         </div>
     </div>
 
     <div class="sheet-foot">
-        <div><strong>Bestellen</strong> &nbsp;zakelijk@qrsong.io</div>
-        <div class="sheet-foot-note">Prijzen excl. 21% BTW</div>
+        <div><strong><%= t('orderingFootLabel') %></strong> &nbsp;zakelijk@qrsong.io</div>
+        <div class="sheet-foot-note"><%= t('orderingFootNote', { percent: 21 }) %></div>
     </div>
 </div>

@@ -42,6 +42,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Translations are stored in `src/locales/*.json` (en.json, nl.json, de.json, etc.)
 - Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`
 - After modifying translation keys, run `remove-from-cache.sh` with the changed keys to ensure they get regenerated
+- `translate.js` runs both bundles; `node translate.js business` limits it to one
+
+### Business document copy (`src/locales/business/`)
+
+Quotations, technical instruction PDFs and MoneyBird invoice lines are B2B
+correspondence and must read as **formal** (German `Sie`, Dutch `u`). The main
+`src/locales/*.json` bundle is deliberately informal (`translate.js` prompts for
+German `du`), so that copy must never be reused for these documents. They read
+from a separate bundle instead:
+
+- `src/locales/business/{en,nl,de}.json` — flat dotted keys under the
+  `quotation.*`, `instructions.*`, `invoice_lines.*` and `pricing.*` prefixes
+  (`pricing.*` covers the retail/reseller price lists and the brochure
+  partials `front_page`, `product_info` and `closing_page` they share).
+- Only these three languages are produced. `Translation.resolveBusinessLocale()`
+  is the single fallback point: any other `Company.locale` becomes `en`. Missing
+  keys fall back to the English string, never to `undefined`.
+- `nl.json` is the original hand-written Dutch (it is the source these documents
+  were written in) and `de.json` is hand-written German. Both are pre-seeded in
+  `src/locales/business/translated.cache`, so `translate.js` will not overwrite
+  them; only newly added keys get generated, using the bundle's formal prompt.
+- **The Algemene Voorwaarden / IP clauses in this bundle are contract text.**
+  Have any change to `quotation.terms*` / `quotation.ip*` reviewed before it
+  reaches a customer.
+
+Consume them via `translation.getBusinessTranslator(locale, prefix)`, which
+returns a `t(key, vars)` for EJS views, and `translation.getIntlTag(locale)` for
+date/currency formatting (this is what makes German render `1.234,56 €` and
+`1. September 2026`). All four PDF routes (quotation, technical instructions,
+retail and reseller price lists) are screenshotted by Lambda, which has no
+session, so the language travels in the URL as `?locale=`.
+
+Where the language comes from differs per document:
+
+| Document | Source |
+|---|---|
+| Quotation, technical instructions, MoneyBird invoice | `Company.locale` |
+| Price lists, from a company's Documents tab | that company's `Company.locale` |
+| Price lists, from the standalone Pricing Tables page | an explicit picker (no company context to infer from; defaults to `nl`) |
+
+The price-list PDF routes name the download from the bundle and return it in
+`Content-Disposition`; the frontend reads the name from that header rather
+than duplicating the mapping.
 
 ## Adding New Music Services
 
