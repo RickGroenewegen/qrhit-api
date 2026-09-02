@@ -1054,5 +1054,17 @@
   "extras.cuttingDieBox": [
     "nl",
     "de"
+  ],
+  "quotation.vatReverseCharge": [
+    "nl",
+    "de"
+  ],
+  "quotation.vatReverseChargeNote": [
+    "nl",
+    "de"
+  ],
+  "quotation.total": [
+    "nl",
+    "de"
   ]
 }

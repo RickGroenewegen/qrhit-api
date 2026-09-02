@@ -13,6 +13,9 @@ class AppTheme {
   private utils = new Utils();
   private appThemes: Map<number, { s: string; n: string; st: string }> = new Map();
   private appThemesInitialized: boolean = false;
+  private loadPromise: Promise<void> | null = null;
+  private retryAttempt: number = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   // Unique id for this process so we can ignore reload messages we published ourselves
   private instanceId: string = `${process.pid}-${Math.random()
     .toString(36)
@@ -31,7 +34,9 @@ class AppTheme {
         }
       });
     } else {
-      this.loadAppThemes(false);
+      // Workers load via warmup() after fastify.listen (plus the lazy
+      // trigger in getTheme), keeping the full-table JOIN out of the boot
+      // window where the cold pool creates connections one at a time.
     }
 
     // Listen for cross-worker reload broadcasts
@@ -129,10 +134,61 @@ class AppTheme {
       }
 
       this.appThemesInitialized = true;
+      this.retryAttempt = 0;
     } catch (error: any) {
-      console.error(`Failed to load app themes: ${error.message}`);
-      this.appThemesInitialized = true; // Mark as initialized even on error to prevent blocking
+      this.logger.log(
+        color.red.bold('Failed to load app themes: ') +
+          color.white.bold(error.message)
+      );
+      // Leave appThemesInitialized false so getTheme keeps triggering
+      // ensureLoaded; retry with backoff instead of serving an empty map.
+      this.scheduleRetry();
     }
+  }
+
+  /**
+   * Load the themes once, deduplicating concurrent triggers.
+   */
+  private ensureLoaded(): Promise<void> {
+    if (this.appThemesInitialized) {
+      return Promise.resolve();
+    }
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+    if (this.retryTimer) {
+      // Backoff in progress; only the timer may start the next attempt,
+      // otherwise every request would relaunch the failed query instantly.
+      return Promise.resolve();
+    }
+    this.loadPromise = this.loadAppThemes(false).finally(() => {
+      this.loadPromise = null;
+    });
+    return this.loadPromise;
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer) {
+      return;
+    }
+    const delays = [5000, 15000, 60000];
+    const delay = delays[Math.min(this.retryAttempt, delays.length - 1)];
+    this.retryAttempt++;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.ensureLoaded();
+    }, delay);
+    this.retryTimer.unref();
+  }
+
+  /**
+   * Kick off the initial load outside the boot window. Called by workers
+   * after fastify.listen; a no-op once themes are loaded.
+   */
+  public warmup(delayMs: number = 0): void {
+    setTimeout(() => {
+      this.ensureLoaded();
+    }, delayMs).unref();
   }
 
   /**
@@ -141,8 +197,9 @@ class AppTheme {
    */
   public getTheme(phpId: number): { s: string; n: string; st: string } | null {
     if (!this.appThemesInitialized) {
-      console.warn('App themes not yet initialized, returning null');
-      return null;
+      // Trigger the load (deduplicated) but serve whatever the map holds:
+      // a stale map from before a failed reload beats returning null.
+      this.ensureLoaded();
     }
     return this.appThemes.get(phpId) || null;
   }

@@ -1,4 +1,5 @@
 import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
+import { resolveVatRegion } from './services/vat';
 import * as auth from './auth';
 import crypto from 'crypto';
 import Logger from './logger';
@@ -400,6 +401,17 @@ class Vibe {
             locale,
             adminUrl // pass admin URL
           );
+        } else {
+          // /business intake: the lead gets no mail, but the business inbox
+          // does, so the request lands in mail as well as Pushover.
+          await this.mail.sendBusinessLeadNotification({
+            company,
+            fullname,
+            email,
+            phone,
+            message,
+            locale,
+          });
         }
       } catch (err) {
         // Log but do not fail the endpoint if email fails
@@ -1156,6 +1168,9 @@ class Vibe {
         numberOfLists: company._count.CompanyList, // Use the actual count
         test: company.test, // Ensure test property is present
         _count: undefined, // Remove the internal _count object
+        // Derived server-side so the frontend never re-implements the
+        // legacy free-text country normalization
+        vatRegion: resolveVatRegion(company.countrycode),
       }));
 
       return {

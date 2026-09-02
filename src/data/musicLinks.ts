@@ -270,14 +270,27 @@ export async function getLink(
     )
   );
 
-  // Wait for blocked playlists to be initialized
-  if (!deps.blockedPlaylistsInitialized) {
+  // Wait for blocked playlists to be initialized, but bounded: the wait
+  // itself drives a load attempt, and after a timeout we fail open for 30s
+  // so a sustained outage stalls one request per window, not every request.
+  if (
+    !deps.blockedPlaylistsInitialized &&
+    Date.now() >= deps.blockedFailOpenUntil
+  ) {
     deps.logger.log(
       color.yellow.bold('Waiting for blocked playlists to initialize...')
     );
-    // Poll until initialized (should be very quick)
-    while (!deps.blockedPlaylistsInitialized) {
-      await new Promise(resolve => setTimeout(resolve, 10));
+    await Promise.race([
+      deps.ensureBlockedLoaded(),
+      new Promise((resolve) => setTimeout(resolve, 10000)),
+    ]);
+    if (!deps.blockedPlaylistsInitialized) {
+      deps.blockedFailOpenUntil = Date.now() + 30000;
+      deps.logger.log(
+        color.yellow.bold(
+          'Blocked playlists still initializing after 10s, skipping block check for 30s'
+        )
+      );
     }
   }
 

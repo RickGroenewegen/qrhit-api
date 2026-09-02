@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolveTaxContext } from '../../src/services/vat';
+import {
+  resolveTaxContext,
+  resolveVatRegion,
+  quotationVatContext,
+} from '../../src/services/vat';
 import type { VatIdCheckResult } from '../../src/services/vies';
 
 // Controls what the mocked VIES client returns per test.
@@ -124,5 +128,52 @@ describe('resolveTaxContext (EU reverse charge)', () => {
     });
     expect(res.taxRate).toBe(DE_RATE);
     expect(res.vatIdStatus).toBe('invalid');
+  });
+});
+
+describe('resolveVatRegion / quotationVatContext (quotation VAT buckets)', () => {
+  it('maps ISO codes to the three buckets', () => {
+    expect(resolveVatRegion('NL')).toBe('nl');
+    expect(resolveVatRegion('nl')).toBe('nl');
+    expect(resolveVatRegion('DE')).toBe('eu');
+    expect(resolveVatRegion('be')).toBe('eu');
+    expect(resolveVatRegion('CH')).toBe('world');
+    expect(resolveVatRegion('US')).toBe('world');
+  });
+
+  it('normalizes legacy free-text country names', () => {
+    expect(resolveVatRegion('Nederland')).toBe('nl');
+    expect(resolveVatRegion('The Netherlands')).toBe('nl');
+    expect(resolveVatRegion('Duitsland')).toBe('eu');
+    expect(resolveVatRegion('Germany')).toBe('eu');
+    expect(resolveVatRegion('Switzerland')).toBe('world');
+    expect(resolveVatRegion('  Belgien  ')).toBe('eu');
+    expect(resolveVatRegion('UK')).toBe('world');
+  });
+
+  it('falls back to nl (over-collect) for empty or unrecognized input', () => {
+    expect(resolveVatRegion(null)).toBe('nl');
+    expect(resolveVatRegion(undefined)).toBe('nl');
+    expect(resolveVatRegion('')).toBe('nl');
+    expect(resolveVatRegion('XX')).toBe('nl'); // 2-letter but not a known country
+    expect(resolveVatRegion('Atlantis')).toBe('nl');
+  });
+
+  it('quotationVatContext maps region to rate and reverse charge', () => {
+    expect(quotationVatContext('NL')).toEqual({
+      region: 'nl',
+      rate: 21,
+      reverseCharge: false,
+    });
+    expect(quotationVatContext('DE')).toEqual({
+      region: 'eu',
+      rate: 0,
+      reverseCharge: true,
+    });
+    expect(quotationVatContext('US')).toEqual({
+      region: 'world',
+      rate: 0,
+      reverseCharge: false,
+    });
   });
 });

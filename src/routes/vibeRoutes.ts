@@ -7,6 +7,7 @@ import Bookkeeping from '../bookkeeping';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
+import { quotationVatContext } from '../services/vat';
 import Cache from '../cache';
 import { ZipArchive } from 'archiver';
 import * as fsPromises from 'fs/promises';
@@ -1689,6 +1690,10 @@ export default async function vibeRoutes(
           'extras'
         );
 
+        // VAT treatment follows the company's country, never its language:
+        // NL 21%, intra-EU reverse charge (BTW verlegd), outside the EU 0%.
+        const vatContext = quotationVatContext(company.countrycode);
+
         // If a list was specified, load its per-list calculation so per-list
         // toggles (e.g. includeVotingPortal) override the company defaults.
         let listCalc: {
@@ -1938,6 +1943,7 @@ export default async function vibeRoutes(
           productDescription,
           productDetails,
           productType: type,
+          vatContext,
         });
       } catch (error) {
         console.error('Error rendering quotation view:', error);

@@ -1015,6 +1015,81 @@ describe('sendContactForm', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Business intake lead notification (/business form)
+// ---------------------------------------------------------------------------
+describe('sendBusinessLeadNotification', () => {
+  const lead = {
+    company: 'Acme & Co',
+    fullname: 'Rick Tester',
+    email: 'rick@acme.test',
+    phone: '+31 6 1234 5678',
+    message: 'Call me back <soon>\nsecond line',
+    locale: 'nl',
+  };
+
+  it('routes the lead to BUSINESS_CONTACT_EMAIL with Reply-To set to the lead', async () => {
+    process.env['BUSINESS_CONTACT_EMAIL'] = 'biz@qrsong.io';
+    await mail.sendBusinessLeadNotification(lead);
+    expect(sesSend).toHaveBeenCalledTimes(1);
+    const raw = lastRaw();
+    expect(raw).toContain('To: biz@qrsong.io');
+    expect(raw).toContain('From: Rick Tester <noreply@qrsong.io>');
+    expect(raw).toContain('Reply-To: rick@acme.test');
+    expect(raw).toContain('Subject: QRSong! Business request: Acme & Co');
+    expect(raw).toContain('Company:</strong> Acme &amp; Co');
+    expect(raw).toContain('Phone:</strong> +31 6 1234 5678');
+    expect(raw).toContain('Language:</strong> nl');
+    // HTML part is escaped and multi-line, text part is verbatim
+    expect(raw).toContain('Call me back &lt;soon&gt;<br>second line');
+    expect(raw).toContain('Message: Call me back <soon>\nsecond line');
+  });
+
+  it('falls back to INFO_EMAIL when BUSINESS_CONTACT_EMAIL is unset', async () => {
+    await mail.sendBusinessLeadNotification(lead);
+    expect(lastRaw()).toContain('To: info@qrsong.io');
+  });
+
+  it('omits blank phone and message lines', async () => {
+    await mail.sendBusinessLeadNotification({
+      ...lead,
+      phone: '   ',
+      message: null,
+      locale: null,
+    });
+    const raw = lastRaw();
+    expect(raw).not.toContain('Phone:');
+    expect(raw).not.toContain('Message:');
+    expect(raw).not.toContain('Language:');
+  });
+
+  it('keeps header-bound form values on one line', async () => {
+    await mail.sendBusinessLeadNotification({
+      ...lead,
+      fullname: 'Evil <x@y.io>\nBcc: z@y.io',
+      company: 'Line\r\nBreak "Co"',
+    });
+    const raw = lastRaw();
+    // Header block ends at the first blank line; the injected text may only
+    // appear in the body, never as a header of its own.
+    const headers = raw.split('\n\n')[0];
+    expect(headers).toContain('From: Evil x@y.io Bcc: z@y.io <noreply@qrsong.io>');
+    expect(headers).toContain('Subject: QRSong! Business request: Line Break Co');
+    expect(headers).not.toMatch(/^Bcc:/m);
+  });
+
+  it('does nothing without an SES client', async () => {
+    const realSes = (mail as any).ses;
+    (mail as any).ses = null;
+    try {
+      await mail.sendBusinessLeadNotification(lead);
+    } finally {
+      (mail as any).ses = realSes;
+    }
+    expect(sesSend).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Newsletter subscribe / unsubscribe
 // ---------------------------------------------------------------------------
 describe('newsletter', () => {

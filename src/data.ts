@@ -1,5 +1,6 @@
 import { Track } from './interfaces/Track';
 import Logger from './logger';
+import { color } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import { CronJob } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
@@ -41,6 +42,10 @@ class Data {
   private axiosInstance: AxiosInstance;
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
+  private blockedRetryAttempt: number = 0;
+  private blockedRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private blockedLoadPromise: Promise<void> | null = null;
+  public blockedFailOpenUntil: number = 0;
 
   /** Cast this instance to DataDeps for sub-module calls */
   private get deps(): DataDeps {
@@ -55,10 +60,12 @@ class Data {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          // Blocked playlists first: a tiny query that publishes the Redis
+          // key the workers wait on, while prefillLinkCache can take minutes.
+          await this.loadBlocked();
           this.createSiteMap();
 
           await this.prefillLinkCache();
-          await this.loadBlocked();
           // Schedule hourly cache refresh
           const job = new CronJob('0 * * * *', async () => {
             await this.prefillLinkCache();
@@ -349,13 +356,67 @@ class Data {
   }
 
   private async loadBlocked(): Promise<void> {
-    await playlistsModule.loadBlocked(this.deps);
-    this.blockedPlaylistsInitialized = true;
+    if (await playlistsModule.loadBlocked(this.deps)) {
+      this.blockedPlaylistsInitialized = true;
+      this.blockedRetryAttempt = 0;
+    } else {
+      this.scheduleBlockedRetry();
+    }
   }
 
   private async loadBlockedFromCache(): Promise<void> {
-    await playlistsModule.loadBlockedFromCache(this.deps);
-    this.blockedPlaylistsInitialized = true;
+    if (await playlistsModule.loadBlockedFromCache(this.deps)) {
+      this.blockedPlaylistsInitialized = true;
+      this.blockedRetryAttempt = 0;
+    } else {
+      this.scheduleBlockedRetry();
+    }
+  }
+
+  /**
+   * Deduplicated on-demand load, used by getLink when a request arrives
+   * before the list is initialized. Preempts any pending backoff timer so
+   * the waiting request drives an attempt right away. Never rejects.
+   */
+  public ensureBlockedLoaded(): Promise<void> {
+    if (this.blockedPlaylistsInitialized) {
+      return Promise.resolve();
+    }
+    if (this.blockedLoadPromise) {
+      return this.blockedLoadPromise;
+    }
+    if (this.blockedRetryTimer) {
+      clearTimeout(this.blockedRetryTimer);
+      this.blockedRetryTimer = null;
+    }
+    this.blockedLoadPromise = this.loadBlockedFromCache().finally(() => {
+      this.blockedLoadPromise = null;
+    });
+    return this.blockedLoadPromise;
+  }
+
+  // A failed load must not mark the list as initialized: getLink fails open
+  // once its bounded wait expires, so an empty set would silently unblock
+  // every playlist until the next hourly sync.
+  private scheduleBlockedRetry(): void {
+    if (this.blockedPlaylistsInitialized || this.blockedRetryTimer) {
+      return;
+    }
+    const delays = [5000, 15000, 60000];
+    const delay = delays[Math.min(this.blockedRetryAttempt, delays.length - 1)];
+    this.blockedRetryAttempt++;
+    this.logger.log(
+      color.yellow.bold(
+        `Blocked playlists load failed, retrying in ${color.white.bold(
+          delay / 1000
+        )}s`
+      )
+    );
+    this.blockedRetryTimer = setTimeout(() => {
+      this.blockedRetryTimer = null;
+      this.loadBlockedFromCache();
+    }, delay);
+    this.blockedRetryTimer.unref();
   }
 
   // ── Users & Payments ─────────────────────────────────────────

@@ -37,14 +37,23 @@ class TrackEnrichment {
   private trackEnrichmentByTrackId: Map<string, EnrichmentData> = new Map();
   private trackEnrichmentByIsrc: Map<string, EnrichmentData> = new Map();
   private trackEnrichmentByArtistTitleHash: Map<string, EnrichmentData> = new Map();
+  private mapsInitialized: boolean = false;
+  private loadPromise: Promise<void> | null = null;
+  private retryAttempt: number = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   private constructor() {
     this.prisma = PrismaInstance.getInstance();
     this.logger = new Logger();
     this.utils = new Utils();
 
-    // Load enrichment maps on startup
-    this.loadTrackEnrichmentMaps();
+    // Load enrichment maps on startup. Workers instead load via warmup()
+    // after fastify.listen (plus the lazy trigger in the getters), keeping
+    // the full-table scan out of the boot window where the cold pool
+    // creates connections one at a time.
+    if (cluster.isPrimary) {
+      this.loadTrackEnrichmentMaps();
+    }
 
     // Set up hourly refresh cron job
     const enrichmentRefreshJob = new CronJob('0 * * * *', async () => {
@@ -125,6 +134,9 @@ class TrackEnrichment {
         this.trackEnrichmentByArtistTitleHash.set(hash, enrichmentData);
       }
 
+      this.mapsInitialized = true;
+      this.retryAttempt = 0;
+
       if (isPrimary) {
         this.utils.isMainServer().then(async (isMainServer) => {
           if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
@@ -146,7 +158,53 @@ class TrackEnrichment {
       this.logger.log(
         color.red.bold(`[TrackEnrichment] Failed to load maps: ${e.message || e}`)
       );
+      this.scheduleRetry();
     }
+  }
+
+  /**
+   * Load the maps once, deduplicating concurrent triggers.
+   */
+  private ensureLoaded(): Promise<void> {
+    if (this.mapsInitialized) {
+      return Promise.resolve();
+    }
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+    if (this.retryTimer) {
+      // Backoff in progress; only the timer may start the next attempt,
+      // otherwise every request would relaunch the failed query instantly.
+      return Promise.resolve();
+    }
+    this.loadPromise = this.loadTrackEnrichmentMaps().finally(() => {
+      this.loadPromise = null;
+    });
+    return this.loadPromise;
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer) {
+      return;
+    }
+    const delays = [5000, 15000, 60000];
+    const delay = delays[Math.min(this.retryAttempt, delays.length - 1)];
+    this.retryAttempt++;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.ensureLoaded();
+    }, delay);
+    this.retryTimer.unref();
+  }
+
+  /**
+   * Kick off the initial load outside the boot window. Called by workers
+   * after fastify.listen; a no-op once maps are loaded.
+   */
+  public warmup(delayMs: number = 0): void {
+    setTimeout(() => {
+      this.ensureLoaded();
+    }, delayMs).unref();
   }
 
   /**
@@ -160,6 +218,9 @@ class TrackEnrichment {
    * Get enrichment data by Spotify trackId
    */
   public getByTrackId(trackId: string): EnrichmentData | undefined {
+    if (!this.mapsInitialized) {
+      this.ensureLoaded();
+    }
     return this.trackEnrichmentByTrackId.get(trackId);
   }
 
@@ -167,6 +228,9 @@ class TrackEnrichment {
    * Get enrichment data by ISRC
    */
   public getByIsrc(isrc: string): EnrichmentData | undefined {
+    if (!this.mapsInitialized) {
+      this.ensureLoaded();
+    }
     return this.trackEnrichmentByIsrc.get(isrc);
   }
 
@@ -174,6 +238,9 @@ class TrackEnrichment {
    * Get enrichment data by artist + title hash
    */
   public getByArtistTitle(artist: string, title: string): EnrichmentData | undefined {
+    if (!this.mapsInitialized) {
+      this.ensureLoaded();
+    }
     const artistTitleKey = `${artist.toLowerCase().trim()}|||${title.toLowerCase().trim()}`;
     const hash = this.createSimpleHash(artistTitleKey);
     return this.trackEnrichmentByArtistTitleHash.get(hash);

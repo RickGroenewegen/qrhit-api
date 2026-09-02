@@ -21,6 +21,7 @@ import {
   loadBlockedFromCache,
   buildMusicMatchExport,
   BLOCKED_PLAYLISTS_CACHE_KEY,
+  BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
 } from '../../../src/data/playlists';
 
 /**
@@ -793,9 +794,10 @@ describe('small toggle updaters', () => {
 });
 
 describe('updatePlaylistBlocked', () => {
-  it('blocks: adds to the in-memory set and writes the Redis array', async () => {
+  it('blocks: rebuilds the set from the DB and writes the Redis array', async () => {
     const { deps, prisma, cache } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 5 });
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 5 }]);
 
     const res = await updatePlaylistBlocked(deps, 5, true);
 
@@ -809,17 +811,30 @@ describe('updatePlaylistBlocked', () => {
     expect(cache.del).not.toHaveBeenCalled();
   });
 
-  it('unblocking the last playlist deletes the cache key instead', async () => {
+  it('unblocking the last playlist stores the empty sentinel', async () => {
     const { deps, prisma, cache } = makeDeps();
     deps.blockedPlaylists.add(5);
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 5 });
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([]);
 
     const res = await updatePlaylistBlocked(deps, 5, false);
 
     expect(res).toEqual({ success: true });
     expect(deps.blockedPlaylists.size).toBe(0);
-    expect(cache.setArray).not.toHaveBeenCalled();
-    expect(cache.del).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY);
+    expect(cache.setArray).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY, [
+      BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
+    ]);
+    expect(cache.del).not.toHaveBeenCalled();
+  });
+
+  it('reports failure when the DB rebuild after the update fails', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 5 });
+    prisma.paymentHasPlaylist.findMany.mockRejectedValue(new Error('boom'));
+
+    const res = await updatePlaylistBlocked(deps, 5, true);
+
+    expect(res.success).toBe(false);
   });
 
   it('fails for unknown playlists', async () => {
@@ -858,17 +873,19 @@ describe('loadBlocked', () => {
     expect(cache.setArray).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY, ['1', '2']);
   });
 
-  it('clears the cache key when nothing is blocked', async () => {
+  it('stores the empty sentinel when nothing is blocked', async () => {
     const { deps, prisma, cache } = makeDeps();
     prisma.paymentHasPlaylist.findMany.mockResolvedValue([]);
 
-    await loadBlocked(deps);
+    await expect(loadBlocked(deps)).resolves.toBe(true);
 
-    expect(cache.setArray).not.toHaveBeenCalled();
-    expect(cache.del).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY);
+    expect(cache.setArray).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY, [
+      BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
+    ]);
+    expect(cache.del).not.toHaveBeenCalled();
   });
 
-  it('does not touch Redis on non-main servers (ENVIRONMENT=test)', async () => {
+  it('publishes to Redis on non-main servers too, but stays silent', async () => {
     const { deps, prisma, cache } = makeDeps();
     deps.utils.isMainServer.mockResolvedValue(false);
     prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 1 }]);
@@ -876,16 +893,25 @@ describe('loadBlocked', () => {
     await loadBlocked(deps);
 
     expect(deps.blockedPlaylists.has(1)).toBe(true); // set still updated
-    expect(cache.setArray).not.toHaveBeenCalled();
-    expect(cache.del).not.toHaveBeenCalled();
+    expect(cache.setArray).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY, ['1']);
+    expect(deps.logger.log).not.toHaveBeenCalled();
   });
 
-  it('swallows database errors and logs them', async () => {
+  it('reports database errors as failure and logs them', async () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findMany.mockRejectedValue(new Error('boom'));
 
-    await expect(loadBlocked(deps)).resolves.toBeUndefined();
+    await expect(loadBlocked(deps)).resolves.toBe(false);
     expect(deps.logger.log).toHaveBeenCalled();
+  });
+
+  it('still succeeds when the Redis publish fails (best-effort)', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 3 }]);
+    cache.setArray.mockRejectedValue(new Error('redis gone'));
+
+    await expect(loadBlocked(deps)).resolves.toBe(true);
+    expect(deps.blockedPlaylists.has(3)).toBe(true);
   });
 });
 
@@ -904,18 +930,41 @@ describe('loadBlockedFromCache', () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 7 }]);
 
-    await loadBlockedFromCache(deps);
+    await expect(loadBlockedFromCache(deps)).resolves.toBe(true);
 
     expect(prisma.paymentHasPlaylist.findMany).toHaveBeenCalled();
     expect(deps.blockedPlaylists.has(7)).toBe(true);
   });
 
-  it('swallows cache errors', async () => {
-    const { deps, cache } = makeDeps();
-    cache.getArray.mockRejectedValue(new Error('redis gone'));
+  it('treats the empty sentinel as loaded-empty without hitting the DB', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    deps.blockedPlaylists.add(9); // stale entry must be cleared
+    cache.arrays.set(BLOCKED_PLAYLISTS_CACHE_KEY, [
+      BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
+    ]);
 
-    await expect(loadBlockedFromCache(deps)).resolves.toBeUndefined();
+    await expect(loadBlockedFromCache(deps)).resolves.toBe(true);
+
+    expect(deps.blockedPlaylists.size).toBe(0);
+    expect(prisma.paymentHasPlaylist.findMany).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the database on cache errors', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    cache.getArray.mockRejectedValue(new Error('redis gone'));
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 8 }]);
+
+    await expect(loadBlockedFromCache(deps)).resolves.toBe(true);
+    expect(deps.blockedPlaylists.has(8)).toBe(true);
     expect(deps.logger.log).toHaveBeenCalled();
+  });
+
+  it('reports failure when both the cache and the database fail', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    cache.getArray.mockRejectedValue(new Error('redis gone'));
+    prisma.paymentHasPlaylist.findMany.mockRejectedValue(new Error('db gone'));
+
+    await expect(loadBlockedFromCache(deps)).resolves.toBe(false);
   });
 });
 

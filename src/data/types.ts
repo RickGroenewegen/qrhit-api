@@ -24,4 +24,6 @@ export interface DataDeps {
   axiosInstance: AxiosInstance;
   blockedPlaylists: Set<number>;
   blockedPlaylistsInitialized: boolean;
+  blockedFailOpenUntil: number;
+  ensureBlockedLoaded(): Promise<void>;
 }

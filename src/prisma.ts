@@ -19,6 +19,14 @@ function createPrismaAdapter(): PrismaMariaDb {
     // early, but give prod enough headroom for the worker pool plus HTTP
     // traffic.
     connectionLimit: process.env.NODE_ENV === 'development' ? 5 : 10,
+    // The pool creates connections one at a time on the event loop and by
+    // default eagerly handshakes connectionLimit connections in every
+    // process at boot. Pre-warm only a couple per process, give acquires
+    // headroom to survive a saturated boot, and have future pool-timeout
+    // errors report connections held longer than 20s.
+    minimumIdle: 2,
+    acquireTimeout: 30000,
+    leakDetectionTimeout: 20000,
   });
 }
 

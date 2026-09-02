@@ -569,7 +569,8 @@
             const manualDiscountPct = calculation.manualDiscountPercent || 0;
             const discountAmount = subtotalExclVat * (manualDiscountPct / 100);
             const totalAfterDiscount = subtotalExclVat - discountAmount;
-            const vatAmount = totalAfterDiscount * 0.21;
+            const vatCtx = (typeof vatContext !== 'undefined' && vatContext) ? vatContext : { region: 'nl', rate: 21, reverseCharge: false };
+            const vatAmount = Math.round(totalAfterDiscount * (vatCtx.rate / 100) * 100) / 100;
             const totalInclVatFinal = totalAfterDiscount + vatAmount;
         %>
         <div class="totals-container">
@@ -592,15 +593,25 @@
                 </tr>
 
                 <tr class="total-row vat">
-                    <td colspan="3"><%= t('vat', { percent: 21 }) %></td>
+                    <% if (vatCtx.reverseCharge) { %>
+                    <td colspan="3"><%= t('vatReverseCharge') %></td>
+                    <td><%= formatCurrency(0) %></td>
+                    <% } else { %>
+                    <td colspan="3"><%= t('vat', { percent: vatCtx.rate }) %></td>
                     <td><%= formatCurrency(vatAmount) %></td>
+                    <% } %>
                 </tr>
 
                 <tr class="total-row grand-total-incl">
-                    <td colspan="3"><%= t('totalInclVat') %></td>
+                    <td colspan="3"><%= vatCtx.rate > 0 ? t('totalInclVat') : t('total') %></td>
                     <td><%= formatCurrency(totalInclVatFinal) %></td>
                 </tr>
             </table>
+            <% if (vatCtx.reverseCharge) { %>
+            <div style="text-align: right; font-size: 9px; color: #666; margin-top: 4px;">
+                <%= t('vatReverseChargeNote') %>
+            </div>
+            <% } %>
         </div>
 
         <!-- Signature Section -->

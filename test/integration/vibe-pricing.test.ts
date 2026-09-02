@@ -243,6 +243,80 @@ describe('vibe pricing and quotation views', () => {
       expect(res.statusCode).toBe(404);
     });
 
+    it('applies 21% Dutch VAT when the company has no usable country', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-110`,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('BTW 21%');
+      expect(res.body).not.toContain('BTW verlegd');
+    });
+
+    it('reverse-charges VAT for an EU company (BTW verlegd)', async () => {
+      await prisma().company.update({
+        where: { id: companyId },
+        data: { countrycode: 'DE' },
+      });
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-111`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('BTW verlegd (0%)');
+        expect(res.body).toContain('artikel 196');
+        expect(res.body).not.toContain('BTW 21%');
+      } finally {
+        await prisma().company.update({
+          where: { id: companyId },
+          data: { countrycode: null },
+        });
+      }
+    });
+
+    it('normalizes legacy free-text countries (Duitsland → reverse charge)', async () => {
+      await prisma().company.update({
+        where: { id: companyId },
+        data: { countrycode: 'Duitsland' },
+      });
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/qrsong/${companyId}/Q-2026-112?listId=${listId}`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('BTW verlegd (0%)');
+      } finally {
+        await prisma().company.update({
+          where: { id: companyId },
+          data: { countrycode: null },
+        });
+      }
+    });
+
+    it('charges 0% without reverse charge outside the EU', async () => {
+      await prisma().company.update({
+        where: { id: companyId },
+        data: { countrycode: 'US' },
+      });
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-113`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('BTW 0%');
+        expect(res.body).not.toContain('BTW verlegd');
+        expect(res.body).not.toContain('BTW 21%');
+      } finally {
+        await prisma().company.update({
+          where: { id: companyId },
+          data: { countrycode: null },
+        });
+      }
+    });
+
     it('renders the quotation in the language from the query string', async () => {
       // This is the URL the PDF Lambda fetches, so the ?locale it carries is
       // what decides the language of the customer's quotation.

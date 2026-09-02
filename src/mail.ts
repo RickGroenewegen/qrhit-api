@@ -1003,6 +1003,86 @@ class Mail {
     );
   }
 
+  /**
+   * Notify the business inbox about a new lead from the /business intake
+   * form. Mirrors the business branch of the contact form: goes to
+   * BUSINESS_CONTACT_EMAIL (falling back to INFO_EMAIL) with Reply-To set to
+   * the lead, so answering from the inbox reaches them directly.
+   */
+  async sendBusinessLeadNotification(lead: {
+    company: string;
+    fullname: string;
+    email: string;
+    phone?: string | null;
+    message?: string | null;
+    locale?: string | null;
+  }): Promise<void> {
+    if (!this.ses) return;
+
+    const toEmail =
+      process.env['BUSINESS_CONTACT_EMAIL'] || process.env['INFO_EMAIL']!;
+
+    const rows: Array<[string, string]> = [
+      ['Company', lead.company],
+      ['Contact', lead.fullname],
+      ['E-mail', lead.email],
+    ];
+    if (lead.phone && String(lead.phone).trim()) {
+      rows.push(['Phone', String(lead.phone).trim()]);
+    }
+    if (lead.locale) {
+      rows.push(['Language', lead.locale]);
+    }
+    if (lead.message && String(lead.message).trim()) {
+      rows.push(['Message', String(lead.message).trim()]);
+    }
+
+    const html = rows
+      .map(
+        ([label, value]) =>
+          `<p><strong>${label}:</strong> ${this.escapeHtml(value).replace(/\r?\n/g, '<br>')}</p>`
+      )
+      .join('\n');
+    const text = rows.map(([label, value]) => `${label}: ${value}`).join('\n');
+
+    // Form values end up in raw MIME headers; keep them single-line.
+    const headerSafe = (value: string) => value.replace(/[\r\n<>"]/g, ' ').replace(/\s+/g, ' ').trim();
+    const senderName = headerSafe(lead.fullname) || process.env['PRODUCT_NAME']!;
+    const subject = `${process.env['PRODUCT_NAME']} Business request: ${headerSafe(lead.company)}`;
+
+    this.logger.log(
+      color.blue.bold(
+        `Business lead from ${white.bold(lead.email)} (${white.bold(lead.company)}) mailed to ${white.bold(toEmail)}`
+      )
+    );
+
+    const rawEmail = await this.renderRaw({
+      from: `${senderName} <${process.env['FROM_EMAIL']}>`,
+      to: toEmail,
+      subject,
+      html,
+      text,
+      attachments: [] as Attachment[],
+      unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+      replyTo: lead.email,
+    });
+
+    await this.ses.send(
+      new SendRawEmailCommand({
+        RawMessage: { Data: Buffer.from(rawEmail) },
+      })
+    );
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   async sendContactForm(
     data: any,
     ip: string

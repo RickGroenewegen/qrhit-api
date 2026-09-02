@@ -5,6 +5,10 @@ import { DataDeps } from './types';
 import { PRINTER_TYPE } from '../config/constants';
 
 export const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
+// Stored in the Redis set when nothing is blocked, so readers can tell
+// "loaded, empty" apart from "key not written yet" (fresh Redis or a
+// version-bump deploy, since cache keys are version-prefixed).
+export const BLOCKED_PLAYLISTS_EMPTY_SENTINEL = '__none__';
 
 export async function storePlaylists(
   deps: DataDeps,
@@ -982,27 +986,20 @@ export async function updatePlaylistBlocked(
       )
     );
 
-    // Update Redis cache (regardless of main/primary status)
-    if (blocked) {
-      deps.blockedPlaylists.add(playlistId);
-    } else {
-      deps.blockedPlaylists.delete(playlistId);
+    // Rebuild the set from the database and publish it, rather than
+    // publishing this process's local set: a worker whose set is stale or
+    // still uninitialized would otherwise overwrite the shared key (worst
+    // case writing the empty sentinel while playlists are still blocked).
+    const republished = await loadBlocked(deps);
+    if (!republished) {
+      return {
+        success: false,
+        error: 'Playlist updated but republishing the blocked list failed',
+      };
     }
-
-    const blockedIds = Array.from(deps.blockedPlaylists).map(String);
-
-    // Only update cache if there are blocked playlists, otherwise delete the key
-    if (blockedIds.length > 0) {
-      await deps.cache.setArray(BLOCKED_PLAYLISTS_CACHE_KEY, blockedIds);
-      deps.logger.log(
-        color.green.bold('Updated blocked playlists in Redis cache')
-      );
-    } else {
-      await deps.cache.del(BLOCKED_PLAYLISTS_CACHE_KEY);
-      deps.logger.log(
-        color.green.bold('Cleared blocked playlists from Redis cache (no blocked playlists)')
-      );
-    }
+    deps.logger.log(
+      color.green.bold('Updated blocked playlists in Redis cache')
+    );
 
     return { success: true };
   } catch (error: any) {
@@ -1017,7 +1014,7 @@ export async function updatePlaylistBlocked(
   }
 }
 
-export async function loadBlocked(deps: DataDeps): Promise<void> {
+export async function loadBlocked(deps: DataDeps): Promise<boolean> {
   try {
     // Query all blocked PaymentHasPlaylist records
     const blockedRecords = await deps.prisma.paymentHasPlaylist.findMany({
@@ -1035,7 +1032,26 @@ export async function loadBlocked(deps: DataDeps): Promise<void> {
       deps.blockedPlaylists.add(record.id);
     }
 
-    // If main/primary server, store in Redis cache and log
+    const blockedIds = Array.from(deps.blockedPlaylists).map(String);
+
+    // Publish from whichever process loaded first so sibling workers (and
+    // the hourly cache sync) never have to fall back to the database. The
+    // publish is best-effort: a Redis-only outage must not discard a
+    // successful DB load, or nothing could ever initialize the list.
+    try {
+      await deps.cache.setArray(
+        BLOCKED_PLAYLISTS_CACHE_KEY,
+        blockedIds.length > 0 ? blockedIds : [BLOCKED_PLAYLISTS_EMPTY_SENTINEL]
+      );
+    } catch (publishError: any) {
+      deps.logger.log(
+        color.red.bold(
+          `Loaded blocked playlists but failed to publish to Redis: ${publishError.message}`
+        )
+      );
+    }
+
+    // Only log on the main/primary server
     const isMainServer = await deps.utils.isMainServer();
     const cluster = await import('cluster');
     if (
@@ -1050,11 +1066,7 @@ export async function loadBlocked(deps: DataDeps): Promise<void> {
         )
       );
 
-      const blockedIds = Array.from(deps.blockedPlaylists).map(String);
-
-      // Only store in cache if there are blocked playlists
       if (blockedIds.length > 0) {
-        await deps.cache.setArray(BLOCKED_PLAYLISTS_CACHE_KEY, blockedIds);
         deps.logger.log(
           color.green.bold(
             `Stored ${color.white.bold(
@@ -1062,39 +1074,50 @@ export async function loadBlocked(deps: DataDeps): Promise<void> {
             )} blocked playlists in Redis cache`
           )
         );
-      } else {
-        // Clear cache if no blocked playlists
-        await deps.cache.del(BLOCKED_PLAYLISTS_CACHE_KEY);
       }
     }
+
+    return true;
   } catch (error: any) {
     deps.logger.log(
       color.red.bold(`Error loading blocked playlists: ${error.message}`)
     );
+    return false;
   }
 }
 
-export async function loadBlockedFromCache(deps: DataDeps): Promise<void> {
+export async function loadBlockedFromCache(deps: DataDeps): Promise<boolean> {
   try {
     const blockedIds = await deps.cache.getArray(BLOCKED_PLAYLISTS_CACHE_KEY);
 
-    // Only update if we got data from cache
     if (blockedIds && blockedIds.length > 0) {
       deps.blockedPlaylists.clear();
       for (const id of blockedIds) {
+        if (id === BLOCKED_PLAYLISTS_EMPTY_SENTINEL) {
+          continue;
+        }
         deps.blockedPlaylists.add(parseInt(id, 10));
       }
-    } else {
-      // If cache is empty, load directly from database (race condition on startup)
-      await loadBlocked(deps);
-      return; // loadBlocked sets the initialized flag
+      return true;
     }
+
+    // Key absent (fresh Redis or version-bump deploy): load directly from
+    // the database.
+    return await loadBlocked(deps);
   } catch (error: any) {
     deps.logger.log(
       color.red.bold(
         `Error loading blocked playlists from cache: ${error.message}`
       )
     );
+    // Redis is down but the database may be fine — fall back the same way
+    // the key-absent path does. loadBlocked returns false if the DB is
+    // also unreachable, preserving the retry chain.
+    try {
+      return await loadBlocked(deps);
+    } catch {
+      return false;
+    }
   }
 }
 

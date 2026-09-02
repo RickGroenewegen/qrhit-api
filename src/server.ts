@@ -38,6 +38,8 @@ import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
+import AppTheme from './apptheme';
+import TrackEnrichment from './trackEnrichment';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -283,10 +285,15 @@ class Server {
       CalendarService.getInstance();
 
       const numCPUs = os.cpus().length;
+      // Track each worker's slot: the exit handler runs in the primary,
+      // where WORKER_ID is unset, so the respawn must recover the slot
+      // from the dying worker instead of the environment.
+      const workerSlots = new Map<number, number>();
       for (let i = 0; i < numCPUs; i++) {
-        cluster.fork({
+        const forked = cluster.fork({
           WORKER_ID: `${i}`,
         });
+        workerSlots.set(forked.id, i);
       }
       cluster.on('exit', (worker, code, signal) => {
         this.logger.log(
@@ -294,9 +301,12 @@ class Server {
             `Worker ${color.white.bold(worker.process.pid)} died. Restarting...`
           )
         );
-        cluster.fork({
-          WORKER_ID: `${parseInt(process.env['WORKER_ID'] as string)}`,
+        const slot = workerSlots.get(worker.id) ?? 0;
+        workerSlots.delete(worker.id);
+        const respawned = cluster.fork({
+          WORKER_ID: `${slot}`,
         });
+        workerSlots.set(respawned.id, slot);
       });
     } else {
       this.workerId = parseInt(process.env['WORKER_ID'] as string);
@@ -307,6 +317,11 @@ class Server {
   public async startServer(): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
+        // Themes feed getLink responses, so start their load before traffic
+        // arrives; it no longer contends with the blocked-playlists query
+        // at boot (that now comes from Redis) and does not block listen.
+        AppTheme.getInstance().warmup(0);
+
         await this.fastify.listen({ port: this.port, host: '0.0.0.0' });
 
         // Initialize WebSocket servers on all workers
@@ -339,6 +354,14 @@ class Server {
             color.green.bold(' on worker ') +
             color.white.bold(this.workerId)
         );
+
+        // Warm the track-enrichment maps only now that the server is
+        // listening, staggered per worker so four full-table scans do not
+        // hit the database at once.
+        const warmupStagger =
+          (Number.isFinite(this.workerId) ? this.workerId : 0) * 3000;
+        TrackEnrichment.getInstance().warmup(warmupStagger);
+
         resolve();
       } catch (err) {
         this.fastify.log.error(err);

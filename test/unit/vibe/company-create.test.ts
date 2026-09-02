@@ -218,6 +218,7 @@ describe('handleCompanyListCreate — happy path (companyadmin)', () => {
       'https://vote.test',
     ]);
     expect(outbound.calls('Mail', 'sendQRVoteWelcomeEmail')).toHaveLength(0);
+    expect(outbound.calls('Mail', 'sendBusinessLeadNotification')).toHaveLength(0);
 
     // Pushover notification, not forced (not a business lead)
     const pushes = outbound.calls('PushoverClient', 'sendMessage');
@@ -343,10 +344,15 @@ describe('handleCompanyListCreate — QRVote flow', () => {
 });
 
 describe('handleCompanyListCreate — business intake (source=business)', () => {
-  it('creates a lead company, skips the welcome mail, forces pushover', async () => {
+  it('creates a lead company, skips the welcome mail, mails the business inbox, forces pushover', async () => {
     arrangeHappyPath();
     const res = await vibe.handleCompanyListCreate(
-      baseBody({ source: 'business', message: 'Call me back' }),
+      baseBody({
+        source: 'business',
+        message: 'Call me back',
+        phone: '0612345678',
+        locale: 'de',
+      }),
       '9.9.9.9'
     );
     expect(res.success).toBe(true);
@@ -357,12 +363,38 @@ describe('handleCompanyListCreate — business intake (source=business)', () => 
       message: 'Call me back',
     });
 
+    // The lead never gets a welcome mail...
     expect(outbound.calls('Mail', 'sendPortalWelcomeEmail')).toHaveLength(0);
     expect(outbound.calls('Mail', 'sendQRVoteWelcomeEmail')).toHaveLength(0);
+
+    // ...but the business inbox is notified with the full lead
+    const leadMails = outbound.calls('Mail', 'sendBusinessLeadNotification');
+    expect(leadMails).toHaveLength(1);
+    expect(leadMails[0].args[0]).toEqual({
+      company: 'Acme & Co!',
+      fullname: 'Rick Tester',
+      email: 'rick@acme.test',
+      phone: '0612345678',
+      message: 'Call me back',
+      locale: 'de',
+    });
 
     const push = outbound.calls('PushoverClient', 'sendMessage')[0];
     expect(push.args[0].message).toContain('Message: Call me back');
     expect(push.args[2]).toBe(true); // always notify for business leads
+  });
+
+  it('still succeeds and pushes when the business inbox mail fails', async () => {
+    arrangeHappyPath();
+    outbound.respondWith('Mail', 'sendBusinessLeadNotification', () =>
+      Promise.reject(new Error('ses down'))
+    );
+    const res = await vibe.handleCompanyListCreate(
+      baseBody({ source: 'business' }),
+      '9.9.9.9'
+    );
+    expect(res.success).toBe(true);
+    expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(1);
   });
 });
 

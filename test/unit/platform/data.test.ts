@@ -265,6 +265,9 @@ beforeEach(() => {
   h.isPrimary = true;
   // Default: primary process but NOT the main server → minimal wiring
   h.isMainServer.mockReset().mockResolvedValue(false);
+  // The wrappers only mark the blocked list initialized on a truthy result
+  h.playlists.loadBlocked.mockResolvedValue(true);
+  h.playlists.loadBlockedFromCache.mockResolvedValue(true);
 });
 
 // ---------------------------------------------------------------------------

@@ -94,3 +94,153 @@ export async function resolveTaxContext(
     vatIdStatus: 'valid',
   };
 }
+
+export type VatRegion = 'nl' | 'eu' | 'world';
+
+export interface QuotationVatContext {
+  region: VatRegion;
+  rate: number; // percent
+  reverseCharge: boolean;
+}
+
+// Free-text fallback for legacy Company.countrycode values typed before the
+// field became a dropdown of ISO codes. Only covers names admins actually
+// typed (Dutch/English/German); anything unrecognized resolves to 'nl' so we
+// over-collect rather than under-collect — same bias as resolveTaxContext.
+const COUNTRY_NAME_TO_ISO: Record<string, string> = {
+  nederland: 'NL',
+  netherlands: 'NL',
+  'the netherlands': 'NL',
+  holland: 'NL',
+  niederlande: 'NL',
+  belgie: 'BE',
+  'belgië': 'BE',
+  belgium: 'BE',
+  belgien: 'BE',
+  duitsland: 'DE',
+  germany: 'DE',
+  deutschland: 'DE',
+  frankrijk: 'FR',
+  france: 'FR',
+  frankreich: 'FR',
+  luxemburg: 'LU',
+  luxembourg: 'LU',
+  oostenrijk: 'AT',
+  austria: 'AT',
+  'österreich': 'AT',
+  osterreich: 'AT',
+  spanje: 'ES',
+  spain: 'ES',
+  spanien: 'ES',
+  italie: 'IT',
+  'italië': 'IT',
+  italy: 'IT',
+  italien: 'IT',
+  ierland: 'IE',
+  ireland: 'IE',
+  irland: 'IE',
+  denemarken: 'DK',
+  denmark: 'DK',
+  'dänemark': 'DK',
+  danemark: 'DK',
+  zweden: 'SE',
+  sweden: 'SE',
+  schweden: 'SE',
+  polen: 'PL',
+  poland: 'PL',
+  portugal: 'PT',
+  finland: 'FI',
+  finnland: 'FI',
+  tsjechie: 'CZ',
+  'tsjechië': 'CZ',
+  'czech republic': 'CZ',
+  czechia: 'CZ',
+  tschechien: 'CZ',
+  hongarije: 'HU',
+  hungary: 'HU',
+  ungarn: 'HU',
+  roemenie: 'RO',
+  'roemenië': 'RO',
+  romania: 'RO',
+  'rumänien': 'RO',
+  griekenland: 'GR',
+  greece: 'GR',
+  griechenland: 'GR',
+  zwitserland: 'CH',
+  switzerland: 'CH',
+  schweiz: 'CH',
+  suisse: 'CH',
+  'verenigd koninkrijk': 'GB',
+  'united kingdom': 'GB',
+  uk: 'GB',
+  engeland: 'GB',
+  england: 'GB',
+  'great britain': 'GB',
+  'verenigde staten': 'US',
+  'united states': 'US',
+  usa: 'US',
+  amerika: 'US',
+  noorwegen: 'NO',
+  norway: 'NO',
+  norwegen: 'NO',
+  canada: 'CA',
+  australie: 'AU',
+  'australië': 'AU',
+  australia: 'AU',
+  australien: 'AU',
+};
+
+// Recognized non-EU ISO codes. A 2-letter code outside the EU list that is
+// not in here is treated as unrecognized (→ 'nl'): charging 21% to a typo is
+// recoverable, granting a 0% quote to one is not.
+const KNOWN_NON_EU_ISO = [
+  'CH', 'GB', 'US', 'NO', 'CA', 'AU', 'NZ', 'JP', 'AE', 'IS', 'LI', 'TR',
+  'RS', 'UA', 'MA', 'ZA', 'SG', 'HK', 'KR', 'CN', 'IN', 'BR', 'MX', 'IL',
+];
+
+/**
+ * Bucket a Company.countrycode into the three VAT treatments a quotation
+ * can carry: domestic (21%), intra-EU B2B (reverse charge, 0%) or outside
+ * the EU (0%). Quotations have no VIES-checked VAT ID, so unlike
+ * resolveTaxContext the EU bucket assumes the B2B customer will supply one.
+ */
+export function resolveVatRegion(
+  countrycode: string | null | undefined
+): VatRegion {
+  const raw = (countrycode || '').trim();
+  if (!raw) {
+    return 'nl';
+  }
+
+  let iso = COUNTRY_NAME_TO_ISO[raw.toLowerCase()] || '';
+  if (!iso && /^[A-Za-z]{2}$/.test(raw)) {
+    iso = raw.toUpperCase();
+  }
+
+  if (!iso) {
+    return 'nl';
+  }
+  if (iso === sellerCountry()) {
+    return 'nl';
+  }
+  if (euCountryCodes.includes(iso)) {
+    return 'eu';
+  }
+  if (KNOWN_NON_EU_ISO.includes(iso)) {
+    return 'world';
+  }
+  return 'nl';
+}
+
+export function quotationVatContext(
+  countrycode: string | null | undefined
+): QuotationVatContext {
+  const region = resolveVatRegion(countrycode);
+  if (region === 'eu') {
+    return { region, rate: 0, reverseCharge: true };
+  }
+  if (region === 'world') {
+    return { region, rate: 0, reverseCharge: false };
+  }
+  return { region, rate: 21, reverseCharge: false };
+}
