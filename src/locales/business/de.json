@@ -55,7 +55,7 @@
   "quotation.vat": "zzgl. {{percent}} % MwSt.",
   "quotation.totalInclVat": "Gesamtbetrag brutto",
   "quotation.vatReverseCharge": "Steuerschuldnerschaft des Leistungsempfängers (0%)",
-  "quotation.vatReverseChargeNote": "Die Umsatzsteuerschuld geht gemäß Artikel 196 der Richtlinie 2006/112/EG auf den Leistungsempfänger über (Reverse-Charge-Verfahren).",
+  "quotation.vatReverseChargeNote": "Umsatzsteuer 0%: innergemeinschaftliche Lieferung gemäß Artikel 138 der Richtlinie 2006/112/EG; die Steuerschuld für etwaige Dienstleistungen geht gemäß Artikel 196 auf den Leistungsempfänger über.",
   "quotation.total": "Gesamtbetrag",
   "quotation.signatureIntro": "Mit seiner Unterschrift nimmt der Auftraggeber dieses Angebot an und erklärt sich ausdrücklich mit den Allgemeinen Geschäftsbedingungen sowie mit den in diesem Angebot aufgeführten Bestimmungen zum geistigen Eigentum und zur Freistellung einverstanden.",
   "quotation.signatureFor": "Rechtsverbindliche Unterschrift für",

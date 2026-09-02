@@ -55,7 +55,7 @@
   "quotation.vat": "BTW {{percent}}%",
   "quotation.totalInclVat": "Totaal incl. BTW",
   "quotation.vatReverseCharge": "BTW verlegd (0%)",
-  "quotation.vatReverseChargeNote": "BTW verlegd naar de afnemer op grond van artikel 196 van Richtlijn 2006/112/EG.",
+  "quotation.vatReverseChargeNote": "0% btw: intracommunautaire levering op grond van artikel 138 van Richtlijn 2006/112/EG; btw op eventuele diensten is verlegd naar de afnemer op grond van artikel 196.",
   "quotation.total": "Totaal",
   "quotation.signatureIntro": "Door ondertekening gaat Opdrachtgever akkoord met deze offerte en verklaart Opdrachtgever uitdrukkelijk in te stemmen met de Algemene Voorwaarden en met de bepalingen inzake Intellectueel Eigendom en Vrijwaring, zoals opgenomen in deze offerte.",
   "quotation.signatureFor": "Voor akkoord namens",

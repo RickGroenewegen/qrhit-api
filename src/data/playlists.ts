@@ -990,7 +990,7 @@ export async function updatePlaylistBlocked(
     // publishing this process's local set: a worker whose set is stale or
     // still uninitialized would otherwise overwrite the shared key (worst
     // case writing the empty sentinel while playlists are still blocked).
-    const republished = await loadBlocked(deps);
+    const republished = await loadBlocked(deps, { requirePublish: true });
     if (!republished) {
       return {
         success: false,
@@ -1014,7 +1014,10 @@ export async function updatePlaylistBlocked(
   }
 }
 
-export async function loadBlocked(deps: DataDeps): Promise<boolean> {
+export async function loadBlocked(
+  deps: DataDeps,
+  opts?: { requirePublish?: boolean }
+): Promise<boolean> {
   try {
     // Query all blocked PaymentHasPlaylist records
     const blockedRecords = await deps.prisma.paymentHasPlaylist.findMany({
@@ -1049,10 +1052,20 @@ export async function loadBlocked(deps: DataDeps): Promise<boolean> {
           `Loaded blocked playlists but failed to publish to Redis: ${publishError.message}`
         )
       );
+      // Admin toggles must not report success when the shared key still
+      // holds the old list; boot/retry callers stay best-effort.
+      if (opts?.requirePublish) {
+        return false;
+      }
     }
 
-    // Only log on the main/primary server
-    const isMainServer = await deps.utils.isMainServer();
+    // Only log on the main/primary server. The lookup involves EC2
+    // metadata calls and gates logging only — it must never turn a
+    // successful load into a failure.
+    let isMainServer = false;
+    try {
+      isMainServer = await deps.utils.isMainServer();
+    } catch {}
     const cluster = await import('cluster');
     if (
       cluster.default.isPrimary &&

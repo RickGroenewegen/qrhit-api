@@ -190,12 +190,33 @@ const COUNTRY_NAME_TO_ISO: Record<string, string> = {
   australien: 'AU',
 };
 
-// Recognized non-EU ISO codes. A 2-letter code outside the EU list that is
-// not in here is treated as unrecognized (→ 'nl'): charging 21% to a typo is
+// The complete ISO 3166-1 alpha-2 set, identical to the frontend country
+// dropdown (qrhit src/app/shared/vat-region.util.ts) so every selectable
+// country buckets the same on both sides. A 2-letter code outside this set
+// is treated as unrecognized (→ 'nl'): charging 21% to a typo is
 // recoverable, granting a 0% quote to one is not.
-const KNOWN_NON_EU_ISO = [
-  'CH', 'GB', 'US', 'NO', 'CA', 'AU', 'NZ', 'JP', 'AE', 'IS', 'LI', 'TR',
-  'RS', 'UA', 'MA', 'ZA', 'SG', 'HK', 'KR', 'CN', 'IN', 'BR', 'MX', 'IL',
+const ALL_ISO_COUNTRY_CODES = [
+  'AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM',
+  'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ',
+  'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR', 'IO', 'BN', 'BG', 'BF',
+  'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'CX', 'CC',
+  'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CW', 'CY', 'CZ', 'DK',
+  'DJ', 'DM', 'DO', 'EC', 'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO',
+  'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM', 'GE', 'DE', 'GH', 'GI',
+  'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM',
+  'VA', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IQ', 'IE', 'IM', 'IL', 'IT',
+  'JM', 'JP', 'JE', 'JO', 'KZ', 'KE', 'KI', 'KR', 'KW', 'KG', 'LA', 'LV',
+  'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO', 'MK', 'MG', 'MW', 'MY',
+  'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC',
+  'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC',
+  'NZ', 'NI', 'NE', 'NG', 'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS',
+  'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT', 'PR', 'QA', 'RE', 'RO',
+  'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST',
+  'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA',
+  'GS', 'SS', 'ES', 'LK', 'SR', 'SJ', 'SZ', 'SE', 'CH', 'TW', 'TJ', 'TZ',
+  'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR', 'TM', 'TC', 'TV', 'UG',
+  'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VG', 'VI',
+  'WF', 'EH', 'YE', 'ZM', 'ZW'
 ];
 
 /**
@@ -204,19 +225,34 @@ const KNOWN_NON_EU_ISO = [
  * the EU (0%). Quotations have no VIES-checked VAT ID, so unlike
  * resolveTaxContext the EU bucket assumes the B2B customer will supply one.
  */
+/**
+ * Best-effort normalization of a Company.countrycode value (ISO code or
+ * legacy free-text name) to an ISO 3166-1 alpha-2 code. Returns null when
+ * the value is empty or unrecognizable.
+ */
+export function normalizeCountryIso(
+  countrycode: string | null | undefined
+): string | null {
+  const raw = (countrycode || '').trim();
+  if (!raw) {
+    return null;
+  }
+  const mapped = COUNTRY_NAME_TO_ISO[raw.toLowerCase()];
+  if (mapped) {
+    return mapped;
+  }
+  if (/^[A-Za-z]{2}$/.test(raw)) {
+    const iso = raw.toUpperCase();
+    // EU-VAT prefix for Greece (VAT ids use EL, ISO uses GR)
+    return iso === 'EL' ? 'GR' : iso;
+  }
+  return null;
+}
+
 export function resolveVatRegion(
   countrycode: string | null | undefined
 ): VatRegion {
-  const raw = (countrycode || '').trim();
-  if (!raw) {
-    return 'nl';
-  }
-
-  let iso = COUNTRY_NAME_TO_ISO[raw.toLowerCase()] || '';
-  if (!iso && /^[A-Za-z]{2}$/.test(raw)) {
-    iso = raw.toUpperCase();
-  }
-
+  const iso = normalizeCountryIso(countrycode);
   if (!iso) {
     return 'nl';
   }
@@ -226,7 +262,7 @@ export function resolveVatRegion(
   if (euCountryCodes.includes(iso)) {
     return 'eu';
   }
-  if (KNOWN_NON_EU_ISO.includes(iso)) {
+  if (ALL_ISO_COUNTRY_CODES.includes(iso)) {
     return 'world';
   }
   return 'nl';

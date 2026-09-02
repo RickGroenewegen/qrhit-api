@@ -7,7 +7,11 @@ import Bookkeeping from '../bookkeeping';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
-import { quotationVatContext } from '../services/vat';
+import {
+  quotationVatContext,
+  normalizeCountryIso,
+  resolveVatRegion,
+} from '../services/vat';
 import Cache from '../cache';
 import { ZipArchive } from 'archiver';
 import * as fsPromises from 'fs/promises';
@@ -207,6 +211,30 @@ export default async function vibeRoutes(
 
         const company = built.company as any;
         const list = built.list as any;
+
+        // The quotation shows reverse charge (EU) or 0% export (world) for
+        // non-domestic companies; without an explicit rate createInvoice
+        // falls back to the standard 21% NL rate and the finalized invoice
+        // would contradict the signed quotation. Fail loudly when MoneyBird
+        // has no matching 0% rate rather than booking the wrong VAT.
+        const invoiceVatRegion = resolveVatRegion(company.countrycode);
+        if (invoiceVatRegion !== 'nl') {
+          const zeroRateId = await bookkeeping.findTaxRateId({
+            percentage: 0,
+            countryCode:
+              normalizeCountryIso(company.countrycode) || undefined,
+          });
+          if (!zeroRateId) {
+            reply.status(409).send({
+              error: `No 0% tax rate configured in MoneyBird for ${company.countrycode}`,
+            });
+            return;
+          }
+          built.items = built.items.map((it: any) => ({
+            ...it,
+            tax_rate_id: zeroRateId,
+          }));
+        }
 
         const fullName = (company.contact || '').trim();
         const [firstname, ...rest] = fullName.split(/\s+/);
@@ -1694,6 +1722,20 @@ export default async function vibeRoutes(
         // NL 21%, intra-EU reverse charge (BTW verlegd), outside the EU 0%.
         const vatContext = quotationVatContext(company.countrycode);
 
+        // The address block shows the country name in the quotation's
+        // language, not the stored ISO code; the main locale bundles carry
+        // countries.* for every business locale (same map invoice.ejs uses).
+        // Unrecognizable legacy values fall back to the stored text.
+        const countryNames = await translation.getTranslationsByPrefix(
+          locale,
+          'countries'
+        );
+        const companyCountryIso = normalizeCountryIso(company.countrycode);
+        const companyCountryName =
+          (companyCountryIso && countryNames?.[companyCountryIso]) ||
+          company.countrycode ||
+          '';
+
         // If a list was specified, load its per-list calculation so per-list
         // toggles (e.g. includeVotingPortal) override the company defaults.
         let listCalc: {
@@ -1944,6 +1986,7 @@ export default async function vibeRoutes(
           productDetails,
           productType: type,
           vatContext,
+          companyCountryName,
         });
       } catch (error) {
         console.error('Error rendering quotation view:', error);

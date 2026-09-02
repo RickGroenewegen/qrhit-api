@@ -414,7 +414,7 @@
                     1069CD Amsterdam<br>
                     zakelijk@qrsong.io<br>
                     <%= t('senderCoc') %>: 99311917<br>
-                    <%= t('senderVat') %>: <%= locale === 'nl' ? '8689.27.764.B.01' : 'NL868927764B01' %>
+                    <%= t('senderVat') %>: <% const vatIdCtx = (typeof vatContext !== 'undefined' && vatContext) ? vatContext : { region: 'nl' }; %><%= (vatIdCtx.region === 'nl' && locale === 'nl') ? '8689.27.764.B.01' : 'NL868927764B01' %>
                 </div>
             </div>
         </div>
@@ -433,7 +433,7 @@
                             <%= company.zipcode %> <%= company.city %><br>
                         <% } %>
                         <% if (company.countrycode) { %>
-                            <%= company.countrycode %><br>
+                            <%= companyCountryName %><br>
                         <% } %>
 
                         <% if (company.contact) { %>

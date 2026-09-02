@@ -913,6 +913,25 @@ describe('loadBlocked', () => {
     await expect(loadBlocked(deps)).resolves.toBe(true);
     expect(deps.blockedPlaylists.has(3)).toBe(true);
   });
+
+  it('fails when the publish fails and the caller requires it', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 3 }]);
+    cache.setArray.mockRejectedValue(new Error('redis gone'));
+
+    await expect(
+      loadBlocked(deps, { requirePublish: true })
+    ).resolves.toBe(false);
+  });
+
+  it('a failed isMainServer lookup only skips logging, not the load', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 4 }]);
+    deps.utils.isMainServer.mockRejectedValue(new Error('imds down'));
+
+    await expect(loadBlocked(deps)).resolves.toBe(true);
+    expect(deps.blockedPlaylists.has(4)).toBe(true);
+  });
 });
 
 describe('loadBlockedFromCache', () => {

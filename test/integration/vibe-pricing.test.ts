@@ -265,8 +265,11 @@ describe('vibe pricing and quotation views', () => {
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
+        expect(res.body).toContain('artikel 138');
         expect(res.body).toContain('artikel 196');
         expect(res.body).not.toContain('BTW 21%');
+        // The address block shows the localized country name, not the code
+        expect(res.body).toContain('Duitsland');
       } finally {
         await prisma().company.update({
           where: { id: companyId },
@@ -287,6 +290,26 @@ describe('vibe pricing and quotation views', () => {
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
+      } finally {
+        await prisma().company.update({
+          where: { id: companyId },
+          data: { countrycode: null },
+        });
+      }
+    });
+
+    it('shows the country name in the quotation language', async () => {
+      await prisma().company.update({
+        where: { id: companyId },
+        data: { countrycode: 'DE' },
+      });
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-114?locale=de`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain('Deutschland');
       } finally {
         await prisma().company.update({
           where: { id: companyId },

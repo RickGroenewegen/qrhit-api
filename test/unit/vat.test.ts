@@ -139,6 +139,11 @@ describe('resolveVatRegion / quotationVatContext (quotation VAT buckets)', () =>
     expect(resolveVatRegion('be')).toBe('eu');
     expect(resolveVatRegion('CH')).toBe('world');
     expect(resolveVatRegion('US')).toBe('world');
+    // any real ISO country outside the EU is an export, not a typo
+    expect(resolveVatRegion('TH')).toBe('world');
+    expect(resolveVatRegion('AR')).toBe('world');
+    // EU-VAT prefix for Greece maps to the ISO code
+    expect(resolveVatRegion('EL')).toBe('eu');
   });
 
   it('normalizes legacy free-text country names', () => {

@@ -55,7 +55,7 @@
   "quotation.vat": "VAT {{percent}}%",
   "quotation.totalInclVat": "Total incl. VAT",
   "quotation.vatReverseCharge": "VAT reverse charged (0%)",
-  "quotation.vatReverseChargeNote": "VAT reverse charged to the recipient pursuant to Article 196 of Council Directive 2006/112/EC.",
+  "quotation.vatReverseChargeNote": "VAT charged at 0%: intra-Community supply pursuant to Article 138 of Council Directive 2006/112/EC; VAT on any services is reverse charged to the recipient pursuant to Article 196.",
   "quotation.total": "Total",
   "quotation.signatureIntro": "By signing, the Client accepts this quotation and expressly agrees to the General Terms and Conditions and to the provisions on Intellectual Property and Indemnification set out in this quotation.",
   "quotation.signatureFor": "Agreed on behalf of",
