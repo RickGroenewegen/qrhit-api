@@ -824,6 +824,7 @@ export async function resetJudgedStatus(
 
 export interface TrackOrderEntry {
   id: number;
+  trackId: string;
   artist: string;
   name: string;
   year: number | null;
@@ -854,7 +855,9 @@ export async function getPlaylistTrackOrder(
       orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
       select: {
         order: true,
-        track: { select: { id: true, artist: true, name: true, year: true } },
+        track: {
+          select: { id: true, trackId: true, artist: true, name: true, year: true },
+        },
       },
     });
 
@@ -862,6 +865,7 @@ export async function getPlaylistTrackOrder(
       success: true,
       tracks: rows.map((row) => ({
         id: row.track.id,
+        trackId: row.track.trackId,
         artist: row.track.artist,
         name: row.track.name,
         year: row.track.year,

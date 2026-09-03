@@ -1068,16 +1068,16 @@ describe('getPlaylistTrackOrder', () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
     prisma.playlistHasTrack.findMany.mockResolvedValue([
-      { order: 0, track: { id: 7, artist: 'Queen', name: 'Bo Rhap', year: 1975 } },
-      { order: 1, track: { id: 9, artist: 'Abba', name: 'SOS', year: 1975 } },
+      { order: 0, track: { id: 7, trackId: 'sp-7', artist: 'Queen', name: 'Bo Rhap', year: 1975 } },
+      { order: 1, track: { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975 } },
     ]);
 
     const res = await getPlaylistTrackOrder(deps, 5);
 
     expect(res.success).toBe(true);
     expect(res.tracks).toEqual([
-      { id: 7, artist: 'Queen', name: 'Bo Rhap', year: 1975, order: 0 },
-      { id: 9, artist: 'Abba', name: 'SOS', year: 1975, order: 1 },
+      { id: 7, trackId: 'sp-7', artist: 'Queen', name: 'Bo Rhap', year: 1975, order: 0 },
+      { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975, order: 1 },
     ]);
     expect(prisma.playlistHasTrack.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
