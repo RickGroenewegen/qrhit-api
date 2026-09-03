@@ -2030,16 +2030,21 @@ class Mollie {
             numberOfTracks: item.numberOfTracks,
             type: item.type == 'sheets' ? 'physical' : item.type,
             subType: item.type == 'sheets' ? 'sheets' : 'none',
-            doubleSided: item.doubleSided,
-            eco: item.eco,
-            allowDuplicates: item.allowDuplicates === true,
+            // Design flags may arrive as MySQL tinyint 1/0 when the cart item
+            // was rebuilt from a stored design (raw SQL readers in designer.ts
+            // and data/playlists.ts). Prisma rejects Int for Boolean columns,
+            // so normalise every flag here.
+            doubleSided: this.utils.parseBoolean(item.doubleSided),
+            eco: this.utils.parseBoolean(item.eco),
+            allowDuplicates: this.utils.parseBoolean(item.allowDuplicates),
             qrColor: item.qrColor || '#000000',
             qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
             qrLogo: sanitizeLogoFilename(item.qrLogo),
             qrLogoScale: clampScale(item.qrLogoScale),
-            hideCircle: item.hideCircle,
+            hideCircle: this.utils.parseBoolean(item.hideCircle),
             qrBackgroundType:
-              item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),
+              item.qrBackgroundType ||
+              (this.utils.parseBoolean(item.hideCircle) ? 'none' : 'square'),
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,
@@ -2052,7 +2057,7 @@ class Mollie {
             // Front side color/gradient
             backgroundFrontType: item.backgroundFrontType || 'image',
             backgroundFrontColor: item.backgroundFrontColor || '#ffffff',
-            useFrontGradient: item.useFrontGradient || false,
+            useFrontGradient: this.utils.parseBoolean(item.useFrontGradient),
             gradientFrontColor: item.gradientFrontColor || '#ffffff',
             gradientFrontDegrees: item.gradientFrontDegrees || 180,
             gradientFrontPosition: item.gradientFrontPosition || 50,
@@ -2061,7 +2066,7 @@ class Mollie {
             backgroundBack: item.backgroundBack || '',
             backgroundBackColor: item.backgroundBackColor || '#ffffff',
             fontColor: item.fontColor || '#000000',
-            useGradient: item.useGradient || false,
+            useGradient: this.utils.parseBoolean(item.useGradient),
             gradientBackgroundColor: item.gradientBackgroundColor || '#ffffff',
             gradientDegrees: item.gradientDegrees || 180,
             gradientPosition: item.gradientPosition || 50,
@@ -2070,17 +2075,25 @@ class Mollie {
               item.frontOpacity !== undefined ? item.frontOpacity : 100,
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
             // Bingo enabled flag and price
-            gamesEnabled: item.productType === 'cards' ? (item.gamesEnabled === true) : false,
-            gamesPrice: (item.productType === 'cards' && item.gamesEnabled === true) ? QRGAMES_UPGRADE_PRICE : 0,
+            gamesEnabled:
+              item.productType === 'cards' &&
+              this.utils.parseBoolean(item.gamesEnabled),
+            gamesPrice:
+              item.productType === 'cards' &&
+              this.utils.parseBoolean(item.gamesEnabled)
+                ? QRGAMES_UPGRADE_PRICE
+                : 0,
             // Box add-on
-            boxEnabled: item.boxEnabled === true,
+            boxEnabled: this.utils.parseBoolean(item.boxEnabled),
             boxQuantity: item.boxQuantity || 0,
             boxPrice: (item.boxQuantity || 0) * BOX_PRICE,
             // Box front design
             boxFrontBackgroundType: item.boxFrontBackgroundType || 'image',
             boxFrontBackground: item.boxFrontBackground || '',
             boxFrontBackgroundColor: item.boxFrontBackgroundColor || '#ffffff',
-            boxFrontUseFrontGradient: item.boxFrontUseFrontGradient || false,
+            boxFrontUseFrontGradient: this.utils.parseBoolean(
+              item.boxFrontUseFrontGradient
+            ),
             boxFrontGradientColor: item.boxFrontGradientColor || '#ffffff',
             boxFrontGradientDegrees: item.boxFrontGradientDegrees || 180,
             boxFrontGradientPosition: item.boxFrontGradientPosition || 50,
@@ -2094,7 +2107,7 @@ class Mollie {
             boxBackBackground: item.boxBackBackground || '',
             boxBackBackgroundColor: item.boxBackBackgroundColor || '#ffffff',
             boxBackFontColor: item.boxBackFontColor || '#000000',
-            boxBackUseGradient: item.boxBackUseGradient || false,
+            boxBackUseGradient: this.utils.parseBoolean(item.boxBackUseGradient),
             boxBackGradientColor: item.boxBackGradientColor || '#ffffff',
             boxBackGradientDegrees: item.boxBackGradientDegrees || 180,
             boxBackGradientPosition: item.boxBackGradientPosition || 50,

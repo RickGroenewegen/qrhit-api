@@ -133,14 +133,19 @@ const utilsMock = vi.hoisted(() => ({
   lookupIp: vi.fn(async () => null as any),
   generateRandomString: vi.fn(() => 'RND1234567'),
 }));
-vi.mock('../../../src/utils', () => ({
-  default: class {
-    isMainServer = utilsMock.isMainServer;
-    isTrustedIp = utilsMock.isTrustedIp;
-    lookupIp = utilsMock.lookupIp;
-    generateRandomString = utilsMock.generateRandomString;
-  },
-}));
+vi.mock('../../../src/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/utils')>();
+  return {
+    default: class {
+      isMainServer = utilsMock.isMainServer;
+      isTrustedIp = utilsMock.isTrustedIp;
+      lookupIp = utilsMock.lookupIp;
+      generateRandomString = utilsMock.generateRandomString;
+      // Pure helper; use the real one so tinyint/boolean coercion is exercised.
+      parseBoolean = actual.default.prototype.parseBoolean;
+    },
+  };
+});
 
 const generatorMock = vi.hoisted(() => ({
   queueGenerate: vi.fn(),
@@ -694,6 +699,54 @@ describe('getPaymentUri', () => {
       priceVAT: 8.68,
       printApiPrice: 30, // 15 * 2
     });
+  });
+
+  it('normalises tinyint 1/0 design flags to booleans', async () => {
+    // A cart item rebuilt from a stored design (dashboard reorder, designer
+    // page) carries MySQL tinyint flags from the raw SQL readers. Prisma
+    // rejects Int for Boolean columns, which used to abort payment creation
+    // with "Argument `useGradient`: Invalid value provided. Expected Boolean,
+    // provided Int."
+    const params = makeParams({
+      cart: {
+        items: [
+          makeItem({
+            doubleSided: 1,
+            eco: 0,
+            hideCircle: 0,
+            allowDuplicates: 1,
+            useFrontGradient: 0,
+            useGradient: 1,
+            gamesEnabled: 1,
+            boxEnabled: 0,
+            boxFrontUseFrontGradient: 1,
+            boxBackUseGradient: 0,
+          }),
+        ],
+      },
+    });
+
+    const result = await mollie.getPaymentUri(params, IP);
+
+    expect(result.success).toBe(true);
+    const row =
+      prismaMock.payment.create.mock.calls[0][0].data.PaymentHasPlaylist
+        .create[0];
+    // toMatchObject is strict about type: 1 does not match true.
+    expect(row).toMatchObject({
+      doubleSided: true,
+      eco: false,
+      hideCircle: false,
+      qrBackgroundType: 'square',
+      allowDuplicates: true,
+      useFrontGradient: false,
+      useGradient: true,
+      gamesEnabled: true,
+      boxEnabled: false,
+      boxFrontUseFrontGradient: true,
+      boxBackUseGradient: false,
+    });
+    expect(row.gamesPrice).toBeGreaterThan(0);
   });
 
   it('converts to the presentment currency and filters methods (USD)', async () => {
