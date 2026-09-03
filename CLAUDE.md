@@ -86,6 +86,30 @@ The price-list PDF routes name the download from the bundle and return it in
 `Content-Disposition`; the frontend reads the name from that header rather
 than duplicating the mapping.
 
+## Print&Bind (physical card printing)
+
+All Print&Bind code lives in `src/printers/printenbind.ts`; it talks to the
+REST API documented at https://www.printenbind.nl/api/docs (OpenAPI at
+`/api/openapi.json`). Keep changes to the integration inside that file.
+
+- `PRINTENBIND_API_URL` / `PRINTENBIND_API_KEY`: development must point at
+  `https://sandbox.printenbind.nl/api/rest` with the sandbox token; production
+  uses `https://www.printenbind.nl/api/rest`. The live token also works on
+  the REST endpoint.
+- `POST /orders` places (checks out) the order immediately; there is no
+  separate finish step. `processOrderRequest` therefore refuses to place
+  orders on the live host unless `ENVIRONMENT=production` and runs
+  `/orders/calculate` instead. `/orders/calculate` never creates anything but
+  also does not price delivery.
+- Products: `losbladig` (60x60 game cards, or A4 sheets) and `werkblad`
+  (120x120 box insert cards). `accessory_item` is required for our account
+  (`none` or the customer-specific `box_qrsong`). `borderless: true` and
+  `check_doc: false` reproduce what Print&Bind applied to our v1 orders.
+- Tracking comes back as barcodes only; `buildTrackingUrl` rebuilds the
+  PostNL / international URLs because `shipping.ts` parses
+  `code/country/postalcode` off the URL tail.
+- Sandbox orders can be cancelled with `DELETE /orders/{id}`.
+
 ## Adding New Music Services
 
 See [NEW_MUSIC_SERVICE.md](./NEW_MUSIC_SERVICE.md) for complete documentation on integrating new music streaming services (Spotify, Tidal, YouTube Music, etc.).

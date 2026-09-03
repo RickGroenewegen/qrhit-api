@@ -3,12 +3,12 @@ import { maxCardsFor, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/c
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
-import { color, blue, white, magenta } from 'console-log-colors';
+import { color, blue, white } from 'console-log-colors';
 import Mail from '../mail';
 import fs from 'fs/promises';
 import Data from '../data';
 import PDF from '../pdf';
-import crypto from 'crypto';
+import PushoverClient from '../pushover';
 import Spotify from '../spotify';
 import Utils from '../utils';
 import cluster from 'cluster';
@@ -24,6 +24,26 @@ interface PriceResult {
   discountPercentage: number;
 }
 
+/**
+ * One HTTP exchange with Print&Bind. The list of calls made for an order is
+ * stored on the payment (printApiOrderResponse) so the admin dashboard can
+ * show exactly what was sent and what came back.
+ */
+interface PbApiCall {
+  method: string;
+  url: string;
+  body?: any;
+  statusCode: number;
+  responseBody: any;
+}
+
+/**
+ * Order statuses (Print&Bind's own Dutch enum) that mean the parcel has left
+ * the building. `Verzonden` is the normal one; the other two are reached when
+ * the hourly poll missed the shipped window.
+ */
+const PB_SHIPPED_STATUSES = ['Verzonden', 'Afgeleverd', 'Afgehaald'];
+
 class PrintEnBind {
   private static instance: PrintEnBind;
   private prisma = PrismaInstance.getInstance();
@@ -35,259 +55,13 @@ class PrintEnBind {
   private utils = new Utils();
   private discount = new Discount();
   private shipping = Shipping.getInstance();
-  private countryCodes: string[] = [
-    'AF',
-    'AX',
-    'AL',
-    'DZ',
-    'AS',
-    'AD',
-    'AO',
-    'AI',
-    'AQ',
-    'AG',
-    'AR',
-    'AM',
-    'AW',
-    'AU',
-    'AT',
-    'AZ',
-    'BS',
-    'BH',
-    'BD',
-    'BB',
-    'BY',
-    'BE',
-    'BZ',
-    'BJ',
-    'BM',
-    'BT',
-    'BO',
-    'BQ',
-    'BA',
-    'BW',
-    'BV',
-    'BR',
-    'IO',
-    'BN',
-    'BG',
-    'BF',
-    'BI',
-    'KH',
-    'CM',
-    'CA',
-    'CV',
-    'KY',
-    'CF',
-    'TD',
-    'CL',
-    'CN',
-    'CX',
-    'CC',
-    'CO',
-    'KM',
-    'CG',
-    'CD',
-    'CK',
-    'CR',
-    'CI',
-    'HR',
-    'CW',
-    'CY',
-    'CZ',
-    'DK',
-    'DJ',
-    'DM',
-    'DO',
-    'EC',
-    'EG',
-    'SV',
-    'GQ',
-    'ER',
-    'EE',
-    'ET',
-    'FK',
-    'FO',
-    'FJ',
-    'FI',
-    'FR',
-    'GF',
-    'PF',
-    'TF',
-    'GA',
-    'GM',
-    'GE',
-    'DE',
-    'GH',
-    'GI',
-    'GR',
-    'GL',
-    'GD',
-    'GP',
-    'GU',
-    'GT',
-    'GG',
-    'GN',
-    'GW',
-    'GY',
-    'HT',
-    'HM',
-    'VA',
-    'HN',
-    'HK',
-    'HU',
-    'IS',
-    'IN',
-    'ID',
-    'IQ',
-    'IE',
-    'IM',
-    'IL',
-    'IT',
-    'JM',
-    'JP',
-    'JE',
-    'JO',
-    'KZ',
-    'KE',
-    'KI',
-    'KR',
-    'KW',
-    'KG',
-    'LA',
-    'LV',
-    'LB',
-    'LS',
-    'LR',
-    'LY',
-    'LI',
-    'LT',
-    'LU',
-    'MO',
-    'MK',
-    'MG',
-    'MW',
-    'MY',
-    'MV',
-    'ML',
-    'MT',
-    'MH',
-    'MQ',
-    'MR',
-    'MU',
-    'YT',
-    'MX',
-    'FM',
-    'MD',
-    'MC',
-    'MN',
-    'ME',
-    'MS',
-    'MA',
-    'MZ',
-    'MM',
-    'NA',
-    'NR',
-    'NP',
-    'NL',
-    'AN',
-    'NC',
-    'NZ',
-    'NI',
-    'NE',
-    'NG',
-    'NU',
-    'NF',
-    'MP',
-    'NO',
-    'OM',
-    'PK',
-    'PW',
-    'PS',
-    'PA',
-    'PG',
-    'PY',
-    'PE',
-    'PH',
-    'PN',
-    'PL',
-    'PT',
-    'PR',
-    'QA',
-    'RE',
-    'RO',
-    'RU',
-    'RW',
-    'BL',
-    'SH',
-    'KN',
-    'LC',
-    'MF',
-    'PM',
-    'VC',
-    'WS',
-    'SM',
-    'ST',
-    'SA',
-    'SN',
-    'RS',
-    'SC',
-    'SL',
-    'SG',
-    'SX',
-    'SK',
-    'SI',
-    'SB',
-    'SO',
-    'ZA',
-    'GS',
-    'SS',
-    'ES',
-    'LK',
-    'SR',
-    'SJ',
-    'SZ',
-    'SE',
-    'CH',
-    'TW',
-    'TJ',
-    'TZ',
-    'TH',
-    'TL',
-    'TG',
-    'TK',
-    'TO',
-    'TT',
-    'TN',
-    'TR',
-    'TM',
-    'TC',
-    'TV',
-    'UG',
-    'UA',
-    'AE',
-    'GB',
-    'US',
-    'UM',
-    'UY',
-    'UZ',
-    'VU',
-    'VE',
-    'VN',
-    'VG',
-    'VI',
-    'WF',
-    'EH',
-    'YE',
-    'ZM',
-    'ZW',
-  ];
+  private pushover = new PushoverClient();
 
   private constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          // Schedule hourly cache refresh
+          // Poll Print&Bind for shipped orders and send the tracking mail
           const trackingJob = new CronJob('15 * * * *', async () => {
             await this.handleTrackingMails();
           });
@@ -298,12 +72,6 @@ class PrintEnBind {
             await this.handleBoxInstructionMails();
           });
           boxInstructionsJob.start();
-
-          // Schedule monthly shipping costs update (1st day of month at 1 AM)
-          const shippingJob = new CronJob('0 1 1 * *', async () => {
-            //await this.calculateShippingCosts();
-          });
-          shippingJob.start();
         }
       });
     }
@@ -474,18 +242,300 @@ class PrintEnBind {
     return orderType;
   }
 
-  private generateOrderHash(items: any[], countrycode: string): string {
-    const orderData = {
-      items,
-      countrycode,
-    };
+  // ---------------------------------------------------------------------------
+  // Print&Bind REST client (https://www.printenbind.nl/api/docs)
+  // ---------------------------------------------------------------------------
 
-    return crypto
-      .createHash('md5')
-      .update(JSON.stringify(orderData))
-      .digest('hex');
+  /**
+   * Base URL of the REST API without a trailing slash. Development points at
+   * https://sandbox.printenbind.nl/api/rest, production at
+   * https://www.printenbind.nl/api/rest.
+   */
+  private pbBaseUrl(): string {
+    return (process.env['PRINTENBIND_API_URL'] || '').replace(/\/+$/, '');
   }
 
+  /** True when PRINTENBIND_API_URL points at the live API rather than the sandbox. */
+  private isLiveApi(): boolean {
+    return !/\/\/sandbox\./i.test(this.pbBaseUrl());
+  }
+
+  /**
+   * POST /orders checks the order out immediately; the REST API has no
+   * separate "finish" step like v1 had. Outside production we therefore only
+   * ever place orders on the sandbox. Development pointed at the live URL is
+   * limited to /orders/calculate.
+   */
+  private mayPlaceOrders(): boolean {
+    return process.env['ENVIRONMENT'] === 'production' || !this.isLiveApi();
+  }
+
+  /**
+   * Single entry point for every HTTP call to Print&Bind. Adds bearer auth,
+   * parses the JSON body (resources are wrapped in `{ data }`) and appends
+   * the exchange to `apiCalls` when given.
+   */
+  private async pbFetch(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    body?: any,
+    apiCalls?: PbApiCall[]
+  ): Promise<{ ok: boolean; status: number; statusText: string; data: any }> {
+    const url = `${this.pbBaseUrl()}${path}`;
+    const authToken = await this.getAuthToken();
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+    };
+    const init: NonNullable<Parameters<typeof fetch>[1]> = { method, headers };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(url, init);
+    const text = await response.text();
+    let data: any = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+
+    if (apiCalls) {
+      apiCalls.push({
+        method,
+        url,
+        ...(body !== undefined ? { body } : {}),
+        statusCode: response.status,
+        responseBody: data,
+      });
+    }
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      data,
+    };
+  }
+
+  /**
+   * Human readable summary of a Print&Bind error response. Validation
+   * errors (422) carry per-field messages, either as `{ field: [msg] }` or
+   * as `[[field, msg], ...]` pairs.
+   */
+  private describePbError(result: {
+    status: number;
+    statusText: string;
+    data: any;
+  }): string {
+    const parts: string[] = [
+      `HTTP ${result.status}${result.statusText ? ` ${result.statusText}` : ''}`,
+    ];
+    const data = result.data;
+    if (data && typeof data === 'object') {
+      if (data.message) {
+        parts.push(String(data.message));
+      }
+      const errors = data.errors;
+      if (Array.isArray(errors)) {
+        for (const entry of errors) {
+          parts.push(Array.isArray(entry) ? entry.join(': ') : String(entry));
+        }
+      } else if (errors && typeof errors === 'object') {
+        for (const [field, messages] of Object.entries(errors)) {
+          parts.push(
+            `${field}: ${
+              Array.isArray(messages) ? messages.join('; ') : String(messages)
+            }`
+          );
+        }
+      }
+    } else if (typeof data === 'string' && data.length > 0) {
+      parts.push(data.slice(0, 200));
+    }
+    return parts.join(' | ');
+  }
+
+  /** GET /orders/{id}; returns the order resource, or null when that fails. */
+  private async getOrder(
+    orderId: string,
+    apiCalls?: PbApiCall[]
+  ): Promise<any | null> {
+    try {
+      const result = await this.pbFetch(
+        'GET',
+        `/orders/${orderId}`,
+        undefined,
+        apiCalls
+      );
+      if (!result.ok || !result.data?.data) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to fetch Print&Bind order ${color.white.bold(
+              orderId
+            )}: ${this.describePbError(result)}`
+          )
+        );
+        return null;
+      }
+      return result.data.data;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error fetching Print&Bind order ${color.white.bold(
+            orderId
+          )}: ${error}`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * The REST API only returns carrier barcodes. Rebuild the tracking URLs the
+   * v1 API used to hand us: shipping.ts parses `code/country/postalcode` off
+   * the URL tail and the tracking mail links to it.
+   */
+  private buildTrackingUrl(
+    code: string,
+    countrycode?: string | null,
+    zipcode?: string | null
+  ): string {
+    const country = (countrycode || 'NL').trim().toUpperCase();
+    let zip = (zipcode || '').trim();
+    if (country === 'NL') {
+      // PostNL formats Dutch postal codes as "1234 AB"; checkout stores them
+      // with or without the space.
+      const match = zip
+        .replace(/\s+/g, '')
+        .toUpperCase()
+        .match(/^(\d{4})([A-Z]{2})$/);
+      if (match) {
+        zip = `${match[1]} ${match[2]}`;
+      }
+      return `https://jouw.postnl.nl/track-and-trace/${code}/NL/${zip}`;
+    }
+    return `https://www.internationalparceltracking.com/Main.aspx#/track/${code}/${country}/${zip}`;
+  }
+
+  /** Tracking link for an order resource, or '' while nothing has shipped. */
+  private trackingLinkFromOrder(
+    order: any,
+    countrycode?: string | null,
+    zipcode?: string | null
+  ): string {
+    const codes: string[] = Array.isArray(order?.tracktrace)
+      ? order.tracktrace.filter(
+          (code: any) => typeof code === 'string' && code.length > 0
+        )
+      : [];
+    if (codes.length === 0) {
+      return '';
+    }
+    if (codes.length > 1) {
+      this.logger.log(
+        color.yellow.bold(
+          `Print&Bind order ${color.white.bold(
+            String(order.id)
+          )} shipped in ${color.white.bold(
+            codes.length
+          )} parcels; using the first tracking code (${codes.join(', ')})`
+        )
+      );
+    }
+    return this.buildTrackingUrl(codes[0], countrycode, zipcode);
+  }
+
+  /**
+   * Convert an internal article (built by createOrderItem and the box
+   * builders) into the REST article payload: internal routing fields are
+   * stripped, v1-only article fields dropped, and numbers/booleans typed the
+   * way the REST validation expects.
+   */
+  private toPbArticle(item: any): Record<string, any> {
+    const {
+      type: _type,
+      amount: _amount,
+      delivery_method: _deliveryMethod,
+      delivery_option: _deliveryOption,
+      payment_method: _paymentMethod,
+      check_doc,
+      borderless,
+      number,
+      copies,
+      ...rest
+    } = item;
+
+    return {
+      ...rest,
+      number: parseInt(String(number), 10) || 1,
+      copies: parseInt(String(copies), 10) || 1,
+      // v1 took 'standard' here; in REST `true` requests the paid extended check
+      check_doc: check_doc === true,
+      borderless:
+        borderless !== undefined ? Boolean(borderless) : rest.size === 'custom',
+      add_inserts: false,
+    };
+  }
+
+  /**
+   * Build the REST `StoreOrderRequest`: address, delivery, production and the
+   * articles. Field limits follow the API schema.
+   */
+  private buildOrderRequest(
+    customerInfo: {
+      fullname?: string;
+      email: string;
+      address?: string;
+      housenumber?: string;
+      zipcode?: string;
+      city?: string;
+      countrycode: string;
+    },
+    articles: Record<string, any>[],
+    options: { fast: boolean; orderComment: string; reference?: string }
+  ): Record<string, any> {
+    const country = (customerInfo.countrycode || 'NL').toUpperCase();
+    const request: Record<string, any> = {
+      contact: (customerInfo.fullname?.trim() || 'John Doe').slice(0, 35),
+      street: (customerInfo.address?.trim() || 'Some lane').slice(0, 95),
+      number: (customerInfo.housenumber?.trim() || '1').slice(0, 35),
+      postalcode: (customerInfo.zipcode?.trim() || '1234AB').slice(0, 17),
+      city: (customerInfo.city?.trim() || 'Amsterdam').slice(0, 35),
+      country,
+      email: (customerInfo.email || 'john@doe.com').slice(0, 100),
+      // Same rule as v1: NL goes via post (Print&Bind picks mailbox or parcel
+      // by size), everything else via the international service.
+      delivery_method: country === 'NL' ? 'post' : 'international',
+      production_method: options.fast ? 'fast' : 'standard',
+      // No Print&Bind branding on the package (was `blanco: 1` in v1)
+      anonymous: true,
+      articles,
+    };
+    if (options.orderComment) {
+      request.comment = options.orderComment.slice(0, 255);
+    }
+    if (options.reference) {
+      // Must be unique per order at Print&Bind; a re-send of the same
+      // payment gets a fresh suffix.
+      request.reference = `${options.reference}-${Date.now().toString(
+        36
+      )}`.slice(0, 100);
+    }
+    return request;
+  }
+
+  /**
+   * Turn our internal items into one Print&Bind order. Physical items become
+   * the articles of a single `POST /orders`, which places the order right
+   * away; digital items are priced locally and never leave the building. With
+   * `dryRun` the same request goes to `POST /orders/calculate`, which prices
+   * it without creating anything.
+   */
   private async processOrderRequest(
     items: any[],
     customerInfo: {
@@ -497,479 +547,235 @@ class PrintEnBind {
       city?: string;
       countrycode: string;
     },
-    logging: boolean = false,
-    cache: boolean = true,
-    fast: boolean = false,
-    orderComment: string = ''
-  ): Promise<
-    ApiResult & {
-      apiCalls?: Array<{
-        method: string;
-        url: string;
-        body?: any;
-        statusCode: number;
-        responseBody: any;
-      }>;
-    }
-  > {
-    const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
-    const cacheKey = `order_request_${orderHash}`;
+    options: {
+      logging?: boolean;
+      fast?: boolean;
+      orderComment?: string;
+      reference?: string;
+      dryRun?: boolean;
+    } = {}
+  ): Promise<ApiResult & { apiCalls: PbApiCall[] }> {
+    const {
+      logging = false,
+      fast = false,
+      orderComment = '',
+      reference,
+      dryRun = false,
+    } = options;
 
-    let supplier = 0;
     let total = 0;
     let shipping = 0;
-    let handling = 0;
     let price = 0;
     let payment = 0;
     let totalProductPriceWithoutVAT = 0;
-    let apiCalls: Array<{
-      method: string;
-      url: string;
-      body?: any;
-      statusCode: number;
-      responseBody: any;
-    }> = [];
+    const apiCalls: PbApiCall[] = [];
 
-    // Check cache first
-    const cachedResult = await this.cache.get(cacheKey);
-    if (cachedResult && cache) {
-      return JSON.parse(cachedResult);
-    }
-
-    const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
-    let physicalOrderCreated: boolean = false;
-    let orderId = null;
-    let totalItems = items.length;
+    const taxModifier = 1 + (taxRate ?? 0) / 100;
+    const round2 = (value: number) => parseFloat(value.toFixed(2));
+
+    const totalItems = items.length;
     let totalItemsSuccess = 0;
-    let paymentMethod = 'bundled';
+    let orderId: string | null = null;
+    let error: string | undefined;
+    const articles: Record<string, any>[] = [];
 
-    if (!this.data.euCountryCodes.includes(customerInfo.countrycode)) {
-      paymentMethod = 'account';
-    }
-
-    // If there's an order-level comment (e.g. packing instructions
-    // for box orders), create the order first via POST /v1/orders so
-    // the comment lives on the order itself rather than being copied
-    // into each article. Subsequent articles are appended below.
-    // See https://www.printenbind.nl/api/documentation/order
-    if (orderComment) {
-      const createOrderBody = { comment: orderComment };
-      const orderResp = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(createOrderBody),
-        }
-      );
-      const orderRespBody = await orderResp.clone().json();
-      if (logging) {
-        apiCalls.push({
-          method: 'POST',
-          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders`,
-          body: createOrderBody,
-          statusCode: orderResp.status,
-          responseBody: orderRespBody,
-        });
-      }
-      const headerLocation = orderResp.headers.get('location');
-      orderId =
-        headerLocation?.split('/')[1] ||
-        orderRespBody.order?.toString() ||
-        orderRespBody.location?.split('/')[1] ||
-        null;
-      if (orderId) {
-        physicalOrderCreated = true;
-        if (logging) {
-          this.logger.log(
-            color.blue.bold(
-              `Created order ${color.white.bold(
-                orderId
-              )} with order-level comment`
-            )
-          );
-        }
-      } else if (logging) {
-        this.logger.log(
-          color.red.bold(
-            `Printenbind did not return an orderId from POST /v1/orders (status ${color.white.bold(
-              orderResp.status.toString()
-            )}) — falling back to creating order from first article`
-          )
-        );
-      }
-    }
-
-    // Add remaining articles
-    for (let i = 0; i < items.length; i++) {
-      items[i].payment_method = paymentMethod;
-      // if (fast) {
-      //   items[i].production_method = 'fast';
-      // }
-
-      if (items[i].type == 'physical' && !physicalOrderCreated) {
-        if (items[i].type == 'physical') {
+    for (const item of items) {
+      if (item.type == 'physical') {
+        if (item.product === 'losbladig') {
+          // Our own sales price for the game cards (ex VAT); only used for
+          // the price breakdown in the result.
           const orderType = await this.getOrderType(
-            parseInt(items[i].copies) / 2,
+            (parseInt(String(item.copies), 10) || 0) / 2,
             false,
             'cards',
-            items[i].playlistId
+            item.playlistId
           );
-
-          const productPriceWithoutVAT = parseFloat(
-            (orderType.amountWithMargin / (1 + (taxRate ?? 0) / 100)).toFixed(2)
-          );
-
-          totalProductPriceWithoutVAT += productPriceWithoutVAT;
-        }
-
-        // `type` is an internal routing flag; Print&Bind doesn't accept it.
-        const { type: _t, ...articleBody } = items[i];
-
-        // Create initial order with first article
-        const response = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(articleBody),
-          }
-        );
-
-        const firstResponse = await response.clone().json();
-
-        if (logging) {
-          apiCalls.push({
-            method: 'POST',
-            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-            body: articleBody,
-            statusCode: response.status,
-            responseBody: firstResponse,
-          });
-        }
-
-        // Try to get orderId from header first, fallback to response body
-        const headerLocation = response.headers.get('location');
-        const bodyOrder = firstResponse.order;
-        const bodyLocation = firstResponse.location;
-
-        // Print&Bind returns the new order via a Location-style path. The
-        // path may or may not have a leading slash and may include extra
-        // segments (e.g. `/orders/7989-1` or `orders/7989-1/articles/1`), so
-        // we pull the segment right after `orders` rather than a fixed index
-        // (a fixed index broke when a leading slash shifted everything and
-        // orderId became the literal string 'orders').
-        const idFromPath = (path?: string | null): string | undefined => {
-          if (!path) return undefined;
-          const segments = path.split('/').filter(Boolean);
-          const ordersIdx = segments.indexOf('orders');
-          if (ordersIdx >= 0 && segments[ordersIdx + 1]) {
-            return segments[ordersIdx + 1];
-          }
-          return segments[segments.length - 1];
-        };
-
-        // Only treat this as a created order when Print&Bind actually
-        // accepted the article. A 400 still carries a `location` like
-        // `/orders/<id>/article`, so without this guard we'd extract an id
-        // for an empty order shell and fail later with the misleading
-        // "No articles has been placed in this cart yet".
-        orderId = response.ok
-          ? idFromPath(headerLocation)
-            || bodyOrder?.toString()
-            || idFromPath(bodyLocation)
-          : null;
-
-        if (orderId) {
-          physicalOrderCreated = true;
-
-          if (logging) {
-            this.logger.log(
-              color.blue.bold(
-                `Created order: ${color.white.bold(
-                  orderId
-                )} and added first article — ${color.white.bold(
-                  this.describeArticle(items[i])
-                )}`
-              )
+          if (orderType?.amountWithMargin) {
+            totalProductPriceWithoutVAT += round2(
+              orderType.amountWithMargin / taxModifier
             );
           }
-          totalItemsSuccess++;
-        } else if (logging) {
-          // No orderId → Printenbind rejected the POST (auth, payload
-          // shape, etc.). Surface the status + body so we can diagnose
-          // without re-running with a debugger attached.
-          this.logger.log(
-            color.red.bold(
-              `Printenbind did not return an orderId for ${color.white.bold(
-                customerInfo.countrycode
-              )} (POST /orders/articles → ${color.white.bold(
-                response.status.toString()
-              )})`
-            )
-          );
-          this.logger.log(
-            color.gray('  response body: ') +
-              color.white(JSON.stringify(firstResponse))
-          );
-          this.logger.log(
-            color.gray('  request body: ') +
-              color.white(JSON.stringify(items[i]))
-          );
         }
-      } else if (items[i].type == 'physical' && physicalOrderCreated) {
-        // `type` is an internal routing flag; Print&Bind doesn't accept it.
-        const { type: _t, ...articleBody } = items[i];
-
-        const articleResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(articleBody),
-          }
-        );
-
-        const articleResponseBody = await articleResponse
-          .clone()
-          .json()
-          .catch(() => null);
-
-        if (logging) {
-          apiCalls.push({
-            method: 'POST',
-            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-            body: articleBody,
-            statusCode: articleResponse.status,
-            responseBody: articleResponseBody,
-          });
-        }
-
-        if (articleResponse.ok) {
-          if (logging) {
-            this.logger.log(
-              color.blue.bold(
-                `Added article ${color.white.bold(
-                  i + 1
-                )} to order ${color.white.bold(orderId)} — ${color.white.bold(
-                  this.describeArticle(items[i])
-                )}`
-              )
-            );
-          }
-          totalItemsSuccess++;
-        } else {
-          // Leave totalItemsSuccess untouched so result.success stays false —
-          // otherwise the order is "sent" with an empty cart and every later
-          // step (delivery, finish, tracking) fails with misleading errors.
-          this.logger.log(
-            color.red.bold(
-              `Failed to add article ${color.white.bold(
-                i + 1
-              )} to order ${color.white.bold(orderId)} — ${color.white.bold(
-                this.describeArticle(items[i])
-              )} (POST /orders/${orderId}/articles → ${color.white.bold(
-                articleResponse.status.toString()
-              )})`
-            )
-          );
-          this.logger.log(
-            color.gray('  response body: ') +
-              color.white(JSON.stringify(articleResponseBody))
-          );
-          this.logger.log(
-            color.gray('  request body: ') + color.white(JSON.stringify(items[i]))
-          );
-        }
-      } else if (items[i].type == 'digital') {
+        articles.push(this.toPbArticle(item));
+      } else if (item.type == 'digital') {
         const orderType = await this.getOrderType(
-          items[i].numberOfTracks,
+          item.numberOfTracks,
           true,
-          items[i].productType,
-          items[i].playlistId
+          item.productType,
+          item.playlistId
         );
 
         if (orderType) {
           let itemPrice = 0;
 
-          if (items[i].productType === 'cards') {
+          if (item.productType === 'cards') {
             itemPrice = parseFloat(
-              (orderType.amountWithMargin * items[i].amount).toFixed(2)
+              (orderType.amountWithMargin * item.amount).toFixed(2)
             );
-          } else if (items[i].productType === 'giftcard') {
-            itemPrice = parseFloat(items[i].price.toFixed(2));
+          } else if (item.productType === 'giftcard') {
+            itemPrice = parseFloat(item.price.toFixed(2));
           }
 
-          const productPriceWithoutVAT = parseFloat(
-            (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
-          );
+          const productPriceWithoutVAT = round2(itemPrice / taxModifier);
 
-          //totalProductPriceWithoutVAT += productPriceWithoutVAT;
           total += itemPrice;
-          price += parseFloat(productPriceWithoutVAT.toFixed(2));
+          price += productPriceWithoutVAT;
 
           totalItemsSuccess++;
         }
       }
     }
 
-    if (physicalOrderCreated) {
-      // Set up delivery. Print&Bind advised using 'mailbox' for NL so the
-      // package always goes via letterbox; 'mailbox' and 'international' do
-      // not require a delivery_option.
-      const deliveryMethod =
-        customerInfo.countrycode === 'NL' ? 'post' : 'international';
+    let blocked = false;
 
-      const deliveryData = {
-        name_contact: customerInfo.fullname?.trim() || 'John Doe',
-        street: customerInfo.address?.trim() || 'Some lane',
-        city: customerInfo.city?.trim() || 'Amsterdam',
-        streetnumber: customerInfo.housenumber?.trim() || '1',
-        zipcode: customerInfo.zipcode?.trim() || '1234AB',
-        country: customerInfo.countrycode,
-        delivery_method: deliveryMethod,
-        blanco: '1',
-        email: customerInfo.email || 'john@doe.com',
-      };
+    if (articles.length > 0) {
+      const placeOrder = !dryRun && this.mayPlaceOrders();
+      blocked = !dryRun && !placeOrder;
 
-      const addDeliveryResult = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(deliveryData),
-        }
-      );
-
-      const addDelivery = await addDeliveryResult.json();
-
-      if (!addDeliveryResult.ok) {
+      if (blocked) {
         this.logger.log(
           color.red.bold(
-            `Failed to set delivery for order ${orderId}: ${
-              addDeliveryResult.status
-            } ${JSON.stringify(addDelivery)}`
+            `Refusing to place a Print&Bind order on the live API while ENVIRONMENT is ${color.white.bold(
+              String(process.env['ENVIRONMENT'])
+            )}. Point PRINTENBIND_API_URL at the sandbox. Running /orders/calculate instead so the request can still be inspected.`
           )
         );
-        // decide: throw, or mark totalItemsSuccess so result.success stays false
+        error =
+          'Print&Bind live API cannot be used to place orders outside production';
       }
 
-      if (logging) {
-        apiCalls.push({
-          method: 'POST',
-          url: `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-          body: deliveryData,
-          statusCode: addDeliveryResult.status,
-          responseBody: addDelivery,
-        });
-      }
+      const orderRequest = this.buildOrderRequest(customerInfo, articles, {
+        fast,
+        orderComment,
+        reference,
+      });
+      const endpoint = placeOrder ? '/orders' : '/orders/calculate';
 
       if (logging) {
+        const summary = items
+          .filter((item) => item.type == 'physical')
+          .map((item) => this.describeArticle(item))
+          .join(', ');
         this.logger.log(
           color.blue.bold(
-            `Added delivery data to order ${color.white.bold(orderId)}`
-          )
-        );
-      }
-      // Get final order details
-      const [orderResponse, deliveryResponse] = await Promise.all([
-        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }),
-        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`, {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }),
-      ]);
-
-      if (logging) {
-        this.logger.log(
-          color.blue.bold(
-            `Retrieved order & delivery details for order ${color.white.bold(
-              orderId
+            `Sending ${color.white.bold(
+              articles.length
+            )} article(s) to Print&Bind in a single POST ${endpoint}: ${color.white.bold(
+              summary
             )}`
           )
         );
       }
 
-      const order: any = await orderResponse.json();
-      const delivery: any = await deliveryResponse.json();
-      const taxModifier = 1 + taxRate / 100;
-
-      supplier += parseFloat(
-        (parseFloat(order.amount) * taxModifier).toFixed(2)
+      const result = await this.pbFetch(
+        'POST',
+        endpoint,
+        orderRequest,
+        apiCalls
       );
+      const order = result.ok ? result.data?.data : null;
 
-      total += parseFloat(
-        (
-          (totalProductPriceWithoutVAT +
-            parseFloat(delivery.amount) +
-            parseFloat(order.price_startup)) *
-          taxModifier
-        ).toFixed(2)
-      );
+      if (!order) {
+        this.logger.log(
+          color.red.bold(
+            `Print&Bind rejected the order request (POST ${endpoint}) for ${color.white.bold(
+              customerInfo.countrycode
+            )}: ${this.describePbError(result)}`
+          )
+        );
+        this.logger.log(
+          color.gray('  request body: ') +
+            color.white(JSON.stringify(orderRequest))
+        );
+        error =
+          error ||
+          `Print&Bind rejected the order: ${this.describePbError(result)}`;
+      } else {
+        orderId =
+          order.id !== null && order.id !== undefined ? String(order.id) : null;
 
-      shipping += parseFloat(
-        (parseFloat(delivery.amount) * taxModifier).toFixed(2)
-      );
+        const amount = parseFloat(order.amount) || 0;
+        const articlesAmount = (
+          Array.isArray(order.articles) ? order.articles : []
+        ).reduce(
+          (sum: number, article: any) =>
+            sum + (parseFloat(article.amount) || 0),
+          0
+        );
+        // Delivery and the per-article startup fee are no longer itemised
+        // by the API; whatever sits above the article prices is what we pay
+        // on top of the print work.
+        const deliveryAndHandling = Math.max(
+          0,
+          round2(amount - articlesAmount)
+        );
 
-      handling += parseFloat(
-        (parseFloat(order.price_startup) * taxModifier).toFixed(2)
-      );
+        total += round2(
+          (totalProductPriceWithoutVAT + deliveryAndHandling) * taxModifier
+        );
+        shipping += round2(deliveryAndHandling * taxModifier);
+        price += round2(totalProductPriceWithoutVAT * taxModifier);
+        payment = round2(deliveryAndHandling * taxModifier);
 
-      price += parseFloat(
-        (totalProductPriceWithoutVAT * taxModifier).toFixed(2)
-      );
-
-      payment = parseFloat(
-        (
-          (parseFloat(delivery.amount) + parseFloat(order.price_startup)) *
-          taxModifier
-        ).toFixed(2)
-      );
+        if (placeOrder && !orderId) {
+          this.logger.log(
+            color.red.bold(
+              `Print&Bind accepted the order request but returned no order id: ${JSON.stringify(
+                order
+              )}`
+            )
+          );
+          error = 'Print&Bind returned no order id';
+        } else {
+          totalItemsSuccess += articles.length;
+          if (logging) {
+            this.logger.log(
+              color.blue.bold(
+                `${placeOrder ? 'Placed' : 'Calculated'} Print&Bind order ${color.white.bold(
+                  orderId ?? '(dry run)'
+                )} with ${color.white.bold(
+                  articles.length
+                )} article(s): supplier amount ${color.white.bold(
+                  amount.toFixed(2)
+                )} ex VAT (${color.white.bold(
+                  deliveryAndHandling.toFixed(2)
+                )} delivery + handling)`
+              )
+            );
+          }
+        }
+      }
     }
 
-    let result = {
-      success: false,
-      data: {},
-      ...(logging ? { apiCalls } : {}),
-    };
+    const success =
+      totalItems > 0 && totalItemsSuccess === totalItems && !blocked;
 
-    if (totalItemsSuccess == totalItems) {
-      result = {
-        success: true,
-        data: {
-          orderId,
-          total,
-          shipping,
-          handling,
-          taxRateShipping: taxRate,
-          taxRate,
-          price,
-          payment,
-        },
-        ...(logging ? { apiCalls } : {}),
+    if (!success) {
+      return {
+        success: false,
+        data: {},
+        ...(error ? { error } : {}),
+        apiCalls,
       };
-      // Cache the successful result for 1 hour (3600 seconds)
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
     }
 
-    return result;
+    return {
+      success: true,
+      data: {
+        orderId,
+        total,
+        shipping,
+        handling: 0,
+        taxRateShipping: taxRate,
+        taxRate,
+        price,
+        payment,
+      },
+      apiCalls,
+    };
   }
+
 
   private async createOrderItem(
     numberOfTracks: number,
@@ -1004,12 +810,16 @@ class PrintEnBind {
       // When playlistItem is null (backward compatibility), use original amount
       const orderAmount = playlistItem ? 1 : item.amount;
 
+      // Print&Bind's `losbladig` (loose page) product. `borderless` and
+      // `check_doc` are explicit in the REST API; the values below are what
+      // Print&Bind applied to our v1 orders (borderless for the 60x60 custom
+      // size, standard file check), so the product and price stay the same.
       let orderObj: any = {
         type: 'physical',
         amount: orderAmount,
         product: 'losbladig',
-        number: '1',
-        copies: numberOfPages.toString(),
+        number: 1,
+        copies: numberOfPages,
         color: 'all',
         size: 'custom',
         printside: 'double',
@@ -1018,10 +828,10 @@ class PrintEnBind {
         finishing_extra: 'none',
         accessory_item: 'none',
         papertype: 'card',
-        size_custom_width: '60',
-        size_custom_height: '60',
-        check_doc: 'standard',
-        delivery_method: 'post',
+        size_custom_width: 60,
+        size_custom_height: 60,
+        borderless: true,
+        check_doc: false,
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
@@ -1029,8 +839,9 @@ class PrintEnBind {
       };
 
       if (item.subType == 'sheets') {
-        orderObj.copies = (Math.ceil(numberOfTracks / 12) * 2).toString();
+        orderObj.copies = Math.ceil(numberOfTracks / 12) * 2;
         orderObj.size = 'a4';
+        orderObj.borderless = false;
         delete orderObj.size_custom_width;
         delete orderObj.size_custom_height;
         orderObj.comment =
@@ -1060,7 +871,7 @@ class PrintEnBind {
       // accessory. Game card articles are 'losbladig' and carry a
       // "Batch nummer ... #X-Y" comment.
       if (item.product === 'werkblad' && !item.accessory_group) {
-        const pages = parseInt(item.copies, 10) || 0;
+        const pages = parseInt(String(item.copies), 10) || 0;
         return `insert cards (${pages} pages)`;
       }
       const batchMatch = comment.match(/#([\d-]+)/);
@@ -1082,8 +893,8 @@ class PrintEnBind {
       // copies equals the file's actual page count.
       amount: 1,
       product: 'werkblad',
-      number: '1',
-      copies: pageCount.toString(),
+      number: 1,
+      copies: pageCount,
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -1091,10 +902,10 @@ class PrintEnBind {
       finishing2: 'none',
       finishing_extra: 'none',
       papertype: 'card',
-      size_custom_width: '120',
-      size_custom_height: '120',
-      check_doc: 'standard',
-      delivery_method: 'post',
+      size_custom_width: 120,
+      size_custom_height: 120,
+      borderless: true,
+      check_doc: false,
       add_file_method: 'url',
       file_overwrite: true,
       file_url: fileUrl,
@@ -1120,8 +931,8 @@ class PrintEnBind {
       type: 'physical',
       amount: 1,
       product: 'werkblad',
-      number: '1',
-      copies: pageCount.toString(),
+      number: 1,
+      copies: pageCount,
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -1130,10 +941,10 @@ class PrintEnBind {
       finishing_extra: 'none',
       accessory_item: 'none',
       papertype: 'card',
-      size_custom_width: '120',
-      size_custom_height: '120',
-      check_doc: 'standard',
-      delivery_method: 'post',
+      size_custom_width: 120,
+      size_custom_height: 120,
+      borderless: true,
+      check_doc: false,
       add_file_method: 'url',
       file_overwrite: true,
       file_url: fileUrl,
@@ -1206,24 +1017,15 @@ class PrintEnBind {
       quantity === 1 ? 'doos' : 'dozen'
     }`;
 
-    const result = await this.processOrderRequest(
-      items,
-      customerInfo,
-      false,
-      true,
-      false,
-      orderComment
-    );
+    const result = await this.processOrderRequest(items, customerInfo, {
+      logging: true,
+      orderComment,
+      reference: `${payment.paymentId}-box-${paymentHasPlaylistId}`,
+    });
 
     if (result.success && result.data?.orderId) {
-      // Finish order in production
-      if (process.env['ENVIRONMENT'] === 'production') {
-        this.logger.log(color.blue.bold(`Finishing order ${color.white.bold(result.data.orderId)} in production`));
-        await this.finishOrder(result.data.orderId, result.apiCalls);
-      }
-
       this.logger.log(
-        color.green.bold(`Successfully created box upgrade Print&Bind order: `) +
+        color.green.bold(`Successfully placed box upgrade Print&Bind order: `) +
           color.white.bold(result.data.orderId) +
           color.green.bold(` for PHP ${paymentHasPlaylistId}`)
       );
@@ -1422,105 +1224,36 @@ class PrintEnBind {
     }
   }
 
-  public async testOrder() {
-    const authToken = await this.getAuthToken();
-  }
-
-  private async getAuthToken(force: boolean = false): Promise<string | null> {
-    return process.env['PRINTENBIND_API_KEY']!;
-  }
-
-  public async finishOrder(
-    orderId: string,
-    apiCalls?: Array<{
-      method: string;
-      url: string;
-      body?: any;
-      statusCode: number;
-      responseBody: any;
-    }>
-  ): Promise<
-    ApiResult & {
-      apiCalls?: Array<{
-        method: string;
-        url: string;
-        body?: any;
-        statusCode: number;
-        responseBody: any;
-      }>;
-    }
-  > {
-    try {
-      const authToken = await this.getAuthToken();
-      const finishApiCalls: Array<{
-        method: string;
-        url: string;
-        body?: any;
-        statusCode: number;
-        responseBody: any;
-      }> = [];
-
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}),
-        }
-      );
-
-      const responseBody = await response
-        .clone()
-        .json()
-        .catch(() => null);
-
-      finishApiCalls.push({
-        method: 'POST',
-        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
-        statusCode: response.status,
-        responseBody,
-      });
-
-      if (!response.ok) {
-        this.logger.log(
-          color.red.bold(
-            `Print&Bind order ${color.white.bold(orderId)} failed to finish: ${response.status}`
-          )
-        );
-        return {
-          success: false,
-          data: {
-            orderId,
-          },
-          apiCalls: [...(apiCalls || []), ...finishApiCalls],
-        };
-      }
-
+  /**
+   * Connectivity check: GET /me returns the customer the token belongs to.
+   */
+  public async testOrder(): Promise<any | null> {
+    const result = await this.pbFetch('GET', '/me');
+    if (!result.ok) {
       this.logger.log(
-        color.green.bold(
-          `Print&Bind order ${color.white.bold(orderId)} finished successfully`
+        color.red.bold(
+          `Print&Bind API check failed (${color.white.bold(
+            this.pbBaseUrl()
+          )}): ${this.describePbError(result)}`
         )
       );
-
-      return {
-        success: true,
-        data: {
-          orderId,
-        },
-        apiCalls: [...(apiCalls || []), ...finishApiCalls],
-      };
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error finishing order ${orderId}: ${error}`)
-      );
-      return {
-        success: false,
-        error: `Error finishing order: ${error}`,
-      };
+      return null;
     }
+    const customer = result.data?.data ?? null;
+    this.logger.log(
+      color.blue.bold(
+        `Print&Bind API reachable at ${color.white.bold(
+          this.pbBaseUrl()
+        )} as ${color.white.bold(customer?.name ?? 'unknown')}${
+          this.isLiveApi() ? ' (live)' : ' (sandbox)'
+        }`
+      )
+    );
+    return customer;
+  }
+
+  private async getAuthToken(): Promise<string | null> {
+    return process.env['PRINTENBIND_API_KEY'] || null;
   }
 
   /**
@@ -1642,7 +1375,6 @@ class PrintEnBind {
     playlists: any[],
     productType: string
   ): Promise<any> {
-    const authToken = await this.getAuthToken();
     const orderItems = [];
 
     for (const playlistItem of playlists) {
@@ -1676,7 +1408,7 @@ class PrintEnBind {
           orderItems.push(orderItem);
           this.logger.log(
             color.blue.bold(
-              `Adding article to ${color.white.bold(
+              `Prepared article for ${color.white.bold(
                 'Print&Bind'
               )} order. Playlist: ${color.white(
                 playlist.name
@@ -1704,7 +1436,7 @@ class PrintEnBind {
           const batchNumber = `${playlist.paymentHasPlaylistId}-${item.index}`;
           this.logger.log(
             color.blue.bold(
-              `Adding article to ${color.white.bold(
+              `Prepared article for ${color.white.bold(
                 'Print&Bind'
               )} order. Playlist: ${color.white(
                 playlist.name
@@ -1755,7 +1487,7 @@ class PrintEnBind {
 
         this.logger.log(
           color.blue.bold(
-            `Adding insert card article to ${color.white.bold(
+            `Prepared insert card article for ${color.white.bold(
               'Print&Bind'
             )} order. Playlist: ${color.white(
               playlist.name
@@ -1808,7 +1540,7 @@ class PrintEnBind {
 
         this.logger.log(
           color.blue.bold(
-            `Adding merged insert card article to ${color.white.bold(
+            `Prepared merged insert card article for ${color.white.bold(
               'Print&Bind'
             )} order. Playlists: ${color.white(
               playlistNames.join(', ')
@@ -1872,83 +1604,15 @@ class PrintEnBind {
         city: payment.city,
         countrycode: payment.countrycode,
       },
-      true,
-      false,
-      payment.fast || false,
-      orderComment
+      {
+        logging: true,
+        fast: payment.fast || false,
+        orderComment,
+        reference: payment.paymentId,
+      }
     );
 
-    let finalApiCalls = result.apiCalls || [];
-
-    if (result.success) {
-      if (process.env['ENVIRONMENT'] === 'production') {
-        const finishResult = await this.finishOrder(
-          result.data.orderId,
-          finalApiCalls
-        );
-        finalApiCalls = finishResult.apiCalls || [];
-
-        if (!finishResult.success) {
-          // The order is still sitting in the Print&Bind cart — report
-          // failure so the dashboard shows it instead of pretending the
-          // order was sent (and don't store payment info/tracking).
-          return {
-            success: false,
-            request: '',
-            response: {
-              apiCalls: finalApiCalls,
-              error: `Print&Bind order ${result.data.orderId} could not be finished`,
-            },
-          };
-        }
-      }
-
-      this.logger.log(
-        color.blue.bold(
-          `Finished order ${color.white.bold(result.data.orderId)}`
-        )
-      );
-
-      const delivery = await this.getDeliveryInfo(result.data.orderId);
-      const trackingLink = delivery?.tracktrace_url || '';
-
-      this.logger.log(
-        color.blue.bold(
-          `Tracking link for order ${color.white.bold(
-            result.data.orderId
-          )} is: ${color.white.bold(trackingLink)}`
-        )
-      );
-
-      if (trackingLink.length > 0) {
-        // Update printApiTrackingLink
-        await this.prisma.payment.update({
-          where: { paymentId: payment.paymentId },
-          data: {
-            printApiTrackingLink: trackingLink,
-          },
-        });
-      }
-
-      this.setPaymentInfo(result.data.orderId, payment);
-
-      return {
-        success: true,
-        request: '',
-        response: {
-          apiCalls: finalApiCalls,
-          id: result.data.orderId,
-        },
-      };
-    } else {
-      return {
-        success: false,
-        request: '',
-        response: {
-          apiCalls: finalApiCalls,
-        },
-      };
-    }
+    return this.finishPlacedOrder(result, payment, 'order');
   }
 
   /**
@@ -2006,7 +1670,7 @@ class PrintEnBind {
 
       this.logger.log(
         color.blue.bold(
-          `Adding inlay card article to ${color.white.bold(
+          `Prepared inlay card article for ${color.white.bold(
             'Print&Bind'
           )} order. Playlist: ${color.white(
             playlist.name
@@ -2041,7 +1705,7 @@ class PrintEnBind {
 
       this.logger.log(
         color.blue.bold(
-          `Adding merged inlay card article to ${color.white.bold(
+          `Prepared merged inlay card article for ${color.white.bold(
             'Print&Bind'
           )} order. Playlists: ${color.white(
             playlistNames.join(', ')
@@ -2061,72 +1725,36 @@ class PrintEnBind {
         city: payment.city,
         countrycode: payment.countrycode,
       },
-      true,
-      false,
-      payment.fast || false,
-      ''
+      {
+        logging: true,
+        fast: payment.fast || false,
+        reference: `${payment.paymentId}-inlay`,
+      }
     );
 
-    let finalApiCalls = result.apiCalls || [];
+    return this.finishPlacedOrder(result, payment, 'inlay card order');
+  }
 
-    if (result.success) {
-      // Finish the order from A to Z — only skipped on development so
-      // local runs don't submit real orders.
-      if (process.env['ENVIRONMENT'] !== 'development') {
-        const finishResult = await this.finishOrder(
-          result.data.orderId,
-          finalApiCalls
-        );
-        finalApiCalls = finishResult.apiCalls || [];
+  /**
+   * Shared tail of the order flows: log the placed order, kick off the
+   * payment/profit bookkeeping and shape the result the generator stores on
+   * the payment (`response` ends up in printApiOrderResponse).
+   */
+  private finishPlacedOrder(
+    result: ApiResult & { apiCalls: PbApiCall[] },
+    payment: any,
+    label: string
+  ): { success: boolean; request: string; response: any } {
+    const apiCalls = result.apiCalls || [];
 
-        if (!finishResult.success) {
-          // The order is still sitting in the Print&Bind cart — report
-          // failure so the dashboard shows it instead of pretending the
-          // order was sent (and don't store payment info/tracking).
-          return {
-            success: false,
-            request: '',
-            response: {
-              apiCalls: finalApiCalls,
-              error: `Print&Bind inlay card order ${result.data.orderId} could not be finished`,
-            },
-          };
-        }
-      } else {
-        this.logger.log(
-          color.yellow.bold(
-            `Skipping finish for inlay card order ${color.white.bold(
-              result.data.orderId
-            )} (development environment)`
-          )
-        );
-      }
-
+    if (result.success && result.data?.orderId) {
       this.logger.log(
-        color.blue.bold(
-          `Finished inlay card order ${color.white.bold(result.data.orderId)}`
-        )
-      );
-
-      const delivery = await this.getDeliveryInfo(result.data.orderId);
-      const trackingLink = delivery?.tracktrace_url || '';
-
-      this.logger.log(
-        color.blue.bold(
-          `Tracking link for inlay card order ${color.white.bold(
+        color.green.bold(
+          `Placed Print&Bind ${label} ${color.white.bold(
             result.data.orderId
-          )} is: ${color.white.bold(trackingLink)}`
+          )} for payment ${color.white.bold(payment.paymentId)}`
         )
       );
-
-      if (trackingLink.length > 0) {
-        await this.prisma.payment.update({
-          where: { paymentId: payment.paymentId },
-          data: {
-            printApiTrackingLink: trackingLink,
-          },
-        });
-      }
 
       this.setPaymentInfo(result.data.orderId, payment);
 
@@ -2134,19 +1762,20 @@ class PrintEnBind {
         success: true,
         request: '',
         response: {
-          apiCalls: finalApiCalls,
+          apiCalls,
           id: result.data.orderId,
         },
       };
-    } else {
-      return {
-        success: false,
-        request: '',
-        response: {
-          apiCalls: finalApiCalls,
-        },
-      };
     }
+
+    return {
+      success: false,
+      request: '',
+      response: {
+        apiCalls,
+        ...(result.error ? { error: result.error } : {}),
+      },
+    };
   }
 
   private async setPaymentInfo(
@@ -2154,7 +1783,6 @@ class PrintEnBind {
     payment: any,
     newStatus: string = 'Submitted'
   ): Promise<void> {
-    const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
 
     const totalPriceWithoutTax = parseFloat(
@@ -2165,25 +1793,14 @@ class PrintEnBind {
     let printApiPriceInclVat = 0;
 
     try {
-      const orderResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${printApiOrderId}`,
-        {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }
-      );
+      const order = await this.getOrder(printApiOrderId);
 
-      const order = await orderResponse.json();
-
-      if (!orderResponse.ok) {
-        this.logger.log(
-          color.red.bold(
-            `Failed to fetch order ${printApiOrderId}: ${orderResponse.status} ${JSON.stringify(order)}`
-          )
-        );
+      if (!order) {
         return;
       }
 
+      // `amount` is the full order amount ex VAT (articles, delivery and
+      // handling), the same figure v1 reported as order.amount.
       printApiPrice = parseFloat(order.amount) || 0;
       const amountTax = parseFloat(order.amount_tax_standard) || 0;
       printApiPriceInclVat = parseFloat(
@@ -2285,219 +1902,23 @@ class PrintEnBind {
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
+  /**
+   * v1 learned the delivery price per country by creating carts it never
+   * finished and reading their delivery record. The REST API prices delivery
+   * only on placed orders (`/orders/calculate` leaves it out) and
+   * `POST /orders` places a real order, so this probe is parked:
+   * `shipping_costs_new` keeps its current values and `getShippingCosts`
+   * keeps reading from it.
+   */
   public async calculateShippingCosts(countryCodes?: string[]): Promise<void> {
-    const authToken = await this.getAuthToken();
-    const codes = countryCodes || this.countryCodes;
-
+    const codes = countryCodes || [];
     this.logger.log(
-      color.blue.bold(
-        `Calculating shipping costs for ${color.white.bold(
-          codes.length.toString()
-        )} countries: ${codes.join(', ')}`
+      color.yellow.bold(
+        `Shipping cost calculation is not available on the Print&Bind REST API (calculate returns no delivery costs); keeping the stored rates${
+          codes.length > 0 ? ` for ${color.white.bold(codes.join(', '))}` : ''
+        }`
       )
     );
-
-    // Process countries one at a time. Parallel runs collided on Printenbind
-    // (shared file uploads, rate limits) — serial is slower but deterministic
-    // and much easier to reason about in the logs.
-    for (let i = 0; i < codes.length; i++) {
-      const countryCode = codes[i];
-      this.logger.log(
-        color.blue.bold(
-          `[${i + 1}/${codes.length}] Starting ${color.white.bold(countryCode)}`
-        )
-      );
-      await this.processCountryShippingCosts(countryCode, authToken!);
-      // Gentle pause between countries so we don't blow past the API's
-      // request ceiling. 1s is plenty for a 3-call-per-country workload.
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-  }
-
-  private async processCountryShippingCosts(
-    countryCode: string,
-    authToken: string
-  ): Promise<void> {
-    const amountConfigs = [
-      { amount: 116, fileUrl: 'https://api.qrsong.io/public/pdf/tr_btmfhy8aerkdijt2ynejj_2149_extra_printer_1.pdf' },
-      { amount: 412, fileUrl: 'https://api.qrsong.io/public/pdf/tr_zadlfwasljqchqeaaycjj_1871_qr_printer_1.pdf' },
-      { amount: 1680, fileUrl: 'https://api.qrsong.io/public/pdf/tr_hcvtkvdmgqe37hujmvfjj_2163_supplies_printer_1.pdf' },
-    ];
-
-    try {
-      // Process each amount sequentially for this country. Parallel runs
-      // caused Printenbind rate-limit and file-overwrite collisions.
-      for (const { amount, fileUrl } of amountConfigs) {
-        try {
-          // Check if record exists
-          const existingRecord = await this.prisma.shippingCostNew.findFirst({
-            where: {
-              country: countryCode,
-              size: amount,
-            },
-          });
-
-            this.logger.log(
-              color.blue.bold(
-                `Processing country: ${color.white.bold(
-                  countryCode
-                )} for amount ${color.white.bold(amount)}`
-              )
-            );
-
-            const orderItems = [];
-            // Create order item matching actual order structure
-            // delivery_method is always 'post' in order item, 'international' is set in delivery setup
-            const isNL = countryCode === 'NL';
-            const orderItem: any = {
-              type: 'physical',
-              amount: '1',
-              product: 'losbladig',
-              number: '1',
-              copies: (amount).toString(),
-              color: 'all',
-              size: 'custom',
-              printside: 'double',
-              finishing: 'loose',
-              finishing2: 'none',
-              finishing_extra: 'none',
-              accessory_item: 'none',
-              papertype: 'card',
-              size_custom_width: '60',
-              size_custom_height: '60',
-              check_doc: 'standard',
-              delivery_method: 'post',
-              add_file_method: 'url',
-              file_url: fileUrl,
-              // Printenbind rejects duplicate filenames with "bestaat al op
-              // onze server". These shipping-cost probes reuse the same
-              // three fixture PDFs on every run; without overwrite, only
-              // the very first country succeeds and every subsequent 400s.
-              file_overwrite: true,
-            };
-            if (isNL) {
-              orderItem.delivery_option = 'standard';
-            }
-            orderItems.push(orderItem);
-
-            // Process the order request
-            const result = await this.processOrderRequest(
-              orderItems,
-              {
-                fullname: 'Rick Groenewegen',
-                email: 'john@doe.com',
-                address: 'Prinsenhof 1',
-                housenumber: '1',
-                zipcode: '1234AB',
-                city: 'Sassenheim',
-                countrycode: countryCode,
-              },
-              true,
-              false,
-              false
-            );
-
-            if (result.success) {
-              const deliveryResponse = await fetch(
-                `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
-                {
-                  method: 'GET',
-                  headers: { Authorization: authToken },
-                }
-              );
-
-              const delivery = await deliveryResponse.json();
-
-              const price = delivery.amount / delivery.parcel_count;
-
-              if (existingRecord) {
-                await this.prisma.shippingCostNew.update({
-                  where: { id: existingRecord.id },
-                  data: {
-                    cost: parseFloat(price.toFixed(2)),
-                  },
-                });
-              } else {
-                await this.prisma.shippingCostNew.create({
-                  data: {
-                    country: countryCode,
-                    size: amount,
-                    cost: parseFloat(price.toFixed(2)),
-                  },
-                });
-              }
-
-              this.logger.log(
-                color.blue.bold(
-                  `Stored shipping costs for ${color.white.bold(
-                    countryCode
-                  )} with ${color.white.bold(
-                    amount.toString()
-                  )} items: Shipping: ${color.white.bold(
-                    result.data.shipping.toFixed(2)
-                  )}, Handling: ${color.white.bold(
-                    result.data.handling.toFixed(2)
-                  )}`
-                )
-              );
-            } else {
-              // Dump the full result incl. apiCalls + Printenbind response
-              // bodies so we can see which step Printenbind rejected (auth,
-              // size, country, etc.) rather than just "failed".
-              this.logger.log(
-                color.red.bold(
-                  `Failed to calculate shipping for ${color.white.bold(
-                    countryCode
-                  )} with ${color.white.bold(amount.toString())} items`
-                )
-              );
-              this.logger.log(
-                color.red.bold('  └─ result: ') +
-                  color.white(JSON.stringify(result, null, 2))
-              );
-              if ((result as any).apiCalls) {
-                for (const call of (result as any).apiCalls as Array<any>) {
-                  this.logger.log(
-                    color.yellow.bold(
-                      `     [${call.statusCode}] ${call.method} ${call.url}`
-                    )
-                  );
-                  if (call.body) {
-                    this.logger.log(
-                      color.gray('       body:     ') +
-                        color.white(JSON.stringify(call.body))
-                    );
-                  }
-                  this.logger.log(
-                    color.gray('       response: ') +
-                      color.white(JSON.stringify(call.responseBody))
-                  );
-                }
-              }
-            }
-          } catch (error) {
-            this.logger.log(
-              color.red.bold(
-                `Error processing ${color.white.bold(
-                  countryCode
-                )} with ${color.white.bold(amount.toString())} items: ${error}`
-              )
-            );
-          if (error instanceof Error && error.stack) {
-            this.logger.log(color.gray(error.stack));
-          }
-        }
-        // Brief breather between amount probes so the same file never
-        // gets re-uploaded back-to-back.
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error processing country ${color.white.bold(countryCode)}: ${error}`
-        )
-      );
-    }
   }
 
   public async getShippingCosts(
@@ -2558,50 +1979,6 @@ class PrintEnBind {
     }
   }
 
-  private async getOrderStatus(orderId: string): Promise<any> {
-    try {
-      const authToken = await this.getAuthToken();
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
-        {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to get order status: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error getting order status for order ID ${orderId}: ${error}`));
-      return null;
-    }
-  }
-
-  private async getDeliveryInfo(orderId: string): Promise<any> {
-    try {
-      const authToken = await this.getAuthToken();
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-        {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to get delivery info: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error getting delivery info: ${error}`));
-      return null;
-    }
-  }
-
   /**
    * Returns the list for the admin "Shipment Check" table: every payment that
    * has a Print&Bind order ID and a printApiStatus of 'Submitted'. This is a
@@ -2637,33 +2014,38 @@ class PrintEnBind {
   }
 
   /**
-   * Retrieves the Print&Bind delivery data for a single order and reports
-   * whether it is ok, missing, or errored. Used by the admin "Shipment Check"
-   * table to fill in each row one by one.
+   * Retrieves the Print&Bind order for a single order id and reports whether
+   * its delivery looks ok, missing, or errored. Used by the admin "Shipment
+   * Check" table to fill in each row one by one.
    */
   public async checkDeliveryForOrder(orderId: string): Promise<any> {
     let deliveryStatus: 'ok' | 'missing' | 'error' = 'ok';
     let deliveryError: string | null = null;
-    let delivery: any = null;
+    let order: any = null;
+    let trackingUrl: string | null = null;
 
     try {
-      const authToken = await this.getAuthToken();
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-        {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }
-      );
+      const result = await this.pbFetch('GET', `/orders/${orderId}`);
 
-      if (!response.ok) {
+      if (!result.ok) {
         deliveryStatus = 'error';
-        deliveryError = `HTTP ${response.status} ${response.statusText}`;
+        deliveryError = this.describePbError(result);
       } else {
-        delivery = await response.json();
-        if (!delivery || Object.keys(delivery).length === 0) {
+        order = result.data?.data ?? null;
+        if (!order || !order.delivery_method) {
           deliveryStatus = 'missing';
           deliveryError = 'No delivery data found';
+        } else {
+          const payment = await this.prisma.payment.findFirst({
+            where: { printApiOrderId: orderId },
+            select: { countrycode: true, zipcode: true },
+          });
+          trackingUrl =
+            this.trackingLinkFromOrder(
+              order,
+              payment?.countrycode,
+              payment?.zipcode
+            ) || null;
         }
       }
     } catch (error: any) {
@@ -2675,9 +2057,9 @@ class PrintEnBind {
       printApiOrderId: orderId,
       deliveryStatus,
       deliveryError,
-      deliveryMethod: delivery?.delivery_method ?? null,
-      amount: delivery?.amount ?? null,
-      trackingUrl: delivery?.tracktrace_url ?? null,
+      deliveryMethod: order?.delivery_method ?? null,
+      amount: order?.amount ?? null,
+      trackingUrl,
     };
   }
 
@@ -2709,30 +2091,29 @@ class PrintEnBind {
           });
 
           if (payment) {
-            const orderStatus = await this.getOrderStatus(
-              order.printApiOrderId
-            );
+            const pbOrder = await this.getOrder(order.printApiOrderId);
 
-            if (!orderStatus) {
+            if (!pbOrder) {
               this.logger.log(color.red.bold(`Skipping order ID ${order.printApiOrderId} (paymentId: ${order.paymentId}): failed to get order status`));
               continue;
             }
 
-            if (orderStatus.status == 'Verzonden') {
+            if (PB_SHIPPED_STATUSES.includes(pbOrder.status)) {
               this.logger.log(
                 color.blue.bold(
                   `Order ${color.white.bold(
                     order.printApiOrderId
-                  )} has been shipped`
+                  )} has been shipped (${color.white.bold(pbOrder.status)})`
                 )
               );
 
-              // Get the latest delivery info to ensure we have the most up-to-date tracking link
-              const deliveryInfo = await this.getDeliveryInfo(
-                order.printApiOrderId
-              );
+              // The order resource carries the carrier barcode(s) once shipped
               const trackingLink =
-                deliveryInfo?.tracktrace_url ||
+                this.trackingLinkFromOrder(
+                  pbOrder,
+                  payment.countrycode,
+                  payment.zipcode
+                ) ||
                 payment.printApiTrackingLink ||
                 '';
 
@@ -2880,65 +2261,39 @@ class PrintEnBind {
   }
 
   /**
-   * Updates the production method for an existing PrintEnBind order
-   * @param orderId - The PrintEnBind order ID
-   * @param productionMethod - 'fast' or 'standard'
+   * The REST API sets production_method only when the order is created (v1
+   * allowed a PUT afterwards). When express is toggled on a payment that was
+   * already sent, the change has to be made by Print&Bind customer service,
+   * so an admin is alerted instead.
    */
   public async updateProductionMethod(
     orderId: string,
     productionMethod: 'fast' | 'standard'
   ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const authToken = await this.getAuthToken();
+    this.logger.log(
+      color.yellow.bold(
+        `Cannot update production method for order ${color.white.bold(
+          orderId
+        )} to ${color.white.bold(
+          productionMethod
+        )}: not supported by the Print&Bind REST API, notifying admin`
+      )
+    );
 
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            production_method: productionMethod,
-          }),
-        }
-      );
+    await this.pushover.sendMessage(
+      {
+        title: 'Print&Bind production method change needed',
+        message: `Print&Bind order ${orderId} was already placed; the REST API cannot change its production method to '${productionMethod}'. Ask Print&Bind customer service to change it.`,
+      },
+      '',
+      true
+    );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.log(
-          color.red.bold(
-            `Failed to update production method for order ${color.white.bold(
-              orderId
-            )}: ${errorText}`
-          )
-        );
-        return {
-          success: false,
-          error: `Failed to update production method: ${response.statusText}`,
-        };
-      }
-
-      this.logger.log(
-        color.blue.bold(
-          `Updated production method for order ${color.white.bold(
-            orderId
-          )} to ${color.white.bold(productionMethod)}`
-        )
-      );
-
-      return { success: true };
-    } catch (error: any) {
-      this.logger.log(
-        color.red.bold(
-          `Error updating production method for order ${color.white.bold(
-            orderId
-          )}: ${error.message}`
-        )
-      );
-      return { success: false, error: error.message };
-    }
+    return {
+      success: false,
+      error:
+        'Changing the production method is not supported by the Print&Bind REST API',
+    };
   }
 }
 

@@ -10,9 +10,10 @@
  *  - ../../../src/shipping → createShipment stub
  *  - ../../../src/pdf      → countPDFPages / mergeLocalPdfs stubs
  *  - ../../../src/spotify, src/utils, src/logger, src/game, cron → inert stubs
- * Mail stays on the global recording proxy (asserted via `outbound`).
- * Print&Bind HTTP calls go through globalThis.fetch which is replaced with a
- * per-test routing mock (the setup.ts fetch guard is restored afterwards).
+ * Mail and Pushover stay on the global recording proxy (asserted via `outbound`).
+ * Print&Bind REST calls (https://www.printenbind.nl/api/docs) go through
+ * globalThis.fetch which is replaced with a per-test routing mock (the
+ * setup.ts fetch guard is restored afterwards).
  */
 import {
   describe,
@@ -36,7 +37,12 @@ vi.unmock('../../../src/printers/printenbind');
 const prismaMock = vi.hoisted(() => ({
   orderType: { findFirst: vi.fn(), findMany: vi.fn() },
   shippingCostNew: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
-  payment: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+  payment: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+  },
   paymentHasPlaylist: { findUnique: vi.fn(), findMany: vi.fn() },
   paymentHasPlaylistItem: { findMany: vi.fn() },
 }));
@@ -130,7 +136,10 @@ import PrintEnBind from '../../../src/printers/printenbind';
 // ---------------------------------------------------------------------------
 // Fixtures / helpers
 // ---------------------------------------------------------------------------
-const PB = 'https://printenbind.test/api';
+// A sandbox host: outside production the module only places orders on the
+// sandbox, the live host is limited to /orders/calculate (tested below).
+const PB = 'https://sandbox.printenbind.test/api/rest';
+const PB_LIVE = 'https://www.printenbind.test/api/rest';
 const API_KEY = 'test-pb-key';
 const savedFetch = globalThis.fetch;
 const fetchMock = vi.fn();
@@ -727,8 +736,8 @@ describe('createOrderItem', () => {
       type: 'physical',
       amount: 2, // playlistItem null → keeps original amount
       product: 'losbladig',
-      number: '1',
-      copies: '200', // 100 tracks × 2 sides
+      number: 1,
+      copies: 200, // 100 tracks × 2 sides
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -737,10 +746,12 @@ describe('createOrderItem', () => {
       finishing_extra: 'none',
       accessory_item: 'none',
       papertype: 'card',
-      size_custom_width: '60',
-      size_custom_height: '60',
-      check_doc: 'standard',
-      delivery_method: 'post',
+      size_custom_width: 60,
+      size_custom_height: 60,
+      // What Print&Bind applied to our v1 orders: borderless custom size,
+      // standard (free) file check.
+      borderless: true,
+      check_doc: false,
       add_file_method: 'url',
       file_overwrite: true,
       file_url: 'https://api.qrsong.io/public/pdf/file.pdf',
@@ -756,14 +767,14 @@ describe('createOrderItem', () => {
       { ...baseItem(), addHowToCard: true },
       null
     );
-    expect(withHowTo.copies).toBe('202');
+    expect(withHowTo.copies).toBe(202);
 
     // A track count inside the cap is passed straight through: 2 pages per
     // card. This is the case that regressed when the cap was raised — the
     // ceiling used to be a hardcoded 2000 (the old 1000-card limit expressed
     // in pages), which silently halved any order above 1000 cards.
     const inRange = await (peb as any).createOrderItem(1500, 'u', baseItem(), null);
-    expect(inRange.copies).toBe('3000');
+    expect(inRange.copies).toBe(3000);
 
     // Only a genuinely over-cap count is clamped, and the ceiling tracks
     // MAX_CARDS_PHYSICAL rather than a literal.
@@ -773,7 +784,7 @@ describe('createOrderItem', () => {
       baseItem(),
       null
     );
-    expect(capped.copies).toBe(String(MAX_CARDS_PHYSICAL * 2 + 2));
+    expect(capped.copies).toBe(MAX_CARDS_PHYSICAL * 2 + 2);
   });
 
   it('uses amount 1 and an indexed batch number per playlist item', async () => {
@@ -791,10 +802,12 @@ describe('createOrderItem', () => {
       { ...baseItem(), subType: 'sheets' },
       null
     );
-    expect(item.copies).toBe('18'); // ceil(100/12)=9 sheets × 2 sides
+    expect(item.copies).toBe(18); // ceil(100/12)=9 sheets × 2 sides
     expect(item.size).toBe('a4');
     expect(item.size_custom_width).toBeUndefined();
     expect(item.size_custom_height).toBeUndefined();
+    // A4 sheets were never borderless at Print&Bind
+    expect(item.borderless).toBe(false);
     expect(item.comment).toContain('door de klant zelf uitgeknipt');
   });
 
@@ -859,8 +872,8 @@ describe('box order article builders', () => {
       type: 'physical',
       amount: 1,
       product: 'werkblad',
-      number: '1',
-      copies: '6',
+      number: 1,
+      copies: 6,
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -868,10 +881,10 @@ describe('box order article builders', () => {
       finishing2: 'none',
       finishing_extra: 'none',
       papertype: 'card',
-      size_custom_width: '120',
-      size_custom_height: '120',
-      check_doc: 'standard',
-      delivery_method: 'post',
+      size_custom_width: 120,
+      size_custom_height: 120,
+      borderless: true,
+      check_doc: false,
       add_file_method: 'url',
       file_overwrite: true,
       file_url: 'https://x/box.pdf',
@@ -885,9 +898,71 @@ describe('box order article builders', () => {
     const item = (peb as any).createBoxOrderInsertItem('https://x/i.pdf', 4, 'c');
     expect(item.accessory_group).toBeUndefined();
     expect(item.accessory_item).toBe('none');
-    expect(item.copies).toBe('4');
-    expect(item.size_custom_width).toBe('120');
+    expect(item.copies).toBe(4);
+    expect(item.size_custom_width).toBe(120);
+    expect(item.borderless).toBe(true);
     expect(item.comment).toBe('c');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REST helpers: article mapping + tracking URLs
+// ---------------------------------------------------------------------------
+describe('toPbArticle', () => {
+  it('strips internal fields, drops v1 article-level delivery/payment and types the values', () => {
+    const article = (peb as any).toPbArticle({
+      type: 'physical',
+      amount: 2,
+      product: 'losbladig',
+      number: '1',
+      copies: '200',
+      size: 'custom',
+      check_doc: 'standard',
+      delivery_method: 'post',
+      delivery_option: 'standard',
+      payment_method: 'bundled',
+      file_url: 'https://x/f.pdf',
+    });
+    expect(article).toEqual({
+      product: 'losbladig',
+      number: 1,
+      copies: 200,
+      size: 'custom',
+      check_doc: false,
+      borderless: true, // custom size defaults to borderless
+      add_inserts: false,
+      file_url: 'https://x/f.pdf',
+    });
+  });
+
+  it('keeps an explicit borderless flag and only requests the paid check for check_doc true', () => {
+    expect(
+      (peb as any).toPbArticle({ size: 'a4', borderless: false, check_doc: true })
+    ).toMatchObject({ borderless: false, check_doc: true });
+    expect((peb as any).toPbArticle({ size: 'a4' }).borderless).toBe(false);
+  });
+});
+
+describe('buildTrackingUrl', () => {
+  it('rebuilds the PostNL URL for NL with the postal code spaced like Print&Bind did', () => {
+    expect((peb as any).buildTrackingUrl('3STERY010751747', 'NL', '5651ez')).toBe(
+      'https://jouw.postnl.nl/track-and-trace/3STERY010751747/NL/5651 EZ'
+    );
+    expect((peb as any).buildTrackingUrl('3S1', 'nl', '1234 AB')).toBe(
+      'https://jouw.postnl.nl/track-and-trace/3S1/NL/1234 AB'
+    );
+  });
+
+  it('uses the international tracking URL for other countries', () => {
+    expect((peb as any).buildTrackingUrl('3STERY0193109', 'DE', '26441')).toBe(
+      'https://www.internationalparceltracking.com/Main.aspx#/track/3STERY0193109/DE/26441'
+    );
+  });
+
+  it('defaults to NL when the payment has no country', () => {
+    expect((peb as any).buildTrackingUrl('3S1', null, null)).toBe(
+      'https://jouw.postnl.nl/track-and-trace/3S1/NL/'
+    );
   });
 });
 
@@ -905,13 +980,14 @@ describe('processOrderRequest', () => {
     countrycode: 'NL',
   };
 
+  /** Internal article as produced by createOrderItem. */
   function physicalItem(): any {
     return {
       type: 'physical',
       amount: 1,
       product: 'losbladig',
-      number: '1',
-      copies: '200',
+      number: 1,
+      copies: 200,
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -920,10 +996,10 @@ describe('processOrderRequest', () => {
       finishing_extra: 'none',
       accessory_item: 'none',
       papertype: 'card',
-      size_custom_width: '60',
-      size_custom_height: '60',
-      check_doc: 'standard',
-      delivery_method: 'post',
+      size_custom_width: 60,
+      size_custom_height: 60,
+      borderless: true,
+      check_doc: false,
       add_file_method: 'url',
       file_overwrite: true,
       file_url: 'https://api.qrsong.io/public/pdf/file.pdf',
@@ -931,29 +1007,56 @@ describe('processOrderRequest', () => {
     };
   }
 
-  function happyRoutes(orderId = '7989-1') {
+  /** The REST article payload expected for physicalItem(). */
+  function expectedArticle(): any {
+    const { type: _t, amount: _a, ...rest } = physicalItem();
+    return { ...rest, add_inserts: false };
+  }
+
+  /** OrderResource as Print&Bind returns it from POST /orders. */
+  function orderResource(overrides: any = {}): any {
+    return {
+      id: 7989,
+      reference: 'pay_1-abc',
+      status: 'In opdracht',
+      sub_status: [],
+      production_method: 'standard',
+      payment_method: 'bundled',
+      // articles 12.05 + delivery/handling 7.95
+      amount: 20,
+      amount_tax_reduced: 0,
+      amount_tax_standard: 4.2,
+      delivery_at: null,
+      delivery_method: 'mailbox',
+      delivery_option: null,
+      anonymous: true,
+      tracktrace: [],
+      articles: [
+        {
+          id: 1,
+          product: 'losbladig',
+          amount: 12.05,
+          number: 1,
+          copies: 200,
+          status: 'Created',
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  function orderRoutes(order: any = orderResource()) {
     routeFetch([
       {
         method: 'POST',
-        url: `${PB}/v1/orders/articles`,
-        response: () =>
-          jsonResponse({}, { headers: { location: `orders/${orderId}` } }),
+        url: `${PB}/orders`,
+        response: () => jsonResponse({ data: order }),
       },
       {
         method: 'POST',
-        url: `${PB}/v1/delivery/${orderId}`,
-        response: () => jsonResponse({}),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/orders/${orderId}`,
+        url: `${PB}/orders/calculate`,
         response: () =>
-          jsonResponse({ amount: '20.00', price_startup: '2.25' }),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/delivery/${orderId}`,
-        response: () => jsonResponse({ amount: '5.95' }),
+          jsonResponse({ data: { ...order, id: null, status: 'Aangemaakt' } }),
       },
     ]);
     prismaMock.orderType.findFirst.mockResolvedValue({
@@ -963,163 +1066,139 @@ describe('processOrderRequest', () => {
     });
   }
 
-  it('creates the order, sets delivery, and returns VAT-adjusted totals (NL)', async () => {
-    happyRoutes();
+  /** Calls to exactly POST {PB}/orders (not /orders/calculate). */
+  function placeOrderCalls(): any[][] {
+    return sentRequests('POST', '/orders').filter(
+      ([u]) => String(u) === `${PB}/orders`
+    );
+  }
+
+  it('places the order with a single POST /orders carrying address, delivery and articles (NL)', async () => {
+    orderRoutes();
     const result = await (peb as any).processOrderRequest(
       [physicalItem()],
       customerNL,
-      true
+      { logging: true, reference: 'pay_1' }
     );
 
-    // --- article request shape ---
-    const [articleCall] = sentRequests('POST', '/v1/orders/articles');
-    expect(articleCall[1].headers).toEqual({
-      Authorization: API_KEY,
+    const [orderCall] = placeOrderCalls();
+    expect(orderCall[1].headers).toEqual({
+      Authorization: `Bearer ${API_KEY}`,
+      Accept: 'application/json',
       'Content-Type': 'application/json',
     });
-    const articleBody = body(articleCall);
-    expect(articleBody).toEqual({
-      ...(() => {
-        const { type: _t, ...rest } = physicalItem();
-        return rest;
-      })(),
-      payment_method: 'bundled', // NL is EU → bundled payment
-    });
-    expect(articleBody.type).toBeUndefined();
-
-    // --- delivery request shape ---
-    const [deliveryCall] = sentRequests('POST', '/v1/delivery/7989-1');
-    expect(body(deliveryCall)).toEqual({
-      name_contact: 'Jane Buyer',
+    expect(body(orderCall)).toEqual({
+      contact: 'Jane Buyer',
       street: 'Mainstreet',
+      number: '12',
+      postalcode: '1234AB',
       city: 'Amsterdam',
-      streetnumber: '12',
-      zipcode: '1234AB',
       country: 'NL',
-      delivery_method: 'post', // NL ships via post
-      blanco: '1',
       email: 'jane@example.com',
+      delivery_method: 'post', // NL ships via post
+      production_method: 'standard',
+      anonymous: true,
+      reference: expect.stringMatching(/^pay_1-[0-9a-z]+$/),
+      articles: [expectedArticle()],
     });
 
     // --- price math (taxModifier 1.21) ---
-    // product ex VAT: 26 / 1.21 = 21.49
-    // total  = (21.49 + 5.95 + 2.25) × 1.21 = 35.92
-    // shipping = 5.95 × 1.21 = 7.20 · handling = 2.25 × 1.21 = 2.72
-    // price = 21.49 × 1.21 = 26.00 · payment = (5.95 + 2.25) × 1.21 = 9.92
+    // product ex VAT: 26 / 1.21 = 21.49 · delivery+handling: 20 − 12.05 = 7.95
+    // total = (21.49 + 7.95) × 1.21 = 35.62 · shipping = 7.95 × 1.21 = 9.62
+    // price = 21.49 × 1.21 = 26.00 · payment = 9.62
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
-      orderId: '7989-1',
-      total: 35.92,
-      shipping: 7.2,
-      handling: 2.72,
+      orderId: '7989',
+      total: 35.62,
+      shipping: 9.62,
+      handling: 0,
       taxRateShipping: 21,
       taxRate: 21,
       price: 26,
-      payment: 9.92,
+      payment: 9.62,
     });
-    // Only the two POSTs are logged into apiCalls; the final GET order/
-    // delivery detail calls are not recorded.
-    expect(result.apiCalls).toHaveLength(2);
-    expect(result.apiCalls.map((c: any) => [c.method, c.url])).toEqual([
-      ['POST', `${PB}/v1/orders/articles`],
-      ['POST', `${PB}/v1/delivery/7989-1`],
-    ]);
-
-    // Successful result is cached for an hour
-    expect(cacheMock.set).toHaveBeenCalledWith(
-      expect.stringMatching(/^order_request_[0-9a-f]{32}$/),
-      JSON.stringify(result),
-      3600
-    );
+    expect(result.apiCalls).toHaveLength(1);
+    expect(result.apiCalls[0]).toMatchObject({
+      method: 'POST',
+      url: `${PB}/orders`,
+      statusCode: 200,
+    });
+    expect(result.apiCalls[0].body.articles).toHaveLength(1);
+    // Results are never cached: every call places an order
+    expect(
+      cacheMock.set.mock.calls.filter(([k]: any[]) =>
+        String(k).startsWith('order_request_')
+      )
+    ).toHaveLength(0);
   });
 
-  it('uses account payment and international delivery for non-EU countries', async () => {
+  it('uses international delivery and fast production for non-EU express orders', async () => {
     dataMock.getTaxRate.mockImplementation(async (c: string) =>
       c === 'NL' ? 21 : 0
     );
-    happyRoutes();
+    orderRoutes();
     const result = await (peb as any).processOrderRequest(
       [physicalItem()],
       { ...customerNL, countrycode: 'US' },
-      false
+      { fast: true }
     );
 
-    const [articleCall] = sentRequests('POST', '/v1/orders/articles');
-    expect(body(articleCall).payment_method).toBe('account');
+    const [orderCall] = placeOrderCalls();
+    expect(body(orderCall)).toMatchObject({
+      country: 'US',
+      delivery_method: 'international',
+      production_method: 'fast',
+    });
+    expect(body(orderCall).reference).toBeUndefined();
 
-    const [deliveryCall] = sentRequests('POST', '/v1/delivery/7989-1');
-    expect(body(deliveryCall).delivery_method).toBe('international');
-    expect(body(deliveryCall).country).toBe('US');
-
-    // taxRate 0 → taxModifier 1, product ex VAT = 26.00
+    // taxRate 0 → product 26.00, delivery+handling 7.95
     expect(result.data).toEqual({
-      orderId: '7989-1',
-      total: 34.2, // 26 + 5.95 + 2.25
-      shipping: 5.95,
-      handling: 2.25,
+      orderId: '7989',
+      total: 33.95,
+      shipping: 7.95,
+      handling: 0,
       taxRateShipping: 0,
       taxRate: 0,
       price: 26,
-      payment: 8.2,
+      payment: 7.95,
     });
   });
 
-  it('creates the order via POST /v1/orders first when an order comment is given', async () => {
-    routeFetch([
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders`,
-        response: () =>
-          jsonResponse({}, { headers: { location: 'orders/123' } }),
-      },
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/123/articles`,
-        response: () => jsonResponse({}),
-      },
-      {
-        method: 'POST',
-        url: `${PB}/v1/delivery/123`,
-        response: () => jsonResponse({}),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/orders/123`,
-        response: () => jsonResponse({ amount: '20.00', price_startup: '2.25' }),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/delivery/123`,
-        response: () => jsonResponse({ amount: '5.95' }),
-      },
-    ]);
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
-
-    const result = await (peb as any).processOrderRequest(
-      [physicalItem()],
-      customerNL,
-      true,
-      true,
-      false,
-      'LET OP: Deze order moet verpakt worden met in totaal 2 QRSong! dozen'
-    );
-
-    const [orderCall] = sentRequests('POST', `${PB}/v1/orders`).filter(
-      ([u]) => String(u) === `${PB}/v1/orders`
-    );
-    expect(body(orderCall)).toEqual({
-      comment:
+  it('puts the packing comment on the order and keeps the batch comment on the article', async () => {
+    orderRoutes();
+    await (peb as any).processOrderRequest([physicalItem()], customerNL, {
+      orderComment:
         'LET OP: Deze order moet verpakt worden met in totaal 2 QRSong! dozen',
     });
-    // Article was appended to the pre-created order, not POST /orders/articles
-    expect(sentRequests('POST', '/v1/orders/articles')).toHaveLength(0);
-    expect(sentRequests('POST', '/v1/orders/123/articles')).toHaveLength(1);
-    expect(result.success).toBe(true);
-    expect(result.data.orderId).toBe('123');
+    const [orderCall] = placeOrderCalls();
+    expect(body(orderCall).comment).toBe(
+      'LET OP: Deze order moet verpakt worden met in totaal 2 QRSong! dozen'
+    );
+    expect(body(orderCall).articles[0].comment).toBe(
+      'Batch nummer ... moet #55 zijn'
+    );
+  });
+
+  it('maps v1-style article fields to the REST payload', async () => {
+    orderRoutes();
+    const legacy: any = {
+      ...physicalItem(),
+      number: '1',
+      copies: '200',
+      check_doc: 'standard',
+      delivery_method: 'post',
+      delivery_option: 'standard',
+      payment_method: 'bundled',
+    };
+    delete legacy.borderless;
+    const sheets = { ...physicalItem(), size: 'a4', borderless: false };
+
+    await (peb as any).processOrderRequest([legacy, sheets], customerNL, {});
+
+    const [orderCall] = placeOrderCalls();
+    const [first, second] = body(orderCall).articles;
+    expect(first).toEqual(expectedArticle());
+    expect(second).toMatchObject({ size: 'a4', borderless: false });
   });
 
   it('totals digital items from the order type margin without any HTTP calls', async () => {
@@ -1139,7 +1218,7 @@ describe('processOrderRequest', () => {
         },
       ],
       customerNL,
-      false
+      {}
     );
     expect(fetchMock).not.toHaveBeenCalled();
     // itemPrice = 15 × 2 = 30 · ex VAT = 30 / 1.21 = 24.79
@@ -1170,22 +1249,27 @@ describe('processOrderRequest', () => {
         },
       ],
       customerNL,
-      false
+      {}
     );
     expect(result.data.total).toBe(25);
     expect(result.data.price).toBe(20.66);
   });
 
-  it('does not extract an order id from a rejected first article (400)', async () => {
+  it('reports the validation errors when Print&Bind rejects the order (422)', async () => {
     routeFetch([
       {
         method: 'POST',
-        url: `${PB}/v1/orders/articles`,
-        // A 400 still carries a location-style path; the guard must ignore it
+        url: `${PB}/orders`,
         response: () =>
           jsonResponse(
-            { location: '/orders/55/article', error: 'invalid' },
-            { status: 400 }
+            {
+              message: 'copies (and 1 more error)',
+              errors: [
+                ['copies', "112 pagina's te weinig opgegeven"],
+                ['accessory_item', 'this field is required'],
+              ],
+            },
+            { status: 422 }
           ),
       },
     ]);
@@ -1197,142 +1281,72 @@ describe('processOrderRequest', () => {
     const result = await (peb as any).processOrderRequest(
       [physicalItem()],
       customerNL,
-      true
+      {}
     );
     expect(result.success).toBe(false);
     expect(result.data).toEqual({});
-    expect(fetchMock).toHaveBeenCalledTimes(1); // no delivery / detail calls
-    // The failed result must not be cached (getOrderType caches its own key)
-    expect(
-      cacheMock.set.mock.calls.filter(([k]: any[]) =>
-        String(k).startsWith('order_request_')
-      )
-    ).toHaveLength(0);
+    expect(result.error).toContain('HTTP 422');
+    expect(result.error).toContain("copies: 112 pagina's te weinig opgegeven");
+    expect(result.error).toContain('accessory_item: this field is required');
+    expect(result.apiCalls).toHaveLength(1);
+    expect(result.apiCalls[0].statusCode).toBe(422);
   });
 
-  it('reports failure when a follow-up article is rejected', async () => {
-    routeFetch([
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/articles`,
-        response: () =>
-          jsonResponse({}, { headers: { location: 'orders/7989-1' } }),
-      },
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/7989-1/articles`,
-        response: () => jsonResponse({ error: 'too big' }, { status: 400 }),
-      },
-      {
-        method: 'POST',
-        url: `${PB}/v1/delivery/7989-1`,
-        response: () => jsonResponse({}),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/orders/7989-1`,
-        response: () => jsonResponse({ amount: '20.00', price_startup: '2.25' }),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/delivery/7989-1`,
-        response: () => jsonResponse({ amount: '5.95' }),
-      },
-    ]);
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
-    const result = await (peb as any).processOrderRequest(
-      [physicalItem(), physicalItem()],
-      customerNL,
-      true
-    );
-    expect(result.success).toBe(false);
-    expect(
-      cacheMock.set.mock.calls.filter(([k]: any[]) =>
-        String(k).startsWith('order_request_')
-      )
-    ).toHaveLength(0);
-  });
-
-  it('returns the cached result without calling Print&Bind', async () => {
-    const cached = { success: true, data: { orderId: 'cached-1', total: 1 } };
-    cacheMock.get.mockResolvedValueOnce(JSON.stringify(cached));
+  it('fails when Print&Bind answers without an order id', async () => {
+    orderRoutes(orderResource({ id: null }));
     const result = await (peb as any).processOrderRequest(
       [physicalItem()],
       customerNL,
-      false
+      {}
     );
-    expect(result).toEqual(cached);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Print&Bind returned no order id');
   });
-});
 
-// ---------------------------------------------------------------------------
-// finishOrder
-// ---------------------------------------------------------------------------
-describe('finishOrder', () => {
-  it('POSTs an empty body to /finish with the API key and merges apiCalls', async () => {
-    routeFetch([
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/42/finish`,
-        response: () => jsonResponse({ ok: true }),
-      },
-    ]);
-    const prior = [
-      { method: 'POST', url: 'x', statusCode: 201, responseBody: {} },
-    ];
-    const result = await peb.finishOrder('42', prior as any);
-
-    const [call] = sentRequests('POST', '/v1/orders/42/finish');
-    expect(call[1].headers).toEqual({
-      Authorization: API_KEY,
-      'Content-Type': 'application/json',
-    });
-    expect(call[1].body).toBe('{}');
-
+  it('prices a dry run through /orders/calculate without placing anything', async () => {
+    orderRoutes();
+    const result = await (peb as any).processOrderRequest(
+      [physicalItem()],
+      customerNL,
+      { dryRun: true }
+    );
+    expect(sentRequests('POST', '/orders/calculate')).toHaveLength(1);
+    expect(placeOrderCalls()).toHaveLength(0);
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ orderId: '42' });
-    expect(result.apiCalls).toEqual([
-      prior[0],
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/42/finish`,
-        statusCode: 200,
-        responseBody: { ok: true },
-      },
-    ]);
+    expect(result.data.orderId).toBeNull();
+    expect(result.data.shipping).toBe(9.62);
   });
 
-  it('returns success:false (still with apiCalls) on a non-OK response', async () => {
-    routeFetch([
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/42/finish`,
-        response: () => jsonResponse({ error: 'cart empty' }, { status: 400 }),
-      },
-    ]);
-    const result = await peb.finishOrder('42');
-    expect(result.success).toBe(false);
-    expect(result.data).toEqual({ orderId: '42' });
-    expect(result.apiCalls).toEqual([
-      {
-        method: 'POST',
-        url: `${PB}/v1/orders/42/finish`,
-        statusCode: 400,
-        responseBody: { error: 'cart empty' },
-      },
-    ]);
-  });
-
-  it('catches network errors and returns an error result', async () => {
-    fetchMock.mockRejectedValue(new Error('ECONNRESET'));
-    const result = await peb.finishOrder('42');
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('ECONNRESET');
+  it('refuses to place orders on the live API outside production and only calculates', async () => {
+    process.env['PRINTENBIND_API_URL'] = PB_LIVE;
+    try {
+      routeFetch([
+        {
+          method: 'POST',
+          url: `${PB_LIVE}/orders/calculate`,
+          response: () =>
+            jsonResponse({ data: { ...orderResource(), id: null } }),
+        },
+      ]);
+      prismaMock.orderType.findFirst.mockResolvedValue({
+        id: 2,
+        maxCards: 500,
+        amountWithMargin: 26,
+      });
+      const result = await (peb as any).processOrderRequest(
+        [physicalItem()],
+        customerNL,
+        {}
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('outside production');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0][0])).toBe(
+        `${PB_LIVE}/orders/calculate`
+      );
+    } finally {
+      process.env['PRINTENBIND_API_URL'] = PB;
+    }
   });
 });
 
@@ -1340,41 +1354,18 @@ describe('finishOrder', () => {
 // updateProductionMethod
 // ---------------------------------------------------------------------------
 describe('updateProductionMethod', () => {
-  it('PUTs the production method to the order endpoint', async () => {
-    routeFetch([
-      {
-        method: 'PUT',
-        url: `${PB}/v1/orders/42`,
-        response: () => jsonResponse({}),
-      },
-    ]);
+  it('cannot change a placed order: alerts an admin via Pushover and reports failure', async () => {
     const result = await peb.updateProductionMethod('42', 'fast');
-    expect(result).toEqual({ success: true });
-    const [call] = sentRequests('PUT', '/v1/orders/42');
-    expect(call[1].headers.Authorization).toBe(API_KEY);
-    expect(body(call)).toEqual({ production_method: 'fast' });
-  });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('not supported');
+    expect(fetchMock).not.toHaveBeenCalled();
 
-  it('returns the status text on a failed update', async () => {
-    routeFetch([
-      {
-        method: 'PUT',
-        url: `${PB}/v1/orders/42`,
-        response: () =>
-          new Response('nope', { status: 400, statusText: 'Bad Request' }),
-      },
-    ]);
-    const result = await peb.updateProductionMethod('42', 'standard');
-    expect(result).toEqual({
-      success: false,
-      error: 'Failed to update production method: Bad Request',
-    });
-  });
-
-  it('returns the error message when the request throws', async () => {
-    fetchMock.mockRejectedValue(new Error('offline'));
-    const result = await peb.updateProductionMethod('42', 'fast');
-    expect(result).toEqual({ success: false, error: 'offline' });
+    const pushes = outbound.calls('PushoverClient', 'sendMessage');
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].args[0].message).toContain('order 42');
+    expect(pushes[0].args[0].message).toContain("'fast'");
+    // forced, so the alert also fires outside production
+    expect(pushes[0].args[2]).toBe(true);
   });
 });
 
@@ -1382,35 +1373,98 @@ describe('updateProductionMethod', () => {
 // checkDeliveryForOrder
 // ---------------------------------------------------------------------------
 describe('checkDeliveryForOrder', () => {
-  it('maps delivery data into the shipment-check row', async () => {
+  const shippedOrder = {
+    id: 42,
+    status: 'Verzonden',
+    delivery_method: 'mailbox',
+    amount: 8.9,
+    tracktrace: ['3STERY010751747'],
+  };
+
+  it('maps the order into the shipment-check row with a rebuilt tracking URL', async () => {
     routeFetch([
       {
         method: 'GET',
-        url: `${PB}/v1/delivery/42`,
-        response: () =>
-          jsonResponse({
-            delivery_method: 'post',
-            amount: '5.95',
-            tracktrace_url: 'https://track.example/1',
-          }),
+        url: `${PB}/orders/42`,
+        response: () => jsonResponse({ data: shippedOrder }),
       },
     ]);
+    prismaMock.payment.findFirst.mockResolvedValue({
+      countrycode: 'NL',
+      zipcode: '5651EZ',
+    });
     expect(await peb.checkDeliveryForOrder('42')).toEqual({
       printApiOrderId: '42',
       deliveryStatus: 'ok',
       deliveryError: null,
-      deliveryMethod: 'post',
-      amount: '5.95',
-      trackingUrl: 'https://track.example/1',
+      deliveryMethod: 'mailbox',
+      amount: 8.9,
+      trackingUrl:
+        'https://jouw.postnl.nl/track-and-trace/3STERY010751747/NL/5651 EZ',
     });
+    const [call] = sentRequests('GET', '/orders/42');
+    expect(call[1].headers.Authorization).toBe(`Bearer ${API_KEY}`);
   });
 
-  it('reports missing when the delivery object is empty', async () => {
+  it('builds the international tracking URL for destinations outside NL', async () => {
     routeFetch([
       {
         method: 'GET',
-        url: `${PB}/v1/delivery/42`,
-        response: () => jsonResponse({}),
+        url: `${PB}/orders/42`,
+        response: () =>
+          jsonResponse({
+            data: {
+              ...shippedOrder,
+              delivery_method: 'international',
+              tracktrace: ['3STERY0193109'],
+            },
+          }),
+      },
+    ]);
+    prismaMock.payment.findFirst.mockResolvedValue({
+      countrycode: 'DE',
+      zipcode: '26441',
+    });
+    const r = await peb.checkDeliveryForOrder('42');
+    expect(r.trackingUrl).toBe(
+      'https://www.internationalparceltracking.com/Main.aspx#/track/3STERY0193109/DE/26441'
+    );
+  });
+
+  it('has no tracking URL yet while the order has not shipped', async () => {
+    routeFetch([
+      {
+        method: 'GET',
+        url: `${PB}/orders/42`,
+        response: () =>
+          jsonResponse({
+            data: { ...shippedOrder, status: 'In productie', tracktrace: [] },
+          }),
+      },
+    ]);
+    prismaMock.payment.findFirst.mockResolvedValue({
+      countrycode: 'NL',
+      zipcode: '1234AB',
+    });
+    const r = await peb.checkDeliveryForOrder('42');
+    expect(r.deliveryStatus).toBe('ok');
+    expect(r.trackingUrl).toBeNull();
+  });
+
+  it('reports missing when the order carries no delivery data', async () => {
+    routeFetch([
+      {
+        method: 'GET',
+        url: `${PB}/orders/42`,
+        response: () =>
+          jsonResponse({
+            data: {
+              id: 42,
+              status: 'Aangemaakt',
+              delivery_method: null,
+              tracktrace: [],
+            },
+          }),
       },
     ]);
     const r = await peb.checkDeliveryForOrder('42');
@@ -1422,14 +1476,14 @@ describe('checkDeliveryForOrder', () => {
     routeFetch([
       {
         method: 'GET',
-        url: `${PB}/v1/delivery/42`,
+        url: `${PB}/orders/42`,
         response: () =>
           new Response('x', { status: 500, statusText: 'Internal Server Error' }),
       },
     ]);
     const r = await peb.checkDeliveryForOrder('42');
     expect(r.deliveryStatus).toBe('error');
-    expect(r.deliveryError).toBe('HTTP 500 Internal Server Error');
+    expect(r.deliveryError).toContain('HTTP 500 Internal Server Error');
   });
 
   it('reports error with the exception message when fetch throws', async () => {
@@ -1512,53 +1566,87 @@ describe('handleTrackingMails', () => {
     id: 1,
     paymentId: 'pay_1',
     printApiTrackingLink: 'old-link',
+    countrycode: 'NL',
+    zipcode: '1234 AB',
   };
 
-  it('marks shipped orders, stores the tracking link, mails it, and creates a shipment', async () => {
-    prismaMock.payment.findMany.mockResolvedValue([orderRow]);
-    prismaMock.payment.findUnique.mockResolvedValue(payment);
-    prismaMock.payment.update.mockResolvedValue({});
+  function orderWithStatus(
+    status: string,
+    tracktrace: string[] = ['3STERY0000001']
+  ) {
     routeFetch([
       {
         method: 'GET',
-        url: `${PB}/v1/orders/7989`,
-        response: () => jsonResponse({ status: 'Verzonden' }),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/delivery/7989`,
+        url: `${PB}/orders/7989`,
         response: () =>
-          jsonResponse({ tracktrace_url: 'https://track.example/new' }),
+          jsonResponse({ data: { id: 7989, status, tracktrace } }),
       },
     ]);
+  }
+
+  it('marks shipped orders, stores the rebuilt tracking link, mails it, and creates a shipment', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([orderRow]);
+    prismaMock.payment.findUnique.mockResolvedValue(payment);
+    prismaMock.payment.update.mockResolvedValue({});
+    orderWithStatus('Verzonden');
 
     await peb.handleTrackingMails();
 
+    const trackingLink =
+      'https://jouw.postnl.nl/track-and-trace/3STERY0000001/NL/1234 AB';
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: {
         printApiShipped: true,
         printApiShippedAt: expect.any(Date),
         printApiStatus: 'Shipped',
-        printApiTrackingLink: 'https://track.example/new',
+        printApiTrackingLink: trackingLink,
       },
     });
     const mails = outbound.calls('Mail', 'sendTrackingEmail');
     expect(mails).toHaveLength(1);
-    expect(mails[0].args).toEqual([payment, 'https://track.example/new', '']);
+    expect(mails[0].args).toEqual([payment, trackingLink, '']);
     expect(shippingMock.createShipment).toHaveBeenCalledWith('pay_1');
+  });
+
+  it('treats delivered orders as shipped when the shipped window was missed', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([orderRow]);
+    prismaMock.payment.findUnique.mockResolvedValue(payment);
+    prismaMock.payment.update.mockResolvedValue({});
+    orderWithStatus('Afgeleverd');
+
+    await peb.handleTrackingMails();
+
+    expect(prismaMock.payment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ printApiStatus: 'Shipped' }),
+      })
+    );
+    expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(1);
+  });
+
+  it('falls back to the stored tracking link when no tracking code is available yet', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([orderRow]);
+    prismaMock.payment.findUnique.mockResolvedValue(payment);
+    prismaMock.payment.update.mockResolvedValue({});
+    orderWithStatus('Verzonden', []);
+
+    await peb.handleTrackingMails();
+
+    expect(prismaMock.payment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ printApiTrackingLink: 'old-link' }),
+      })
+    );
+    expect(outbound.calls('Mail', 'sendTrackingEmail')[0].args[1]).toBe(
+      'old-link'
+    );
   });
 
   it('leaves orders untouched while Print&Bind has not shipped them', async () => {
     prismaMock.payment.findMany.mockResolvedValue([orderRow]);
     prismaMock.payment.findUnique.mockResolvedValue(payment);
-    routeFetch([
-      {
-        method: 'GET',
-        url: `${PB}/v1/orders/7989`,
-        response: () => jsonResponse({ status: 'In productie' }),
-      },
-    ]);
+    orderWithStatus('In productie', []);
 
     await peb.handleTrackingMails();
 
@@ -1572,8 +1660,8 @@ describe('handleTrackingMails', () => {
     routeFetch([
       {
         method: 'GET',
-        url: `${PB}/v1/orders/7989`,
-        response: () => jsonResponse({}, { status: 500 }),
+        url: `${PB}/orders/7989`,
+        response: () => jsonResponse({ message: 'Server Error' }, { status: 500 }),
       },
     ]);
 
@@ -1629,21 +1717,22 @@ describe('handleBoxInstructionMails', () => {
 // createOrder — end-to-end article building (backward-compatible path)
 // ---------------------------------------------------------------------------
 describe('createOrder', () => {
-  it('builds the game card article from the playlist and submits the full order', async () => {
-    const payment = {
-      id: 9,
-      paymentId: 'pay_9',
-      fullname: 'Jane Buyer',
-      email: 'jane@example.com',
-      address: 'Mainstreet',
-      housenumber: '12',
-      zipcode: '1234AB',
-      city: 'Amsterdam',
-      countrycode: 'NL',
-      fast: false,
-      totalPrice: 60,
-    };
-    const playlists = [
+  const payment = {
+    id: 9,
+    paymentId: 'pay_9',
+    fullname: 'Jane Buyer',
+    email: 'jane@example.com',
+    address: 'Mainstreet',
+    housenumber: '12',
+    zipcode: '1234AB',
+    city: 'Amsterdam',
+    countrycode: 'NL',
+    fast: false,
+    totalPrice: 60,
+  };
+
+  function playlistsFor(playlist: any = {}) {
+    return [
       {
         filename: 'qr_test.pdf',
         playlist: {
@@ -1654,9 +1743,37 @@ describe('createOrder', () => {
           boxEnabled: false,
           boxQuantity: 0,
           boxFilename: null,
+          ...playlist,
         },
       },
     ];
+  }
+
+  const placedOrder = {
+    id: 7989,
+    status: 'In opdracht',
+    amount: 20,
+    amount_tax_standard: 4.2,
+    tracktrace: [],
+    articles: [{ product: 'losbladig', amount: 12.05 }],
+  };
+
+  function placedRoutes() {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders`,
+        response: () => jsonResponse({ data: placedOrder }),
+      },
+      {
+        method: 'GET',
+        url: `${PB}/orders/7989`,
+        response: () => jsonResponse({ data: placedOrder }),
+      },
+    ]);
+  }
+
+  beforeEach(() => {
     prismaMock.paymentHasPlaylistItem.findMany.mockResolvedValue([]);
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([]);
     prismaMock.payment.update.mockResolvedValue({});
@@ -1665,70 +1782,58 @@ describe('createOrder', () => {
       maxCards: 500,
       amountWithMargin: 26,
     });
-    routeFetch([
+  });
+
+  it('builds the game card article from the playlist and places the order', async () => {
+    placedRoutes();
+
+    const result = await peb.createOrder(payment, playlistsFor(), 'cards');
+
+    const [orderCall] = sentRequests('POST', '/orders');
+    const orderBody = body(orderCall);
+    expect(orderBody).toMatchObject({
+      contact: 'Jane Buyer',
+      street: 'Mainstreet',
+      number: '12',
+      postalcode: '1234AB',
+      city: 'Amsterdam',
+      country: 'NL',
+      email: 'jane@example.com',
+      delivery_method: 'post',
+      production_method: 'standard',
+      anonymous: true,
+    });
+    expect(orderBody.reference).toMatch(/^pay_9-[0-9a-z]+$/);
+    expect(orderBody.comment).toBeUndefined();
+    expect(orderBody.articles).toEqual([
       {
-        method: 'POST',
-        url: `${PB}/v1/orders/articles`,
-        response: () =>
-          jsonResponse({}, { headers: { location: 'orders/7989-1' } }),
-      },
-      {
-        method: 'POST',
-        url: `${PB}/v1/delivery/7989-1`,
-        response: () => jsonResponse({}),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/orders/7989-1`,
-        response: () =>
-          jsonResponse({
-            amount: '20.00',
-            price_startup: '2.25',
-            amount_tax_standard: '4.20',
-          }),
-      },
-      {
-        method: 'GET',
-        url: `${PB}/v1/delivery/7989-1`,
-        response: () => jsonResponse({ amount: '5.95' }),
+        product: 'losbladig',
+        number: 1,
+        copies: 200,
+        color: 'all',
+        size: 'custom',
+        printside: 'double',
+        finishing: 'loose',
+        finishing2: 'none',
+        finishing_extra: 'none',
+        accessory_item: 'none',
+        papertype: 'card',
+        size_custom_width: 60,
+        size_custom_height: 60,
+        borderless: true,
+        check_doc: false,
+        add_file_method: 'url',
+        file_overwrite: true,
+        file_url: `${process.env['API_URI']}/public/pdf/qr_test.pdf`,
+        comment:
+          'Batch nummer op de kaartjes (rechts onderin op kant met titel/artiest/jaar) moet #55 zijn',
+        add_inserts: false,
       },
     ]);
 
-    const result = await peb.createOrder(payment, playlists, 'cards');
-
-    // ENVIRONMENT=test → finishOrder must NOT run
-    expect(sentRequests('POST', '/finish')).toHaveLength(0);
-
-    const [articleCall] = sentRequests('POST', '/v1/orders/articles');
-    expect(body(articleCall)).toEqual({
-      amount: 1,
-      product: 'losbladig',
-      number: '1',
-      copies: '200',
-      color: 'all',
-      size: 'custom',
-      printside: 'double',
-      finishing: 'loose',
-      finishing2: 'none',
-      finishing_extra: 'none',
-      accessory_item: 'none',
-      papertype: 'card',
-      size_custom_width: '60',
-      size_custom_height: '60',
-      check_doc: 'standard',
-      delivery_method: 'post',
-      add_file_method: 'url',
-      file_overwrite: true,
-      file_url: `${process.env['API_URI']}/public/pdf/qr_test.pdf`,
-      comment:
-        'Batch nummer op de kaartjes (rechts onderin op kant met titel/artiest/jaar) moet #55 zijn',
-      payment_method: 'bundled',
-    });
-
     expect(result.success).toBe(true);
-    expect(result.response.id).toBe('7989-1');
-    // article POST + delivery POST (detail GETs are not logged)
-    expect(result.response.apiCalls).toHaveLength(2);
+    expect(result.response.id).toBe('7989');
+    expect(result.response.apiCalls).toHaveLength(1);
 
     // setPaymentInfo is fire-and-forget — let it settle, then verify the
     // profit bookkeeping: 60/1.21=49.59 ex VAT − 20.00 print cost − 0 boxes.
@@ -1743,5 +1848,59 @@ describe('createOrder', () => {
         printApiStatus: 'Submitted',
       },
     });
+  });
+
+  it('sends express orders as fast production and adds the box article plus packing comment', async () => {
+    placedRoutes();
+
+    const result = await peb.createOrder(
+      { ...payment, fast: true },
+      playlistsFor({ boxEnabled: true, boxQuantity: 2, boxFilename: 'box.pdf' }),
+      'cards'
+    );
+
+    const orderBody = body(sentRequests('POST', '/orders')[0]);
+    expect(orderBody.production_method).toBe('fast');
+    expect(orderBody.comment).toBe(
+      'LET OP: Deze order moet verpakt worden met in totaal 2 QRSong! dozen'
+    );
+    expect(orderBody.articles).toHaveLength(2);
+    expect(orderBody.articles[0]).toMatchObject({
+      product: 'losbladig',
+      accessory_group: 'packaging',
+      accessory_item: 'box_qrsong',
+    });
+    // countPDFPages mock → 2 pages of 120×120 insert cards, no accessory
+    expect(orderBody.articles[1]).toMatchObject({
+      product: 'werkblad',
+      copies: 2,
+      size_custom_width: 120,
+      borderless: true,
+      accessory_item: 'none',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('reports failure and stores no payment info when Print&Bind rejects the order', async () => {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders`,
+        response: () =>
+          jsonResponse(
+            { message: 'contact (and 1 more error)', errors: { contact: ['required'] } },
+            { status: 422 }
+          ),
+      },
+    ]);
+
+    const result = await peb.createOrder(payment, playlistsFor(), 'cards');
+
+    expect(result.success).toBe(false);
+    expect(result.response.error).toContain('HTTP 422');
+    expect(result.response.error).toContain('contact: required');
+    expect(result.response.apiCalls).toHaveLength(1);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
   });
 });
