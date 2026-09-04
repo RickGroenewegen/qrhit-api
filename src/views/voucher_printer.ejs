@@ -5,7 +5,7 @@
     <title>QRSong Gift Voucher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Patrick+Hand&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;700;900&family=Patrick+Hand&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
     <style>
         @page {
             size: A5 landscape;
@@ -34,7 +34,7 @@
             right: -20%;  /* Increased negative right value */
             width: 120%;  /* Increased width to compensate */
             height: 200%;
-            background: #4B96D1;
+            background: #18565e;
             clip-path: polygon(100% -20%, 15% 100%, 120% 100%);  /* Extended polygon points */
             z-index: -1;
             transform: translateZ(0);  /* Force GPU acceleration */
@@ -53,28 +53,33 @@
         }
         .tagline {
             font-size: 14px;
-            color: #333;
+            color: #18565e;
             margin-bottom: 5px;
             margin-top: 5px;
             max-width: 400px;
         }
         .gift-voucher {
-            font-size: 32px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-size: 26px;
             font-weight: 900;
             margin: 0;
             line-height: 1;
-            color: #1a1a1a;
+            color: #0b2c31;
             margin-top: 15px;
             margin-bottom: 15px;
-            letter-spacing: -0.5px;
+            letter-spacing: .02em;
+            text-transform: uppercase;
         }
         .amount {
             font-size: 95px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
             font-weight: 900;
             margin: 0;
             line-height: 0.9;
-            color: #1a1a1a;
-            letter-spacing: 5px;
+            color: #0b2c31;
+            letter-spacing: 2px;
             margin-bottom: 20px;
             position: relative;
             z-index: 2;
@@ -85,19 +90,26 @@
             margin: 15px 0;
             font-weight: 700;
             line-height: 1.4;
-            color: #333;
+            color: #18565e;
         }
         .instructions {
             margin: 25px 0;
         }
         .instructions h3 {
-            font-size: 16px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-weight: 800;
+            font-size: 14px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: #0b2c31;
             margin-bottom: 8px;
         }
         .instructions ol {
             margin: 0;
             padding-left: 20px;
             font-size: 12px;
+            color: #18565e;
         }
         .instructions li {
             margin-bottom: 4px;
@@ -106,12 +118,19 @@
             position: absolute;
             bottom: 15px;
             left: 15px;
-            background: #4B96D1;
-            color: white;
-            padding: 6px 15px;
-            border-radius: 4px;
+            background: #f79677;
+            color: #0b2c31;
+            padding: 8px 18px;
+            border: 2px solid #0b2c31;
+            border-radius: 999px;
+            box-shadow: 3px 3px 0 #0b2c31;
             text-decoration: none;
-            font-size: 14px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
         }
         .voucher-code {
             position: absolute;
@@ -119,11 +138,11 @@
             right: 15px;
             font-family: 'Fira Code', monospace;
             font-size: 16px;
-            color: #333;
-            background: rgba(255, 255, 255, 0.95);
+            color: #0b2c31;
+            background: rgba(255, 248, 243, 0.97);
             padding: 6px 14px;
-            border-radius: 8px;
-            border: 1px solid #4B96D1;
+            border-radius: 10px;
+            border: 2px solid #18565e;
             -webkit-mask-image: -webkit-radial-gradient(white, black);
             -webkit-transform: translateZ(0);
             isolation: isolate;
@@ -143,7 +162,7 @@
     <div class="page">
         <div class="blue-triangle"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <h1 class="gift-voucher"><%= translations.title %></h1>
@@ -170,9 +189,9 @@
     </div>
     <!-- Back page -->
     <div class="page" style="position: relative;">    
-        <div class="blue-triangle" style="clip-path: polygon(-50% -80%, 70% 100%, -50% 100%); background: #f5f5f5; transform: translateX(-240px);"></div>
+        <div class="blue-triangle" style="clip-path: polygon(-50% -80%, 70% 100%, -50% 100%); background: #feefe5; transform: translateX(-240px);"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <div style="display: flex; margin-top: 40px; align-items: center;">
@@ -180,17 +199,17 @@
                     <img src="https://www.qrsong.io/assets/images/voucher_phone.png" alt="QRSong App" style="width: 180px; height: auto;">
                 </div>
                 <div style="flex: 1.4; margin-left: -100px; padding: 20px; margin-top: -20px;">
-                    <div style="font-family: 'Patrick Hand', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-mask-image: -webkit-radial-gradient(white, black); -webkit-transform: translateZ(0); position: relative; isolation: isolate; border: 2px solid #4B96D1; z-index: 1; min-height: 200px;">
+                    <div style="font-family: 'Patrick Hand', cursive; color: #0b2c31; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-mask-image: -webkit-radial-gradient(white, black); -webkit-transform: translateZ(0); position: relative; isolation: isolate; border: 2px solid #18565e; z-index: 1; min-height: 200px;">
                         <% if (discount.message.trim()) { %>
-                        <div style="font-size: 24px; margin-bottom: 20px; color: #4B96D1;" id="greeting"><%= translations.dearMusicLover %>,</div>
+                        <div style="font-size: 24px; margin-bottom: 20px; color: #18565e;" id="greeting"><%= translations.dearMusicLover %>,</div>
                         <div style="font-size: 18px; line-height: 1.6; margin-bottom: 25px;" id="message">
                             <%= discount.message.substring(0, 255) %>
                         </div>
                         <% } %>
                         <% if (discount.from.trim()) { %>
-                        <div style="font-size: 20px; margin-top: 30px; color: #4B96D1;" id="from">
+                        <div style="font-size: 20px; margin-top: 30px; color: #18565e;" id="from">
                             <%= translations.withMusicalGreetings %>,<br>
-                            <span style="font-size: 28px; margin-top: 15px; display: block; color: #1a1a1a;"><%= discount.from.substring(0,100) %></span>
+                            <span style="font-size: 28px; margin-top: 15px; display: block; color: #0b2c31;"><%= discount.from.substring(0,100) %></span>
                         </div>
                         <% } %>
                         <script>

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title><%= t('title') %> - <%= company.name %></title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
+
         @media print {
             @page {
                 size: A4;
@@ -23,9 +25,9 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.5;
-            color: #333;
+            color: #0b2c31;
             background: white;
             font-size: 14px;
             margin: 0;
@@ -53,10 +55,14 @@
         }
 
         .quotation-title {
-            font-size: 42px;
-            color: #5FBFFF;
-            font-weight: 300;
-            letter-spacing: -1px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-size: 34px;
+            line-height: 1.1;
+            color: #0b2c31;
+            font-weight: 900;
+            letter-spacing: .02em;
+            text-transform: uppercase;
         }
 
         .company-section {
@@ -65,7 +71,7 @@
 
         .company-section .label {
             font-size: 10px;
-            color: #999;
+            color: #3d6d74;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 8px;
@@ -79,7 +85,7 @@
 
         .company-details {
             font-size: 11px;
-            color: #666;
+            color: #3d6d74;
             line-height: 1.3;
             text-align: right;
         }
@@ -98,7 +104,7 @@
 
         .info-label {
             font-size: 11px;
-            color: #999;
+            color: #3d6d74;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 6px;
@@ -114,7 +120,7 @@
             transform: translateY(-50%);
             width: 4px;
             height: 15px;
-            background: #5FBFFF;
+            background: #18565e;
         }
 
         .info-content {
@@ -124,13 +130,13 @@
         .info-content .name {
             font-size: 15px;
             font-weight: 600;
-            color: #333;
+            color: #0b2c31;
             margin-bottom: 4px;
         }
 
         .info-content .details {
             font-size: 12px;
-            color: #666;
+            color: #3d6d74;
             line-height: 1.4;
         }
 
@@ -142,14 +148,14 @@
 
         .info-field .field-label {
             font-weight: 600;
-            color: #333;
+            color: #0b2c31;
             min-width: 60px;
             display: inline-block;
         }
 
         /* Quotation Details Box */
         .quotation-details {
-            background: #f9f9f9;
+            background: #feefe5;
             padding: 12px 15px;
             border-radius: 4px;
         }
@@ -162,11 +168,11 @@
         }
 
         .quotation-details .detail-label {
-            color: #666;
+            color: #3d6d74;
         }
 
         .quotation-details .detail-value {
-            color: #333;
+            color: #0b2c31;
             font-weight: 600;
         }
 
@@ -182,8 +188,8 @@
         }
 
         thead {
-            background: #5FBFFF;
-            color: white;
+            background: #18565e;
+            color: #feefe5;
         }
 
         thead th {
@@ -211,7 +217,7 @@
         }
 
         tbody tr {
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f8e1d2;
         }
 
         tbody tr:last-child {
@@ -221,7 +227,7 @@
         tbody td {
             padding: 8px 15px;
             font-size: 13px;
-            color: #333;
+            color: #0b2c31;
         }
 
         tbody td:nth-child(2) {
@@ -236,13 +242,13 @@
         }
 
         .item-description {
-            color: #333;
+            color: #0b2c31;
         }
 
         .item-details {
             display: block;
             font-size: 11px;
-            color: #999;
+            color: #3d6d74;
             margin-top: 4px;
         }
 
@@ -272,24 +278,24 @@
         .totals-table td:first-child {
             text-align: right;
             padding-right: 20px;
-            color: #666;
+            color: #3d6d74;
         }
 
         .total-row.subtotal td {
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #eed2bf;
             padding-bottom: 10px;
             font-size: 13px;
         }
 
         .total-row.grand-total td {
             padding-top: 10px;
-            border-top: 2px solid #5FBFFF;
+            border-top: 2px solid #18565e;
             font-weight: 600;
             font-size: 13px;
         }
 
         .total-row.vat td {
-            color: #666;
+            color: #3d6d74;
             font-style: italic;
             font-size: 13px;
         }
@@ -302,13 +308,13 @@
 
         .total-row.grand-total-incl td {
             padding-top: 8px;
-            border-top: 2px solid #5FBFFF;
+            border-top: 2px solid #18565e;
             font-size: 16px;
             font-weight: bold;
         }
 
         .total-row.grand-total-incl td:last-child {
-            color: #5FBFFF;
+            color: #18565e;
             font-size: 18px;
         }
 
@@ -322,10 +328,10 @@
         .section-title {
             font-size: 16px;
             font-weight: 600;
-            color: #333;
+            color: #0b2c31;
             margin-bottom: 15px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #5FBFFF;
+            border-bottom: 2px solid #18565e;
             display: inline-block;
         }
 
@@ -339,7 +345,7 @@
             padding-left: 25px;
             margin-bottom: 10px;
             font-size: 13px;
-            color: #666;
+            color: #3d6d74;
             line-height: 1.6;
         }
 
@@ -348,7 +354,7 @@
             counter-increment: item;
             position: absolute;
             left: 0;
-            color: #5FBFFF;
+            color: #18565e;
             font-weight: 600;
         }
 
@@ -365,33 +371,33 @@
 
         .notes-content {
             font-size: 13px;
-            color: #666;
+            color: #3d6d74;
             line-height: 1.8;
-            background: #f9f9f9;
+            background: #feefe5;
             padding: 20px;
             border-radius: 4px;
-            border-left: 4px solid #5FBFFF;
+            border-left: 4px solid #18565e;
         }
 
         /* Footer */
         .footer {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #eed2bf;
         }
 
         .footer-content {
             font-size: 13px;
-            color: #666;
+            color: #3d6d74;
             line-height: 1.6;
         }
 
         .footer-content strong {
-            color: #333;
+            color: #0b2c31;
         }
 
         .footer-content a {
-            color: #5FBFFF;
+            color: #18565e;
             text-decoration: none;
         }
 
@@ -610,7 +616,7 @@
                 </tr>
             </table>
             <% if (vatCtx.reverseCharge) { %>
-            <div style="text-align: right; font-size: 9px; color: #666; margin-top: 4px;">
+            <div style="text-align: right; font-size: 9px; color: #3d6d74; margin-top: 4px;">
                 <%= t('vatReverseChargeNote') %>
             </div>
             <% } %>
@@ -618,19 +624,19 @@
 
         <!-- Signature Section -->
         <div style="margin-top: 12px;">
-            <div style="font-size: 10px; color: #666; margin-bottom: 6px; line-height: 1.4;">
+            <div style="font-size: 10px; color: #3d6d74; margin-bottom: 6px; line-height: 1.4;">
                 <%= t('signatureIntro') %>
             </div>
-            <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; width: 50%;">
-                <div style="font-size: 11px; color: #666; margin-bottom: 4px;"><%= t('signatureFor') %> <%= company.name %></div>
+            <div style="border: 1px solid #eed2bf; border-radius: 4px; padding: 10px; width: 50%;">
+                <div style="font-size: 11px; color: #3d6d74; margin-bottom: 4px;"><%= t('signatureFor') %> <%= company.name %></div>
                 <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
             </div>
         </div>
 
         <!-- Deposit Notice -->
-        <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #f0f8ff; border-left: 4px solid #5FBFFF; border-radius: 4px;">
-            <strong style="color: #5FBFFF; font-size: 12px;"><%= t('depositTitle') %></strong>
-            <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; line-height: 1.3;">
+        <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #dce9ea; border-left: 4px solid #18565e; border-radius: 4px;">
+            <strong style="color: #18565e; font-size: 12px;"><%= t('depositTitle') %></strong>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #3d6d74; line-height: 1.3;">
                 <%= t('depositText') %>
             </p>
         </div>

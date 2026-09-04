@@ -5,6 +5,8 @@
 <title>Music Bingo - QRSong!</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Inter:wght@400;600;700&display=swap');
+
     @media print {
         @page {
             size: A4;
@@ -29,7 +31,7 @@
     }
 
     body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background: #ffffff;
     }
 
@@ -57,12 +59,16 @@
 
     .header .subtitle {
         font-size: 14px;
-        color: #666;
+        color: #3d6d74;
     }
 
     .header .round-info {
-        font-size: 16px;
-        font-weight: 600;
+        font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+        font-stretch: expanded;
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
         margin-top: 2mm;
     }
 
@@ -98,7 +104,7 @@
     .bingo-cell .song-title {
         font-size: 10px;
         font-weight: 600;
-        color: #1f2937;
+        color: #0b2c31;
         margin-bottom: 1mm;
         line-height: 1.2;
         max-height: 2.4em;
@@ -110,7 +116,7 @@
 
     .bingo-cell .artist {
         font-size: 9px;
-        color: #4b5563;
+        color: #3d6d74;
         margin-bottom: 1mm;
         line-height: 1.2;
         max-height: 1.2em;
@@ -131,12 +137,12 @@
         text-align: center;
         margin-top: 5mm;
         padding-top: 3mm;
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid #eed2bf;
     }
 
     .footer .branding {
         font-size: 11px;
-        color: #9ca3af;
+        color: #3d6d74;
     }
 
     .footer .branding a {
@@ -162,7 +168,7 @@
 
     .qr-container .card-id {
         font-size: 9px;
-        color: #666;
+        color: #3d6d74;
         margin-top: 1mm;
         text-align: center;
         font-weight: 600;
@@ -173,12 +179,12 @@
         padding-right: 45mm;
     }
 
-    /* Round 1: Blue (classic bingo) */
-    .round-1 .bingo-cell { border: 1.5px solid #1e40af; background: rgba(219, 234, 254, 0.5); }
-    .round-1 .bingo-cell .year { color: #1e40af; font-size: 16px; font-weight: 700; }
-    .round-1 .bingo-cell.free-space { background: #1e40af; }
-    .round-1 .header .round-info { color: #1e40af; }
-    .round-1 .footer .branding a { color: #1e40af; }
+    /* Round 1: Disco (brand) */
+    .round-1 .bingo-cell { border: 1.5px solid #18565e; background: rgba(220, 233, 234, 0.6); }
+    .round-1 .bingo-cell .year { color: #18565e; font-size: 16px; font-weight: 700; }
+    .round-1 .bingo-cell.free-space { background: #18565e; }
+    .round-1 .header .round-info { color: #18565e; }
+    .round-1 .footer .branding a { color: #18565e; }
 
     /* Round 2: Red */
     .round-2 .bingo-cell { border: 1.5px solid #b91c1c; background: rgba(254, 226, 226, 0.5); }
@@ -201,12 +207,12 @@
     .round-4 .header .round-info { color: #a16207; }
     .round-4 .footer .branding a { color: #a16207; }
 
-    /* Round 5: Orange */
-    .round-5 .bingo-cell { border: 1.5px solid #c2410c; background: rgba(255, 237, 213, 0.5); }
-    .round-5 .bingo-cell .year { color: #c2410c; font-size: 16px; font-weight: 700; }
-    .round-5 .bingo-cell.free-space { background: #c2410c; }
-    .round-5 .header .round-info { color: #c2410c; }
-    .round-5 .footer .branding a { color: #c2410c; }
+    /* Round 5: Pop (brand) */
+    .round-5 .bingo-cell { border: 1.5px solid #dd6a45; background: rgba(253, 227, 217, 0.6); }
+    .round-5 .bingo-cell .year { color: #dd6a45; font-size: 16px; font-weight: 700; }
+    .round-5 .bingo-cell.free-space { background: #dd6a45; }
+    .round-5 .header .round-info { color: #dd6a45; }
+    .round-5 .footer .branding a { color: #dd6a45; }
 
     /* Round 6: Purple */
     .round-6 .bingo-cell { border: 1.5px solid #7e22ce; background: rgba(243, 232, 255, 0.5); }

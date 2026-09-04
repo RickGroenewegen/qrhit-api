@@ -11,6 +11,8 @@
 
 		<!-- Invoice styling -->
 		<style>
+			@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
+
 			@media print {
 				@page {
 					size: A4;
@@ -21,47 +23,36 @@
 					print-color-adjust: exact !important;
 				}
 			}
-			
+
 			body {
-				font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+				font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 				text-align: center;
-				color: #777;
+				color: #18565e;
 				margin: 0;
 				padding: 0;
 			}
 
-			body h1 {
-				font-weight: 300;
-				margin-bottom: 0px;
-				padding-bottom: 0px;
-				color: #000;
-			}
-
-			body h3 {
-				font-weight: 300;
-				margin-top: 10px;
-				margin-bottom: 20px;
-				font-style: italic;
-				color: #555;
-			}
-
 			body a {
-				color: #06f;
+				color: #18565e;
+			}
+
+			strong {
+				color: #0b2c31;
 			}
 
 			.invoice-box {
 				width: 210mm;
 				height: 297mm;
 				margin: 0 auto;
-				padding: 30px;
+				padding: 16mm 14mm;
 				box-sizing: border-box;
-				border: 1px solid #eee;
+				border: 1px solid #eed2bf;
 				box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
 				font-size: 12px;
 				line-height: 18px;
-				font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-				color: #555;
-				background-color: white;
+				font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+				color: #18565e;
+				background-color: #ffffff;
 			}
 
 			.invoice-box table {
@@ -72,7 +63,7 @@
 			}
 
 			.invoice-box table td {
-				padding: 5px;
+				padding: 6px 5px;
 				vertical-align: top;
 			}
 
@@ -81,13 +72,25 @@
 			}
 
 			.invoice-box table tr.top table td {
-				padding-bottom: 20px;
+				padding-bottom: 28px;
 			}
 
 			.invoice-box table tr.top table td.title {
 				font-size: 35px;
 				line-height: 35px;
-				color: #333;
+			}
+
+			.invoice-kicker {
+				display: block;
+				margin-bottom: 6px;
+				font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+				font-stretch: expanded;
+				font-weight: 900;
+				font-size: 22px;
+				line-height: 26px;
+				letter-spacing: .02em;
+				text-transform: uppercase;
+				color: #0b2c31;
 			}
 
 			.invoice-box table tr.information table td {
@@ -95,9 +98,18 @@
 			}
 
 			.invoice-box table tr.heading td {
-				background: #eee;
-				border-bottom: 1px solid #ddd;
-				font-weight: bold;
+				background: #18565e;
+				color: #feefe5;
+				font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+				font-stretch: expanded;
+				font-weight: 800;
+				font-size: 10px;
+				line-height: 16px;
+				letter-spacing: .08em;
+				text-transform: uppercase;
+				white-space: nowrap;
+				padding-top: 7px;
+				padding-bottom: 7px;
 			}
 
 			.invoice-box table tr.details td {
@@ -105,7 +117,7 @@
 			}
 
 			.invoice-box table tr.item td {
-				border-bottom: 1px solid #eee;
+				border-bottom: 1px solid #eed2bf;
 			}
 
 			.invoice-box table tr.item.last td {
@@ -113,8 +125,9 @@
 			}
 
 			.invoice-box table tr.total  {
-				border-top: 2px solid #eee;
+				border-top: 2px solid #0b2c31;
 				font-weight: bold;
+				color: #0b2c31;
 			}
 
 			@media only screen and (max-width: 600px) {
@@ -146,6 +159,7 @@
 									<img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="Company logo" style="width: 100%; max-width: 200px" />
 								</td>
 								<td>
+									<span class="invoice-kicker"><%= translations.invoice %></span>
 									<%= translations.invoiceNumber %>: <%= payment.orderId %><br />
 									<%= translations.invoiceDate %>: <%= dateFormatter.format(payment.createdAt) %><br />
                                     <%= translations.paidInFull %><br />
@@ -283,15 +297,15 @@
 				<!-- Subtotal and VAT breakdown -->
 				<% const subtotalExclVAT = payment.totalPrice - payment.totalVATPrice; %>
 
-				<tr style="border-top: 2px solid #eee;">
+				<tr style="border-top: 2px solid #eed2bf;">
 					<td colspan="6" style="text-align:right; padding-top: 20px;"><strong><%= translations.subtotalExclVAT %>:</strong></td>
 					<td style="text-align:right; padding-top: 20px;"><strong><%= moneyFormatter.format(displayRate *subtotalExclVAT) %></strong></td>
 				</tr>
 
 				<% if (payment.reverseCharge) { %>
 				<tr>
-					<td colspan="6" style="text-align:right; color: #1e3a8a;"><strong><%= translations.reverseChargeLine || 'VAT reverse charged (0%)' %>:</strong></td>
-					<td style="text-align:right; color: #1e3a8a;"><strong><%= moneyFormatter.format(0) %></strong></td>
+					<td colspan="6" style="text-align:right; color: #0b2c31;"><strong><%= translations.reverseChargeLine || 'VAT reverse charged (0%)' %>:</strong></td>
+					<td style="text-align:right; color: #0b2c31;"><strong><%= moneyFormatter.format(0) %></strong></td>
 				</tr>
 				<% } else {
 					// Box and QRGames are taxed at the product rate; include their
@@ -326,7 +340,7 @@
 				</tr>
 				<% } %>
 
-				<tr class="total" style="border-top: 2px solid #333;">
+				<tr class="total" style="border-top: 2px solid #0b2c31;">
 					<td colspan="6" style="text-align:right; padding-top: 10px;"><strong><%= translations.totalInclVAT %>:</strong></td>
 					<td style="text-align:right; padding-top: 10px;"><strong><%= moneyFormatter.format(presentmentTotal) %></strong></td>
 				</tr>
@@ -334,11 +348,11 @@
 				<% if (payment.reverseCharge) { %>
 				<tr>
 					<td colspan="7" style="padding-top: 20px;">
-						<div style="border: 1px solid #1e3a8a; background: #eff6ff; padding: 12px; border-radius: 4px;">
-							<div style="font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">
+						<div style="border: 2px solid #18565e; background: #dce9ea; padding: 12px; border-radius: 10px;">
+							<div style="font-weight: bold; color: #0b2c31; margin-bottom: 4px;">
 								<%= translations.reverseChargeHeading || 'VAT reverse charged' %>
 							</div>
-							<div style="font-size: 11px; color: #1e3a8a; line-height: 1.5;">
+							<div style="font-size: 11px; color: #0b2c31; line-height: 1.5;">
 								<%= translations.reverseChargeExplanation || 'VAT is reverse charged to the recipient in accordance with Article 196 of Council Directive 2006/112/EC. The recipient is liable to self-account for VAT under the local reverse-charge procedure.' %>
 								<% if (payment.vatIdChecked) { %>
 									<br/><%= translations.vatIdVerified || 'VAT ID verified via VIES' %>: <strong><%= payment.vatIdChecked %></strong>
@@ -351,7 +365,7 @@
 
 				<% if (invoiceCurrency !== 'EUR') { %>
 				<tr>
-					<td colspan="7" style="text-align:right; padding-top: 15px; font-size: 10px; color: #888;">
+					<td colspan="7" style="text-align:right; padding-top: 15px; font-size: 10px; color: #3d6d74;">
 						<%= translations.eurEquivalent || 'EUR equivalent' %>: <%= euroFormatter.format(payment.totalPrice) %>
 						(<%= translations.exchangeRate || 'rate' %>: 1 EUR = <%= invoiceRate.toFixed(4) %> <%= invoiceCurrency %>)
 					</td>
