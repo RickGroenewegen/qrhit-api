@@ -4673,8 +4673,14 @@ class Vibe {
   // ============================================
 
   /**
-   * Import companies from Excel file
-   * Excel columns: Bedrijfsnaam, E-mail, Voornaam, Achternaam, Telefoonnummer, Adres, Plaats, Land, zipcode, Categorie, Opmerking
+   * Import companies (leads) from an Excel export.
+   *
+   * Columns are matched by header name (case-insensitive), so both the
+   * current lead export (Email, First name, Last name, Company name,
+   * Phone number, Address, zipcode, Country, ..., Comment) and the older
+   * Dutch layout (Bedrijfsnaam, E-mail, Voornaam, Achternaam,
+   * Telefoonnummer, Adres, Plaats, Land, zipcode, Categorie, Opmerking)
+   * are accepted. Columns without a recognised header are ignored.
    */
   public async importCompaniesFromExcel(
     fileBuffer: Buffer,
@@ -4710,14 +4716,54 @@ class Vibe {
       };
 
       // Convert worksheet to array of arrays
-      const rows: any[][] = [];
-      worksheet.eachRow((row: any, rowNumber: number) => {
-        const rowValues: any[] = [];
+      const rows: string[][] = [];
+      worksheet.eachRow((row: any) => {
+        const rowValues: string[] = [];
         row.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
           rowValues[colNumber - 1] = getCellText(cell);
         });
         rows.push(rowValues);
       });
+
+      // Resolve column positions from the header row. Header names are
+      // compared after lower-casing and stripping everything that is not a
+      // letter or digit, so "E-mail", "Email" and "e_mail" all match.
+      const columnAliases: { [field: string]: string[] } = {
+        company: ['companyname', 'company', 'bedrijfsnaam', 'bedrijf'],
+        email: ['email', 'emailaddress', 'emailadres'],
+        firstName: ['firstname', 'voornaam'],
+        lastName: ['lastname', 'achternaam'],
+        phone: ['phonenumber', 'phone', 'telefoonnummer', 'telefoon'],
+        address: ['address', 'adres', 'straat'],
+        city: ['city', 'plaats', 'woonplaats'],
+        country: ['country', 'land'],
+        zipcode: ['zipcode', 'zip', 'postcode'],
+        comment: ['comment', 'comments', 'opmerking', 'opmerkingen', 'notes', 'note'],
+      };
+      const normalizeHeader = (value: string): string =>
+        (value ?? '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const headerRow = rows[0].map(normalizeHeader);
+      const columns: { [field: string]: number } = {};
+      for (const [fieldName, aliases] of Object.entries(columnAliases)) {
+        const index = headerRow.findIndex((header) => aliases.includes(header));
+        if (index >= 0) {
+          columns[fieldName] = index;
+        }
+      }
+
+      if (columns.company === undefined) {
+        const found = rows[0].filter((header) => header && header.trim()).join(', ');
+        return {
+          success: false,
+          error: `Could not find a company name column in the header row (found: ${found || 'no headers'})`,
+        };
+      }
+
+      const field = (row: string[], fieldName: string): string => {
+        const index = columns[fieldName];
+        if (index === undefined) return '';
+        return (row[index] ?? '').toString().trim();
+      };
 
       // Skip header row
       const dataRows = rows.slice(1);
@@ -4726,23 +4772,54 @@ class Vibe {
       const countryMap: { [key: string]: string } = {
         nederland: 'NL',
         netherlands: 'NL',
+        'the netherlands': 'NL',
+        holland: 'NL',
         belgium: 'BE',
         belgie: 'BE',
         belgië: 'BE',
         germany: 'DE',
         duitsland: 'DE',
+        deutschland: 'DE',
         france: 'FR',
         frankrijk: 'FR',
         uk: 'GB',
         'united kingdom': 'GB',
+        'great britain': 'GB',
+        england: 'GB',
+        'verenigd koninkrijk': 'GB',
         usa: 'US',
         'united states': 'US',
+        ireland: 'IE',
+        ierland: 'IE',
+        luxembourg: 'LU',
+        luxemburg: 'LU',
+        spain: 'ES',
+        spanje: 'ES',
+        slovenia: 'SI',
+        slovenië: 'SI',
+        slovenie: 'SI',
+        austria: 'AT',
+        oostenrijk: 'AT',
+        switzerland: 'CH',
+        zwitserland: 'CH',
+        italy: 'IT',
+        italië: 'IT',
+        italie: 'IT',
+        portugal: 'PT',
+        denmark: 'DK',
+        denemarken: 'DK',
+        sweden: 'SE',
+        zweden: 'SE',
+        norway: 'NO',
+        noorwegen: 'NO',
+        poland: 'PL',
+        polen: 'PL',
       };
 
       // Group rows by company name
-      const companiesMap = new Map<string, any[]>();
+      const companiesMap = new Map<string, string[][]>();
       for (const row of dataRows) {
-        const companyName = row[0]?.toString()?.trim();
+        const companyName = field(row, 'company');
         if (!companyName) continue;
 
         if (!companiesMap.has(companyName)) {
@@ -4765,6 +4842,70 @@ class Vibe {
         return { success: false, error: 'companyadmin user group not found' };
       }
 
+      let usersCreatedTotal = 0;
+
+      // Create (or link) a companyadmin user for every contact row that has
+      // an e-mail address. Returns the number of users created or linked.
+      const createContacts = async (
+        companyId: number,
+        contactRows: string[][]
+      ): Promise<number> => {
+        let usersCreated = 0;
+        for (const row of contactRows) {
+          const email = field(row, 'email').toLowerCase();
+          if (!email) continue;
+
+          // Check if user already exists
+          const existingUser = await this.prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (existingUser) {
+            // If user exists but has no company, link them
+            if (!existingUser.companyId) {
+              await this.prisma.user.update({
+                where: { id: existingUser.id },
+                data: { companyId },
+              });
+              usersCreated++;
+            }
+            continue;
+          }
+
+          // Create new user
+          const userFirstName = field(row, 'firstName');
+          const userLastName = field(row, 'lastName');
+          const displayName =
+            [userFirstName, userLastName].filter(Boolean).join(' ') || email.split('@')[0];
+
+          // Generate unique hash and userId
+          const userHash = require('crypto').randomBytes(8).toString('hex').slice(0, 16);
+          const userIdStr = `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+          const newUser = await this.prisma.user.create({
+            data: {
+              userId: userIdStr,
+              email,
+              displayName,
+              hash: userHash,
+              companyId,
+              verified: false,
+            },
+          });
+
+          // Add user to companyadmin group
+          await this.prisma.userInGroup.create({
+            data: {
+              userId: newUser.id,
+              groupId: companyAdminGroup.id,
+            },
+          });
+
+          usersCreated++;
+        }
+        return usersCreated;
+      };
+
       for (const [companyName, companyRows] of companiesMap) {
         try {
           // Check if company already exists
@@ -4773,17 +4914,27 @@ class Vibe {
           });
 
           if (existingCompany) {
+            // Known company: leave it untouched, but still add the contact
+            // persons from the sheet that do not exist as users yet.
+            const usersCreated = await createContacts(existingCompany.id, companyRows);
+            usersCreatedTotal += usersCreated;
             skipped++;
-            details.push({ company: companyName, status: 'skipped', reason: 'Company already exists' });
+            details.push({
+              company: companyName,
+              status: 'skipped',
+              reason: 'Company already exists',
+              companyId: existingCompany.id,
+              usersCreated,
+            });
             continue;
           }
 
           // Use first row for company data
           const firstRow = companyRows[0];
 
-          // Extract house number from address
-          const fullAddress = firstRow[5]?.toString()?.trim() || '';
-          const addressMatch = fullAddress.match(/^(.+?)\s+(\d+\s*\w*)$/);
+          // Extract house number from address ("Hoofdstraat 12a", "Straat, 2")
+          const fullAddress = field(firstRow, 'address');
+          const addressMatch = fullAddress.match(/^(.+?)[\s,]+(\d+\s*\w*)$/);
           let address = fullAddress;
           let housenumber = '';
           if (addressMatch) {
@@ -4792,17 +4943,20 @@ class Vibe {
           }
 
           // Convert country to code
-          const countryRaw = firstRow[7]?.toString()?.trim()?.toLowerCase() || '';
-          const countrycode = countryMap[countryRaw] || firstRow[7]?.toString()?.trim() || '';
+          const countryRaw = field(firstRow, 'country');
+          const countrycode = countryMap[countryRaw.toLowerCase()] || countryRaw;
 
           // Combine first and last name for contact
-          const firstName = firstRow[2]?.toString()?.trim() || '';
-          const lastName = firstRow[3]?.toString()?.trim() || '';
+          const firstName = field(firstRow, 'firstName');
+          const lastName = field(firstRow, 'lastName');
           const contact = [firstName, lastName].filter(Boolean).join(' ');
 
           // Format phone number
-          let phone = firstRow[4]?.toString()?.trim() || '';
-          if (phone && !phone.startsWith('+')) {
+          let phone = field(firstRow, 'phone');
+          if (phone.startsWith('00')) {
+            // International prefix written as 00 -> +
+            phone = '+' + phone.substring(2);
+          } else if (phone && !phone.startsWith('+')) {
             // Add Dutch country code if not present
             if (phone.startsWith('0')) {
               phone = '+31' + phone.substring(1);
@@ -4821,81 +4975,30 @@ class Vibe {
               followUp: false,
               address,
               housenumber,
-              city: firstRow[6]?.toString()?.trim() || '',
-              zipcode: firstRow[8]?.toString()?.trim() || '',
+              city: field(firstRow, 'city'),
+              zipcode: field(firstRow, 'zipcode'),
               countrycode,
               contact,
-              contactemail: firstRow[1]?.toString()?.trim() || '',
+              contactemail: field(firstRow, 'email'),
               contactphone: phone,
             },
           });
 
-          // Create company event from Opmerking if present
-          const opmerking = firstRow[10]?.toString()?.trim();
-          if (opmerking) {
+          // Create company event from the comment column if present
+          const comment = field(firstRow, 'comment');
+          if (comment) {
             await this.prisma.companyEvent.create({
               data: {
                 companyId: newCompany.id,
                 userId,
                 type: 'comment',
-                content: opmerking,
+                content: comment,
               },
             });
           }
 
-          // Create users for each contact row
-          let usersCreated = 0;
-          for (const row of companyRows) {
-            const email = row[1]?.toString()?.trim()?.toLowerCase();
-            if (!email) continue;
-
-            // Check if user already exists
-            const existingUser = await this.prisma.user.findUnique({
-              where: { email },
-            });
-
-            if (existingUser) {
-              // If user exists but has no company, link them
-              if (!existingUser.companyId) {
-                await this.prisma.user.update({
-                  where: { id: existingUser.id },
-                  data: { companyId: newCompany.id },
-                });
-                usersCreated++;
-              }
-              continue;
-            }
-
-            // Create new user
-            const userFirstName = row[2]?.toString()?.trim() || '';
-            const userLastName = row[3]?.toString()?.trim() || '';
-            const displayName = [userFirstName, userLastName].filter(Boolean).join(' ') || email.split('@')[0];
-
-            // Generate unique hash and userId
-            const userHash = require('crypto').randomBytes(8).toString('hex').slice(0, 16);
-            const userIdStr = `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-            const newUser = await this.prisma.user.create({
-              data: {
-                userId: userIdStr,
-                email,
-                displayName,
-                hash: userHash,
-                companyId: newCompany.id,
-                verified: false,
-              },
-            });
-
-            // Add user to companyadmin group
-            await this.prisma.userInGroup.create({
-              data: {
-                userId: newUser.id,
-                groupId: companyAdminGroup.id,
-              },
-            });
-
-            usersCreated++;
-          }
+          const usersCreated = await createContacts(newCompany.id, companyRows);
+          usersCreatedTotal += usersCreated;
 
           imported++;
           details.push({
@@ -4912,7 +5015,7 @@ class Vibe {
 
       this.logger.log(
         color.green.bold(
-          `Imported ${imported} companies, skipped ${skipped}, errors: ${errors.length}`
+          `Imported ${imported} companies, skipped ${skipped}, contacts created: ${usersCreatedTotal}, errors: ${errors.length}`
         )
       );
 
@@ -4921,6 +5024,7 @@ class Vibe {
         data: {
           imported,
           skipped,
+          usersCreated: usersCreatedTotal,
           errors,
           details,
         },
