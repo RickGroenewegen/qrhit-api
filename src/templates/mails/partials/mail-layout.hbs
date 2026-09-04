@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>{{ title }}</title>
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: Arial, sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
+        :root { color-scheme: light; supported-color-schemes: light; }
+        body { margin: 0; padding: 0; background-color: #feefe5; }
+        a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+        @media (max-width: 620px) {
+            .qr-shell { padding: 16px 12px !important; }
+            .qr-card { border-radius: 16px !important; }
+            .qr-pad { padding-left: 20px !important; padding-right: 20px !important; }
+            .qr-stack { display: block !important; width: 100% !important; padding: 0 0 16px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #feefe5;">
+    {{#if preheader}}<div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">{{ preheader }}</div>{{/if}}
+    <div role="article" aria-roledescription="email" aria-label="{{#if label}}{{ label }}{{else}}{{ title }}{{/if}}" lang="en" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #feefe5;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #feefe5;">
+            <tr>
+                <td align="center" class="qr-shell" style="padding: 32px 16px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" class="qr-card" style="width: 100%; max-width: 600px; border-collapse: separate; background-color: #fff8f3; border: 2px solid #18565e; border-radius: 20px; box-shadow: 6px 6px 0 #18565e;">
+                        <tr>
+                            <td style="height: 8px; font-size: 0; line-height: 0; background-color: #f79677; border-radius: 18px 18px 0 0;">&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td align="center" style="padding: 28px 32px 4px;">
+                                <img src="cid:{{#if logoCid}}{{ logoCid }}{{else}}logo{{/if}}" alt="{{ productName }}" width="180" style="display: block; width: 180px; max-width: 180px; height: auto; border: 0;">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="qr-pad" style="padding: 20px 32px 32px;">
+{{> @partial-block }}
+                            </td>
+                        </tr>
+                    </table>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px;">
+                        <tr>
+                            <td align="center" style="padding: 24px 16px 0; font-size: 12px; line-height: 18px; color: #3d6d74;">
+                                <p style="margin: 0;">&copy; {{ currentYear }} {{ productName }}. {{#if rights}}{{ rights }}{{else}}All rights reserved.{{/if}}</p>
+                                {{#if links}}
+                                <p style="margin: 8px 0 0;">
+                                    <a href="https://www.qrsong.io" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.visitWebsite }}</a>
+                                    &nbsp;&middot;&nbsp;
+                                    <a href="mailto:support@qrsong.io" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.contactSupport }}</a>
+                                </p>
+                                {{/if}}
+                                {{#if unsubscribe}}
+                                <p style="margin: 8px 0 0;"><a href="{{ unsubscribe }}" style="color: #3d6d74; text-decoration: underline;">{{ translations.unsubscribe }}</a></p>
+                                {{/if}}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

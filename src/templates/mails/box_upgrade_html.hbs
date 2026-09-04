@@ -1,136 +1,27 @@
-<!DOCTYPE html>
-<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-    <meta charset="utf-8">
-    <meta name="x-apple-disable-message-reformatting">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-    <title>{{ translations.boxUpgradeBody }}</title>
-    <!--[if mso]>
-    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
-    <style>
-      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
-    </style>
-    <![endif]-->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
-    </style>
-</head>
-<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
-    <div style="display: none;">{{ translations.boxUpgradeBody }}</div>
-    <div role="article" aria-roledescription="email" aria-label="{{ productName }} Box Upgrade" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
-        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
-            <tr>
-                <td align="center" style="padding: 24px;">
-                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
-                        <tr>
-                            <td style="padding: 24px;">
-                                <!-- Logo -->
-                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td align="center" style="padding-bottom: 24px;">
-                                            <img src="logo.png" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
-                                        </td>
-                                    </tr>
-                                </table>
-                                <!-- Content -->
-                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td>
-                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ payment.fullname }},</p>
-                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.boxUpgradeBody }}</p>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.boxUpgradeThankYou }}</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                                <!-- Order Details -->
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 7px;" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.boxUpgradeOrderDetails }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.boxUpgradePlaylist }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ playlist.name }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.boxUpgradeQuantity }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ quantity }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.boxUpgradeGiftBox }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">&euro;{{ boxPriceFormatted }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.boxUpgradeShipping }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">&euro;{{ shippingCost }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;"><strong>{{ translations.boxUpgradeTotal }}</strong></td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #2d3748;"><strong>&euro;{{ totalPrice }}</strong></td>
-                                    </tr>
-                                    <!-- Your Information -->
-                                    <tr>
-                                        <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.yourInformation }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.fullname }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ fullname }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.email }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ email }}</td>
-                                    </tr>
-                                    <!-- Shipping Address -->
-                                    <tr>
-                                        <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.shippingAddress }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.address }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ address }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.housenumber }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ housenumber }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.city }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ city }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.zipcode }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ zipcode }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.country }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ lookup countries country }}</td>
-                                    </tr>
-                                </table>
-                                <!-- Closing -->
-                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td style="padding-top: 32px;">
-                                            <p style="margin: 0; font-size: 16px; line-height: 24px; color: #4a5568;">
-                                                {{ translations.greetings }},<br>
-                                                {{ productName }}
-                                            </p>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                    <!-- Footer -->
-                    <table style="width: 100%; max-width: 600px;" cellpadding="0" cellspacing="0" role="presentation">
-                        <tr>
-                            <td style="padding: 24px; text-align: center; font-size: 12px; color: #718096;">
-                                <p style="margin: 0;">&copy; {{ currentYear }} {{ productName }}. All rights reserved.</p>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </div>
-</body>
-</html>
+{{#> mail-layout title=translations.boxUpgradeBody preheader=translations.boxUpgradeBody }}
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.boxUpgradeBody }}</p>
+<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.boxUpgradeThankYou }}</p>
+<!-- Order details -->
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin: 8px 0 0;">
+    {{> mail-th label=translations.boxUpgradeOrderDetails }}
+    {{> mail-tr label=translations.boxUpgradePlaylist value=playlist.name }}
+    {{> mail-tr label=translations.boxUpgradeQuantity value=quantity }}
+    {{> mail-tr label=translations.boxUpgradeGiftBox prefix="&euro;" value=boxPriceFormatted }}
+    {{> mail-tr label=translations.boxUpgradeShipping prefix="&euro;" value=shippingCost }}
+    <tr>
+        <td style="padding: 11px 14px; border: 1px solid #eed2bf; background-color: #feefe5; font-weight: 700; font-size: 14px; line-height: 20px; color: #0b2c31; width: 40%;">{{ translations.boxUpgradeTotal }}</td>
+        <td style="padding: 11px 14px; border: 1px solid #eed2bf; font-size: 15px; line-height: 20px; font-weight: 700; color: #0b2c31;">&euro;{{ totalPrice }}</td>
+    </tr>
+    {{> mail-th label=translations.yourInformation }}
+    {{> mail-tr label=translations.fullname value=fullname }}
+    {{> mail-tr label=translations.email value=email }}
+    {{> mail-th label=translations.shippingAddress }}
+    {{> mail-tr label=translations.address value=address }}
+    {{> mail-tr label=translations.housenumber value=housenumber }}
+    {{> mail-tr label=translations.city value=city }}
+    {{> mail-tr label=translations.zipcode value=zipcode }}
+    {{> mail-tr label=translations.country value=(lookup countries country) }}
+</table>
+{{> mail-closing }}
+{{/mail-layout}}

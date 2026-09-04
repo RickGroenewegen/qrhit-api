@@ -1,0 +1,12 @@
+{{#if showPromotionalCta}}
+<!-- Promotional CTA (Pop band) -->
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 24px; border-collapse: separate;">
+    <tr>
+        <td align="center" bgcolor="#f79677" style="padding: 28px 24px; background-color: #f79677; border: 2px solid #0b2c31; border-radius: 20px;">
+            <p style="margin: 0 0 8px; font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 900; font-size: 20px; line-height: 26px; letter-spacing: .02em; text-transform: uppercase; color: #0b2c31;">{{ translations.promotionalCtaTitle }}</p>
+            <p style="margin: 0 0 20px; font-size: 15px; line-height: 23px; color: #0b2c31;">{{ translations.promotionalCtaSubtitle }}</p>
+            {{> mail-btn-disco href=promotionalSetupLink label=translations.promotionalCtaButton }}
+        </td>
+    </tr>
+</table>
+{{/if}}

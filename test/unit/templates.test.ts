@@ -31,6 +31,7 @@ beforeAll(async () => {
       'Amount: {{formatCurrency amount}}',
       'Decimal: {{formatDecimal num 3}}',
       '{{#if (gt a b)}}BIG{{else}}SMALL{{/if}}',
+      'Title: {{concat name " - " amount}}',
     ].join('\n')
   );
 });
@@ -66,6 +67,8 @@ describe('Templates.render', () => {
     // gt helper: 2 > 1
     expect(html).toContain('BIG');
     expect(html).not.toContain('SMALL');
+    // concat helper joins all positional arguments
+    expect(html).toContain('Title: Rick - 12.5');
   });
 
   it('gt helper returns false for equal values', async () => {
