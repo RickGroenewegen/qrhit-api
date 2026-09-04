@@ -2,7 +2,7 @@
     <tr>
         <td align="center" style="padding: 22px 16px; background-color: #feefe5; border: 2px dashed #18565e; border-radius: 16px;">
             <p style="margin: 0 0 6px; font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 800; font-size: 12px; line-height: 16px; letter-spacing: .12em; text-transform: uppercase; color: #3d6d74;">{{ eyebrow }}</p>
-            <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: 8px; color: #0b2c31;">{{ code }}</p>
+            <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: {{#if compact}}22px{{else}}32px{{/if}}; line-height: {{#if compact}}30px{{else}}40px{{/if}}; font-weight: 700; letter-spacing: {{#if compact}}2px{{else}}6px{{/if}}; white-space: nowrap; color: #0b2c31;">{{ code }}</p>
             {{#if note}}<p style="margin: 8px 0 0; font-size: 13px; line-height: 19px; color: #3d6d74;">{{ note }}</p>{{/if}}
         </td>
     </tr>
