@@ -180,62 +180,9 @@
   }
 
   /* ── Magnetic buttons ──────────────────────────────────────── */
-  function initMagnetic() {
-    if (reducedMotion) return;
-    // Skip magnetic on touch-primary devices — feels wrong on mobile
-    if (window.matchMedia('(hover: none)').matches) return;
-
-    const STRENGTH = 0.32;       // 0..1, how strongly the button follows cursor
-    const RADIUS   = 110;        // px, activation distance from button center
-    const els = document.querySelectorAll('[data-magnetic]');
-
-    els.forEach((el) => {
-      let raf = 0;
-      let target = { x: 0, y: 0 };
-      let current = { x: 0, y: 0 };
-      const content = el.querySelector('.btn-content') || el;
-
-      function loop() {
-        current.x += (target.x - current.x) * 0.18;
-        current.y += (target.y - current.y) * 0.18;
-        el.style.transform = `translate3d(${current.x * STRENGTH}px, ${current.y * STRENGTH}px, 0)`;
-        content.style.transform = `translate3d(${current.x * STRENGTH * 0.5}px, ${current.y * STRENGTH * 0.5}px, 0)`;
-        if (Math.abs(target.x - current.x) > 0.1 || Math.abs(target.y - current.y) > 0.1) {
-          raf = requestAnimationFrame(loop);
-        } else {
-          raf = 0;
-        }
-      }
-
-      el.addEventListener('pointermove', (e) => {
-        const r = el.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-        const dist = Math.hypot(dx, dy);
-        if (dist < RADIUS) {
-          target.x = dx;
-          target.y = dy;
-        } else {
-          target.x = 0;
-          target.y = 0;
-        }
-        if (!raf) raf = requestAnimationFrame(loop);
-      });
-
-      el.addEventListener('pointerleave', () => {
-        target.x = 0;
-        target.y = 0;
-        if (!raf) raf = requestAnimationFrame(loop);
-      });
-    });
-  }
-
   /* ── Init ──────────────────────────────────────────────────── */
   function init() {
     initShader();
-    initMagnetic();
   }
 
   if (document.readyState === 'loading') {
