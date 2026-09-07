@@ -161,8 +161,8 @@ describe('generate()', () => {
     // Old PDFs cleared before regeneration
     expect(mollie.clearPDFs).toHaveBeenCalledWith('pay_1');
 
-    // Digital personal order: no invoice, main mail without attachment
-    expect(h.order.createInvoice).not.toHaveBeenCalled();
+    // Digital personal order: invoice generated and attached to the main mail
+    expect(h.order.createInvoice).toHaveBeenCalledWith(payment);
     const mainMail = outbound.calls('Mail', 'sendEmail');
     expect(mainMail).toHaveLength(1);
     expect(mainMail[0].args).toEqual([
@@ -171,7 +171,7 @@ describe('generate()', () => {
       [playlist],
       '',
       '',
-      '',
+      '/tmp/invoice-42.pdf',
     ]);
 
     // Tracks stored with a 1-based order map in playlist order
@@ -880,7 +880,7 @@ describe('finalizeOrder()', () => {
     expect(outbound.calls('Mail', 'sendFinalizedMail')).toHaveLength(1);
   });
 
-  it('finalizes a digital personal giftcard without printer PDF or invoice', async () => {
+  it('finalizes a digital personal giftcard without printer PDF but with an invoice', async () => {
     const payment = makePayment();
     const playlist = makePlaylist({
       productType: 'giftcard',
@@ -897,12 +897,12 @@ describe('finalizeOrder()', () => {
     // Only the digital giftcard PDF
     expect(h.pdf.generateGiftcardPDF).toHaveBeenCalledTimes(1);
     expect(h.pdf.generateGiftcardPDF.mock.calls[0][4]).toBe('digital');
-    expect(h.order.createInvoice).not.toHaveBeenCalled();
+    expect(h.order.createInvoice).toHaveBeenCalledWith(payment);
 
     const mails = outbound.calls('Mail', 'sendEmail');
     expect(mails[0].args[0]).toBe('voucher_digital');
     expect(mails[0].args[3]).toBe(''); // no printer filename
-    expect(mails[0].args[5]).toBe(''); // no invoice
+    expect(mails[0].args[5]).toBe('/tmp/invoice-42.pdf'); // invoice attached
     // No printer window
     const printerUpdate = h.prisma.payment.update.mock.calls.find(
       (c) => c[0].data.canBeSentToPrinter
