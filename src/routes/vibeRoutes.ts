@@ -3445,6 +3445,7 @@ export default async function vibeRoutes(
           success: true,
           imported: result.data.imported,
           skipped: result.data.skipped,
+          usersCreated: result.data.usersCreated,
           errors: result.data.errors,
           details: result.data.details
         });

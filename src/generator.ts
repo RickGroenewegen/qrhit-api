@@ -531,15 +531,10 @@ class Generator {
 
     // Generate invoice and send the main mail for cards
     if (productType == 'cards' && !skipMainMail && !onlyProductMail) {
-      let invoicePath = '';
+      // Every order gets an invoice, digital or physical, personal or business
+      const invoicePath = await this.order.createInvoice(payment);
 
-      // Only generate invoice for: physical orders OR digital business orders
-      // Don't generate for: digital personal orders
-      if (orderType !== 'digital' || payment.isBusinessOrder) {
-        invoicePath = await this.order.createInvoice(payment);
-      }
-
-      // Send confirmation email with invoice attached (if generated)
+      // Send confirmation email with the invoice attached
       await this.mail.sendEmail('main_' + orderType, payment, playlists, '', '', invoicePath);
     }
 
@@ -1752,12 +1747,8 @@ class Generator {
       });
     }
 
-    // Generate invoice and send voucher email
-    // Only generate invoice for: physical vouchers OR digital business vouchers
-    let invoicePath = '';
-    if (playlist.orderType !== 'digital' || payment.isBusinessOrder) {
-      invoicePath = await this.order.createInvoice(payment);
-    }
+    // Every voucher order gets an invoice, digital or physical
+    const invoicePath = await this.order.createInvoice(payment);
 
     await this.mail.sendEmail(
       'voucher_' + playlist.orderType,
