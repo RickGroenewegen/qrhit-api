@@ -410,12 +410,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       if (payment.email) {
-        // A playlist's forced company template replaces the single-card
-        // printer layout only. Digital downloads and sheets keep their own
-        // multi-card layout, otherwise they come out one card per page.
+        // A company list's forced template lives on the shared playlist row.
+        // It applies to company (vibe) orders only, and only to the
+        // single-card printer layout: public orders of the same playlist print
+        // the regular layout, and digital downloads and sheets keep their
+        // multi-card layout instead of coming out one card per page.
         const requestedTemplate: string = request.params.template;
         const template =
-          playlist.template && !isMultiCardTemplate(requestedTemplate)
+          payment.vibe && playlist.template && !isMultiCardTemplate(requestedTemplate)
             ? playlist.template
             : requestedTemplate;
 

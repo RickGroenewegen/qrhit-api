@@ -707,12 +707,19 @@ describe('finalizeOrder()', () => {
     expect(outbound.calls('Mail', 'sendFinalizedMail')).toHaveLength(0);
   });
 
-  it('selects printer templates: CompanyList override > vibe > schneiders', async () => {
+  it('selects printer templates: CompanyList override (company orders only) > vibe > schneiders', async () => {
     const cases = [
       {
-        paymentOver: {},
+        paymentOver: { vibe: true },
         playlistOver: { orderType: 'physical', template: 'company_x' },
         expected: 'company_x',
+      },
+      {
+        // The forced template sticks to the shared playlist row; a public
+        // order of the same playlist must still print the regular layout.
+        paymentOver: {},
+        playlistOver: { orderType: 'physical', template: 'company_x' },
+        expected: 'printer',
       },
       {
         paymentOver: { vibe: true },

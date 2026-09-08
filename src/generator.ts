@@ -1049,8 +1049,12 @@ class Generator {
 
           let printerTemplate = 'printer';
 
-          // Check if playlist has a forced template override (from CompanyList.forceTemplate)
-          if (playlist.template) {
+          // A company list's forced template (CompanyList.forceTemplate) is
+          // written onto the playlist row, which is shared by every later
+          // order of that Spotify playlist. It only means something for the
+          // company (vibe) order itself; a public order of the same playlist
+          // must print the regular layout.
+          if (payment.vibe && playlist.template) {
             printerTemplate = playlist.template;
           } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
