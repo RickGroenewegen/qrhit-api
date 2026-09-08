@@ -13,6 +13,7 @@ import {
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
+import { isMultiCardTemplate } from '../pdf';
 import { maxCardsFor } from '../config/constants';
 
 import fs from 'fs/promises';
@@ -409,8 +410,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       if (payment.email) {
-        // Use playlist template if set, otherwise use request template
-        const template = playlist.template || request.params.template;
+        // A playlist's forced company template replaces the single-card
+        // printer layout only. Digital downloads and sheets keep their own
+        // multi-card layout, otherwise they come out one card per page.
+        const requestedTemplate: string = request.params.template;
+        const template =
+          playlist.template && !isMultiCardTemplate(requestedTemplate)
+            ? playlist.template
+            : requestedTemplate;
 
         // Load how-to card translations if enabled
         let howtoTranslations: Record<string, string> | null = null;

@@ -18,6 +18,23 @@ import { PDFDocument } from 'pdf-lib';
 const SMALL_CARD_TEMPLATES = new Set(['schneiders', 'kramp', 'banvo', 'gebo']);
 
 /**
+ * Multi-card layouts: digital downloads (six fold cards per A4 or Letter
+ * page) and A4 sheets. A playlist's forced company template only ever
+ * replaces the single-card printer layout, never one of these.
+ */
+const MULTI_CARD_TEMPLATES = new Set([
+  'digital',
+  'digital_double',
+  'digital_us',
+  'digital_double_us',
+  'printer_sheets',
+]);
+
+export function isMultiCardTemplate(template: string): boolean {
+  return MULTI_CARD_TEMPLATES.has(template);
+}
+
+/**
  * Page size (mm) for a single-card printer PDF. The template decides, not the
  * printer type: a playlist can force a company template on any printer, and
  * a 56 mm card on a 60 mm page leaves a white strip on two sides.
@@ -598,12 +615,7 @@ class PDF {
     const numberOfTracks = playlist.numberOfTracks;
 
     // Determine if this is a digital template (multi-item per page) or printer template (single item, front/back)
-    const isDigitalTemplate =
-      template === 'digital' ||
-      template === 'digital_double' ||
-      template === 'digital_us' ||
-      template === 'digital_double_us' ||
-      template === 'printer_sheets';
+    const isDigitalTemplate = isMultiCardTemplate(template);
 
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
     const pagesPerTrack = isDigitalTemplate ? 1 : 2;
@@ -756,12 +768,7 @@ class PDF {
     const numberOfTracks = playlist.numberOfTracks;
 
     // Determine if this is a digital template (multi-item per page) or printer template (single item, front/back)
-    const isDigitalTemplate =
-      template === 'digital' ||
-      template === 'digital_double' ||
-      template === 'digital_us' ||
-      template === 'digital_double_us' ||
-      template === 'printer_sheets';
+    const isDigitalTemplate = isMultiCardTemplate(template);
 
     // Calculate chunking parameters
     const itemsPerPage = isDigitalTemplate ? 6 : 1;

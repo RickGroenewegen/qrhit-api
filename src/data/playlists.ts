@@ -169,6 +169,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.frontOpacity,
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
+      playlists.template,
       payment_has_playlist.theme,
       payment_has_playlist.themeName,
       payment_has_playlist.gamesEnabled,

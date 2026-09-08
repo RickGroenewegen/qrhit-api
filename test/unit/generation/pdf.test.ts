@@ -108,7 +108,7 @@ vi.mock('pdf-lib', () => ({
   },
 }));
 
-import PDF, { printerPageSizeMm } from '../../../src/pdf';
+import PDF, { printerPageSizeMm, isMultiCardTemplate } from '../../../src/pdf';
 
 const PUBLIC_DIR = process.env['PUBLIC_DIR'];
 const API_URI = 'https://api.test';
@@ -702,6 +702,20 @@ describe('printerPageSizeMm', () => {
 
   it('keeps 56 mm when the printer itself is Schneiders', () => {
     expect(printerPageSizeMm('printer', 'schneiders')).toBe(56);
+  });
+});
+
+describe('isMultiCardTemplate', () => {
+  it('recognises the digital downloads and the A4 sheets', () => {
+    for (const template of ['digital', 'digital_double', 'digital_us', 'digital_double_us', 'printer_sheets']) {
+      expect(isMultiCardTemplate(template)).toBe(true);
+    }
+  });
+
+  it('treats every single-card printer layout, company ones included, as not multi-card', () => {
+    for (const template of ['printer', 'printer_vibe', 'schneiders', 'kramp', 'banvo', 'gebo']) {
+      expect(isMultiCardTemplate(template)).toBe(false);
+    }
   });
 });
 
