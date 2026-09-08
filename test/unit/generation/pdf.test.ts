@@ -108,7 +108,7 @@ vi.mock('pdf-lib', () => ({
   },
 }));
 
-import PDF from '../../../src/pdf';
+import PDF, { printerPageSizeMm } from '../../../src/pdf';
 
 const PUBLIC_DIR = process.env['PUBLIC_DIR'];
 const API_URI = 'https://api.test';
@@ -684,6 +684,24 @@ describe('generateGiftcardPDF', () => {
     expect(payload.options.pageRanges).toBe('1-2');
     expect(resizeSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/giftp.pdf`, 210, 148);
     expect(bleedSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/giftp.pdf`, 3);
+  });
+});
+
+describe('printerPageSizeMm', () => {
+  it('uses 60 mm for the standard card templates on any printer', () => {
+    expect(printerPageSizeMm('printer', 'printnbind')).toBe(60);
+    expect(printerPageSizeMm('printer_vibe', 'tromp')).toBe(60);
+    expect(printerPageSizeMm('cannock', 'printnbind')).toBe(60);
+  });
+
+  it('uses 56 mm for the Schneiders layout and the company templates built on it, whatever the printer', () => {
+    for (const template of ['schneiders', 'kramp', 'banvo', 'gebo']) {
+      expect(printerPageSizeMm(template, 'printnbind')).toBe(56);
+    }
+  });
+
+  it('keeps 56 mm when the printer itself is Schneiders', () => {
+    expect(printerPageSizeMm('printer', 'schneiders')).toBe(56);
   });
 });
 

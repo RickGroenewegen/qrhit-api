@@ -11,6 +11,24 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 
+/**
+ * Printer templates whose cards are 56 mm: the Schneiders layout and the
+ * company templates built on it. Everything else prints 60 mm cards.
+ */
+const SMALL_CARD_TEMPLATES = new Set(['schneiders', 'kramp', 'banvo', 'gebo']);
+
+/**
+ * Page size (mm) for a single-card printer PDF. The template decides, not the
+ * printer type: a playlist can force a company template on any printer, and
+ * a 56 mm card on a 60 mm page leaves a white strip on two sides.
+ */
+export function printerPageSizeMm(template: string, printerType: string): number {
+  if (SMALL_CARD_TEMPLATES.has(template)) {
+    return 56;
+  }
+  return printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+}
+
 interface LambdaPdfOptions {
   url: string;
   options: {
@@ -644,7 +662,7 @@ class PDF {
 
         if (!isDigitalTemplate) {
           // Printer templates - determine page size based on template
-          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerPageSizeMm(template, printerType);
           options['PageWidth'] = pageSize;
           options['PageHeight'] = pageSize;
         } else if (isUsTemplate) {
@@ -690,7 +708,7 @@ class PDF {
         if (payment.vibe) {
           await this.resizePDFPages(finalPath, 62, 62);
         } else {
-          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerPageSizeMm(template, printerType);
           await this.resizePDFPages(finalPath, pageSize, pageSize);
           await this.addBleed(finalPath, 3);
         }
@@ -784,7 +802,7 @@ class PDF {
       options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
       // Printer templates - determine page size based on template
-      const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+      const pageSize = printerPageSizeMm(template, printerType);
       options.width = pageSize;
       options.height = pageSize;
     }
@@ -883,7 +901,7 @@ class PDF {
       if (payment.vibe) {
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+        const pageSize = printerPageSizeMm(template, printerType);
         await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
       }
