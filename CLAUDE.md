@@ -212,6 +212,27 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Multi-worker clustering** for scalability
 - **Static file serving** for public assets
 
+## Default card artwork and the 2026 cutover
+
+Order lines never store a background when the customer keeps the default; the
+card templates in `src/views/pdf_*.ejs` fall back to
+`assets/images/background_brand.png` (the cream brand artwork, same image the
+frontend shows). `assets/images/background_new.png` still holds the old blue
+artwork under its historical name.
+
+Orders from before the switch must keep the blue artwork on every
+regeneration or reprint, so `src/legacyBackground.ts` pins them explicitly:
+at startup the blue artwork is copied to `public/background/legacy_default_blue.png`
+(uploads are not in git), and the primary process runs a one-time UPDATE that
+sets that filename on every line with no background and no solid colour. The
+run is recorded in `app_settings` under `legacy_default_background_backfill`,
+so it never repeats; delete that row to run it again. Nothing to do at deploy
+beyond restarting the API.
+
+When changing the default artwork again, give the new file a new name (a
+warm Lambda keeps Chromium's image cache between renders) and repeat this
+cutover rather than overwriting the file.
+
 ## Key Security Considerations
 - **Input validation** on all endpoints
 - **SQL injection protection** via Prisma ORM

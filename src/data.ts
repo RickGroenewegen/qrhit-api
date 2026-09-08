@@ -10,6 +10,7 @@ import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
 import cluster from 'cluster';
+import { backfillLegacyDefaultBackground } from './legacyBackground';
 import { Music } from './music';
 import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
@@ -435,6 +436,11 @@ class Data {
 
   public async getPayment(paymentId: string, playlistId: string): Promise<any> {
     return usersModule.getPayment(this.deps, paymentId, playlistId);
+  }
+
+  /** One-time cutover for the default card artwork; see legacyBackground.ts. */
+  public async backfillLegacyDefaultBackground(): Promise<number | null> {
+    return backfillLegacyDefaultBackground(this.deps.prisma);
   }
 
   public async verifyPayment(paymentId: string) {
