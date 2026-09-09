@@ -55,6 +55,20 @@ describe('ensureLegacyDefaultBackgroundFile', () => {
     );
     expect(kept).toBe('already-there');
   });
+
+  it('skips quietly when the artwork asset is not present', async () => {
+    await fs.rm(path.join(assetsDir, LEGACY_DEFAULT_BACKGROUND_ASSET));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const created = await ensureLegacyDefaultBackgroundFile(assetsDir, publicDir);
+
+    expect(created).toBe(false);
+    await expect(
+      fs.access(path.join(publicDir, 'background', LEGACY_DEFAULT_BACKGROUND_FILE))
+    ).rejects.toBeTruthy();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
 });
 
 describe('backfillLegacyDefaultBackground', () => {

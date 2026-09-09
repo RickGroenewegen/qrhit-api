@@ -1220,9 +1220,29 @@ export default async function accountRoutes(
           return;
         }
 
+        // Earn-discount programme: the customer's promotional code with what
+        // it has earned in total and what is left to spend, so the account
+        // page can show both. Same arithmetic as promotional.ts.
+        const discountCode = await prisma.discountCode.findFirst({
+          where: { promotional: true, promotionalUserId: user.id },
+          select: { code: true, amount: true },
+        });
+        let promotionalCode: { code: string; earned: number; balance: number } | null = null;
+        if (discountCode) {
+          const totalUsed = await prisma.discountCodedUses.aggregate({
+            where: { discountCode: { promotional: true, promotionalUserId: user.id } },
+            _sum: { amount: true },
+          });
+          promotionalCode = {
+            code: discountCode.code,
+            earned: discountCode.amount,
+            balance: Math.max(0, discountCode.amount - (totalUsed._sum.amount || 0)),
+          };
+        }
+
         reply.send({
           success: true,
-          user,
+          user: { ...user, promotionalCode },
         });
       } catch (error) {
         console.error('Error in customer profile:', error);

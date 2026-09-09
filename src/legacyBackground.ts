@@ -38,8 +38,17 @@ export async function ensureLegacyDefaultBackgroundFile(
   } catch {
     // Missing: fall through and copy it.
   }
+  const source = path.join(assetsDir, LEGACY_DEFAULT_BACKGROUND_ASSET);
+  try {
+    await fs.access(source);
+  } catch {
+    // No artwork to copy (a stripped-down deploy or a test APP_ROOT). Startup
+    // must not depend on it; legacy rows then fall back to the template default.
+    console.warn(`Legacy default background asset not found, skipping: ${source}`);
+    return false;
+  }
   await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.copyFile(path.join(assetsDir, LEGACY_DEFAULT_BACKGROUND_ASSET), target);
+  await fs.copyFile(source, target);
   return true;
 }
 

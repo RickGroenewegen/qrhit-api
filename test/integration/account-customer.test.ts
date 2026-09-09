@@ -355,6 +355,25 @@ describe('customer account routes', () => {
       const { user } = res.json();
       expect(user.email).toBe(shopperEmail);
       expect(user.displayName).toBe('Sandra Shopper');
+      expect(user.promotionalCode).toBeNull();
+    });
+
+    it('includes the promotional discount code with what is earned and left', async () => {
+      const code = await prisma().discountCode.create({
+        data: { code: 'TEST-PROM-0001', amount: 10, promotional: true, promotionalUserId: shopperId },
+      });
+      await prisma().discountCodedUses.create({ data: { amount: 2.5, discountCodeId: code.id } });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/account/customer-profile',
+        headers: authHeader(shopperToken),
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().user.promotionalCode).toEqual({ code: 'TEST-PROM-0001', earned: 10, balance: 7.5 });
+
+      await prisma().discountCodedUses.deleteMany({ where: { discountCodeId: code.id } });
+      await prisma().discountCode.delete({ where: { id: code.id } });
     });
 
     it('lists purchases with playlists', async () => {
