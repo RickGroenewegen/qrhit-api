@@ -4,23 +4,15 @@
 
     Follows the QRSong! brand kit:
       DISCO     #18565E   POP  #F79677   OFF WHITE  #feefe5
-      Hagrid Text, Heavy, letter-spacing 70 (0.07em) for display
+      Archivo (expanded, heavy) letter-spacing 70 (0.07em) for display, Inter for body
       Rounded cards, grain-textured music assets
 
     Parameters:
       editionName - label printed on the cover sticker and running headers
 -->
 <style>
-    /* Hagrid Text is the brand display face. Drop HagridText-Heavy.woff2 into
-       assets/fonts/ and it takes over automatically; until then the stack
-       falls through to the heaviest wide grotesque available. */
-    @font-face {
-        font-family: 'Hagrid Text';
-        src: url('<%= baseUrl %>/assets/fonts/HagridText-Heavy.woff2') format('woff2');
-        font-weight: 900;
-        font-style: normal;
-        font-display: swap;
-    }
+    /* Same faces the invoice and the mails use, from the same Google import. */
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
 
     :root {
         --disco: #18565E;
@@ -39,8 +31,8 @@
         --radius: 6mm;
         --radius-sm: 3mm;
 
-        --display: 'Hagrid Text', 'Hagrid', 'Arial Black', 'Helvetica Neue', Helvetica, sans-serif;
-        --body: 'Aeonik', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        --display: 'Archivo', 'Arial Black', 'Helvetica Neue', Helvetica, sans-serif;
+        --body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     }
 
     @page {

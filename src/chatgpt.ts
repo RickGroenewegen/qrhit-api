@@ -1302,9 +1302,10 @@ Write in a professional, informative, and engaging style. The tone should be cle
 
   /**
    * Generate a hero image for an occasion / base event, themed around the
-   * occasion and its description. Mirrors generateBlogImage: edits the brand
-   * cards.png template so the QRSong product stays on-brand, then stores a
-   * wide hero-sized JPEG under PUBLIC_DIR/event_images.
+   * occasion and its description. Unlike generateBlogImage this takes no
+   * product reference image (see the prompt below): it is a pure
+   * text-to-image scene, stored as a wide hero-sized JPEG under
+   * PUBLIC_DIR/event_images.
    * @param name The occasion name (e.g. "Christmas") used for theming
    * @param description Optional admin description guiding the vibe
    * @returns Promise<string | null> - filename if successful, null if failed
