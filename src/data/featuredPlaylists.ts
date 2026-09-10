@@ -140,6 +140,85 @@ export async function getFeaturedPlaylists(
   return returnList;
 }
 
+/** Decade columns, weighted against each other to measure musical overlap. */
+const DECADE_KEYS = [
+  'decadePercentage2020',
+  'decadePercentage2010',
+  'decadePercentage2000',
+  'decadePercentage1990',
+  'decadePercentage1980',
+  'decadePercentage1970',
+  'decadePercentage1960',
+  'decadePercentage1950',
+  'decadePercentage1900',
+] as const;
+
+/**
+ * Playlists similar to `slug`, for the "you might also like" row on a product
+ * page.
+ *
+ * Why this exists: every product page used to be an orphan. The catalogue is
+ * ~600 pages that between them had no internal links at all, reachable only
+ * from the sitemap, and averaging ~13 impressions a month each. Linking
+ * siblings turns the catalogue into a connected graph a crawler can walk from
+ * any entry point, and gives each page inbound links from topically related
+ * pages rather than none.
+ *
+ * It reads the same cached list `getFeaturedPlaylists` builds and ranks in
+ * memory, so it costs no extra database work.
+ */
+export async function getRelatedFeaturedPlaylists(
+  deps: DataDeps,
+  locale: string,
+  slug: string,
+  limit: number = 6
+): Promise<any[]> {
+  const all = await getFeaturedPlaylists(deps, locale, true);
+  const source = all.find((p: any) => p.slug === slug);
+  if (!source) return [];
+
+  const decadeVector = (p: any): number[] =>
+    DECADE_KEYS.map((k) => Number(p[k]) || 0);
+  const sourceDecades = decadeVector(source);
+
+  const scored = all
+    .filter((p: any) => p.slug && p.slug !== slug)
+    .map((p: any) => {
+      // Same genre is the strongest signal a listener would agree with.
+      let affinity = p.genreId && p.genreId === source.genreId ? 100 : 0;
+
+      // Then era overlap: sum of the smaller share in each decade, so two
+      // playlists that are both mostly 80s score near 100 and a 60s/2020s
+      // pair scores near 0.
+      const theirs = decadeVector(p);
+      affinity += sourceDecades.reduce(
+        (sum, share, i) => sum + Math.min(share, theirs[i]),
+        0
+      );
+
+      // A nudge toward playlists in the visitor's own market.
+      if (
+        source.featuredLocale &&
+        p.featuredLocale === source.featuredLocale
+      ) {
+        affinity += 25;
+      }
+
+      return { playlist: p, affinity, score: Number(p.score) || 0 };
+    }) as Array<{ playlist: any; affinity: number; score: number }>;
+
+  scored.sort(
+    (a, b) =>
+      b.affinity - a.affinity ||
+      b.score - a.score ||
+      // Stable final tiebreak so server and client agree and the row does not
+      // reshuffle between renders.
+      String(a.playlist.slug).localeCompare(String(b.playlist.slug))
+  );
+
+  return scored.slice(0, limit).map((s) => s.playlist);
+}
+
 /**
  * Project a set of playlist ids into the same card shape as
  * getFeaturedPlaylists, preserving the given id order. Reused by the occasion

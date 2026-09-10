@@ -60,10 +60,16 @@ export async function storePlaylists(
         giftcardMessage = cartItem.personalMessage!;
       }
 
-      const slug = slugify(cartItem.playlistName, {
-        lower: true,
-        strict: true,
-      });
+      // `strict: true` drops everything outside [a-z0-9-], so a playlist named
+      // entirely in CJK, or in emoji, or in punctuation slugifies to an empty
+      // string. That is how `/product/-2` and `/product/my-` became live,
+      // sitemap-listed URLs. Fall back to the playlist id, which at least
+      // resolves and reads as an identifier rather than a counter.
+      const slug =
+        slugify(cartItem.playlistName, {
+          lower: true,
+          strict: true,
+        }).replace(/^-+|-+$/g, '') || `playlist-${usePlaylistId}`;
 
       const playlistCreate = await deps.prisma.playlist.create({
         data: {

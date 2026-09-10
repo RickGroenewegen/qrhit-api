@@ -304,6 +304,22 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     return { success: true, data: playlists };
   });
 
+  // Playlists similar to a given one, for the "you might also like" row on a
+  // product page. Small on purpose: the product page renders this server-side,
+  // so it must not pull the whole catalogue down with it.
+  fastify.get('/featured/:locale/related/:slug', async (request: any, _reply) => {
+    const limit = Math.min(
+      12,
+      Math.max(1, parseInt(request.query.limit, 10) || 6)
+    );
+    const playlists = await data.getRelatedFeaturedPlaylists(
+      request.params.locale,
+      request.params.slug,
+      limit
+    );
+    return { success: true, data: playlists };
+  });
+
   // Active seasonal occasions + curated playlists for the visitor's country.
   // Country comes from ?country= (the frontend already knows it) or the
   // CloudFront-Viewer-Country header. Cache key includes country + date.

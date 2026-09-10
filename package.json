@@ -19,7 +19,8 @@
     "test:coverage": "vitest run --coverage",
     "test:db:push": "node test/db-push.js",
     "test:live": "vitest run --config vitest.live.config.ts",
-    "kpi": "tsx scripts/kpi.ts"
+    "kpi": "tsx scripts/kpi.ts",
+    "fix-blog-slugs": "tsx scripts/fix-blog-slugs.ts"
   },
   "keywords": [],
   "author": "",

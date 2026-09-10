@@ -480,6 +480,19 @@ class Data {
     return featuredPlaylistsModule.getAllFeaturedPlaylists(this.deps);
   }
 
+  public async getRelatedFeaturedPlaylists(
+    locale: string,
+    slug: string,
+    limit?: number
+  ): Promise<any[]> {
+    return featuredPlaylistsModule.getRelatedFeaturedPlaylists(
+      this.deps,
+      locale,
+      slug,
+      limit
+    );
+  }
+
   public async searchFeaturedPlaylists(
     searchTerm: string = '',
     locale: string | null = null,

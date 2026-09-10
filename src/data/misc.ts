@@ -306,6 +306,31 @@ export async function translateGenres(deps: DataDeps): Promise<{
   };
 }
 
+/**
+ * True for a product slug that carries no meaning as a URL.
+ *
+ * Playlist slugs come from customer-supplied playlist names, so a name made of
+ * emoji, CJK or punctuation slugifies to nothing and the row ends up with a
+ * bare counter. Those were being submitted in every locale's sitemap
+ * (`/en/product/-2`, `/en/product/-3`, `/en/product/qr`, ...), asking Google
+ * to crawl pages whose URL says nothing about them.
+ *
+ * Deliberately conservative: this drops counters and dash-only strings, not
+ * short names. `pur`, `am` and `jk` are plausible band or album names, and
+ * `1955-2026` is a decade playlist — excluding real products from the sitemap
+ * would be a worse error than leaving a few ugly URLs in it. Nothing is
+ * renamed either; these URLs stay reachable, they just stop being advertised.
+ */
+export function isDegenerateProductSlug(slug: string): boolean {
+  if (!slug) return true;
+  const stripped = slug.replace(/-/g, '');
+  // Nothing but dashes, or nothing but a uniqueness counter.
+  if (stripped === '') return true;
+  if (/^\d{1,3}$/.test(stripped) && /^-/.test(slug)) return true;
+  // A single character either side of the dashes says nothing.
+  return stripped.length < 2;
+}
+
 export async function createSiteMap(
   deps: DataDeps
 ): Promise<{ locales: number; urls: number }> {
@@ -361,10 +386,15 @@ export async function createSiteMap(
   }
 
   // Define standard paths with default values
+  // Destinations only. `/reviews`, `/examples` and `/onzevibe` used to be
+  // listed here, but all three redirect (302, 302 and 301), so every locale
+  // submitted three URLs that are not the page — 36 of them — while the real
+  // destinations appeared in no sitemap at all. `/en/reviews` even canonicals
+  // to `/en/user/reviews`, contradicting its own sitemap entry.
   const standardPaths = [
     '/faq',
     '/pricing',
-    '/reviews',
+    '/user/reviews',
     '/blog',
     '/giftcard',
     '/gift-box',
@@ -372,19 +402,23 @@ export async function createSiteMap(
     '/music-bingo',
     '/music-quiz',
     '/music-timeline',
-    '/examples',
-    '/generate/playlist',
+    '/user/examples',
+    '/download-app',
+    // '/generate/playlist' removed: it is the first step of checkout, is in
+    // PRIVATE_PATH_PREFIXES and now serves X-Robots-Tag: noindex. Submitting
+    // it for indexing contradicted that (it had ~450 impressions across
+    // locales, ranking a checkout step instead of a landing page).
     '/contact',
     '/privacy-policy',
     '/terms-and-conditions',
     '/playlists',
-    '/onzevibe',
     '/business',
     '/qr-cards-as-a-service',
     '/pubquiz',
     '/shipping-info',
     '/earn-discount',
-    '/supported-platforms'
+    '/supported-platforms',
+    '/hitster-alternative'
   ];
 
   // Get current date in YYYY-MM-DD format for lastmod
@@ -430,13 +464,24 @@ export async function createSiteMap(
         changefreq: 'monthly',
         priority: '0.8',
       })),
-      // Add product pages for featured playlists
-      ...featuredPlaylists.map((playlist) => ({
-        loc: `/${locale}/product/${playlist.slug}`,
-        lastmod: playlist.updatedAt.toISOString().split('T')[0],
-        changefreq: 'daily',
-        priority: '0.9',
-      })),
+      // Add product pages for featured playlists.
+      //
+      // Priority sits below the marketing pages (0.8) on purpose. These are
+      // ~600 templated pages per locale and make up about 94% of the sitemap,
+      // so ranking them above the pages we actually want found pointed crawl
+      // budget at the least differentiated part of the site. `changefreq` is
+      // weekly rather than daily for the same reason: a featured playlist's
+      // content does not change daily, and claiming it does costs credibility
+      // without buying anything. (Google ignores both hints, but Bing and
+      // others still read them.)
+      ...featuredPlaylists
+        .filter((playlist) => !isDegenerateProductSlug(playlist.slug || ''))
+        .map((playlist) => ({
+          loc: `/${locale}/product/${playlist.slug}`,
+          lastmod: playlist.updatedAt.toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: '0.7',
+        })),
       // Add blog pages for this locale
       ...activeBlogs
         .filter((blog) => blog[`slug_${locale}` as keyof typeof blog])

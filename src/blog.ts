@@ -86,7 +86,11 @@ class Blog {
       for (const locale of SUPPORTED_LOCALES) {
         const title = input[`title_${locale}`];
         if (title) {
-          const baseSlug = this.slugify(title);
+          // Fall back to the English title if this one slugifies to nothing
+          // (e.g. a title made entirely of punctuation). Without a base the
+          // uniqueness loop below produces a bare `-1`.
+          const baseSlug =
+            this.slugify(title) || this.slugify(input.title_en || '') || 'post';
           let slug = baseSlug;
           let counter = 1;
           while (
@@ -146,7 +150,12 @@ class Blog {
           // Update slug if title changed
           const title = input[`title_${locale}`];
           if (title) {
-            const baseSlug = this.slugify(title);
+            // See createBlog: never let an unslugifiable title fall through to
+            // a bare uniqueness counter.
+            const baseSlug =
+              this.slugify(title) ||
+              this.slugify(input.title_en || '') ||
+              'post';
             let slug = baseSlug;
             let counter = 1;
             while (
@@ -314,16 +323,33 @@ class Blog {
     }
   }
 
+  /**
+   * URL slug for a post title, in any script.
+   *
+   * The character class used to be `[^\w-]`, which is ASCII-only: every
+   * character of a Chinese, Japanese, Hindi or Russian title was deleted. The
+   * caller then appended a uniqueness counter to the empty result, so live
+   * URLs included `/cn/blog/-1`, `/cn/blog/-2` and `/jp/blog/-1`. Latin titles
+   * ending in punctuation kept a trailing dash for the same reason
+   * (`/fr/blog/...-reductions-`).
+   *
+   * `\p{L}`/`\p{N}` keep letters and digits from every script, so a CJK title
+   * now yields a CJK slug. Those are percent-encoded on the wire and rendered
+   * decoded by browsers and search engines alike, which is standard practice
+   * for non-Latin sites.
+   */
   private slugify(text: string): string {
     return text
       .toString()
       .normalize('NFD')
+      // Strips Latin combining marks (\u00e9 -> e); leaves other scripts alone.
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim()
       .replace(/\s+/g, '-')
-      .replace(/[^\w-]+/g, '')
-      .replace(/--+/g, '-');
+      .replace(/[^\p{L}\p{N}-]+/gu, '')
+      .replace(/--+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   // Helper: clear blog-related caches
