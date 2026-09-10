@@ -225,6 +225,7 @@ class Server {
     await this.utils.createDir(`${publicDir}/quiz_images`);
     await this.utils.createDir(`${publicDir}/companydata/assets`);
     await this.utils.createDir(`${publicDir}/background`);
+    await this.utils.createDir(`${publicDir}/channable`);
     await this.utils.createDir(`${privateDir}/invoice`);
 
     // Orders from before the brand artwork are pinned to the blue artwork in

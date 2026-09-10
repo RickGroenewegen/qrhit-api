@@ -233,6 +233,49 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Channable product feed.
+  //
+  // Channable imports products by fetching a data file from a URL once a day
+  // (it has no API to push products into), so this is the URL the agency
+  // configures as the import source. `?country=` serves that country's slice
+  // for a per-country Channable project; without it you get every market.
+  //
+  // A wrong or missing token 404s rather than 401s so the endpoint does not
+  // advertise its own existence to anyone poking at the API.
+  fastify.get('/channable/feed.csv', async (request: any, reply: any) => {
+    const expectedToken = process.env['CHANNABLE_FEED_TOKEN'];
+    if (!expectedToken || request.query?.token !== expectedToken) {
+      return reply.status(404).send({ error: 'Not found' });
+    }
+
+    try {
+      const { channable } = await import('../channable');
+
+      const requested = (request.query?.country || '').toUpperCase();
+      if (requested && !channable.getFeedCountries().includes(requested)) {
+        return reply.status(404).send({ error: 'Unknown country' });
+      }
+      const country = requested || undefined;
+
+      // Build inline only when nothing has been built yet (first boot). After
+      // that the 5 AM cron keeps it fresh — a full build is far too slow to
+      // run inside Channable's fetch.
+      if (!(await channable.feedExists(country))) {
+        await channable.generateFeed();
+      }
+
+      const feedContent = await fs.readFile(channable.getFeedPath(country));
+      const fileName = country ? `qrsong_feed_${country}.csv` : 'qrsong_feed.csv';
+
+      reply.header('Content-Disposition', `attachment; filename=${fileName}`);
+      reply.type('text/csv; charset=utf-8');
+      return reply.send(feedContent);
+    } catch (error: any) {
+      logger.log(color.red.bold(`Channable feed failed: ${error}`));
+      return reply.status(500).send({ error: 'Failed to build feed' });
+    }
+  });
+
   // Conta  ct form
   fastify.post('/contact', async (request: any, _reply) => {
     return await mail.sendContactForm(request.body, request.clientIp);

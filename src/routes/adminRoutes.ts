@@ -3401,6 +3401,29 @@ export default async function adminRoutes(
 
   // Generate AI product images for all featured playlists. Long-running, so
   // fire-and-forget and let the admin watch the API logs.
+  // Channable feed routes
+  fastify.post(
+    '/admin/channable/generate-feed',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const { channable } = await import('../channable');
+        // Fire-and-forget: a full build takes minutes, so don't hold the
+        // request open. Progress goes to the log.
+        channable.generateFeed();
+        reply.send({
+          success: true,
+          message: 'Channable feed build initiated',
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to build Channable feed',
+        });
+      }
+    }
+  );
+
   fastify.post(
     '/admin/merchant-center/generate-product-images',
     getAuthHandler(['admin']),

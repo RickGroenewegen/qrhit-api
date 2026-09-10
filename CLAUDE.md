@@ -233,6 +233,48 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Product feeds: Merchant Center and Channable
+
+Two modules publish the same catalogue and currently run side by side:
+
+- `src/merchantcenter.ts` pushes products straight into Google via the Merchant
+  API (4 AM cron), and generates the AI product images (1 AM cron).
+- `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron).
+
+The agency running the Merchant Center asked for the feed to go through
+Channable first; once they have Channable wired to Merchant Center, the Google
+push can be retired.
+
+**Channable has no API to push products into.** Its API only covers orders,
+offers, returns and shipments — `POST .../offers` can update stock and price on
+offers that already exist, but cannot create them. Projects and imports are
+web-app only. Product data enters exclusively through an import, so we host a
+CSV and Channable fetches it about once a day:
+
+```
+https://api.qrsong.io/channable/feed.csv?token=<CHANNABLE_FEED_TOKEN>
+        # add &country=DE for a single market's slice
+```
+
+`CHANNABLE_FEED_TOKEN` is the only new env var; a wrong or missing token 404s.
+`npx tsx test-channable.ts` builds the feed locally and prints a summary, and
+`POST /admin/channable/generate-feed` rebuilds it on demand.
+
+Anything both feeds have to agree on — the locale/country markets, the
+"localised + international" gating, product ids, PMax custom labels, shipping
+tiers — lives in `src/productFeed.ts` so the two cannot drift apart. Put new
+shared logic there rather than in either module.
+
+Two things `channable.ts` deliberately does NOT do:
+
+- It never touches `markedForMerchantCenter`. That flag is written by
+  `promotional.ts` / `adminRoutes.ts` and cleared only by the Google sync; a
+  second consumer would race with it. A feed is a full snapshot anyway.
+- It never generates product images, only reads what `merchantcenter.ts` has
+  already written under `public/products/`. **When `merchantcenter.ts` is
+  retired, its image-generation half has to move into `channable.ts` or a
+  shared module, or the feed will slowly lose images.**
+
 ## Key Security Considerations
 - **Input validation** on all endpoints
 - **SQL injection protection** via Prisma ORM
