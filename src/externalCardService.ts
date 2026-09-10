@@ -6,7 +6,13 @@ import path from 'path';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import PrismaInstance from './prisma';
+import Cache from './cache';
 import Utils from './utils';
+import {
+  EXTERNAL_CARD_CACHE_PREFIX,
+  ExternalCardIdentity,
+  externalCardCacheKey,
+} from './externalCardCacheKey';
 
 export interface ExternalCardData {
   id: number;
@@ -27,222 +33,143 @@ export interface ImportResult {
   errors: string[];
 }
 
+// Columns returned by the lookup methods
+const CARD_DATA_SELECT = {
+  id: true,
+  spotifyId: true,
+  spotifyLink: true,
+  appleMusicLink: true,
+  tidalLink: true,
+  youtubeMusicLink: true,
+  deezerLink: true,
+  amazonMusicLink: true,
+} as const;
+
+// Columns needed to derive a card's cache key
+const CARD_IDENTITY_SELECT = {
+  cardType: true,
+  sku: true,
+  countryCode: true,
+  playlistId: true,
+  cardNumber: true,
+} as const;
+
 class ExternalCardService {
   private static instance: ExternalCardService;
   private logger = new Logger();
   private prisma = PrismaInstance.getInstance();
+  private cache = Cache.getInstance();
   private utils = new Utils();
 
-  // In-memory maps (loaded from database)
-  private jumboCardMap: Map<string, ExternalCardData> = new Map();
-  private countryCardMaps: Map<string, Map<string, ExternalCardData>> = new Map();
-  private musicMatchMap: Map<string, ExternalCardData> = new Map();
-  private mapsLoaded: boolean = false;
-  private mapsLoadingPromise: Promise<void> | null = null;
-
-  private constructor() {
-    // Maps will be loaded on first access
-  }
+  private constructor() {}
 
   public static getInstance(): ExternalCardService {
     if (!ExternalCardService.instance) {
       ExternalCardService.instance = new ExternalCardService();
       // Start the nightly import cron job
       ExternalCardService.instance.startNightlyImportCron();
-      // Load maps from database on startup
-      ExternalCardService.instance.loadMapsFromDatabase();
     }
     return ExternalCardService.instance;
   }
 
-  /**
-   * Load all in-memory maps from the database
-   */
-  public async loadMapsFromDatabase(): Promise<void> {
-    // Prevent multiple concurrent loads
-    if (this.mapsLoadingPromise) {
-      return this.mapsLoadingPromise;
-    }
-
-    this.mapsLoadingPromise = this._loadMapsFromDatabase();
-    await this.mapsLoadingPromise;
-    this.mapsLoadingPromise = null;
-  }
-
-  private async _loadMapsFromDatabase(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
-
-    try {
-      // Clear existing maps
-      this.jumboCardMap.clear();
-      this.countryCardMaps.clear();
-      this.musicMatchMap.clear();
-
-      // Load all external cards from database
-      const cards = await this.prisma.externalCard.findMany();
-
-      let jumboCount = 0;
-      let countryCount = 0;
-      let musicMatchCount = 0;
-
-      for (const card of cards) {
-        const cardData: ExternalCardData = {
-          id: card.id,
-          spotifyId: card.spotifyId,
-          spotifyLink: card.spotifyLink,
-          appleMusicLink: card.appleMusicLink,
-          tidalLink: card.tidalLink,
-          youtubeMusicLink: card.youtubeMusicLink,
-          deezerLink: card.deezerLink,
-          amazonMusicLink: card.amazonMusicLink,
-        };
-
-        if (card.cardType === 'jumbo' && card.sku) {
-          const key = `${card.sku}_${card.cardNumber}`;
-          this.jumboCardMap.set(key, cardData);
-          jumboCount++;
-        } else if (card.cardType === 'country' && card.countryCode) {
-          if (!this.countryCardMaps.has(card.countryCode)) {
-            this.countryCardMaps.set(card.countryCode, new Map());
-          }
-          this.countryCardMaps.get(card.countryCode)!.set(card.cardNumber, cardData);
-          countryCount++;
-        } else if (card.cardType === 'musicmatch' && card.playlistId) {
-          const key = `${card.playlistId}_${card.cardNumber}`;
-          this.musicMatchMap.set(key, cardData);
-          musicMatchCount++;
-        }
-      }
-
-      this.mapsLoaded = true;
-
-      if (isPrimary) {
-        this.utils.isMainServer().then(async (isMainServer) => {
-          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-            this.logger.log(
-              color.blue.bold(
-                `External cards loaded from database: ${color.white.bold(jumboCount)} Jumbo, ${color.white.bold(countryCount)} Country, ${color.white.bold(musicMatchCount)} MusicMatch`
-              )
-            );
-          }
-        });
-      }
-    } catch (e: any) {
-      this.logger.log(
-        color.red.bold(`Failed to load external cards from database: ${e.message || e}`)
-      );
-    }
-  }
-
-  /**
-   * Ensure maps are loaded before lookup
-   */
-  private async ensureMapsLoaded(): Promise<void> {
-    if (!this.mapsLoaded) {
-      await this.loadMapsFromDatabase();
-    }
-  }
-
   // ============ LOOKUP METHODS ============
+  //
+  // Lookups go straight to the database. Every cluster worker used to hold its
+  // own in-memory copy of the table, loaded once and never refreshed, so links
+  // added by MusicFetch or the admin were invisible to most workers until a
+  // restart. The resolved result is cached in Redis by spotify.ts, so the
+  // database only sees one indexed query per card until that entry is
+  // invalidated.
 
   /**
-   * Get card data by Jumbo key (sku_cardNumber)
+   * Get card data by Jumbo key (sku, cardNumber)
    */
   public async getCardByJumboKey(sku: string, cardNumber: string): Promise<ExternalCardData | null> {
-    await this.ensureMapsLoaded();
-    const key = `${sku}_${cardNumber}`;
-    return this.jumboCardMap.get(key) || null;
+    return this.prisma.externalCard.findFirst({
+      where: { cardType: 'jumbo', sku, cardNumber },
+      select: CARD_DATA_SELECT,
+    });
   }
 
   /**
    * Get card data by country key (countryCode, cardNumber)
    */
   public async getCardByCountryKey(countryCode: string, cardNumber: string): Promise<ExternalCardData | null> {
-    await this.ensureMapsLoaded();
-    const countryMap = this.countryCardMaps.get(countryCode.toLowerCase());
-    if (!countryMap) return null;
-    return countryMap.get(cardNumber) || null;
+    return this.prisma.externalCard.findFirst({
+      where: { cardType: 'country', countryCode: countryCode.toLowerCase(), cardNumber },
+      select: CARD_DATA_SELECT,
+    });
   }
 
   /**
-   * Get card data by MusicMatch key (playlistId_trackId)
+   * Get card data by MusicMatch key (playlistId, trackId)
    */
   public async getCardByMusicMatchKey(playlistId: string, trackId: string): Promise<ExternalCardData | null> {
-    await this.ensureMapsLoaded();
-    const key = `${playlistId}_${trackId}`;
-    return this.musicMatchMap.get(key) || null;
+    return this.prisma.externalCard.findFirst({
+      where: { cardType: 'musicmatch', playlistId, cardNumber: trackId },
+      select: CARD_DATA_SELECT,
+    });
+  }
+
+  // ============ CACHE INVALIDATION ============
+
+  /**
+   * Drop the cached scan result for one card. Call after anything changes a
+   * card's links so the next scan re-reads the database.
+   */
+  public async clearCacheForCard(card: ExternalCardIdentity): Promise<boolean> {
+    const key = externalCardCacheKey(card);
+    if (!key) return false;
+    await this.cache.del(key);
+    return true;
   }
 
   /**
-   * Update a card's data in the in-memory cache
-   * Called after MusicFetch updates links for external cards
+   * Drop the cached scan result for a card by database id.
    */
-  public async updateCardInCache(
-    cardId: number,
-    cardType: string,
-    keyIdentifier: { sku?: string; countryCode?: string; playlistId?: string; cardNumber: string },
-    newData: Partial<ExternalCardData>
-  ): Promise<void> {
-    await this.ensureMapsLoaded();
-
-    let existingCard: ExternalCardData | undefined;
-    let mapKey: string;
-
-    if (cardType === 'jumbo' && keyIdentifier.sku) {
-      mapKey = `${keyIdentifier.sku}_${keyIdentifier.cardNumber}`;
-      existingCard = this.jumboCardMap.get(mapKey);
-      if (existingCard) {
-        this.jumboCardMap.set(mapKey, { ...existingCard, ...newData });
-      }
-    } else if (cardType === 'country' && keyIdentifier.countryCode) {
-      const countryMap = this.countryCardMaps.get(keyIdentifier.countryCode.toLowerCase());
-      if (countryMap) {
-        existingCard = countryMap.get(keyIdentifier.cardNumber);
-        if (existingCard) {
-          countryMap.set(keyIdentifier.cardNumber, { ...existingCard, ...newData });
-        }
-      }
-    } else if (cardType === 'musicmatch' && keyIdentifier.playlistId) {
-      mapKey = `${keyIdentifier.playlistId}_${keyIdentifier.cardNumber}`;
-      existingCard = this.musicMatchMap.get(mapKey);
-      if (existingCard) {
-        this.musicMatchMap.set(mapKey, { ...existingCard, ...newData });
-      }
-    }
+  public async clearCacheForCardId(cardId: number): Promise<boolean> {
+    const card = await this.prisma.externalCard.findUnique({
+      where: { id: cardId },
+      select: CARD_IDENTITY_SELECT,
+    });
+    if (!card) return false;
+    return this.clearCacheForCard(card);
   }
 
   /**
-   * Update all cards with a given spotifyId in the in-memory cache
-   * Called after MusicFetch updates links for external cards
+   * Drop the cached scan result of every card sharing a spotifyId. MusicFetch
+   * writes links per spotifyId, so all of those cards change at once.
+   * Returns the number of cache entries cleared.
    */
-  public async updateCardsWithSpotifyIdInCache(
-    spotifyId: string,
-    newLinks: Partial<ExternalCardData>
-  ): Promise<void> {
-    await this.ensureMapsLoaded();
+  public async clearCacheForSpotifyId(spotifyId: string): Promise<number> {
+    const cards = await this.prisma.externalCard.findMany({
+      where: { spotifyId },
+      select: CARD_IDENTITY_SELECT,
+    });
 
-    // Update in jumboCardMap
-    for (const [key, card] of this.jumboCardMap) {
-      if (card.spotifyId === spotifyId) {
-        this.jumboCardMap.set(key, { ...card, ...newLinks });
+    let cleared = 0;
+    for (const card of cards) {
+      if (await this.clearCacheForCard(card)) {
+        cleared++;
       }
     }
+    return cleared;
+  }
 
-    // Update in countryCardMaps
-    for (const [, countryMap] of this.countryCardMaps) {
-      for (const [key, card] of countryMap) {
-        if (card.spotifyId === spotifyId) {
-          countryMap.set(key, { ...card, ...newLinks });
-        }
-      }
-    }
-
-    // Update in musicMatchMap
-    for (const [key, card] of this.musicMatchMap) {
-      if (card.spotifyId === spotifyId) {
-        this.musicMatchMap.set(key, { ...card, ...newLinks });
-      }
-    }
+  /**
+   * Drop every cached card scan result (Hitster, MusicMatch and Hitify).
+   * Returns the number of Redis keys removed.
+   */
+  public async clearAllCardCaches(): Promise<number> {
+    const cleared = await this.cache.delPatternNonBlocking(
+      `${EXTERNAL_CARD_CACHE_PREFIX}*`
+    );
+    this.logger.log(
+      color.blue.bold(
+        `Cleared ${color.white.bold(cleared)} cached external card scan results`
+      )
+    );
+    return cleared;
   }
 
   // ============ IMPORT METHODS ============
@@ -587,9 +514,11 @@ class ExternalCardService {
       )
     );
 
-    // Reload maps from database after import
-    this.mapsLoaded = false;
-    await this.loadMapsFromDatabase();
+    // Cards scanned before they existed were cached as "no mapping found";
+    // drop those so the new rows resolve immediately.
+    if (totalResult.created > 0) {
+      await this.clearAllCardCaches();
+    }
 
     return totalResult;
   }

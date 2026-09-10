@@ -18,12 +18,22 @@ import path from 'path';
 const prismaMock = vi.hoisted(() => ({
   externalCard: {
     findMany: vi.fn(async () => [] as any[]),
+    findFirst: vi.fn(async () => null as any),
+    findUnique: vi.fn(async () => null as any),
     createMany: vi.fn(),
     count: vi.fn(),
   },
 }));
 vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
+}));
+
+const cacheMock = vi.hoisted(() => ({
+  del: vi.fn(async () => undefined),
+  delPatternNonBlocking: vi.fn(async () => 0),
+}));
+vi.mock('../../../src/cache', () => ({
+  default: { getInstance: () => cacheMock },
 }));
 
 const isMainServer = vi.hoisted(() => vi.fn(async () => false));
@@ -91,8 +101,15 @@ beforeEach(() => {
   axiosGet.mockReset();
   prismaMock.externalCard.findMany.mockReset();
   prismaMock.externalCard.findMany.mockResolvedValue([]);
+  prismaMock.externalCard.findFirst.mockReset();
+  prismaMock.externalCard.findFirst.mockResolvedValue(null);
+  prismaMock.externalCard.findUnique.mockReset();
+  prismaMock.externalCard.findUnique.mockResolvedValue(null);
   prismaMock.externalCard.createMany.mockReset();
   prismaMock.externalCard.count.mockReset();
+  cacheMock.del.mockReset();
+  cacheMock.delPatternNonBlocking.mockReset();
+  cacheMock.delPatternNonBlocking.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -110,7 +127,7 @@ describe('cron gating under test environment', () => {
   });
 });
 
-describe('map loading and lookups', () => {
+describe('lookups and cache invalidation', () => {
   const dbCards = [
     {
       id: 1,
@@ -175,13 +192,21 @@ describe('map loading and lookups', () => {
     },
   ];
 
-  async function loadFixtureMaps() {
-    prismaMock.externalCard.findMany.mockResolvedValue(dbCards as any);
-    await service.loadMapsFromDatabase();
+  // Simulates the database: findFirst answers with the first fixture whose
+  // columns match every field in the where clause.
+  function serveFixturesFromDb() {
+    prismaMock.externalCard.findFirst.mockImplementation(async ({ where }: any) => {
+      const hit = dbCards.find((card: any) =>
+        Object.entries(where).every(([field, value]) => card[field] === value)
+      );
+      if (!hit) return null;
+      const { cardType, sku, cardNumber, countryCode, playlistId, ...data } = hit as any;
+      return data;
+    });
   }
 
-  it('indexes jumbo by sku_cardNumber, country by code+number (case-insensitive lookup) and musicmatch by playlist_track', async () => {
-    await loadFixtureMaps();
+  it('looks jumbo cards up by sku + number, country cards by lowercased code + number and musicmatch by playlist + track, straight from the database', async () => {
+    serveFixturesFromDb();
 
     expect(await service.getCardByJumboKey('aaaa0001', '00001')).toEqual({
       id: 1,
@@ -193,71 +218,85 @@ describe('map loading and lookups', () => {
       deezerLink: null,
       amazonMusicLink: null,
     });
+    expect(prismaMock.externalCard.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { cardType: 'jumbo', sku: 'aaaa0001', cardNumber: '00001' },
+      })
+    );
     expect(await service.getCardByJumboKey('aaaa0001', '99999')).toBeNull();
-    expect(await service.getCardByJumboKey('zzzz', '00009')).toBeNull(); // sku-less card not mapped
 
     // Lookup lowercases the country code; stored code is 'nl'.
     expect((await service.getCardByCountryKey('NL', '7'))?.id).toBe(2);
+    expect(prismaMock.externalCard.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { cardType: 'country', countryCode: 'nl', cardNumber: '7' },
+      })
+    );
     expect(await service.getCardByCountryKey('DE', '7')).toBeNull();
     expect(await service.getCardByCountryKey('NL', '8')).toBeNull();
 
     expect((await service.getCardByMusicMatchKey('pl9', '101'))?.id).toBe(3);
+    expect(prismaMock.externalCard.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { cardType: 'musicmatch', playlistId: 'pl9', cardNumber: '101' },
+      })
+    );
     expect(await service.getCardByMusicMatchKey('pl9', '102')).toBeNull();
   });
 
-  it('deduplicates concurrent map loads through a single loading promise', async () => {
-    prismaMock.externalCard.findMany.mockResolvedValue([]);
-    await Promise.all([service.loadMapsFromDatabase(), service.loadMapsFromDatabase()]);
-    expect(prismaMock.externalCard.findMany).toHaveBeenCalledTimes(1);
+  it('never caches lookups in memory: every call hits the database', async () => {
+    serveFixturesFromDb();
+    await service.getCardByCountryKey('nl', '7');
+    await service.getCardByCountryKey('nl', '7');
+    expect(prismaMock.externalCard.findFirst).toHaveBeenCalledTimes(2);
   });
 
-  it('updateCardInCache merges new links into the matching map entry only', async () => {
-    await loadFixtureMaps();
+  it('clearCacheForCard deletes the card-identity key and skips rows without an identifier', async () => {
+    expect(await service.clearCacheForCard(dbCards[0] as any)).toBe(true);
+    expect(cacheMock.del).toHaveBeenLastCalledWith('qrlink2_extcard_jumbo_aaaa0001_00001');
 
-    await service.updateCardInCache(
-      2,
-      'country',
-      { countryCode: 'NL', cardNumber: '7' },
-      { tidalLink: 'https://tidal.test/2' }
-    );
-    const updated = await service.getCardByCountryKey('nl', '7');
-    expect(updated).toMatchObject({ id: 2, spotifyId: 'sp2', tidalLink: 'https://tidal.test/2' });
+    expect(await service.clearCacheForCard({ ...dbCards[1], countryCode: 'NL' } as any)).toBe(true);
+    expect(cacheMock.del).toHaveBeenLastCalledWith('qrlink2_extcard_country_nl_7');
 
-    await service.updateCardInCache(
-      1,
-      'jumbo',
-      { sku: 'aaaa0001', cardNumber: '00001' },
-      { deezerLink: 'https://deezer.test/1' }
-    );
-    expect((await service.getCardByJumboKey('aaaa0001', '00001'))?.deezerLink).toBe(
-      'https://deezer.test/1'
-    );
+    expect(await service.clearCacheForCard(dbCards[2] as any)).toBe(true);
+    expect(cacheMock.del).toHaveBeenLastCalledWith('qrlink2_extcard_musicmatch_pl9_101');
 
-    // Unknown key: silently no-op.
-    await service.updateCardInCache(
-      99,
-      'musicmatch',
-      { playlistId: 'nope', cardNumber: '1' },
-      { tidalLink: 'x' }
-    );
-    expect(await service.getCardByMusicMatchKey('nope', '1')).toBeNull();
+    // Jumbo card without sku: nothing to clear.
+    expect(await service.clearCacheForCard(dbCards[3] as any)).toBe(false);
+    expect(cacheMock.del).toHaveBeenCalledTimes(3);
   });
 
-  it('updateCardsWithSpotifyIdInCache fans the new links out to every map sharing the spotifyId', async () => {
-    await loadFixtureMaps();
-
-    await service.updateCardsWithSpotifyIdInCache('sp1', {
-      youtubeMusicLink: 'https://ytm.test/sp1',
-    });
-
-    expect((await service.getCardByJumboKey('aaaa0001', '00001'))?.youtubeMusicLink).toBe(
-      'https://ytm.test/sp1'
+  it('clearCacheForCardId resolves the card first and reports unknown ids', async () => {
+    prismaMock.externalCard.findUnique.mockResolvedValueOnce(dbCards[1] as any);
+    expect(await service.clearCacheForCardId(2)).toBe(true);
+    expect(prismaMock.externalCard.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 2 } })
     );
-    expect((await service.getCardByMusicMatchKey('pl9', '101'))?.youtubeMusicLink).toBe(
-      'https://ytm.test/sp1'
+    expect(cacheMock.del).toHaveBeenCalledWith('qrlink2_extcard_country_nl_7');
+
+    expect(await service.clearCacheForCardId(999)).toBe(false);
+    expect(cacheMock.del).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearCacheForSpotifyId clears every card sharing the track and counts them', async () => {
+    prismaMock.externalCard.findMany.mockResolvedValueOnce(
+      dbCards.filter((c) => c.spotifyId === 'sp1') as any
     );
-    // sp2 card untouched.
-    expect((await service.getCardByCountryKey('nl', '7'))?.youtubeMusicLink).toBeNull();
+
+    // sp1 is shared by the jumbo card, the musicmatch card and the sku-less card.
+    expect(await service.clearCacheForSpotifyId('sp1')).toBe(2);
+    expect(prismaMock.externalCard.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { spotifyId: 'sp1' } })
+    );
+    expect(cacheMock.del).toHaveBeenCalledTimes(2);
+    expect(cacheMock.del).toHaveBeenCalledWith('qrlink2_extcard_jumbo_aaaa0001_00001');
+    expect(cacheMock.del).toHaveBeenCalledWith('qrlink2_extcard_musicmatch_pl9_101');
+  });
+
+  it('clearAllCardCaches removes every key under the card prefix and returns the count', async () => {
+    cacheMock.delPatternNonBlocking.mockResolvedValueOnce(17);
+    expect(await service.clearAllCardCaches()).toBe(17);
+    expect(cacheMock.delPatternNonBlocking).toHaveBeenCalledWith('qrlink2_extcard_*');
   });
 });
 
@@ -413,7 +452,7 @@ describe('importMusicMatchCards', () => {
 });
 
 describe('importAllExternalCards', () => {
-  it('aggregates the three importers and reloads the in-memory maps afterwards', async () => {
+  it('aggregates the three importers and drops cached scan results when rows were created', async () => {
     process.env['APP_ROOT'] = APPROOT_VALID;
     axiosGet.mockRejectedValue(new Error('jumbo down'));
     prismaMock.externalCard.createMany.mockResolvedValue({ count: 1 } as any);
@@ -427,8 +466,19 @@ describe('importAllExternalCards', () => {
       skipped: 2, // 1 invalid country spotify id + 1 musicmatch track without link
       errors: ['Failed to fetch Jumbo data: jumbo down', 'Invalid format in bad.json'],
     });
-    // Maps are reloaded from the database after the import.
-    expect(prismaMock.externalCard.findMany).toHaveBeenCalledTimes(1);
+    // New rows may already be cached as "no mapping found" from earlier scans.
+    expect(cacheMock.delPatternNonBlocking).toHaveBeenCalledWith('qrlink2_extcard_*');
+  });
+
+  it('leaves the scan cache alone when the import created nothing', async () => {
+    process.env['APP_ROOT'] = APPROOT_VALID;
+    axiosGet.mockRejectedValue(new Error('jumbo down'));
+    prismaMock.externalCard.createMany.mockResolvedValue({ count: 0 } as any);
+
+    const result = await service.importAllExternalCards();
+
+    expect(result.created).toBe(0);
+    expect(cacheMock.delPatternNonBlocking).not.toHaveBeenCalled();
   });
 });
 

@@ -910,6 +910,17 @@ describe('admin routes — wave 2 coverage', () => {
       expect(res.json().success).toBe(true);
     });
 
+    it('POST /admin/external-cards/clear-cache — drops cached card scan results', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/admin/external-cards/clear-cache',
+        headers,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().success).toBe(true);
+      expect(typeof res.json().cleared).toBe('number');
+    });
+
     it('PUT /admin/external-cards/:id — updates card links', async () => {
       const res = await app.inject({
         method: 'PUT',

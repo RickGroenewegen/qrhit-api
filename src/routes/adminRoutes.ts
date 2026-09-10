@@ -3642,6 +3642,27 @@ export default async function adminRoutes(
     }
   );
 
+  // Drop every cached card scan result (Hitster, MusicMatch, Hitify) so the
+  // next scan of any card re-reads its links from the database.
+  fastify.post(
+    '/admin/external-cards/clear-cache',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const cleared = await ExternalCardService.getInstance().clearAllCardCaches();
+
+        reply.send({ success: true, cleared });
+      } catch (error: any) {
+        console.error('Error clearing external card cache:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to clear external card cache',
+        });
+      }
+    }
+  );
+
   // Get external cards with search and filters
   fastify.get(
     '/admin/external-cards',
@@ -3766,6 +3787,11 @@ export default async function adminRoutes(
             ...(amazonMusicLink !== undefined && { amazonMusicLink }),
           },
         });
+
+        // Scans are served from Redis; drop this card's entry so the edited
+        // links are returned on the next scan.
+        const ExternalCardService = (await import('../externalCardService')).default;
+        await ExternalCardService.getInstance().clearCacheForCard(updated);
 
         reply.send({
           success: true,
