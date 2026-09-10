@@ -39,6 +39,14 @@ export function stripNumberScaffolding(text: string): string {
   return out.replace(/^([a-z])/, (m) => m.toUpperCase());
 }
 
+/**
+ * Card-sized companion for a blog image: blog_123.jpg -> blog_123_thumb.webp.
+ * Shared with the backfill script so the two cannot disagree on the name.
+ */
+export function thumbnailNameFor(filename: string): string {
+  return filename.replace(/\.[a-z0-9]+$/i, '') + '_thumb.webp';
+}
+
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -1319,6 +1327,25 @@ Write in a professional, informative, and engaging style. The tone should be cle
           .jpeg({ quality: 85, progressive: true })
           .resize(1280, 720, { fit: 'cover' })
           .toFile(filepath);
+
+        // The blog slider shows these in a 316x178 card, so the full 1280x720
+        // JPEG was about four times the pixels needed and the four cards cost
+        // roughly 340KB on every landing page. Write a card-sized WebP next to
+        // it; the slider asks for this and falls back to the JPEG if missing.
+        // Its own try/catch: the article image is already written and safe, and
+        // a missing thumbnail only costs bytes, so it must never lose the post.
+        try {
+          await sharp(imageBuffer)
+            .resize(640, 360, { fit: 'cover' })
+            .webp({ quality: 72 })
+            .toFile(path.join(blogImagesDir, thumbnailNameFor(filename)));
+        } catch (thumbError) {
+          this.logger.log(
+            color.yellow.bold(
+              `Blog image thumbnail failed for ${color.white.bold(filename)}, the slider will use the full image: ${thumbError}`
+            )
+          );
+        }
 
         this.logger.log(
           color.green.bold(

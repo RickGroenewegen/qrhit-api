@@ -17,10 +17,12 @@ const {
 } = vi.hoisted(() => {
   const chain = {
     jpeg: vi.fn(),
+    webp: vi.fn(),
     resize: vi.fn(),
     toFile: vi.fn(),
   };
   chain.jpeg.mockReturnValue(chain);
+  chain.webp.mockReturnValue(chain);
   chain.resize.mockReturnValue(chain);
   chain.toFile.mockResolvedValue(undefined);
   return {
