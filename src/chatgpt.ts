@@ -10,6 +10,35 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 
+/**
+ * The description prompt used to ask for "a list of numbers from that
+ * playlist", and the model sometimes answered with the label instead of a
+ * sentence: "Numbers you'll spot: 1990, 8 - hit play and ...". Four of those
+ * reached the live catalogue. The prompt no longer asks for it; this removes
+ * the fragment if a model emits it anyway, and repairs the stored rows.
+ *
+ * The letter that follows the label is captured so the sentence it started can
+ * be capitalised. Capitalising after every sentence instead would also hit
+ * "QRSong! and ...", where the exclamation mark belongs to the brand name.
+ */
+export function stripNumberScaffolding(text: string): string {
+  if (!text) return text;
+  const labelled =
+    /\s*\b(?:numbers|cijfers|zahlen|nombres|numeri|liczby|siffror|tall)\b[^.:!?]{0,40}:\s*[^.!?—–-]*\s*(?:[—–-]\s*)?([a-z])?/gi;
+  // Only touch text that actually carries the label. The tidy-up below would
+  // otherwise re-punctuate and re-capitalise perfectly good descriptions.
+  if (!labelled.test(text)) return text;
+  labelled.lastIndex = 0;
+  const out = text
+    .replace(labelled, (_match, next: string | undefined) =>
+      next ? ' ' + next.toUpperCase() : ' '
+    )
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,!?])/g, '$1')
+    .trim();
+  return out.replace(/^([a-z])/, (m) => m.toUpperCase());
+}
+
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -275,8 +304,11 @@ export class ChatGPT {
         },
         {
           role: 'user',
-          content: `  Generate a short Spotify playlist description that seamlessly weaves in the playlist’s title and a list of numbers from that playlist. 
-                      Keep it casual, engaging, and free of AI jargon. 
+          content: `  Generate a short Spotify playlist description that weaves in the playlist’s title and its number of tracks as part of a normal sentence.
+                      Never write a labelled list of figures. Phrases such as "Numbers you'll spot:",
+                      "Numbers from the list:", "Numbers to spot:" or "Numbers in the mix:" must never
+                      appear. Any figure belongs inside a sentence, and only when it means something to a reader.
+                      Keep it casual, engaging, and free of AI jargon.
                       Make it sound like a real human wrote it.
                       Sometimes mention QRSong! (The name of the service)
                       Keep it concise (2-3 sentences max). 
@@ -319,7 +351,16 @@ export class ChatGPT {
       const funcCall = toolCall.function;
       try {
         const descriptions = JSON.parse(funcCall.arguments as string);
-        return descriptions;
+        // Belt and braces: the prompt forbids the labelled figure list, this
+        // removes it if a model produces one anyway.
+        return Object.fromEntries(
+          Object.entries(descriptions as Record<string, string>).map(
+            ([key, value]) => [
+              key,
+              typeof value === 'string' ? stripNumberScaffolding(value) : value,
+            ]
+          )
+        );
       } catch (error) {
         this.logger.log(
           color.red.bold(
