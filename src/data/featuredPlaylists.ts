@@ -175,17 +175,24 @@ export async function getRelatedFeaturedPlaylists(
 ): Promise<any[]> {
   const all = await getFeaturedPlaylists(deps, locale, true);
   const source = all.find((p: any) => p.slug === slug);
-  if (!source) return [];
 
+  // Most product pages are for playlists that were never featured, so the
+  // source is usually absent from this list. Returning nothing there left the
+  // majority of product pages with no related row at all — the opposite of the
+  // point, which is to link orphaned product pages to something. With no
+  // source to compare against, every affinity term below evaluates to 0 and
+  // the ordering falls through to `score`, i.e. the most popular featured
+  // playlists. That is a reasonable row for a page we know nothing else about.
   const decadeVector = (p: any): number[] =>
     DECADE_KEYS.map((k) => Number(p[k]) || 0);
-  const sourceDecades = decadeVector(source);
+  const sourceDecades = source ? decadeVector(source) : DECADE_KEYS.map(() => 0);
 
   const scored = all
     .filter((p: any) => p.slug && p.slug !== slug)
     .map((p: any) => {
       // Same genre is the strongest signal a listener would agree with.
-      let affinity = p.genreId && p.genreId === source.genreId ? 100 : 0;
+      let affinity =
+        source && p.genreId && p.genreId === source.genreId ? 100 : 0;
 
       // Then era overlap: sum of the smaller share in each decade, so two
       // playlists that are both mostly 80s score near 100 and a 60s/2020s
@@ -198,7 +205,7 @@ export async function getRelatedFeaturedPlaylists(
 
       // A nudge toward playlists in the visitor's own market.
       if (
-        source.featuredLocale &&
+        source?.featuredLocale &&
         p.featuredLocale === source.featuredLocale
       ) {
         affinity += 25;
