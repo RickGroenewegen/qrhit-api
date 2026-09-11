@@ -212,6 +212,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.addHowToCard,
       payment_has_playlist.addHowToCardLocale,
       payment_has_playlist.howToCardImage,
+      payment_has_playlist.howToCardNumberColor,
       playlists.numberOfTracks,
       payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
       playlists.featured,
@@ -698,7 +699,8 @@ export async function updateAddHowToCard(
   deps: DataDeps,
   paymentHasPlaylistId: number,
   addHowToCard: boolean,
-  addHowToCardLocale?: string
+  addHowToCardLocale?: string,
+  howToCardNumberColor?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const php = await deps.prisma.paymentHasPlaylist.findUnique({
@@ -714,6 +716,9 @@ export async function updateAddHowToCard(
     if (addHowToCardLocale !== undefined) {
       data.addHowToCardLocale = addHowToCardLocale;
     }
+    if (howToCardNumberColor !== undefined) {
+      data.howToCardNumberColor = howToCardNumberColor;
+    }
 
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
@@ -724,7 +729,7 @@ export async function updateAddHowToCard(
       color.blue.bold(
         `Updated addHowToCard for playlist ${color.white.bold(
           paymentHasPlaylistId
-        )} to ${color.white.bold(addHowToCard)}${addHowToCardLocale ? ` (locale: ${addHowToCardLocale})` : ''}`
+        )} to ${color.white.bold(addHowToCard)}${addHowToCardLocale ? ` (locale: ${addHowToCardLocale})` : ''}${howToCardNumberColor !== undefined ? ` (number color: ${howToCardNumberColor || 'default'})` : ''}`
       )
     );
 

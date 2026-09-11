@@ -1539,6 +1539,7 @@ class Mollie {
             addHowToCard: true,
             addHowToCardLocale: true,
             howToCardImage: true,
+            howToCardNumberColor: true,
             playlist: {
               select: {
                 name: true,

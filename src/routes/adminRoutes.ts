@@ -1586,7 +1586,8 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { paymentHasPlaylistId } = request.params;
-      const { addHowToCard, addHowToCardLocale } = request.body;
+      const { addHowToCard, addHowToCardLocale, howToCardNumberColor } =
+        request.body;
 
       if (!paymentHasPlaylistId) {
         reply.status(400).send({
@@ -1604,10 +1605,26 @@ export default async function adminRoutes(
         return;
       }
 
+      // Optional: hex color for the list numbers, null/empty clears it, undefined leaves it unchanged
+      let numberColor: string | null | undefined = undefined;
+      if (howToCardNumberColor === null || howToCardNumberColor === '') {
+        numberColor = null;
+      } else if (typeof howToCardNumberColor === 'string') {
+        if (!/^#[0-9a-fA-F]{6}$/.test(howToCardNumberColor)) {
+          reply.status(400).send({
+            success: false,
+            error: 'howToCardNumberColor must be a hex color like #ffffff',
+          });
+          return;
+        }
+        numberColor = howToCardNumberColor.toLowerCase();
+      }
+
       const result = await data.updateAddHowToCard(
         parseInt(paymentHasPlaylistId, 10),
         addHowToCard,
-        addHowToCardLocale
+        addHowToCardLocale,
+        numberColor
       );
 
       if (result.success) {

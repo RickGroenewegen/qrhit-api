@@ -321,8 +321,19 @@ class Data {
     });
   }
 
-  public async updateAddHowToCard(paymentHasPlaylistId: number, addHowToCard: boolean, addHowToCardLocale?: string) {
-    return playlistsModule.updateAddHowToCard(this.deps, paymentHasPlaylistId, addHowToCard, addHowToCardLocale);
+  public async updateAddHowToCard(
+    paymentHasPlaylistId: number,
+    addHowToCard: boolean,
+    addHowToCardLocale?: string,
+    howToCardNumberColor?: string | null
+  ) {
+    return playlistsModule.updateAddHowToCard(
+      this.deps,
+      paymentHasPlaylistId,
+      addHowToCard,
+      addHowToCardLocale,
+      howToCardNumberColor
+    );
   }
 
   public async updateHowToCardImage(paymentHasPlaylistId: number, howToCardImage: string | null) {
