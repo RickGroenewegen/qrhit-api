@@ -236,11 +236,19 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         r: true,
       } : null;
 
+      // The scanner's user agent, read once and shared with the failure row
+      // below. In the log it is what separates a real phone from a crawler or a
+      // link checker, which is the difference between an unknown link worth
+      // chasing and noise.
+      const userAgent = request.headers['user-agent'] || null;
+
       // Log the unknown link scan, indicate if cached
       logger.log(
         color.blue.bold(
           `Unknown link scanned${result.cached ? ' (CACHED)' : ''}: ` +
             color.white.bold(`url="${url}"`) +
+            color.blue.bold(', ua=') +
+            color.white.bold(`"${userAgent ?? 'unknown'}"`) +
             color.blue.bold(', result=') +
             color.white.bold(
               JSON.stringify(responsePayload || {
@@ -256,7 +264,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       } else {
         // Log failed scan to database (skip if cached or blacklisted)
         if (!result.cached && !result.blacklisted) {
-          const userAgent = request.headers['user-agent'] || null;
           const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
           prisma.unknownLink.create({
             data: {

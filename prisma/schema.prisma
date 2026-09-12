@@ -628,6 +628,13 @@ model PaymentHasPlaylist {
   printApiUploaded         Boolean                  @default(false)
   printApiUploadResponse   String?                  @db.Text
   printerPageCount         Int                      @default(0)
+  // sha256 of the design + track content the printer PDF on disk was built
+  // from (see src/printFingerprint.ts). Compared against the live data just
+  // before sending to the printer: a mismatch means an admin or customer
+  // changed something after generation, so the PDF is rebuilt before it is
+  // verified and shipped. Null on rows generated before this column existed,
+  // which is treated as "unknown, rebuild to be safe".
+  pdfFingerprint           String?                  @db.VarChar(64)
   suggestionsPending       Boolean                  @default(false)
   artistOnlyForMe          Boolean                  @default(false)
   titleOnlyForMe           Boolean                  @default(false)

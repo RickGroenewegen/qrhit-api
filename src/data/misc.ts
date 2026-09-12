@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import * as ExcelJS from 'exceljs';
 import Translation from '../translation';
+import Blog from '../blog';
 import { Prisma, genre as GenrePrismaModel } from '@prisma/client';
 import {
   CACHE_KEY_PLAYLIST,
@@ -351,23 +352,19 @@ export async function createSiteMap(
     },
   });
 
-  // Get active blogs with non-empty slugs for all locales
-  const activeBlogs = await deps.prisma.blog.findMany({
-    where: {
-      active: true,
-      OR: locales.map((locale) => ({
-        [`slug_${locale}`]: {
-          not: null,
-        },
-      })),
-    },
-    select: {
-      ...Object.fromEntries(
-        locales.map((locale) => [`slug_${locale}`, true])
-      ),
-      updatedAt: true,
-    },
-  });
+  // Blog posts now come from the markdown store rather than the `blogs` table,
+  // so the sitemap reflects what is actually on disk and shipped with the
+  // deploy. Entries are per locale because a post only exists in the locales it
+  // has been translated into: `growth blog gaps` reports which are missing, and
+  // submitting a URL for a post that has no body in that locale would be a 404
+  // in the sitemap.
+  const blogEntriesByLocale = new Map<
+    string,
+    { slug: string; lastmod: string }[]
+  >();
+  for (const locale of locales) {
+    blogEntriesByLocale.set(locale, await Blog.getInstance().getSitemapEntries(locale));
+  }
 
   // Occasion landing pages: all base events + which countries each applies to
   // (a locale gets a page when its primary market has the occasion).
@@ -421,7 +418,8 @@ export async function createSiteMap(
     '/hitster-alternative',
     '/make-hitster-cards',
     '/compare',
-    '/hitster-without-spotify'
+    '/hitster-without-spotify',
+    '/qr-code-for-a-song'
   ];
 
   // Get current date in YYYY-MM-DD format for lastmod
@@ -486,16 +484,12 @@ export async function createSiteMap(
           priority: '0.7',
         })),
       // Add blog pages for this locale
-      ...activeBlogs
-        .filter((blog) => blog[`slug_${locale}` as keyof typeof blog])
-        .map((blog) => ({
-          loc: `/${locale}/blog/${
-            blog[`slug_${locale}` as keyof typeof blog]
-          }`,
-          lastmod: blog.updatedAt.toISOString().split('T')[0],
-          changefreq: 'weekly',
-          priority: '0.7',
-        })),
+      ...(blogEntriesByLocale.get(locale) ?? []).map((entry) => ({
+        loc: `/${locale}/blog/${entry.slug}`,
+        lastmod: entry.lastmod,
+        changefreq: 'weekly',
+        priority: '0.7',
+      })),
       // Add occasion landing pages applicable to this locale's primary market
       ...eventBases
         .filter((eb) =>

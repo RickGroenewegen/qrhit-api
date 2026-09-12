@@ -37,6 +37,7 @@ import AppleMusicProvider from './providers/AppleMusicProvider';
 import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
+import { computePrintFingerprint } from './printFingerprint';
 
 class Generator {
   private static instance: Generator;
@@ -1137,6 +1138,11 @@ class Generator {
             }
           }
 
+          // Record what these PDFs were built from, so sendToPrinter can tell
+          // later whether the files on disk still match the live design. See
+          // src/printFingerprint.ts for why a hash rather than a timestamp.
+          const fingerprint = await this.computePrintFingerprintFor(playlist);
+
           // Update parent record with first item's filenames (backward compatibility)
           await this.prisma.paymentHasPlaylist.update({
             where: {
@@ -1145,6 +1151,7 @@ class Generator {
             data: {
               filename: firstPrinterFilename,
               filenameDigital: firstDigitalFilename,
+              pdfFingerprint: fingerprint,
             },
           });
 
@@ -1419,6 +1426,111 @@ class Generator {
     );
   }
 
+  /**
+   * Fingerprint of the current design + track content for one playlist in one
+   * order. Tracks come from `data.getTracks`, which already folds per-order
+   * corrections in, so this reflects what would be printed right now.
+   */
+  private async computePrintFingerprintFor(playlist: any): Promise<string> {
+    const tracks = await this.data.getTracks(
+      playlist.id,
+      0,
+      playlist.paymentHasPlaylistId
+    );
+    return computePrintFingerprint(playlist, tracks || []);
+  }
+
+  /**
+   * Rebuild the printer PDFs for any physical playlist whose files on disk no
+   * longer match the live design, and return the refreshed filenames.
+   *
+   * Runs *before* validation and finalCheck rather than after, so the pages
+   * that get counted, the pages the vision check inspects and the bytes the
+   * print API receives are all the same file. Regenerating after the check
+   * would ship an artifact nothing had verified, which is the whole thing
+   * finalCheck exists to prevent: it rasterises the stored PDF and compares it
+   * against a fresh render precisely to catch this drift.
+   *
+   * This calls `pdf.generatePDF` directly rather than `generate()`. That is
+   * deliberate: `generate()` goes through the queue and fires the
+   * `checkPrinter` completion callback, which ends in `sendToPrinter` again, so
+   * using it here would make this method re-enter itself. Going straight to the
+   * PDF layer means no queue, no customer email and no callback.
+   */
+  private async regenerateStalePrinterPdfs(
+    payment: any,
+    playlists: any[]
+  ): Promise<void> {
+    for (const playlist of playlists) {
+      if (playlist.orderType !== 'physical') continue;
+
+      const current = await this.computePrintFingerprintFor(playlist);
+      const stored = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: playlist.paymentHasPlaylistId },
+        select: { pdfFingerprint: true },
+      });
+
+      if (stored?.pdfFingerprint && stored.pdfFingerprint === current) {
+        continue;
+      }
+
+      this.logger.log(
+        color.yellow.bold(
+          `[${white.bold('printer')}] PDF for ${white.bold(
+            payment.paymentId
+          )} playlist ${white.bold(String(playlist.paymentHasPlaylistId))} is ${
+            stored?.pdfFingerprint ? 'stale' : 'unfingerprinted'
+          }, regenerating before verification`
+        )
+      );
+
+      const items = await this.prisma.paymentHasPlaylistItem.findMany({
+        where: { paymentHasPlaylistId: playlist.paymentHasPlaylistId },
+        orderBy: { index: 'asc' },
+      });
+
+      const qrSubDir = await resolveQrSubDir(
+        payment.qrSubDir,
+        playlist.paymentHasPlaylistId
+      );
+
+      let printerTemplate = 'printer';
+      if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
+        printerTemplate = PRINTER_TYPE.SCHNEIDERS;
+      }
+
+      for (const item of items) {
+        // Reuse the stored filename so the print API and every existing
+        // reference keep pointing at the same path; only the bytes change.
+        if (!item.filename) continue;
+
+        const regenerated = await this.pdf.generatePDF(
+          item.filename,
+          playlist,
+          payment,
+          playlist.subType === 'sheets' ? 'printer_sheets' : printerTemplate,
+          qrSubDir,
+          false,
+          playlist.printerType || DEFAULT_PRINTER_TYPE,
+          item.index,
+          playlist.addHowToCard || false
+        );
+
+        if (regenerated) {
+          await this.prisma.paymentHasPlaylistItem.update({
+            where: { id: item.id },
+            data: { filename: regenerated },
+          });
+        }
+      }
+
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: playlist.paymentHasPlaylistId },
+        data: { pdfFingerprint: current },
+      });
+    }
+  }
+
   public async sendToPrinter(
     paymentId: string,
     clientIp: string,
@@ -1476,6 +1588,31 @@ class Generator {
       const playlists = await this.data.getPlaylistsByPaymentId(
         payment.paymentId
       );
+
+      // Rebuild any PDF that no longer matches the live design before anything
+      // reads it. Everything below (page-count validation, finalCheck, the
+      // print API upload) then operates on the same, current file.
+      // Inlay-only sends ship the box insert, not the card PDFs, so they skip it.
+      if (!inlayOnly) {
+        try {
+          await this.regenerateStalePrinterPdfs(payment, playlists);
+        } catch (error) {
+          // A failed rebuild must not send the stale file instead. Hold the
+          // order and let the existing Pushover/printerHold path surface it.
+          this.logger.log(
+            color.red.bold(
+              `Regeneration before printing failed for ${white.bold(
+                paymentId
+              )}: ${(error as Error).message}`
+            )
+          );
+          return {
+            success: false,
+            reason: `regeneration-failed: ${(error as Error).message}`,
+          };
+        }
+      }
+
       const physicalPlaylists: any[] = [];
 
       // Loop over playlists and get physical ones with their filenames
