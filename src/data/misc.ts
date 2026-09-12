@@ -418,7 +418,10 @@ export async function createSiteMap(
     '/shipping-info',
     '/earn-discount',
     '/supported-platforms',
-    '/hitster-alternative'
+    '/hitster-alternative',
+    '/make-hitster-cards',
+    '/compare',
+    '/hitster-without-spotify'
   ];
 
   // Get current date in YYYY-MM-DD format for lastmod
