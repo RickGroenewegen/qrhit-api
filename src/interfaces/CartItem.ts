@@ -47,6 +47,12 @@ export interface CartItem {
   backOpacity?: number; // Back background image opacity 0-100 (default 50%)
   design?: any; // Complete design object from localStorage (saved to database for new playlists)
   gamesEnabled?: boolean; // Whether games (bingo/quiz) are included (default: true for digital)
+  // App Designer add-on: a custom scan-app theme for this playlist. `appDesign`
+  // is the editor state, `appTheme` the ThemeConfig the frontend derived from
+  // it (validated by src/appDesign.ts before it is stored).
+  appDesignEnabled?: boolean;
+  appDesign?: Record<string, unknown>;
+  appTheme?: { cssVariables: Record<string, string>; showMusicalNotes?: boolean; showRecord?: boolean; showEqualizer?: boolean };
   // Box add-on
   boxEnabled?: boolean;
   boxQuantity?: number;

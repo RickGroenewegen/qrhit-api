@@ -151,6 +151,9 @@ model Payment {
   volumeDiscount           Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
+  // Custom scan-app theme add-on (see src/appDesign.ts). VAT-inclusive like
+  // gamesFee and boxFee.
+  appDesignFee             Float                @default(0)
   locale                   String               @default("en")
   qrSubDir                 String?
   finalized                Boolean              @default(false)
@@ -684,6 +687,11 @@ model PaymentHasPlaylist {
   boxQuantity              Int                      @default(0)
   boxPrice                 Float                    @default(0)
   boxFilename              String?
+  // Custom scan-app theme add-on. When enabled the customer's design lives in
+  // app_designs and `theme` holds its slug (u<id>) so the scan app picks it up
+  // through the normal /qrlink2 → /theme/:slug path.
+  appDesignEnabled         Boolean                  @default(false)
+  appDesignPrice           Float                    @default(0)
   // Box front design
   boxFrontBackgroundType   String?                  @default("image")
   boxFrontBackground       String?
@@ -721,6 +729,7 @@ model PaymentHasPlaylist {
   items                    PaymentHasPlaylistItem[]
   bingoFiles               BingoFile[]
   quizzes                  Quiz[]
+  appDesign                AppDesign?
 
   @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
@@ -1534,4 +1543,27 @@ model EventBasePlaylist {
   @@unique([baseEventId, playlistId])
   @@index([playlistId])
   @@map("event_base_playlists")
+}
+
+// A customer-made theme for the QRSong scan app, one per order line. The
+// hand-made B2B themes stay as files under src/_data/themes; GET /theme/:slug
+// tries the file first and falls back to this table. `design` is the guided
+// editor state the frontend owns, `theme` the derived ThemeConfig the app
+// consumes (validated by src/appDesign.ts before it is stored).
+model AppDesign {
+  id                   Int                @id @default(autoincrement())
+  paymentHasPlaylistId Int                @unique
+  slug                 String             @unique @db.VarChar(64)
+  name                 String             @db.VarChar(120)
+  version              Int                @default(1)
+  design               Json
+  theme                Json
+  logo                 String?            @db.VarChar(255)
+  background           String?            @db.VarChar(255)
+  helpText             String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+
+  @@map("app_designs")
 }

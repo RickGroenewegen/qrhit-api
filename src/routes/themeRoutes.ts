@@ -1,23 +1,43 @@
 import { FastifyInstance } from 'fastify';
 import AppTheme from '../apptheme';
+import AppDesign, { isValidThemeSlug } from '../appDesign';
 import Logger from '../logger';
 import fs from 'fs/promises';
 import path from 'path';
 
+/**
+ * Themes for the scan app. Two sources, tried in this order:
+ *
+ * 1. Hand-made B2B themes: `src/_data/themes/<slug>/<slug>.json` plus
+ *    optional `logo.png` / `background.png` next to it.
+ * 2. Customer designs from the App Designer: rows in `app_designs`, assets
+ *    under `PUBLIC_DIR/app-theme/`.
+ *
+ * The app cannot tell the two apart and does not need to.
+ */
 export default async function themeRoutes(
   fastify: FastifyInstance,
   getAuthHandler: any
 ) {
   const appTheme = AppTheme.getInstance();
+  const appDesign = AppDesign.getInstance();
   const logger = new Logger();
+
+  const fileThemeDir = (slug: string) =>
+    `${process.env['APP_ROOT']}/_data/themes/${slug}`;
 
   // Get theme configuration JSON file
   fastify.get('/theme/:slug', async (request: any, reply) => {
     const { slug } = request.params;
 
+    if (!isValidThemeSlug(slug)) {
+      reply.code(404);
+      return { success: false, error: 'Theme not found' };
+    }
+
     try {
       // Read theme JSON file from src/_data/themes/{slug}/{slug}.json
-      const themePath = `${process.env['APP_ROOT']}/_data/themes/${slug}/${slug}.json`;
+      const themePath = `${fileThemeDir(slug)}/${slug}.json`;
       const themeContent = await fs.readFile(themePath, 'utf-8');
       const themeData = JSON.parse(themeContent);
 
@@ -26,7 +46,7 @@ export default async function themeRoutes(
       const cacheBuster = themeData.version ?? Date.now();
 
       // Check if logo exists and update URL
-      const logoPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/logo.png`;
+      const logoPath = `${fileThemeDir(slug)}/logo.png`;
       try {
         await fs.access(logoPath);
         themeData.assets.logo = `${process.env['API_URI']}/theme/${slug}/logo?v=${cacheBuster}`;
@@ -35,7 +55,7 @@ export default async function themeRoutes(
       }
 
       // Check if background exists and update URL
-      const backgroundPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/background.png`;
+      const backgroundPath = `${fileThemeDir(slug)}/background.png`;
       try {
         await fs.access(backgroundPath);
         themeData.assets.background = `${process.env['API_URI']}/theme/${slug}/background?v=${cacheBuster}`;
@@ -45,12 +65,23 @@ export default async function themeRoutes(
 
       return { success: true, data: themeData };
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
+      if (error.code !== 'ENOENT') {
+        console.error(`Error loading theme ${slug}: ${error.message}`);
+        reply.code(500);
+        return { success: false, error: 'Failed to load theme' };
+      }
+    }
+
+    // No file: a customer design from the App Designer.
+    try {
+      const row = await appDesign.getBySlug(slug);
+      if (!row) {
         reply.code(404);
         return { success: false, error: 'Theme not found' };
       }
-
-      console.error(`Error loading theme ${slug}: ${error.message}`);
+      return { success: true, data: appDesign.buildThemeResponse(row) };
+    } catch (error: any) {
+      console.error(`Error loading app design ${slug}: ${error.message}`);
       reply.code(500);
       return { success: false, error: 'Failed to load theme' };
     }
@@ -87,59 +118,49 @@ export default async function themeRoutes(
     };
   });
 
-  // Get theme logo asset
-  fastify.get('/theme/:slug/logo', async (request: any, reply) => {
-    const { slug } = request.params;
-
+  /**
+   * Stream a theme asset. File-based themes keep their fixed names; DB-backed
+   * designs resolve the filename through the row. The URL is version-busted
+   * by /theme/:slug, so the asset itself can be cached aggressively.
+   */
+  const sendAsset = async (
+    slug: string,
+    kind: 'logo' | 'background',
+    reply: any
+  ) => {
+    if (!isValidThemeSlug(slug)) {
+      reply.code(404);
+      return { success: false, error: `${kind === 'logo' ? 'Logo' : 'Background'} not found` };
+    }
+    let filePath: string | null = path.join(fileThemeDir(slug), `${kind}.png`);
     try {
-      const logoPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/logo.png`;
-
-      // Check if file exists
-      await fs.access(logoPath);
-
-      // Stream the file. The URL is version-busted by /theme/:slug, so the
-      // asset itself can be cached aggressively.
-      const file = await fs.readFile(logoPath);
+      await fs.access(filePath);
+    } catch {
+      filePath = await appDesign.resolveAssetPath(slug, kind);
+    }
+    if (!filePath) {
+      reply.code(404);
+      return { success: false, error: `${kind === 'logo' ? 'Logo' : 'Background'} not found` };
+    }
+    try {
+      const file = await fs.readFile(filePath);
       reply.type('image/png');
       reply.header('Cache-Control', 'public, max-age=31536000, immutable');
       return file;
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        reply.code(404);
-        return { success: false, error: 'Logo not found' };
-      }
-
-      console.error(`Error loading logo for theme ${slug}: ${error.message}`);
+      logger.log(`Error loading ${kind} for theme ${slug}: ${error.message}`);
       reply.code(500);
-      return { success: false, error: 'Failed to load logo' };
+      return { success: false, error: `Failed to load ${kind}` };
     }
+  };
+
+  // Get theme logo asset
+  fastify.get('/theme/:slug/logo', async (request: any, reply) => {
+    return sendAsset(request.params.slug, 'logo', reply);
   });
 
   // Get theme background asset
   fastify.get('/theme/:slug/background', async (request: any, reply) => {
-    const { slug } = request.params;
-
-    try {
-      const backgroundPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/background.png`;
-
-      // Check if file exists
-      await fs.access(backgroundPath);
-
-      // Stream the file. The URL is version-busted by /theme/:slug, so the
-      // asset itself can be cached aggressively.
-      const file = await fs.readFile(backgroundPath);
-      reply.type('image/png');
-      reply.header('Cache-Control', 'public, max-age=31536000, immutable');
-      return file;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        reply.code(404);
-        return { success: false, error: 'Background not found' };
-      }
-
-      console.error(`Error loading background for theme ${slug}: ${error.message}`);
-      reply.code(500);
-      return { success: false, error: 'Failed to load background' };
-    }
+    return sendAsset(request.params.slug, 'background', reply);
   });
 }

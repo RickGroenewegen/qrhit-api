@@ -286,6 +286,26 @@
 					</tr>
 				<% } %>
 
+				<% if (payment.appDesignFee && payment.appDesignFee > 0) {
+					let appDesignQty = 0;
+					playlists.forEach(function(pl) {
+						if (pl.appDesignEnabled) { appDesignQty += 1; }
+					});
+					if (appDesignQty < 1) { appDesignQty = 1; }
+					const appDesignExclVAT = payment.reverseCharge ? payment.appDesignFee : payment.appDesignFee / (1 + addonRate / 100);
+					const appDesignVAT = payment.appDesignFee - appDesignExclVAT;
+				%>
+					<tr class="item">
+						<td><%= translations.appDesign || 'App design' %></td>
+						<td style="text-align:right;"><%= appDesignQty %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *(appDesignExclVAT / appDesignQty)) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *appDesignExclVAT) %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : (payment.taxRate + '%') %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : moneyFormatter.format(displayRate *appDesignVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *payment.appDesignFee) %></td>
+					</tr>
+				<% } %>
+
 				<% if (orderType != 'digital') {
 					const shippingExclVAT = payment.shipping - payment.shippingVATPrice;
 				%>
@@ -317,7 +337,7 @@
 					// Box and QRGames are taxed at the product rate; include their
 					// embedded VAT in the product VAT line so the breakdown sums to
 					// the (corrected) total VAT.
-					const summaryAddonsGross = (payment.boxFee || 0) + (payment.gamesFee || 0);
+					const summaryAddonsGross = (payment.boxFee || 0) + (payment.gamesFee || 0) + (payment.appDesignFee || 0);
 					const summaryAddonsExclVAT = summaryAddonsGross / (1 + (payment.taxRate || 0) / 100);
 					const summaryAddonsVAT = summaryAddonsGross - summaryAddonsExclVAT;
 					const productBaseExclVAT = payment.productPriceWithoutTax + summaryAddonsExclVAT;

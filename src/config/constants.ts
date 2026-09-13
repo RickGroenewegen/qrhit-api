@@ -36,6 +36,11 @@ export function boxDiscount(boxCount: number): number {
   return 1 - boxTierPrice(boxCount) / BOX_PRICE;
 }
 
+// Custom scan-app theme add-on ("App Designer"). One price per order line,
+// VAT-inclusive like QRGAMES_UPGRADE_PRICE; charged at checkout or as a
+// post-purchase upgrade from the account page.
+export const APP_DESIGN_PRICE = 4.99;
+
 // Multiplier on top of the printenbind raw per-card cost for the "add more
 // tracks" upgrade. 1.25 = 25% markup. Keeps post-purchase upgrade pricing
 // independent of the full margin model used at initial checkout.

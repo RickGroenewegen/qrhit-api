@@ -233,6 +233,45 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Scan-app themes and the App Designer
+
+The scan app (`qrhit-app`) themes itself from `GET /theme/:slug`: a ThemeConfig
+with ~45 `--app-*` CSS variables, flags, a font block, help text and asset
+URLs. Which theme a scanned card gets is decided per order line:
+`payment_has_playlist.theme` holds the slug, `src/apptheme.ts` caches
+`php id → slug` in memory and `GET /qrlink2/:trackId/:php` attaches it as
+`t: {s, n}`.
+
+Two sources, tried in this order by `src/routes/themeRoutes.ts`:
+
+1. Hand-made B2B themes: `src/_data/themes/<slug>/<slug>.json` plus
+   `logo.png` / `background.png`. Untouched by the designer.
+2. Customer designs (App Designer add-on): rows in `app_designs`, slug
+   `u<paymentHasPlaylistId>`, assets under `PUBLIC_DIR/app-theme/`.
+
+**The API never derives a theme.** The frontend turns the guided editor
+controls into the variable map (`app-design.utils.ts` in qrhit) because the
+live preview needs that math anyway; `src/appDesign.ts` validates what the
+client sends (key whitelist, value grammar that rejects `url(`), builds the
+font URL itself from `src/fonts.ts`, escapes `helpText` into `<p>` blocks
+(the app renders it with `[innerHTML]`), bumps `version` on every save (the
+app's cache compares versions) and calls `appTheme.reload()`.
+
+Money: `APP_DESIGN_PRICE` in `src/config/constants.ts`, VAT-inclusive like
+the games fee. Checkout sets `appDesignEnabled`/`appDesignPrice` on the line
+and `Payment.appDesignFee`; `mollie.getPaymentUri` needs the new line ids, so
+the payment create carries an `include` for them. Post-purchase unlock goes
+through `POST /api/app-design/upgrade-payment` and the
+`app_design_upgrade` webhook branch; the design is stored before the customer
+leaves for Mollie but the slug is only published on the paid webhook.
+`POST /api/app-design/ai-theme` sends the uploaded background to OpenAI
+(first vision call in `chatgpt.ts`) with a sharp dominant-colour fallback and
+a per-IP daily counter in Redis.
+
+`theme`/`themeName` were dropped from `printFingerprint.ts` DESIGN_FIELDS:
+no card template reads them, and enabling a design after purchase must not
+force a printer-PDF rebuild.
+
 ## Product feeds: Merchant Center and Channable
 
 Two modules publish the same catalogue and currently run side by side:

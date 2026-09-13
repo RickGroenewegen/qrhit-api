@@ -34,8 +34,8 @@ const DESIGN_FIELDS = [
   'productType',
   'subType',
   'template',
-  'theme',
-  'themeName',
+  // theme/themeName deliberately absent: they only steer the scan app, no
+  // pdf_*.ejs reads them, and the App Designer sets them after purchase.
   'printerType',
   'eco',
   'doubleSided',

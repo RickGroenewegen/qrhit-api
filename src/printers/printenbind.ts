@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { maxCardsFor, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/constants';
+import { maxCardsFor, BOX_PRICE, BOX_UNIT_COST, boxTierPrice, APP_DESIGN_PRICE } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -1375,6 +1375,16 @@ class PrintEnBind {
       }
       totalPrice += gamesFee;
 
+      // App design fee: one per card item (digital or physical) that unlocks
+      // the custom scan-app theme. VAT-inclusive like the games fee.
+      let appDesignFee = 0;
+      for (const item of orderItems) {
+        if (item.productType === 'cards' && item.appDesignEnabled === true) {
+          appDesignFee += APP_DESIGN_PRICE;
+        }
+      }
+      totalPrice += appDesignFee;
+
       // Box fee for physical/sheets items with box enabled. Discount tier
       // is computed per cart item from its own total box count.
       let boxFee = 0;
@@ -1403,6 +1413,8 @@ class PrintEnBind {
           volumeDiscount, // Add volume discount to result
           gamesFee, // Add games fee to result
           qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
+          appDesignFee,
+          appDesignUnitPrice: APP_DESIGN_PRICE,
           boxFee,
           boxUnitPrice: BOX_PRICE,
           totalBoxCount,

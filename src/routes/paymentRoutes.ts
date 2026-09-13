@@ -197,6 +197,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: result.data.volumeDiscount,
           gamesFee: result.data.gamesFee,
           qrgamesUnitPrice: result.data.qrgamesUnitPrice,
+          appDesignFee: result.data.appDesignFee,
+          appDesignUnitPrice: result.data.appDesignUnitPrice,
           reverseCharge: result.data.reverseCharge,
           vatIdStatus: result.data.vatIdStatus,
         };
@@ -217,6 +219,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: await convertField(result.data.volumeDiscount),
           gamesFee: await convertField(result.data.gamesFee),
           qrgamesUnitPrice: await convertField(result.data.qrgamesUnitPrice),
+          appDesignFee: await convertField(result.data.appDesignFee),
+          appDesignUnitPrice: await convertField(result.data.appDesignUnitPrice),
           reverseCharge: result.data.reverseCharge,
           vatIdStatus: result.data.vatIdStatus,
         };

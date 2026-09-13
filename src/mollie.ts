@@ -19,9 +19,10 @@ import { promises as fs } from 'fs';
 import Cache from './cache';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
-import { BOX_PRICE } from './config/constants';
+import { BOX_PRICE, APP_DESIGN_PRICE } from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
+import AppDesign from './appDesign';
 import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
 import Mail from './mail';
@@ -1512,6 +1513,9 @@ class Mollie {
             boxEnabled: true,
             boxQuantity: true,
             boxFilename: true,
+            // App Designer
+            appDesignEnabled: true,
+            appDesignPrice: true,
             boxFrontBackgroundType: true,
             boxFrontBackground: true,
             boxFrontBackgroundColor: true,
@@ -1992,7 +1996,8 @@ class Mollie {
       const addonsTaxRate = calculateResult.data.taxRate ?? 0;
       const addonsGross =
         (calculateResult.data.boxFee || 0) +
-        (calculateResult.data.gamesFee || 0);
+        (calculateResult.data.gamesFee || 0) +
+        (calculateResult.data.appDesignFee || 0);
       const addonsVATPrice = parseFloat(
         (
           addonsGross -
@@ -2084,6 +2089,16 @@ class Mollie {
               this.utils.parseBoolean(item.gamesEnabled)
                 ? QRGAMES_UPGRADE_PRICE
                 : 0,
+            // App Designer add-on (custom scan-app theme). The design itself
+            // is stored in app_designs once the row ids are known, below.
+            appDesignEnabled:
+              item.productType === 'cards' &&
+              this.utils.parseBoolean(item.appDesignEnabled),
+            appDesignPrice:
+              item.productType === 'cards' &&
+              this.utils.parseBoolean(item.appDesignEnabled)
+                ? APP_DESIGN_PRICE
+                : 0,
             // Box add-on
             boxEnabled: this.utils.parseBoolean(item.boxEnabled),
             boxQuantity: item.boxQuantity || 0,
@@ -2150,6 +2165,7 @@ class Mollie {
       delete params.extraOrderData.shipping;
       delete params.extraOrderData.volumeDiscount;
       delete params.extraOrderData.gamesFee;
+      delete params.extraOrderData.appDesignFee;
 
       // Use the tax rate the calculateOrder pipeline resolved (which
       // already reflects reverse charge when applicable) instead of the
@@ -2185,6 +2201,7 @@ class Mollie {
           discount: discountAmount,
           boxFee: calculateResult.data.boxFee || 0,
           gamesFee: calculateResult.data.gamesFee || 0,
+          appDesignFee: calculateResult.data.appDesignFee || 0,
           currency: presentmentCurrency,
           exchangeRate: presentmentRate,
           totalPricePresentment:
@@ -2195,9 +2212,47 @@ class Mollie {
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
+        // The App Designer needs the new line ids to attach designs to.
+        include: {
+          PaymentHasPlaylist: { select: { id: true, playlistId: true, appDesignEnabled: true } },
+        },
       });
 
       const paymentId = insertResult.id;
+
+      // Store the customer's scan-app theme for every line that bought it.
+      // saveDesign also writes the slug onto the line; the reload below
+      // publishes it to the in-memory theme map on every worker.
+      const appDesignItems = params.cart.items.filter(
+        (item: CartItem) =>
+          item.productType === 'cards' &&
+          this.utils.parseBoolean(item.appDesignEnabled) &&
+          item.appDesign
+      );
+      if (appDesignItems.length > 0) {
+        const appDesign = AppDesign.getInstance();
+        for (const item of appDesignItems) {
+          const idx = params.cart.items.indexOf(item);
+          const line = insertResult.PaymentHasPlaylist.find(
+            (php) => php.playlistId === playlistDatabaseIds[idx]
+          );
+          if (!line) continue;
+          try {
+            const { input } = appDesign.normalizeInput({
+              design: item.appDesign,
+              theme: item.appTheme,
+              name: item.playlistName,
+            });
+            await appDesign.saveDesign(line.id, input, { reload: false });
+          } catch (designError: any) {
+            this.logger.log(
+              color.yellow.bold(
+                `Could not store app design for PHP ${line.id}: ${designError.message}`
+              )
+            );
+          }
+        }
+      }
 
       // AI prompts have been persisted on the PaymentHasPlaylist rows above;
       // delete the transient Redis copies so they don't linger past their use.
@@ -2423,6 +2478,70 @@ class Mollie {
           return result.success
             ? { success: true }
             : { success: false, error: result.error || 'Failed to process bingo upgrade' };
+        }
+      }
+
+      // App Designer unlocked after purchase. The design row was stored by
+      // the upgrade route; here we charge the line, publish the slug and
+      // refresh the theme map so the next scan picks it up.
+      if (metadata?.type === 'app_design_upgrade' && payment.status === 'paid') {
+        const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
+        const originalPaymentId = metadata.originalPaymentId as string;
+        const price = metadata.price ? parseFloat(metadata.price) : APP_DESIGN_PRICE;
+
+        if (paymentHasPlaylistId && originalPaymentId) {
+          const php = await this.prisma.paymentHasPlaylist.findUnique({
+            where: { id: paymentHasPlaylistId },
+            include: {
+              appDesign: { select: { slug: true, name: true } },
+              payment: { include: { user: { select: { hash: true } } } },
+            },
+          });
+          if (!php) {
+            return { success: false, error: 'PaymentHasPlaylist not found' };
+          }
+          if (php.appDesignEnabled) {
+            this.logger.log(
+              color.yellow.bold(
+                `App design upgrade already processed for PHP ${paymentHasPlaylistId}, skipping`
+              )
+            );
+            return { success: true };
+          }
+
+          try {
+            await this.prisma.paymentHasPlaylist.update({
+              where: { id: paymentHasPlaylistId },
+              data: {
+                appDesignEnabled: true,
+                appDesignPrice: price,
+                theme: php.appDesign?.slug ?? null,
+                themeName: php.appDesign?.name ?? null,
+              },
+            });
+            await this.prisma.payment.update({
+              where: { paymentId: originalPaymentId },
+              data: {
+                totalPrice: { increment: price },
+                appDesignFee: { increment: price },
+              },
+            });
+            if (php.payment?.user?.hash) {
+              await this.cache.del(`playlists:user:${php.payment.user.hash}`);
+            }
+            await this.appTheme.reload();
+
+            this.logger.log(
+              color.blue.bold('Processed app design upgrade payment for PHP: ') +
+                color.white.bold(paymentHasPlaylistId.toString())
+            );
+            return { success: true };
+          } catch (error: any) {
+            this.logger.log(
+              color.red.bold(`Error processing app design upgrade: ${error.message}`)
+            );
+            return { success: false, error: 'Failed to process app design upgrade' };
+          }
         }
       }
 
@@ -2892,6 +3011,7 @@ class Mollie {
         vatIdChecked: true,
         boxFee: true,
         gamesFee: true,
+        appDesignFee: true,
         DiscountCodedUses: {
           select: {
             amount: true,

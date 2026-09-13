@@ -2774,4 +2774,108 @@ ${htmlString}
       return null;
     }
   }
+
+  /**
+   * Propose a scan-app palette that fits a customer's background image
+   * (App Designer "theme from my image"). The image goes in as a data URI;
+   * the answer is forced through a function call so it is always the same
+   * shape. Returns null when the model produced nothing usable; the caller
+   * falls back to a palette computed from the image itself.
+   */
+  public async suggestAppPalette(
+    imageDataUri: string,
+    fontIds: string[]
+  ): Promise<{
+    backgroundColor: string;
+    textColor: string;
+    accentColor: string;
+    accentTextColor: string;
+    buttonStyle: string;
+    fontId: string;
+    showMusicalNotes: boolean;
+    mood: string;
+  } | null> {
+    try {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5.4-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a brand designer choosing colors for a mobile music game app whose full-screen background is the customer's own image. Pick colors that look intentional against that image and stay readable:
+1. backgroundColor: a solid color that matches the image's overall tone; it fills areas the image does not cover and modal backgrounds.
+2. textColor: must contrast clearly with the image (WCAG AA against backgroundColor, aim for a contrast ratio of at least 4.5).
+3. accentColor: one lively color drawn from or complementary to the image, used for the big round scan button, links and the vinyl center.
+4. accentTextColor: readable on accentColor (contrast at least 4.5).
+5. buttonStyle: "accent" when solid accent buttons suit the image, "glass" when translucent light buttons suit it better (busy or dark photos).
+6. fontId: one id from the allowed list that fits the mood, or "system" for a neutral sans-serif.
+7. showMusicalNotes: true only for playful designs where floating music notes would not clash with the image.
+8. mood: two or three words describing the look.
+Return hex colors with six digits.`,
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Allowed fontId values: ${fontIds.join(', ')}, system. Choose the palette for this background image.`,
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageDataUri, detail: 'low' },
+              },
+            ],
+          },
+        ],
+        tool_choice: { type: 'function', function: { name: 'setPalette' } },
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'setPalette',
+              description: 'Store the chosen app palette',
+              parameters: {
+                type: 'object',
+                properties: {
+                  backgroundColor: { type: 'string', description: 'Hex color, e.g. #18565e' },
+                  textColor: { type: 'string', description: 'Hex color' },
+                  accentColor: { type: 'string', description: 'Hex color' },
+                  accentTextColor: { type: 'string', description: 'Hex color' },
+                  buttonStyle: { type: 'string', enum: ['accent', 'glass'] },
+                  fontId: { type: 'string' },
+                  showMusicalNotes: { type: 'boolean' },
+                  mood: { type: 'string' },
+                },
+                required: [
+                  'backgroundColor',
+                  'textColor',
+                  'accentColor',
+                  'accentTextColor',
+                  'buttonStyle',
+                  'fontId',
+                  'showMusicalNotes',
+                  'mood',
+                ],
+              },
+            },
+          },
+        ],
+      });
+
+      const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.type === 'function') {
+        return JSON.parse(toolCall.function.arguments as string);
+      }
+      this.logger.log(
+        color.yellow.bold('[AppDesign] No function_call result for suggestAppPalette')
+      );
+      return null;
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `[AppDesign] suggestAppPalette failed: ${error?.message || String(error)}`
+        )
+      );
+      return null;
+    }
+  }
 }

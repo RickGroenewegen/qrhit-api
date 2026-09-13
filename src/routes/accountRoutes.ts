@@ -1342,6 +1342,7 @@ export default async function accountRoutes(
               // Whether bingo is enabled for this playlist
               gamesEnabled: php.gamesEnabled,
               boxEnabled: php.boxEnabled,
+              appDesignEnabled: php.appDesignEnabled,
               // Bingo files for this playlist
               bingoFiles: php.bingoFiles.map((bf: any) => ({
                 filename: bf.filename,

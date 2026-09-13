@@ -33,6 +33,7 @@ import {
   EXTRA_TRACK_TIERS,
   MAX_CARDS,
   MAX_CARDS_PHYSICAL,
+  APP_DESIGN_PRICE,
 } from '../config/constants';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
 import PrismaInstance from '../prisma';
@@ -104,6 +105,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       boxMaxCards: BOX_MAX_CARDS,
       boxTierPrices: BOX_TIER_PRICES,
       gamesUnitPrice: QRGAMES_UPGRADE_PRICE,
+      appDesignUnitPrice: APP_DESIGN_PRICE,
       // Card caps. The frontend mirrors these as fallbacks but treats the
       // values served here as authoritative.
       maxCardsPhysical: MAX_CARDS_PHYSICAL,
@@ -507,6 +509,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     const uploadKind: 'card' | 'box' = kind === 'box' ? 'box' : 'card';
 
     let result = { success: false };
+
+    // App Designer assets are phone-sized and live in their own directory;
+    // they never get the square crop the card pipeline applies.
+    if (kind === 'app') {
+      if (type !== 'background' && type !== 'logo') {
+        reply.status(400).send({ success: false, error: 'Invalid upload type' });
+        return;
+      }
+      return await designer.uploadAppThemeImage(image, type);
+    }
 
     if (type == 'background') {
       // Convert hideCircle to qrBackgroundType for backward compatibility

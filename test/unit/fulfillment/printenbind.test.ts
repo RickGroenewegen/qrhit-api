@@ -544,6 +544,8 @@ describe('calculateOrder', () => {
       volumeDiscount: 0,
       gamesFee: 0,
       qrgamesUnitPrice: 5,
+      appDesignFee: 0,
+      appDesignUnitPrice: 4.99,
       boxFee: 0,
       boxUnitPrice: 6.99,
       totalBoxCount: 0,

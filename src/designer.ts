@@ -29,8 +29,10 @@ class Designer {
     try {
       const backgroundDir = `${process.env['PUBLIC_DIR']}/background`;
       const logoDir = `${process.env['PUBLIC_DIR']}/logo`;
+      const appThemeDir = `${process.env['PUBLIC_DIR']}/app-theme`;
       await this.utils.createDir(backgroundDir);
       await this.utils.createDir(logoDir);
+      await this.utils.createDir(appThemeDir);
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error initializing directories: ${white.bold(error)}`)
@@ -357,6 +359,76 @@ class Designer {
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error uploading logo image: ${white.bold(error)}`)
+      );
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Uploads an asset for the scan-app theme (App Designer). Backgrounds are
+   * shown full-screen on a phone, logos at up to 300 CSS px wide, so the
+   * sizes differ from the card/box uploads: no square crop, no QR clearance.
+   * Written to PUBLIC_DIR/app-theme; served through /theme/:slug/{logo|background}.
+   */
+  public async uploadAppThemeImage(
+    base64Image: string,
+    type: 'background' | 'logo'
+  ): Promise<{
+    success: boolean;
+    filename?: string;
+    filePath?: string;
+    error?: string;
+  }> {
+    try {
+      if (!base64Image) {
+        return { success: false, error: 'No image provided' };
+      }
+      let base64Data: string;
+      if (base64Image.includes('base64,')) {
+        const matches = base64Image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        base64Data = matches[2];
+      } else {
+        base64Data = base64Image;
+      }
+
+      const actualFilename = `${this.utils.generateRandomString(32)}.png`.toLowerCase();
+      const dir = path.join(process.env['PUBLIC_DIR'] as string, 'app-theme');
+      const filePath = path.join(dir, actualFilename);
+
+      try {
+        await fs.mkdir(dir, { recursive: true });
+        const buffer = Buffer.from(base64Data, 'base64');
+        const pipeline =
+          type === 'background'
+            ? sharp(buffer).resize(1080, 1920, { fit: 'inside', withoutEnlargement: true })
+            : sharp(buffer).resize(800, 800, { fit: 'inside', withoutEnlargement: true });
+        const processedBuffer = await pipeline
+          .png({ compressionLevel: 9, quality: 90 })
+          .toBuffer();
+        await fs.writeFile(filePath, processedBuffer);
+
+        this.logger.log(
+          color.green.bold(
+            `App theme ${type} uploaded successfully: ${white.bold(filePath)}`
+          )
+        );
+        return {
+          success: true,
+          filename: actualFilename,
+          filePath: `/public/app-theme/${actualFilename}`,
+        };
+      } catch (writeError) {
+        this.logger.log(
+          color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
+        );
+        return { success: false, error: `Error writing file: ${writeError}` };
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error uploading app theme image: ${white.bold(error)}`)
       );
       return { success: false, error: String(error) };
     }
