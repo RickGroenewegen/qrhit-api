@@ -1,33 +1,69 @@
-## Apresentando o QRSong! app versão 1.3.5
+Uma noite de música é uma coisa fácil de organizar mal. As cartas fazem quase todo o trabalho, mas a meia hora de preparação e os primeiros dez minutos decidem se as pessoas jogam três rodadas ou doze. Isto é o que aprendi organizando essas noites, incluindo as partes que dão errado.
 
-A mais recente atualização do aplicativo companheiro QRSong! chegou, e com a versão 1.3.5 estamos tornando as experiências musicais ainda mais acessíveis e versáteis. Seja para animar uma festa, organizar uma noite de quiz ou encontrar o presente musical perfeito, nosso app agora traz mais recursos e compatibilidade na ponta dos seus dedos.
+## Antes de todo mundo chegar
 
-## Agora com suporte para contas gratuitas do Spotify
+**Teste o som.** Alto-falante de celular não funciona para um grupo. Qualquer caixa com Bluetooth funciona. Conecte, toque uma carta, ajuste o volume para que uma sala conversando por cima ainda consiga ouvir a faixa, e deixe assim.
 
-Um dos recursos mais pedidos finalmente chegou: o QRSong! agora funciona tanto com contas Premium quanto com contas gratuitas do Spotify. Isso significa que todo mundo pode participar da diversão escaneando os cartões QRSong! e tocando músicas instantaneamente, sem precisar de assinatura. Se você estiver usando uma conta gratuita do Spotify, poderá curtir playlists e faixas com a mesma experiência prática de escanear QR code.
+**Escaneie três cartas você mesmo.** Você está conferindo se o serviço está conectado, se a reprodução começa rápido e se você sabe o que o app faz. Descobrir na mesa que você saiu da conta é um péssimo começo.
 
-A única diferença é que, ao escanear sem o Spotify Premium, aparecerá uma pequena contagem regressiva e, em seguida, a música será tocada visivelmente. Infelizmente, tecnicamente não é possível esconder a música para usuários gratuitos. Mas a contagem regressiva te dá tempo suficiente para virar o celular e entrar na brincadeira!
+**Decida as configurações.** Duração da música e ponto de início, ambos no app. Quinze segundos e um ponto de início aleatório é difícil e bom para um grupo confiante. Trinta segundos a partir do refrão é mais amigável para um grupo misto. Escolha antes, não durante.
 
-## Suporte ampliado para mais tipos de cartões
+**Deixe as respostas viradas para baixo.** Parece óbvio. Mas não foram poucos os baralhos que já vi espalhados virados para cima na mesa.
 
-Sabemos que quem ama música usa vários tipos de cartões QR, e nossa última atualização amplia o suporte para cartões de outros fabricantes. Agora, você pode escanear e tocar ainda mais estilos de cartões musicais com nosso app, facilitando a integração do QRSong! à sua coleção, não importa de onde vieram seus cartões.
+## Os primeiros dez minutos
 
-- Escaneie cartões das principais marcas físicas de cartões QR
-- Aproveite compatibilidade maior com diferentes designs e formatos
-- Continue usando cartões QRSong! para jogos de quiz, festas e muito mais
+Jogue uma rodada sem pontuação. Ninguém entende um jogo só pela explicação, e todo mundo entende depois de uma carta. Escaneie, deixe tocar, deixe as pessoas chutarem em voz alta, vire a carta.
 
-### Ajude-nos a suportar todos os cartões musicais
+Comece com uma carta que a maior parte da sala vai acertar. Abrir com algo obscuro dá o tom de que este é um jogo para perder, e metade da mesa desliga.
 
-Tem um cartão musical com QR code que ainda não funciona? Queremos tornar o QRSong! compatível com todos os tipos de cartões. Se você encontrar um cartão não suportado, avise a gente usando nosso [formulário de contato](/[lang]/contact). Seu feedback nos ajuda a melhorar o app e levar experiências musicais sem complicação para todo mundo.
+Explique uma regra, não seis. Para um jogo de linha do tempo, é "coloque onde você acha que vai na linha". Todo o resto pode ser respondido quando aparecer.
 
-## Explore tudo o que o QRSong! oferece
+## Mantendo o ritmo
 
-Quer criar seus próprios cartões de playlist ou se inspirar em playlists em destaque? Comece visitando nosso [gerador de playlists](/[lang]/generate/playlist) ou confira nossas [playlists em destaque](/[lang]/playlists). Você também pode ver [exemplos de produtos](/[lang]/user/examples), encontrar respostas na nossa [FAQ](/[lang]/faq) ou saber mais sobre nossos [planos](/[lang]/pricing) e [opções de vale-presente](/[lang]/giftcard).
+O que mata uma noite de música é o silêncio entre as cartas. Alguém rolando a tela, alguém procurando uma resposta, um celular que bloqueou sozinho.
 
-## Resumo das novidades da versão 1.3.5
+Uma pessoa escaneia a noite toda. Passar o celular de mão em mão parece mais justo e dobra a duração de cada pausa. Se as pessoas quiserem revezar, que revezem nos palpites.
 
-- Agora suporta contas gratuitas e Premium do Spotify
-- Compatibilidade ampliada com cartões musicais QR de outros fabricantes
-- Atualizações contínuas com base no seu feedback – fale com a gente sobre novos tipos de cartões
+Mantenha as cartas já jogadas em uma pilha visível. Em um jogo de linha do tempo, essa pilha é o tabuleiro, e no bingo é como você resolve uma vitória contestada.
 
-Baixe a versão mais recente do app QRSong! e leve sua próxima experiência musical a outro nível. Estamos animados para ver como você vai usar essas novidades para criar momentos inesquecíveis com amigos, família e colegas. 🎵
+## Quando começa a perder força
+
+Todo baralho tem um ponto, geralmente lá pela carta quarenta, em que a atenção cai. Duas coisas resolvem:
+
+**Mude o jogo.** O mesmo baralho vira [bingo](/[lang]/music-bingo), um [quiz de músicas](/[lang]/music-quiz) e uma [linha do tempo](/[lang]/music-timeline). Trocar o formato no meio da noite reinicia a sala sem apresentar nada novo para aprender.
+
+**Encurte os trechos.** Baixe para dez ou quinze segundos. Rodadas mais rápidas, mais rodadas, e a energia volta.
+
+## O que fazer com a pessoa que sabe tudo
+
+Sempre tem uma em toda mesa. Duas opções funcionam: transforme essa pessoa na anfitriã, o que tira ela dos palpites e dá algo para fazer, ou jogue em duplas e coloque essa pessoa com alguém que não conhece nada da música.
+
+Não dê desvantagem para ela. É uma festa, não um torneio.
+
+## Se o baralho está ficando familiar
+
+Um baralho fixo deixa de ser um jogo quando todo mundo já aprendeu as respostas. Esse é o momento de [criar outro a partir de uma playlist diferente](/[lang]/generate/playlist): outra década, um gênero que ninguém na mesa escuta, ou um feito com músicas indicadas por cada convidado.
+
+O app gratuito está no [iPhone e Android](/[lang]/download-app), e também lê cartas de outros jogos de cartas musicais, então um baralho que você já tem pode se misturar com um novo.
+
+## FAQ
+
+### Quanto tempo cada música deve tocar em um jogo de música?
+
+De quinze a trinta segundos. Quinze é rápido e difícil, trinta é confortável. Mais do que isso e as pessoas param de adivinhar e começam a ouvir, o que é agradável, mas já não é mais um jogo.
+
+### Quantas pessoas podem jogar?
+
+Funciona de mais ou menos três até doze pessoas. Acima de oito, jogue em duplas: isso mantém todo mundo envolvido e impede que a pessoa mais rápida responda todas as cartas.
+
+### Preciso de uma caixa de som?
+
+Na prática, sim. Alto-falantes de celular não cobrem uma sala de pessoas conversando, e o jogo depende de todo mundo ouvir a faixa com clareza. Qualquer caixa Bluetooth já basta.
+
+### O que faço se alguém souber todas as músicas?
+
+Transforme essa pessoa na anfitriã para ela escanear em vez de adivinhar, ou jogue em duplas e coloque ela com alguém que não conhece a música. Dar desvantagem para alguém em uma festa costuma cair mal.
+
+### Como evito que o jogo fique arrastado?
+
+Uma pessoa escaneia a noite toda, mantenha as cartas jogadas visíveis e encurte os trechos quando a atenção cair. Trocar para outro jogo com o mesmo baralho também reinicia a sala sem ninguém precisar aprender algo novo.

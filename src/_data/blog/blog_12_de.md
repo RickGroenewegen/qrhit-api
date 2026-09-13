@@ -1,86 +1,69 @@
-**🎵 Große Neuigkeiten für Musikliebhaber:** QRSong! unterstützt jetzt **Tidal**, **Deezer**, **Apple Music** und **YouTube Music**. Du kannst nun einfach einen öffentlichen Playlist-Link von diesen Diensten in QRSong! einfügen und dieselben QR-Code-Karten generieren, die du schon von Spotify kennst.
+QRSong! funktioniert mit Spotify, Apple Music, YouTube Music, Tidal und Deezer. Das klingt nach fünf gleichwertigen Optionen. Ist es aber nicht, und genau diesen Vergleich hätte ich gern gehabt, wenn ich selbst entscheiden müsste.
 
-Wir haben auch die **QRSong! Begleit-App** auf **Version 1.5.0** für iOS und Android aktualisiert und mehr Abspieloptionen hinzugefügt, sodass du Tracks mit dem Musikdienst deiner Wahl abspielen kannst.
+Die Unterschiede sind wichtiger, als sie klingen, weil einer davon entscheidet, ob das Spiel überhaupt funktioniert.
 
-## Neue Musikdienste in QRSong! unterstützt
+## Das eine Feature, das entscheidet: versteckte Wiedergabe
 
-QRSong! hat mit Spotify-Playlist-QR-Code-Karten angefangen. Jetzt kannst du QR-Musikkarten erstellen aus:
+Ein Musikratespiel braucht einen Song, der startet, ohne dass der Titel erscheint. Das ist keine Vorliebe, das ist das Spiel.
 
-- **Apple Music Playlists**
-- **Tidal Playlists**
-- **Deezer Playlists**
-- **YouTube Music Playlists**
+| Dienst | Versteckte Wiedergabe | Erscheinungsjahre |
+|---|---|---|
+| Spotify | Ganzer Titel | Vom Dienst |
+| Apple Music | Ganzer Titel | Vom Dienst |
+| Tidal | 30 Sekunden Vorschau | Mit KI unterstützt |
+| Deezer | 30 Sekunden Vorschau | Mit KI unterstützt |
+| YouTube Music | **Keine** | Mit KI unterstützt |
 
-Dieses Update macht QRSong! zu einem noch flexibleren **QR-Code-Generator für Musik** – perfekt für Partys, Geschenke und Musikquiz, egal welche Streaming-Plattform deine Freunde und Familie nutzen.
+**Spotify und Apple Music** sind das volle Erlebnis: Der komplette Song läuft, auf dem Bildschirm steht nichts, und das Erscheinungsjahr kommt direkt vom Dienst.
 
-## So funktioniert's: Link einfügen und QR-Karten erstellen
+**Tidal und Deezer** verstecken den Titel ebenfalls, aber mit einer 30 Sekunden Vorschau statt mit dem ganzen Song. Zum Raten des Jahres reicht das völlig, und in der Praxis sind die meisten Runden sowieso nach den ersten fünfzehn Sekunden entschieden.
 
-Der Ablauf fühlt sich vertraut an. Wenn du schon mal QR-Karten aus einer Spotify-Playlist erstellt hast, ist es genauso:
+**YouTube Music** ist der Dienst mit der echten Einschränkung. Es gibt keine versteckte Wiedergabe: Nach einem Countdown öffnet sich der Link in der YouTube Music App, und der Titel steht auf dem Bildschirm. Deine Karten funktionieren trotzdem, aber jemand muss das Handy halten und wegdrehen. Es geht als Notlösung, nicht als erste Wahl.
 
-1. Kopiere den Link zu deiner **öffentlichen Playlist** (Spotify, Apple Music, Tidal, Deezer oder YouTube Music).
-2. Füge ihn in QRSong! ein und generiere deine QR-Code-Karten.
-3. Scanne und spiele die Tracks mit der QRSong! App und rate dann **Künstler**, **Titel** und **Jahr**.
+## Warum die Jahre unterschiedlich sind
 
-Wenn du es gleich ausprobieren willst, starte hier: [/de/generate/playlist](/[lang]/generate/playlist). Suchst du Inspiration? Schau dir unsere kuratierten Tipps an: [/de/playlists](/[lang]/playlists).
+Wenn in der Tabelle Mit KI unterstützt steht, heißt das: Der Dienst liefert nicht zuverlässig das ursprüngliche Erscheinungsjahr. Fehlende Jahre werden deshalb ergänzt und geprüft, statt einfach blind übernommen zu werden.
 
-## App-Update: QRSong! Begleit-App 1.5.0
+Das ist wichtig, weil ein Zeitstrahlspiel nur spielbar ist, wenn die Jahre stimmen. Streaming Metadaten sind regelmäßig auf eine ganz bestimmte Art falsch: Sie melden die Version, die du gerade abspielst, nicht das Original. Ein Remaster packt einen Song von 1975 plötzlich ins Jahr 2011. Bei Spotify und Apple Music gibt es mehr, womit man arbeiten kann. Bei den anderen liegt mehr Arbeit bei uns.
 
-Für die Multi-Service-Wiedergabe haben wir die **QRSong! App Version 1.5.0** für iOS und Android veröffentlicht. Neben Stabilitätsverbesserungen enthält das Update:
+## Was das in der Praxis bedeutet
 
-- **Mehr Abspiel-Dienste**, damit du Tracks im Dienst deiner Wahl öffnen kannst
-- **Haptisches Feedback** für ein besseres Scan & Play-Gefühl
-- **Stabilitätsverbesserungen**, damit Scannen und Abspielen auf Partys und Events reibungslos läuft
+**Einen Dienst für ein neues Deck wählen:** Spotify oder Apple Music, wenn du eins von beiden hast. Tidal oder Deezer ohne Zögern, wenn du dafür bezahlst. YouTube Music, wenn das dein Dienst ist, aber mit dem Wissen, dass der Titel sichtbar ist.
 
-Für viele Gruppen ist das der große Gewinn: Du kannst denselben Spieleabend veranstalten, auch wenn nicht alle Gäste die gleiche Musikplattform nutzen.
+**Du kannst später wechseln.** Der Dienst ist eine Einstellung in der App, keine Eigenschaft deiner Karten. Verbinde ein anderes Konto, und dasselbe Deck läuft darüber.
 
-## Spotify-Karten spielen jetzt auch auf anderen Diensten
+**Deine Gäste brauchen deinen Dienst nicht.** Die Wiedergabe läuft bei der Person, die scannt, über ihr eigenes Konto. Eine Person hostet, alle anderen spielen einfach mit.
 
-Einer der wichtigsten Hintergrund-Änderungen ist, dass wir **jeden Track in unserer Datenbank mit Links zu den neuen Diensten ergänzt** haben. Praktisch bedeutet das:
+**Deck bauen und Deck spielen sind getrennt.** Du kannst einen Playlist Link von jedem der fünf Dienste einfügen und die fertigen Karten auf jedem der fünf Dienste spielen. Es muss nicht derselbe Dienst sein.
 
-- QR-Karten aus **Spotify-Playlists** lassen sich jetzt auch über **Apple Music**, **Tidal**, **Deezer** oder **YouTube Music** abspielen.
-- Du bist nicht an eine Plattform gebunden, wenn du deine Karten druckst.
-- Du kannst ältere Kartensets leichter bei neuen Events wiederverwenden, selbst wenn sich dein Streaming-Abo ändert.
+## Wenn du schon Karten hast
 
-## Verschiedene Dienste sollen sich gleich anfühlen (trotz ihrer Eigenheiten)
+Die kostenlose App liest Karten aus anderen Musik Kartenspielen genauso wie unsere eigenen. Ein gekauftes Deck, das du schon hast, läuft also mit jedem dieser Dienste. Wenn du eins gekauft hast, das nur Spotify unterstützt, und du kein Spotify hast, [so kommst du drum herum](/[lang]/hitster-without-spotify).
 
-Jeder Streamingdienst hat seine Eigenheiten – von unterschiedlichen Playlist-URL-Formaten und Metadaten bis hin zur Art, wie Tracks identifiziert und abgespielt werden. Unser Ziel war einfach: **das QRSong! Erlebnis für alle Nutzer konsistent halten**.
+Alle Details findest du auf der [Seite mit den unterstützten Plattformen](/[lang]/supported-platforms), und die App ist kostenlos für [iPhone und Android](/[lang]/download-app).
 
-Egal, ob du **physische QR-Code-Karten** auf hochwertigem Papier drucken lässt oder dich für einen **sofortigen digitalen Download** entscheidest – der Fokus bleibt: scannen, abspielen und Musik zum interaktiven Spiel machen.
+## FAQ
 
-## Warum Multi-Service-Support bei Partys und Geschenken zählt
+### Welcher Streamingdienst ist am besten für ein Musik Kartenspiel?
 
-QRSong! ist für gemeinsame Momente gemacht, nicht fürs Solo-Hören. Mit mehr Diensten wird QRSong! ideal für:
+Spotify oder Apple Music. Beide verstecken den kompletten Titel während der Wiedergabe und übernehmen das Erscheinungsjahr direkt vom Dienst. Genau das braucht ein Zeitstrahlspiel.
 
-- **Musik-Trivia auf Partys** (nenne den Song, den Künstler, das Jahr)
-- **Familienspieleabende**, bei denen nicht jeder dieselbe App nutzt
-- **Einzigartige Geschenke für Musikfans**, personalisiert mit einer Playlist
-- **Teambuilding und Icebreaker** im Firmenumfeld
-- **Pub-Quiz-Preise** und Musikrunden
+### Funktioniert QRSong! ohne Spotify?
 
-Willst du sehen, wie die Karten aussehen? Schau dir Beispiele und PDF-Samples an: [/de/examples](/[lang]/user/examples). Neugierig auf Preise und Versand? Nutze die Preisübersicht und den Rechner: [/de/pricing](/[lang]/pricing) und checke die Lieferdetails: [/de/shipping-info](/[lang]/shipping-info).
+Ja. Apple Music, Tidal, Deezer und YouTube Music funktionieren auch, und du verbindest einfach den Dienst, für den du sowieso schon bezahlst. Nur YouTube Music hat eine echte Einschränkung.
 
-## Häufige Fragen zu den neuen Diensten
+### Warum zeigt YouTube Music den Songtitel an?
 
-### Kann ich beliebige Playlist-Links verwenden?
+Weil der Link in der YouTube Music App geöffnet werden muss, und dort steht der Titel während der Wiedergabe auf dem Bildschirm. Das lässt sich nicht unterdrücken. Deshalb ist es der eine Dienst, bei dem jemand das Handy halten und wegschauen muss.
 
-Du kannst **öffentliche Playlist-URLs** von Spotify, Apple Music, Tidal, Deezer und YouTube Music einfügen. Ist eine Playlist privat oder nicht zugänglich, kann QRSong! sie möglicherweise nicht importieren.
+### Kann ich Karten aus einer Apple Music oder Tidal Playlist bauen?
 
-### Brauche ich Spotify, um QRSong! zu nutzen?
+Ja. Füge einen öffentlichen Playlist Link von einem der fünf Dienste ein, und das Deck wird daraus gebaut.
 
-Nein. Durch die neuen Integrationen kannst du QR-Musikkarten mit mehreren Diensten erstellen und abspielen. Die QRSong! App hilft dir, deinen bevorzugten Abspiel-Dienst auszuwählen.
+### Brauchen alle meine Gäste dasselbe Abo?
 
-### Beinhalten physische QRSong! Karten noch den digitalen Download?
+Nein. Nur die Person, die scannt, braucht ein Konto, weil die Wiedergabe über ihre App läuft. Alle anderen hören nur zu und raten.
 
-Ja. Beim Kauf eines physischen Produkts erhältst du auch einen **kostenlosen digitalen Download**, super praktisch für spontane Partys oder zum Selbstdruck.
+### Kann ich den Dienst wechseln, nachdem ich Karten gekauft habe?
 
-## Was kommt als Nächstes: weitere Musikdienst-Integrationen
-
-Wir werden auch zukünftig zusätzliche Musikdienste integrieren. Unser Ziel ist, QRSong! zum einfachsten Weg zu machen, Playlists in **QR-Code-Musikkarten** zu verwandeln – egal wo deine Musik lebt.
-
-Wenn du einen Dienst hast, den du unbedingt unterstützt sehen willst, kontaktiere uns hier: [/de/contact](/[lang]/contact). Die aktuelle Liste kannst du jederzeit hier einsehen: [/de/supported-platforms](/[lang]/supported-platforms).
-
-## Leg los: QR-Karten aus deiner Playlist erstellen
-
-Bist du bereit, ein Kartendeck für dein nächstes Event zu bauen? Füge deinen Playlist-Link ein und erstelle deine Karten in nur wenigen Minuten: [/de/generate/playlist](/[lang]/generate/playlist).
-
-Lieber QRSong! verschenken? Geschenkkarten gibt’s hier: [/de/giftcard](/[lang]/giftcard).
+Ja. Der Dienst ist eine Einstellung in der App und nichts, was fest in den Karten steckt. Du kannst also jederzeit wechseln, und dasselbe Deck funktioniert weiter.

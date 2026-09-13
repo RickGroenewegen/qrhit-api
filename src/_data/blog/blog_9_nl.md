@@ -1,71 +1,57 @@
-Bespaar met je muzieksmaak 🎵 Met QRSong! spaar je nu credit elke keer dat iemand jouw uitgelichte afspeellijst koopt. Laat meer mensen kennismaken met jouw muzikale stijl en verlaag tegelijk de kosten van je volgende bestelling.
+Als je een goede kaartenset maakt, willen anderen die ook gebruiken. Dat gebeurt vaker dan ik had verwacht, en het kortingsprogramma bestaat omdat het alternatief was dat mensen screenshots van hun playlist maakten en die handmatig rondstuurden.
 
-## Wat is het Kortingsverdienprogramma?
+Hier lees je hoe het werkt en, nuttiger nog, wat ervoor zorgt dat andere mensen een playlist echt kiezen.
 
-Het Kortingsverdienprogramma beloont QRSong!-gebruikers die hun afspeellijst op onze site uitlichten. Wanneer iemand jouw afspeellijst ontdekt en koopt, verdien je €2,50 credit die je kunt gebruiken voor toekomstige QRSong!-bestellingen. Er is geen limiet aan hoeveel je kunt verdienen.
+## Zo werkt het
 
-## Hoe het werkt
+Wanneer je een kaartenset maakt, kun je ervoor kiezen om de playlist openbaar uit te lichten. Hij verschijnt dan op de [playlistpagina](/[lang]/playlists), waar iedereen die rondkijkt hem kan kiezen als startpunt voor eigen kaarten.
 
-1. Rond je bestelling af zoals je gewend bent, digitale download of fysieke QR-kaarten. Begin hier: [maak je afspeellijst](/[lang]/generate/playlist).
-2. Meld je aan na het afrekenen. Gebruik de link in je bevestigingsmail om een pakkende titel en beschrijving toe te voegen.
-3. Deel je unieke link op social media, met vrienden of waar je maar wilt.
-4. Verdien €2,50 credit elke keer dat iemand jouw uitgelichte afspeellijst koopt. De credit wordt onmiddellijk aan je account toegevoegd.
+Elke keer dat iemand een kaartenset bestelt die is gemaakt op basis van jouw uitgelichte playlist, bouw je tegoed op voor je volgende bestelling. Je verkoopt niets en niemand betaalt jou: jij krijgt korting, zij krijgen een playlist waar iemand echt over heeft nagedacht.
 
-Inspiratie nodig voordat je begint? Bekijk onze [uitgelichte afspeellijsten](/[lang]/playlists) of bekijk echte productfoto’s en voorbeeld-PDF’s in [voorbeelden](/[lang]/user/examples).
+Je kunt het uitlichten op elk moment uitzetten, en een playlist die niet meer is uitgelicht wordt meteen niet meer aangeboden.
 
-## Wat wordt gedeeld
+## Wat wordt gekozen
 
-- Alleen de titel en beschrijving van je afspeellijst die jij schrijft.
-- Je persoonlijke gegevens worden nooit getoond.
-- Jij bepaalt hoe je afspeellijst wordt gepresenteerd.
+Ik kan zien welke uitgelichte playlists worden gebruikt en welke blijven liggen, en het patroon is duidelijk genoeg om door te geven.
 
-## Waarom meedoen
+**Een specifiek idee wint van een goede playlist.** "Nummers die nummer één stonden in de week dat je geboren werd" wordt gekozen. "Mijn favorieten" niet, hoe goed de nummers ook zijn. Mensen die rondkijken zoeken een concept dat ze met een groep kunnen spelen, niet jouw smaak.
 
-- Onbeperkt verdienen, geen limiet op je creditsaldo.
-- Eenvoudig delen met je unieke link.
-- Direct credit zodra er een aankoop wordt gedaan.
-- Flexibel gebruik: bepaal zelf hoeveel credit je per bestelling inzet.
+**Geef het een naam als een schaplabel.** De titel is de hele pitch, want dat is alles wat iemand ziet voordat die beslist. "Eendagsvliegen uit de jaren 90" vertelt iemand precies wat voor avond het wordt. "Vibes" zegt niets.
 
-## Perfect voor elke QRSong!-gebruiker
+**Bouw voor herkenning.** Net als bij elk spel met muziekfragmenten: refreinen en singles, geen albumtracks. Een uitgelichte playlist die niemand kan raden, wordt één keer besteld en daarna nooit aangeraden.
 
-Met QRSong! verander je Spotify-afspeellijsten in scanbare QR-kaarten voor interactieve muziektrivia. Gasten scannen een kaartje met de QRSong!-app om een nummer af te spelen in Spotify en raden de artiest, de titel en het jaar. Ideaal voor feestjes, familiebijeenkomsten, pubquizzen, in de klas en als cadeau. Kies voor **digitale downloads** voor direct gebruik of **premium gedrukte kaarten** die wereldwijd worden verzonden. Bij elke fysieke bestelling ontvang je een gratis digitale download.
+**Spreid de decennia, tenzij het concept één decennium is.** Een tijdlijnspel heeft ruimte tussen jaren nodig om überhaupt speelbaar te zijn.
 
-Klaar om je set samen te stellen? Ga naar [maak je afspeellijst](/[lang]/generate/playlist), bekijk de [prijzen](/[lang]/pricing) en lees de [ervaringen](/[lang]/user/reviews).
+## De gelegenheden die het goed doen
 
-## Al klant?
+Decenniumsets zijn de betrouwbare keuze. Daarna komen bruiloften, een specifiek jaar, nummers uit films en sets per land die alleen iemand die daar woont echt goed zou samenstellen.
 
-Heb je al eerder een bestelling geplaatst voordat deze functie beschikbaar was? Je kunt nog steeds meedoen. Neem contact met ons op en we sturen je een persoonlijke promotielink: [contact QRSong!](/[lang]/contact)
+De sets die slecht werken zijn de heel persoonlijke, en dat is logisch. Een set op basis van je eigen geschiedenis is het best mogelijke cadeau voor de mensen die erin voorkomen en een vreemde aankoop voor een onbekende. Houd die privé en stop ze liever in een [cadeaubox](/[lang]/gift-box).
 
-## Veelgestelde vragen
+## De eerlijke grenzen
 
-### Hoe meld ik me aan voor het Kortingsverdienprogramma?
+Dit is korting op je volgende bestelling, geen inkomen. Als je een playlist uitlicht en niemand kiest hem, gebeurt er niets en ben je niets kwijt. Als een set van jou populair wordt, is je volgende bestelling goedkoper. Dat is het hele mechanisme, en ik leg het liever gewoon uit dan dat ik het mooier maak dan het is.
 
-Plaats een bestelling en gebruik daarna de link in je bevestigingsmail om je aan te melden en je titel en beschrijving toe te voegen. Nieuw hier? Begin bij [maak je afspeellijst](/[lang]/generate/playlist).
+Details en de huidige voorwaarden staan op de [kortingspagina](/[lang]/earn-discount).
 
-### Hoeveel verdien ik per aankoop?
+## FAQ
 
-Je ontvangt €2,50 credit telkens als iemand jouw uitgelichte afspeellijst koopt.
+### Hoe verdien ik korting op mijn volgende QRSong! bestelling?
 
-### Wanneer is de credit beschikbaar?
+Licht een playlist uit die je hebt gemaakt. Als iemand anders een set bestelt die daarmee is gemaakt, verdien je tegoed voor je volgende bestelling.
 
-Direct. Je creditsaldo wordt meteen bijgewerkt zodra de aankoop is afgerond.
+### Krijg ik betaald als iemand mijn playlist gebruikt?
 
-### Is er een maximum dat ik kan verdienen?
+Nee. Je verdient tegoed voor je eigen volgende bestelling in plaats van een uitbetaling. Het is een kortingsprogramma, geen winstdeling.
 
-Nee. Er is geen plafond. Hoe meer mensen je afspeellijst kopen, hoe meer je bespaart.
+### Kan ik stoppen met het uitlichten van een playlist?
 
-### Hoe gebruik ik mijn credit?
+Ja, op elk moment, en hij wordt dan meteen niet meer aan andere mensen aangeboden.
 
-Bij het afrekenen gebruik je je credit als saldo en kies je zelf hoeveel credit je inzet voor die bestelling.
+### Wat voor playlist wordt het vaakst gekozen?
 
-### Hoe zit het met privacy?
+Playlists met een duidelijk concept in de titel. Decenniumsets, specifieke jaren, bruiloftssets en filmsongs doen het goed. Alles met een naam die om jouw eigen smaak draait wordt zelden gekozen, want mensen zoeken een avond die ze meteen met een groep kunnen spelen.
 
-Alleen de titel en beschrijving van je afspeellijst worden getoond. Je persoonlijke gegevens worden nooit gedeeld.
+### Zien mensen mijn naam?
 
-### Wat als ik hulp nodig heb?
-
-Bezoek de [FAQ](/[lang]/faq) voor snelle antwoorden of neem contact op via [contact](/[lang]/contact).
-
-## Begin vandaag nog
-
-Maak een afspeellijst, licht hem uit en deel je link. Je volgende bestelling kan helemaal gratis zijn. Begin hier: [maak je afspeellijst](/[lang]/generate/playlist). Heb je inspiratie nodig? Bekijk de [uitgelichte afspeellijsten](/[lang]/playlists) of lees meer over formaten en verzending in de [prijzen](/[lang]/pricing).
+De playlist wordt uitgelicht, jij niet. Als je een set liever privé houdt, licht hem dan gewoon niet uit. Dan blijft hij van jou.

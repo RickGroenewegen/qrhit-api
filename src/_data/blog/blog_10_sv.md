@@ -1,87 +1,57 @@
-Skanna. Matcha. Vinn. Möt Music Match, ett fartfyllt musikfestspel som kombinerar fysiska kort med Spotify, drivet av QRSong! technology. Skapat av Source 1 Media från Leeuwarden med QRSong! som teknisk partner, förvandlar detta interaktiva musiktrivia-kortspel varje sammankomst till en högenergisk kunskaps- och reflexduell 🎵
+Music Match är ett kortspel gjort av Source 1 Media i Leeuwarden, med QRSong! som teknisk partner bakom skanning och uppspelning. Det är värt att förklara på sina egna villkor, för det är ett annat spel än tidslinjespelet som de flesta känner till, och det passar en annan sorts kväll.
 
-## Vad är Music Match?
+## Så spelas det
 
-Music Match är ett QR-kodbaserat musik-kortspel där spelarna tävlar om att bli av med alla kort genom att matcha kort med den låt som spelas på Spotify. Det är enkelt att lära sig, snabbt att spela och perfekt för fester, familjekvällar och teamevent.
+Alla får kort på handen. Målet är att bli först med att spela ut alla sina kort.
 
-## Så här spelar du Music Match
+Ett kort läggs i spel, låten skannas, och du kan lägga ett kort från handen om det matchar på något: artisten, genren, årtiondet och så vidare. Om du inte kan matcha drar du ett kort.
 
-### Förberedelser
+Om du har spelat kortspel förut känns formen direkt bekant. Skillnaden är att matchningen sker med musik i stället för färger och siffror, så rundan avgörs av om du känner igen något snarare än av vilka kort du fick.
 
-- Dela ut 7 Match-kort till varje spelare.
-- Lägg QR-korten med framsidan uppåt i mitten.
-- Placera Claim-kuber i mitten, alltid en mindre än antalet spelare.
-- Ge DJ-token till en spelare som startar rundan.
+## Varför det spelas annorlunda än ett tidslinjespel
 
-### Spelgång
+Ett tidslinjespel är ett solopussel som man turas om med: du får en låt, du placerar den, du har rätt eller fel. Music Match är ett spel där du hanterar korten på handen tillsammans med andra. Du håller kort, följer vad som läggs, och bestämmer när du ska använda det där riktigt bra kortet du har sparat.
 
-1. DJ:n skannar ett QR-kort i Music Match-appen.
-2. Låten spelas via Spotify.
-3. Alla tävlar om att lägga ett kort som matchar musiken.
-4. Ta en Claim-kub när du lägger ett kort. Den sista spelaren utan kub riskerar straff.
-5. Vänd upp de spelade korten för att se vem som matchade rätt, och fortsätt sedan till nästa runda.
+Två praktiska följder:
 
-## Sju sätt att matcha
+**Det går snabbare.** Rundorna är korta och tempot hänger inte på att en person tänker länge.
 
-Varje QR-kort erbjuder sju kategorier, så alla spelare har en chans att vinna, även utan encyklopedisk musikkunskap.
+**Det belönar bredd mer än precision.** Att veta ungefär vilken era och genre något hör till slår att kunna exakta utgivningsår. Det gör spelet mycket snällare för ett blandat sällskap, eftersom ingen behöver vara musiknörd för att kunna vara med och vinna.
 
-- **Artist** – identifiera vem som framför låten.
-- **Titel** – namnge låten.
-- **Decennium** – matcha låtens era.
-- **Land** – gissa artistens ursprungsland.
-- **Sång** – manlig eller kvinnlig sångare.
-- **Genre** – pop, rock, hiphop eller annan stil.
-- **#1 Top 40** – var det en etta på topplistorna?
+## Vem det passar för
 
-## Strategi och vändningar som håller det spännande
+Grupper där folks musikkunskap är ojämn. Ett tidslinjespel kan vara brutalt för någon som inte följer musik så noga. Att matcha på genre och årtionde är en mycket lägre tröskel, och en gäst som nästan inte kan något spelar ändå en riktig roll.
 
-- **Artist och Titel är exklusiva** – när en kategori är tagen under en runda kan ingen annan spela samma.
-- **Claim-kuber skapar press** – missar du en kan en felmatchning ge dubbla straff.
-- **DJ-token roterar** – spelaren med färst kort blir nästa DJ för att hålla spelet dynamiskt.
-- **Task-kort** tillför överraskningar som skakar om din strategi.
+Det funkar också bättre än tidslinjespelet för yngre spelare, av samma skäl.
 
-## Tillgänglighet och språk
+## Skanningen är densamma
 
-Music Match finns hos större återförsäljare i Nederländerna. Den nuvarande utgåvan är på nederländska, men fler språkversioner kommer snart.
+Det använder samma skanna och spela-mekanism som våra andra kort: [gratisappen](/[lang]/download-app) läser kortet och spelar låten via ditt eget streamingkonto, utan att visa titeln. [Plattformsreglerna](/[lang]/supported-platforms) är identiska, inklusive att YouTube Music inte har dold uppspelning.
 
-## Drivet av QRSong!, skapat av Source 1 Media
+## Så får du tag på det
 
-Source 1 Media har utformat spelupplevelsen och komponenterna. QRSong levererade QR-till-Spotify-tekniken som gör skanning och uppspelning sömlös. Det är den perfekta fusionen av klassiskt kortspel och modern musikstreaming.
+Music Match är Source 1 Medias spel, säljs som en egen produkt, och finns i en originalutgåva och en K-pop-utgåva. Om du har hittat hit via vår sida finns allt på [Music Match-sidan](/[lang]/music-match).
 
-## Skapa ditt eget QR-musikspel med QRSong!
+Om det du egentligen vill ha är en kortlek med dina egna låtar, då är det den andra saken vi gör: [klistra in en spellista](/[lang]/generate/playlist) så får du kort byggda från den, som du kan spela ett tidslinjespel, [musikbingo](/[lang]/music-bingo) och ett [musikquiz](/[lang]/music-quiz) med.
 
-Vill du ha ett specialanpassat musikspel för nästa fest, klassrum eller event, eller en personlig present till en musikälskare? QRSong förvandlar varje Spotify-spellista till färdiga QR-kort och digitala nedladdningar.
+## FAQ
 
-- [Skapa dina QR-musikkort från valfri Spotify-spellista](/[lang]/generate/playlist)
-- [Bläddra bland utvalda spellistor för direkt inspiration](/[lang]/playlists)
-- [Se produktbilder och exempel-PDF:er](/[lang]/user/examples)
-- [Kolla pris- och leveransalternativ](/[lang]/pricing)
-- [Skicka ett QRSong-presentkort](/[lang]/giftcard)
+### Vad är Music Match?
 
-Arrangerar du ett event eller driver verksamhet? Vi erbjuder även lösningar för företag och lokaler.
+Ett musik quiz spel med kort där du matchar kort från handen mot låten i spel på artist, genre eller årtionde, och försöker bli först av med dina kort. Det görs av Source 1 Media, med QRSong! som står för skanning och uppspelning.
 
-- [OnzeVibe för företagsupplevelser](/[lang]/business)
-- [QR-kort som en tjänst](/[lang]/qr-cards-as-a-service)
-- [Tjänst för musikpubquiz](/[lang]/pubquiz)
+### Hur skiljer det sig från ett tidslinjespel om musik?
 
-## Snabbfrågor
+Ett tidslinjespel ber dig placera en låt efter utgivningsår, en spelare i taget. Music Match handlar om att hantera korten på handen: snabbare rundor, och det belönar att du vet ungefär vad något är snarare än exakta årtal.
 
-### Behövs Spotify för att spela?
+### Är det bra för personer som inte kan så mycket om musik?
 
-Ja. Music Match spelar låtar via Spotify. Se till att enheten som DJ:n använder har Spotify installerat och är redo att streama.
+Bättre än ett tidslinjespel, ja. Att matcha på genre eller årtionde är en mycket lägre tröskel än att kunna nämna ett utgivningsår, så ett blandat sällskap håller sig konkurrenskraftigt.
 
-### Är appen separat från QRSong?
+### Behöver jag en app?
 
-Music Match använder sin egen app för skanning under spelets gång, driven av QRSong!-teknik i bakgrunden. QRSong! erbjuder även en mobilapp för att skanna Music Match-kort.
+Ja, den gratis QRSong!-appen, som spelar låtarna utan att visa titeln. Om du skannar med telefonens kamera visas låtnamnet och rundan är över.
 
-### Hur många spelare kan vara med?
+### Kan jag göra en Music Match-kortlek från min egen spellista?
 
-Music Match är designat för grupper på 3 till 7 spelare. Samla ett bord med spelare och njut av snabba, konkurrenskraftiga omgångar som funkar bra även med fler deltagare.
-
-## Nästa steg
-
-- Planera din nästa musik-kväll med Music Match för omedelbar partystämning.
-- Bygg din egen QR-musikquiz med QRSong!, börja här, [skapa dina spelliste-QR-kort](/[lang]/generate/playlist).
-- Frågor om specialbeställningar eller leverans? [Kontakta vårt team](/[lang]/contact).
-
-Låt musiken spela och må den bästa matcharen vinna.
+Nej, Music Match är ett fast utgivet spel. Om du vill ha kort från din egen spellista är det QRSong!-kortlekarna som gör det, och de spelar ett tidslinjespel, bingo och quiz.

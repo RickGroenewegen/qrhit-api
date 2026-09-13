@@ -1,43 +1,59 @@
-## Wat de titel van je afspeellijst zegt over jouw feestje
+Ik heb heel wat playlists omgezet in kaartensets, en je merkt binnen een nummer of twintig of een spelavond gaat werken. Het ligt bijna nooit aan de mensen. Het ligt aan de liedjeskeuze, en die gaat elke keer op dezelfde drie manieren mis.
 
-Heb je je ooit afgevraagd wat de titel van je Spotify-afspeellijst verklapt over de sfeer van jouw feestje of de energie van je spelletjesavond? Bij QRSong! hebben we duizenden unieke afspeellijsten omgetoverd tot QR-code kaarten voor muzikale spellen, trivia en interactieve fun. Als we door de enorme verzameling afspeellijsttitels van onze gebruikers bladeren, zie je dat elke titel een eigen verhaal vertelt. Hier is een speelse blik op wat jouw afspeellijsttitel misschien over jou zegt—en welk soort QRSong!-ervaring jij klaar bent om te hosten.
+## De fout: liedjes kiezen waar jij van houdt
 
-### Klassieke publieksfavorieten
+Dit is de grootste, en hij pakt iedereen, ook mij.
 
-- **General Hits #1/2, Top 40, Your Top Songs 2020**: Jij zorgt ervoor dat iedereen blij is met herkenbare nummers. Perfect voor ijsbrekers en meezingers, deze afspeellijsten garanderen een volle dansvloer en overal blije gezichten.
-- **Disco Classics, Blues Classics, 80s & 90s Classics, Classic hits everyone knows**: Nostalgie is jouw geheime wapen. Je weet dat niets een groep zo samenbrengt als een goede throwback, waardoor jouw feestjes warm en welkom aanvoelen.
+Een playlist waar jij graag naar luistert en een playlist die een goed raadspel oplevert zijn twee verschillende dingen. Je favoriete albumtracks zijn niet herkenbaar na vier seconden. Die obscure track waarvan je trots bent dat je hem kent, is een dode kaart: één persoon knikt, niemand raadt, de ronde valt stil.
 
-### Themafeest-masters
+Een spelplaylist bouw je voor **herkenning**, niet voor smaak. Dat betekent refreinen, singles en liedjes waar je destijds niet omheen kon. Je bent niet aan het cureren, je kiest dingen waar een kamer doorheen gaat roepen.
 
-- **Halloween Playlist 2024🎃, Kerst Hits Top 100, A Gröbming Xmas**: Jouw feestjes zijn tot in de puntjes gepland. Seizoensgebonden afspeellijsten zoals deze zetten meteen de toon en laten jouw creatieve gastheerschap zien—ideaal voor thematische QRSong!-spellen en quizrondes.
-- **Fiesta Latina, Reggeton y más, Bollywood Evergreen, K-Pop Songs**: Jij houdt van een culturele twist. Internationale hits en eclectische genres houden jouw events fris en wereldwijd geïnspireerd, perfect om de meertalige features van QRSong! te laten zien.
+De test die ik gebruik: kan iemand dit neuriën na vier seconden van het refrein? Zo niet, dan is het een slechte kaart in een spel en overal daarbuiten gewoon een prima liedje.
 
-### Muziekquiz-kampioenen
+## De fout: één tijdperk
 
-- **The Ultimate Music Quiz, Guess the year, Music Quiz Game**: Jij leeft op competitie en daagt je vrienden graag uit met muzikale kennis. Deze afspeellijsten zijn gemaakt voor de trivia- en quizfeatures van QRSong!—reken op veel gelach en gezellige rivaliteit.
-- **Name that tune, One Hit Wonders, 500 Greatest Songs Of All Time**: Voor jou draait het om geheugen testen en verrassingen. Deze titels beloven pittige quizrondes en opscheprechten voor wie er met de winst vandoor gaat.
+Iedereen bouwt een deck uit zijn eigen goede jaren. Dat speelt heerlijk voor mensen die op hetzelfde moment dezelfde leeftijd hadden, en sluit de rest van de tafel buiten.
 
-### Persoonlijke en speelse keuzes
+Een tijdlijnspel heeft vooral spreiding nodig. Als tachtig kaarten allemaal uit 1995 tot 2005 komen, kruipen de jaren op elkaar en wordt een kaart goed leggen meer gokken dan nadenken. Je wilt gaten waar mensen over kunnen discussiëren: komt deze voor of na die andere.
 
-- **Mijn playlist #12, Rickster, John songs, Mommy's playlist😍**: Jouw afspeellijsten zijn net zo uniek als je gasten. Persoonlijke namen maken het intiem en laten zien dat je over elke track hebt nagedacht—voor memorabele feestmomenten en leuke gespreksstarters.
+Mik op echte spreiding over decennia. Zorg daarna dat elke gast minstens een handvol kaarten heeft die duidelijk van hen zijn, want het moment waarop iemand een liedje herkent dat niemand anders kent, is het beste moment van het spel.
 
-### Voor elke gelegenheid
+## De fout: te veel, of te weinig
 
-- **Birthday Playlist, Vrijdag, Verjaardag papa**: Jij grijpt elke kans aan om te vieren. Speciale afspeellijsten maken elk samenzijn persoonlijk en feestelijk—perfect om QRSong! QR-code kaarten als party favor of verrassing te gebruiken.
-- **Corporate team building, Wedding entertainment**: Jij brengt muziek in elk aspect van het leven. Of het nu zakelijk of privé is, jouw afspeellijsttitels laten zien dat je overal plezier in weet te brengen.
+Voor een tijdlijnspel is 80 tot 120 liedjes de goede bandbreedte. Onder de 80 is je avond te snel op. Boven de 120 ben je uren kaarten aan het knippen en wordt het deck nooit helemaal gespeeld.
 
-### Klaar om zelf aan de slag te gaan?
+Voor [muziek bingo](/[lang]/music-bingo) werkt de rekensom anders, omdat de kaarten uit een pool worden getrokken: 40 tot 60 liedjes, anders is iedereen tegelijk klaar.
 
-Bij QRSong! maken we het makkelijk om elke Spotify-afspeellijst om te toveren tot een fysieke of digitale QR-code kaart voor spellen, cadeaus, of gewoon een nieuwe manier om van muziek te genieten. Wil je beginnen? [Maak hier je afspeellijst QR-kaarten](/[lang]/generate/playlist). Inspiratie nodig? Bekijk onze [uitgelichte afspeellijsten](/[lang]/playlists) of download voorbeeld-PDF’s op [onze voorbeeldpagina](/[lang]/user/examples).
+## Twee dingen die stilletjes belangrijk zijn
 
-### Tips voor de perfecte afspeellijsttitel
+**Controleer de jaren.** Streamingdiensten tonen vaak de releasedatum van de versie die je afspeelt, niet van het origineel. Een remaster zet een liedje uit 1975 in 2011, en een tijdlijnspel met verkeerde jaren wordt een discussie zonder goed antwoord. Dit is de meest voorkomende reden dat een zelfgemaakt deck breekt, en daarom controleert QRSong! elk jaar in plaats van de dienst zomaar te vertrouwen.
 
-- Wees specifiek: Thema-afspeellijsten (zoals "90’s Dance Hits") scheppen verwachtingen en maken mensen enthousiast.
-- Maak het persoonlijk: Voeg namen of inside jokes toe voor een unieke touch.
-- Gebruik emoji’s met mate: Ze geven flair, maar zorg dat ze bij de sfeer passen.
-- Denk aan je publiek: Is het voor een quiz, achtergrondmuziek of een danswedstrijd?
-- Wees niet bang om creatief te zijn: Afspeellijsten als "Songs about food" of "QR Song Top 4000" zorgen altijd voor een glimlach.
+**Sla de liedjes met een verhaal eraan over.** In een deck voor een groep is de track die alles betekent voor twee mensen in de kamer en niets voor de andere acht een trage kaart. Bewaar die voor een [persoonlijk deck als cadeau](/[lang]/gift-box), want daar is dat precies de bedoeling.
 
-### Breng je afspeellijst tot leven met QRSong!
+## Goede startpunten
 
-Wat je stijl ook is, de titel van je afspeellijst is de eerste stap naar een onvergetelijke muzikale ervaring. Met QRSong! maak je interactieve muziekgames, quizavonden en persoonlijke cadeaus met je favoriete Spotify-nummers. [Lees meer over hoe het werkt](/[lang]/faq), bekijk onze [gebruikersreviews](/[lang]/user/reviews), of [neem contact op](/[lang]/contact) voor hulp bij het plannen van je volgende event.
+Als je een deck wilt dat werkt zonder zelf de playlist te bouwen, staan er kant-en-klare decks per decennium, genre en gelegenheid op de [playlistpagina](/[lang]/playlists). Ze zijn gebouwd voor herkenning in plaats van smaak, en dat is precies de discipline die lastig is bij je eigen muziek.
+
+Of plak je eigen playlist en kijk wat er gebeurt: [begin hier](/[lang]/generate/playlist).
+
+## FAQ
+
+### Hoeveel liedjes heb ik nodig voor een muziekspel?
+
+80 tot 120 voor een tijdlijnspel, 40 tot 60 voor bingo. Bingo heeft minder nodig omdat elke kaart een andere selectie uit de pool krijgt, en bij een te grote pool vult niemand ooit een kaart.
+
+### Wat maakt een liedje goed voor een muziek quiz spel?
+
+Herkenbaarheid binnen ongeveer vier seconden. Refreinen en singles winnen van albumtracks, en liedjes waar je destijds niet omheen kon winnen van de liedjes die jij persoonlijk hoog hebt zitten. Het is een andere vaardigheid dan een playlist maken die jij leuk vindt.
+
+### Moet ik decennia mixen?
+
+Ja, om twee redenen. Een tijdlijnspel heeft spreiding in de jaren nodig, anders wordt kaarten leggen gokwerk, en een deck uit één tijdperk sluit iedereen buiten die niet op het juiste moment de juiste leeftijd had.
+
+### Waarom staat het verkeerde releasejaar op mijn kaarten?
+
+Omdat streamingdiensten meestal het jaar tonen van de versie die je afspeelt, niet van de originele release. Remasters en heruitgaven zijn de gebruikelijke boosdoeners, en een verkeerd jaar maakt een tijdlijnspel stilletjes kapot.
+
+### Kan ik een playlist gebruiken die iemand anders heeft gemaakt?
+
+Ja, en dat is vaak beter dan je eigen playlist, omdat je niet aan de liedjes gehecht bent. Er zijn kant-en-klare playlists per decennium, genre en gelegenheid als je de selectie helemaal wilt overslaan.

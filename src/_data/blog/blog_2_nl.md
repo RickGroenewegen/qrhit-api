@@ -1,32 +1,61 @@
-## Fysieke QR-muziekkaarten nu wereldwijd beschikbaar
+Mensen vragen me best vaak of de gedrukte kaarten het waard zijn vergeleken met de PDF om thuis te printen. Het eerlijke antwoord is dat het helemaal afhangt van hoe vaak je verwacht te spelen. Dat zeg ik liever dan doen alsof het antwoord altijd ja is.
 
-QRSong! is superblij om aan te kondigen dat je nu echte, fysieke QR-muziekkaarten kunt bestellen met jouw favoriete Spotify-afspeellijsten. Deze professioneel gedrukte kaarten worden bij je thuisbezorgd, zodat je makkelijker dan ooit interactieve muzikale momenten kunt creëren voor feestjes, cadeaus en gezellige bijeenkomsten.
+Dit is wat het verschil echt is.
 
-### Bestel hoogwaardige QR-kaarten met Spotify-afspeellijsten
+## Wat thuis printen je oplevert
 
-Elke kaart wordt gedrukt op premium 350g full-color papier, wat zorgt voor stevigheid en een levendige uitstraling. Dankzij onze samenwerking met een professionele drukker biedt QRSong! nu snelle, betrouwbare verzending naar klanten over de hele wereld. Of je nu een muziekquiz-avond plant, een uniek verjaardagscadeau zoekt of een originele party-icebreaker wilt, deze fysieke kaarten zijn direct klaar voor gebruik zodra ze binnen zijn.
+Je downloadt een PDF die is opgemaakt voor A4 of Letter, print hem dubbelzijdig en knipt de kaarten uit. Het kost niets behalve papier en inkt, je hebt hem meteen, en voor een eenmalig feestje is het een prima oplossing.
 
-- Wereldwijde verzending met track & trace link inbegrepen
-- Bestellingen worden binnen 1-2 werkdagen verwerkt en verzonden
-- Kaarten van hoogwaardig, dik papier voor een luxe gevoel
-- Compatibel met de QRSong! mobiele app voor direct afspelen van afspeellijsten
+Er gaan twee dingen mis, en allebei zijn het eerder printerproblemen dan ontwerpproblemen.
 
-### A4-versie voor extra budgetflexibiliteit
+**Verschuiving bij dubbelzijdig printen.** Thuisprinters zetten de tweede kant bijna nooit precies gelijk met de eerste. Een paar millimeter betekent dat het jaartal op de achterkant niet netjes in het midden staat tegenover de QR-code op de voorkant. Het speelt prima, het ziet er alleen zelfgemaakt uit.
 
-Voor wie op zoek is naar een voordeligere optie, biedt QRSong! nu ook een **A4-versie** van de QR-muziekkaarten. Deze versie heeft hetzelfde premium materiaal en dezelfde printkwaliteit, maar wordt geleverd als een volledig A4-vel dat je zelf kunt knippen. Het is een budgetvriendelijke oplossing voor iedereen die zijn kaarten wil personaliseren of ze in grote aantallen wil uitdelen bij evenementen en bijeenkomsten.
+**Doorschijnen.** Op standaard papier van 80 gsm kun je het antwoord vaak door de kaart heen lezen als iemand hem tegen het licht houdt. Dat maakt meer uit dan je denkt bij een raadspel. Printen op het zwaarste papier dat je printer aankan lost het meeste op.
 
-- Bespaar geld met het zelf-knip A4-formaat
-- Hetzelfde stevige, full-color 350g papier
-- Perfect voor creatieve projecten, klaslokalen en grotere groepen
+Als je hiervoor kiest, print dan eerst één testvel voordat je het hele deck doet. Iedereen die die stap overslaat, krijgt daar ongeveer bij kaart zestig spijt van.
 
-### Waarom kiezen voor QRSong! bij jouw muzikale events?
+## Wat de gedrukte kaarten je opleveren
 
-Met QRSong! maak je van elke Spotify-afspeellijst een tastbare, deelbare ervaring. Gebruik de kaarten voor muziekquizzen, "Herken het liedje"-uitdagingen of als origineel cadeau voor muziekliefhebbers. De kaarten werken naadloos met de QRSong! app, zodat je makkelijk nummers kunt scannen en direct afspelen. En met [eigen afspeellijsten maken](/[lang]/generate/playlist) en [uitgelichte playlists](/[lang]/playlists) heb je eindeloos veel muziekopties binnen handbereik.
+Onze kaarten komen op 350 gsm karton met glanslaminaat, gesneden op 56 bij 56 mm met afgeronde hoeken, klaar om te spelen.
 
-### Hoe bestel je jouw QR-muziekkaarten?
+Het gewicht is het belangrijkste. Bij 350 gsm schijnt er niets door, de kaarten schudden als echte speelkaarten in plaats van aan elkaar te plakken, en ze overleven een kamer vol mensen die al iets gedronken hebben. Een deck dat twintig keer gespeeld wordt, moet een fysiek object zijn dat twintig avonden aankan.
 
-1. Ga naar onze [afspeellijstgenerator](/[lang]/generate/playlist) om je eigen set samen te stellen.
-2. Kies tussen fysieke kaarten of de A4-knip-het-zelf optie.
-3. Rond je bestelling af en geniet van snelle, wereldwijde verzending met tracking.
+Het laminaat doet hetzelfde bij gemorste drankjes, en op een speltafel is dat geen denkbeeldig probleem.
 
-Heb je nog vragen? Bekijk onze [FAQ](/[lang]/faq) of [neem contact met ons op](/[lang]/contact) voor meer info. Klaar om muziek tot leven te brengen op jouw volgende event? Bestel vandaag nog je QRSong! kaarten!
+## Hoe je kiest
+
+Print thuis als het voor één gelegenheid is, als je het vanavond nodig hebt, of als je nog aan het uitzoeken bent of de liedjes kloppen. Het is ook de betere optie als je meerdere kleine decks maakt om te testen.
+
+Bestel gedrukt als het een cadeau is, als je verwacht het vaker dan een paar keer te spelen, of als het ergens openbaar terechtkomt, zoals op kantoor of in een café, waar de kaarten constant door handen gaan.
+
+Er is hier geen verkeerd antwoord en de digitale versie is geen beperkte demo: het zijn dezelfde kaarten, dezelfde QR-codes, dezelfde gecontroleerde jaartallen. Het verschil is het papier.
+
+## Verzending
+
+We drukken en verzenden wereldwijd. Levertijden en landen staan op de [verzendpagina](/[lang]/shipping-info), die we liever nauwkeurig houden dan te optimistisch, want een muziekspel dat na het feest aankomt is niets waard.
+
+Als het een cadeau is, is de [cadeaudoos](/[lang]/gift-box) het bekijken waard: een vouwbare bedrukte doos met een venster in het deksel waar het deck in past. Zo wordt een stapel kaarten iets dat eruitziet als een cadeau, in plaats van een stapel kaarten.
+
+Beide opties en wat ze kosten staan op de [prijzenpagina](/[lang]/pricing).
+
+## FAQ
+
+### Zijn gedrukte kaarten beter dan thuis printen?
+
+Voor vaker spelen wel, vooral door het papiergewicht: 350 gsm laat het antwoord niet door de kaart heen zien en schudt goed. Voor één feestje is thuis printen echt prima en kost het niets.
+
+### Hoe groot zijn de kaarten?
+
+56 bij 56 mm met afgeronde hoeken, gedrukt op 350 gsm met glanslaminaat. Dat komt dicht bij standaard speelkaartkarton, en daardoor schudden ze in plaats van aan elkaar te plakken.
+
+### Welk papier moet ik gebruiken als ik ze zelf print?
+
+Minstens 250 gsm, liefst 300 of meer. Daaronder schijnt het antwoord op de achterkant door als iemand de kaart omhoog houdt, en dan is de ronde eigenlijk al weggegeven.
+
+### Verzenden jullie internationaal?
+
+Ja, wereldwijd. De actuele landen en geschatte levertijden staan op de verzendpagina.
+
+### Kan ik nu een deel printen en de rest later bestellen?
+
+Ja. De digitale en gedrukte versies zijn hetzelfde deck, dus mensen printen vaak eerst thuis om de playlist te testen en bestellen de gedrukte set zodra ze blij zijn met de liedjes.

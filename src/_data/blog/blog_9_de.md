@@ -1,71 +1,57 @@
-Verwandle deinen Musikgeschmack in Ersparnisse 🎵 Mit QRSong! kannst du jetzt jedes Mal Rabattguthaben sammeln, wenn jemand deine vorgestellte Playlist kauft. Stell mehr Leute auf deinen Musikstil aufmerksam und senk gleichzeitig die Kosten deiner nächsten Bestellung.
+Wenn du ein gutes Kartenset baust, wollen andere es auch haben. Das passiert öfter, als ich erwartet hatte. Das Rabattprogramm gibt es, weil die Alternative war, dass Leute Screenshots von ihrer Playlist machen und sie manuell herumschicken.
 
-## Was ist das Rabatt-Programm?
+Hier ist, wie es funktioniert und, noch nützlicher, was eine Playlist ausmacht, die andere wirklich auswählen.
 
-Das Rabatt-Programm belohnt QRSong!-Kund:innen, die ihre Playlist bei uns vorstellen. Sobald jemand deine Playlist entdeckt und kauft, erhältst du 2,50 € Rabattguthaben für künftige QRSong!-Bestellungen. Es gibt kein Limit, wie viel du sammeln kannst.
+## So funktioniert es
 
-## So funktioniert’s
+Wenn du ein Kartenset erstellst, kannst du die Playlist öffentlich vorstellen. Sie erscheint dann auf der [Playlist-Seite](/[lang]/playlists), wo jeder sie beim Stöbern als Ausgangspunkt für eigene Karten nehmen kann.
 
-1. Schließe deine Bestellung wie gewohnt ab, egal ob digitaler Download oder physische QR-Karten. Leg direkt los: [erstelle deine Playlist](/[lang]/generate/playlist).
-2. Melde dich nach dem Checkout an. Nutze den Link in deiner Bestätigungs-E-Mail, um einen einprägsamen Titel und eine Beschreibung hinzuzufügen.
-3. Teile deinen persönlichen Link in den sozialen Medien, mit Freund:innen oder wo immer du magst.
-4. Sammle jedes Mal 2,50 € Guthaben, wenn jemand deine vorgestellte Playlist kauft. Das Guthaben wird sofort deinem Konto gutgeschrieben.
+Jedes Mal, wenn jemand ein Kartenset bestellt, das auf deiner vorgestellten Playlist basiert, bekommst du Guthaben für deine nächste Bestellung. Du verkaufst nichts und niemand bezahlt dich: Du bekommst einen Rabatt, die andere Person bekommt eine Playlist, über die sich wirklich jemand Gedanken gemacht hat.
 
-Brauchst du Inspiration, bevor du loslegst? Stöbere in unseren [vorgestellten Playlists](/[lang]/playlists) oder schau dir echte Produktfotos und Beispiel-PDFs in den [Beispielen](/[lang]/user/examples) an.
+Du kannst das Vorstellen jederzeit ausschalten. Eine nicht mehr vorgestellte Playlist wird sofort nicht mehr angeboten.
 
-## Was geteilt wird
+## Was ausgewählt wird
 
-- Nur dein selbst verfasster Playlist-Titel und deine Beschreibung.
-- Persönliche Daten bleiben verborgen.
-- Du behältst die volle Kontrolle über die Präsentation deiner Playlist.
+Ich kann sehen, welche vorgestellten Playlists genutzt werden und welche einfach dort liegen bleiben. Das Muster ist klar genug, um es weiterzugeben.
 
-## Warum mitmachen?
+**Eine konkrete Idee schlägt eine gute Playlist.** „Songs, die in deiner Geburtswoche auf Platz eins waren“ wird ausgewählt. „Meine Favoriten“ nicht, egal wie gut die Songs sind. Leute, die stöbern, suchen ein Konzept, das sie einer Runde geben können, nicht deinen Geschmack.
 
-- Unbegrenzte Einnahmen, kein Limit für dein Rabattkonto.
-- Einfache Weitergabe mit deinem persönlichen Link.
-- Direktes Guthaben sofort nach jedem Kauf.
-- Flexible Nutzung, wende so viel oder so wenig Guthaben pro Bestellung an, wie du möchtest.
+**Benenne sie wie ein Regalschild.** Der Titel ist der komplette Pitch, weil er das Einzige ist, was jemand vor der Entscheidung sieht. „90er One-Hit-Wonders“ sagt sofort, was für einen Abend man bekommt. „Vibes“ sagt gar nichts.
 
-## Perfekt für jede QRSong!-Anwendung
+**Bau sie auf Wiedererkennung.** Es gilt dieselbe Regel wie bei jedem Spieldeck: Refrains und Singles, keine Albumtracks. Eine vorgestellte Playlist, bei der niemand etwas erraten kann, wird einmal bestellt und nie empfohlen.
 
-QRSong! verwandelt Spotify-Playlists in scannbare QR-Code-Karten für interaktive Musiktrivia. Gäste scannen eine Karte mit der QRSong!-App, um einen Track in Spotify abzuspielen und Künstler:in, Titel und Jahr zu erraten. Ideal für Partys, Spieleabende, Pub-Quizzes, Unterricht und Geschenke. Wähle **Digital-Downloads** für direktes Abspielen oder **hochwertig gedruckte Karten**, die weltweit verschickt werden. Jede physische Bestellung enthält einen kostenlosen Digital-Download.
+**Verteile die Jahrzehnte, außer das Konzept ist ein Jahrzehnt.** Ein Zeitstrahlspiel braucht Abstände zwischen den Jahren, sonst ist es kaum spielbar.
 
-Bereit, dein Set zu erstellen? Gehe zu [erstelle deine Playlist](/[lang]/generate/playlist), sieh dir die [Preise](/[lang]/pricing) an und lies [Bewertungen](/[lang]/user/reviews).
+## Die Anlässe, die gut funktionieren
 
-## Schon Kund:in?
+Jahrzehnte-Decks sind die verlässlichsten. Danach kommen Hochzeiten, ein bestimmtes Jahr, Songs aus Filmen und länderspezifische Sets, die nur jemand wirklich gut zusammenstellt, der dort lebt.
 
-Hast du vor der Einführung dieses Features bestellt? Kein Problem, du kannst trotzdem mitmachen. Kontaktiere uns und wir schicken dir deinen persönlichen Promo-Link: [kontaktiere QRSong!](/[lang]/contact)
+Schlecht laufen die sehr persönlichen Playlists, und das ergibt Sinn. Ein Kartenset aus deiner eigenen Geschichte ist das bestmögliche Geschenk für die Menschen darin und ein seltsamer Kauf für Fremde. Lass solche Sets privat und steck sie lieber in eine [Geschenkbox](/[lang]/gift-box).
 
-## FAQs
+## Die ehrlichen Grenzen
 
-### Wie kann ich beim Rabatt-Programm mitmachen?
+Das ist ein Rabatt auf deine nächste Bestellung, kein Einkommen. Wenn du eine Playlist vorstellst und niemand sie auswählt, passiert nichts und du hast nichts verloren. Wenn eines deiner Kartensets beliebt wird, wird deine nächste Bestellung günstiger. Das ist der ganze Mechanismus, und ich beschreibe ihn lieber klar, statt ihn größer wirken zu lassen.
 
-Gib eine Bestellung auf und nutze dann den Link in deiner Bestätigungs-E-Mail, um dich anzumelden und deinen Playlist-Titel sowie deine Beschreibung hinzuzufügen. Neu hier? Starte unter [erstelle deine Playlist](/[lang]/generate/playlist).
+Details und die aktuellen Bedingungen stehen auf der Seite [Rabatt verdienen](/[lang]/earn-discount).
 
-### Wie viel verdiene ich pro Kauf?
+## FAQ
 
-Du erhältst jedes Mal 2,50 € Rabattguthaben, wenn jemand deine vorgestellte Playlist kauft.
+### Wie verdiene ich einen Rabatt bei QRSong!?
 
-### Wann ist das Guthaben verfügbar?
+Stell eine Playlist vor, die du gebaut hast. Wenn jemand anderes ein Kartenset daraus bestellt, bekommst du Guthaben für deine nächste Bestellung.
 
-Sofort. Dein Rabattguthaben wird direkt nach Abschluss des Kaufs aktualisiert.
+### Werde ich bezahlt, wenn jemand meine Playlist nutzt?
 
-### Gibt es ein Maximum?
+Nein. Du bekommst Guthaben für deine eigene nächste Bestellung statt einer Auszahlung. Es ist ein Rabattprogramm, keine Umsatzbeteiligung.
 
-Nein. Es gibt kein Limit. Je mehr dein Playlist gekauft wird, desto mehr sparst du.
+### Kann ich das Vorstellen einer Playlist stoppen?
 
-### Wie löse ich meinen Rabatt ein?
+Ja, jederzeit. Sie wird anderen Leuten dann sofort nicht mehr angeboten.
 
-Wende an der Kasse deinen Code wie ein Guthaben an und entscheide, wie viel du auf diese Bestellung anwenden möchtest.
+### Welche Art von Playlist wird am häufigsten ausgewählt?
 
-### Wie sieht’s mit Datenschutz aus?
+Playlists mit einem klaren Konzept im Titel. Jahrzehnte-Sets, bestimmte Jahre, Hochzeitsdecks und Filmsongs funktionieren gut. Alles, was nach deinem eigenen Geschmack benannt ist, wird selten ausgewählt, weil Leute beim Stöbern einen Abend suchen, den sie einer Runde geben können.
 
-Es werden nur der von dir angegebene Playlist-Titel und die Beschreibung angezeigt. Deine persönlichen Daten bleiben verborgen.
+### Sehen andere meinen Namen?
 
-### Was, wenn ich Hilfe brauche?
-
-Besuche die [FAQ](/[lang]/faq) für schnelle Antworten oder melde dich über [Kontakt](/[lang]/contact) bei uns.
-
-## Starte noch heute
-
-Erstelle eine Playlist, stelle sie vor und teile deinen Link. Deine nächste Bestellung könnte kostenlos sein. Hier geht’s los: [erstelle deine Playlist](/[lang]/generate/playlist). Brauchst du noch Inspiration? Stöbere in den [vorgestellten Playlists](/[lang]/playlists) oder erfahre mehr über Formate und Versand unter [Preise](/[lang]/pricing).
+Vorgestellt wird die Playlist, nicht du. Wenn du ein Kartenset lieber privat halten willst, stell es einfach nicht vor. Dann bleibt es deins.

@@ -1,43 +1,59 @@
-## Personnalisez vos cartes QRSong! avec le nouveau designer
+L’éditeur de cartes est la partie de QRSong! où les gens passent le plus de temps, et souvent pour les mauvaises raisons. Alors voici ce qui compte vraiment sur une carte de musique, et ce qui relève surtout de la déco.
 
-QRSong! est ravi d’annoncer le lancement de notre **QRSong! Card Designer**. Que vous souhaitiez créer un cadeau musical unique, organiser vos playlists ou faire briller vos cartes lors d’un événement, notre designer rend la personnalisation super facile. Dans ce guide, découvrez comment customiser vos cartes QRSong! et piochez des idées créatives pour rendre vos playlists encore plus inoubliables.
+## Le recto n’a qu’un seul travail
 
-Le designer de cartes se trouve à l’étape 3 du processus de commande.
+Le QR code doit se scanner, de l’autre côté d’une table, dans une mauvaise lumière, tenu par quelqu’un qui a déjà bu un verre. Tout le reste sur le recto passe après ça.
 
-### Fonctionnalités clés du QRSong! Card Designer
+Deux règles couvrent presque tout. Garde le code foncé sur un fond clair, parce qu’un code clair sur fond sombre marche sur certains téléphones et échoue sur d’autres, et tu ne sauras pas lesquels avant la soirée. Et ne touche pas à la zone de silence : la marge vide autour du code fait partie du code, et la remplir avec une image de fond ou un logo est la raison la plus courante pour laquelle une carte ne se scanne pas.
 
-- **Ajoutez votre propre fond** – Importez des images ou choisissez des couleurs pour coller à votre style ou au thème de votre événement.
-- **Téléchargez un logo** – Placez votre logo perso, d’entreprise ou d’événement sur le côté QR pour une identification facile.
-- **Choisissez une petite icône** – Sélectionnez parmi une variété d’icônes pour différencier visuellement vos jeux de cartes.
-- **Ajoutez un texte personnalisé** – Insérez des messages, noms de playlists ou détails de chansons juste sous l’artiste et le titre.
+Une image de fond, c’est très bien. Une image chargée directement derrière le code, non. Si tu veux une photo, laisse-la vivre en arrière-plan de la carte et garde une zone propre là où le code se place.
 
-### Les avantages de personnaliser vos cartes QRSong!
+## Le verso, c’est là que le jeu se joue
 
-- **Des cadeaux qui font mouche** : Offrez un set personnalisé à un proche, rempli de souvenirs ou de chansons favorites.
-- **Organisation des playlists** : Créez des looks uniques pour chaque genre musical, ambiance ou événement.
-- **Des cartes prêtes pour l’événement** : Réalisez des sets thématiques pour des soirées, quiz musicaux ou événements pro.
-- **Des souvenirs mémorables** : Ajoutez des messages significatifs, comme qui a ajouté chaque chanson ou des petites notes spéciales, pour donner encore plus de valeur à vos cartes.
+Le verso contient l’artiste, le titre et l’année de sortie. C’est la réponse, révélée quand quelqu’un retourne la carte, donc la seule vraie question de design est la lisibilité à bout de bras, de l’autre côté d’une table.
 
-### Des idées créatives pour utiliser vos designs de cartes
+Utilise une taille de texte plus grande que tu ne le penses. L’année est l’élément que les gens plissent les yeux pour lire, et c’est autour d’elle que tout le jeu de chronologie tourne.
 
-- **Playlists romantiques :** Composez un set pour votre moitié avec des chansons et des messages qui racontent votre histoire.
-- **Cadeaux sur le thème de la musique :** Surprenez vos amis avec des sets personnalisés selon leurs genres préférés ou des événements comme l’Eurovision.
-- **Playlists famille & amis :** Ajoutez le nom du contributeur sur chaque carte pour un mix collaboratif qui célèbre les goûts de votre groupe.
-- **Sets éducatifs :** Utilisez le texte supplémentaire pour des quiz musicaux, anecdotes ou infos fun pour apprendre en s’amusant ou animer vos soirées.
+## Là où la personnalisation vaut vraiment le coup
 
-### Comment commencer à designer vos cartes QRSong!
+Tu peux mettre ton propre message sur n’importe quelle carte, et c’est cette fonction qui transforme un paquet en cadeau. Pas sur les cent cartes : sur les cinq ou six qui veulent dire quelque chose. La chanson d’une première danse, avec une phrase à propos de cette première danse au verso, n’a pas du tout le même effet qu’un paquet générique.
 
-1. [Créez votre playlist personnalisée](/[lang]/generate/playlist) ou piochez dans nos [playlists à la une](/[lang]/playlists) pour l’inspiration.
-2. Utilisez le QRSong! Card Designer pour importer fonds, logos et choisir vos icônes.
-3. Ajoutez un texte personnalisé sous chaque chanson pour rendre chaque carte unique.
-4. Prévisualisez vos cartes et passez commande pour des cartes physiques ou des téléchargements numériques.
+Même chose pour le fond. Une seule photo utilisée sur tout le paquet donne l’impression d’un objet pensé. Une photo différente sur chaque carte donne l’impression d’un album souvenir, ce qui est parfois ce que tu veux, mais généralement pas.
 
-Prêt à donner vie à vos playlists ? [Commencez à designer vos cartes QRSong! maintenant](/[lang]/generate/playlist) et rendez chaque moment musical inoubliable.
+## Les réalités de l’impression
 
-### Encore plus de façons d’améliorer votre expérience QRSong!
+Si tu imprimes à la maison, le design doit survivre à ton imprimante. Deux choses à vérifier sur une feuille de test avant de te lancer :
 
-- Parcourez notre [galerie de produits](/[lang]/user/examples) pour l’inspiration et des exemples à télécharger.
-- Découvrez nos [options tarifaires](/[lang]/pricing) pour les commandes en gros et occasions spéciales.
-- Offrez la musique avec une [carte cadeau QRSong!](/[lang]/giftcard).
-- Découvrez les avis de nos clients sur notre [page d’avis](/[lang]/user/reviews).
-- Trouvez les réponses aux questions fréquentes dans notre [FAQ](/[lang]/faq).
+**Fond perdu.** Tout ce qui va jusqu’au bord doit dépasser la ligne de coupe, sinon un décalage d’un millimètre laisse un filet blanc sur un côté.
+
+**Fonds sombres.** Un design sombre en fond perdu consomme beaucoup d’encre, et sur du papier non couché d’imprimante maison, le résultat devient irrégulier. Ça rend aussi le QR code plus difficile à placer correctement. Les designs plus clairs pardonnent davantage à la maison. Garde les versions sombres et spectaculaires pour les [cartes imprimées](/[lang]/pricing), qui sont pelliculées et retiennent bien l’encre.
+
+## Pars d’un modèle
+
+Il y a des fonds déjà prêts dans l’éditeur, et partir de l’un d’eux puis changer les couleurs te donne un paquet plus réussi en cinq minutes que de partir de zéro pendant une heure. Tu peux voir des exemples finis sur la [page d’exemples](/[lang]/user/examples).
+
+Si le paquet est un cadeau, le [coffret cadeau](/[lang]/gift-box) peut aussi reprendre ton design, avec une photo dans la fenêtre du couvercle, pour que la présentation aille avec les cartes.
+
+Prêt à en créer un ? [Commence avec une playlist](/[lang]/generate/playlist).
+
+## FAQ
+
+### Est-ce que je peux utiliser mes propres photos sur les cartes ?
+
+Oui, comme fond sur le recto, et tu peux ajouter un message personnel sur certaines cartes. Garde bien la zone autour du QR code dégagée, parce que la zone de silence fait partie de ce qui le rend scannable.
+
+### Pourquoi mon QR code ne se scanne pas ?
+
+Presque toujours pour l’une de ces trois raisons : le code est trop petit, la zone de silence autour est couverte par le visuel, ou le contraste est trop faible. Un code foncé sur fond clair, à 2 cm ou plus, règle presque tous les cas.
+
+### Est-ce que je peux mettre un design différent sur chaque carte ?
+
+Tu peux, mais en général c’est plus joli de ne pas le faire. Un seul fond sur tout le paquet donne l’impression d’un ensemble pensé. Un fond différent par carte donne l’impression d’un album souvenir. Les messages personnels sur une poignée de cartes importantes, c’est la version qui touche vraiment.
+
+### Est-ce que je dois créer un design ?
+
+Non. Il y a des modèles, et un paquet avec un fond prédéfini et la mise en page par défaut rend très bien. L’éditeur est là quand tu en as envie, pas comme une étape obligatoire à passer.
+
+### Qu’est-ce qui est imprimé au verso ?
+
+L’artiste, le titre et l’année de sortie. L’année est l’élément à garder en grand, parce que c’est autour d’elle que tourne le jeu de chronologie et c’est ce que les gens plissent les yeux pour lire de l’autre côté de la table.

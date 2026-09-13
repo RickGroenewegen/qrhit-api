@@ -1,86 +1,69 @@
-**🎵 Groot nieuws voor muziekliefhebbers:** QRSong! ondersteunt nu **Tidal**, **Deezer**, **Apple Music** en **YouTube Music**. Dat betekent dat je een **openbare afspeellijstlink** van deze diensten kunt kopiëren en plakken in QRSong! en dezelfde QR-code kaarten kunt maken die je al kent van Spotify.
+QRSong! werkt met Spotify, Apple Music, YouTube Music, Tidal en Deezer. Dat klinkt als vijf gelijke opties, maar dat is het niet. Dus dit is de vergelijking die ik zelf zou willen hebben als ik moest kiezen.
 
-We hebben ook de **QRSong! companion app** bijgewerkt naar **versie 1.5.0** voor iOS en Android, met meer afspeelopties zodat je nummers kunt afspelen via de muziekdienst die jij fijn vindt.
+De verschillen zijn belangrijker dan ze lijken, want één ervan bepaalt of het spel überhaupt werkt.
 
-## Nieuwe muziekdiensten ondersteund door QRSong!
+## De functie die alles bepaalt: afspelen zonder titel
 
-QRSong! begon met Spotify-afspeellijst QR-code kaarten. Nu kun je QR-muziekkaarten maken van:
+Een muziekraadspel moet het liedje starten zonder dat de titel in beeld komt. Dat is geen voorkeur, dat is het spel.
 
-- **Apple Music-afspeellijsten**
-- **Tidal-afspeellijsten**
-- **Deezer-afspeellijsten**
-- **YouTube Music-afspeellijsten**
+| Dienst | Afspelen zonder titel | Releasejaren |
+|---|---|---|
+| Spotify | Volledig nummer | Van de dienst |
+| Apple Music | Volledig nummer | Van de dienst |
+| Tidal | Preview van 30 seconden | Met AI ondersteund |
+| Deezer | Preview van 30 seconden | Met AI ondersteund |
+| YouTube Music | **Geen** | Met AI ondersteund |
 
-Deze update maakt QRSong! een flexibeler **QR-code generator voor muziek** voor feestjes, cadeaus en trivia-spellen, ongeacht welk streamingplatform je vrienden en familie gebruiken.
+**Spotify en Apple Music** zijn de volledige ervaring: het hele nummer speelt af, er staat niets op het scherm, en het releasejaar komt rechtstreeks van de dienst.
 
-## Hoe het werkt: plak een afspeellijstlink en genereer QR-kaarten
+**Tidal en Deezer** verbergen het nummer ook, maar met een preview van dertig seconden in plaats van het hele liedje. Voor een jaartal raden is dat ruim genoeg, en in de praktijk zijn de meeste rondes toch al in de eerste vijftien seconden beslist.
 
-De workflow is ontworpen om vertrouwd te voelen. Als je ooit QR-kaarten hebt gemaakt van een Spotify-afspeellijst, zijn de stappen in principe hetzelfde:
+**YouTube Music** is de dienst met een echte kanttekening. Er is geen afspelen zonder titel: na een countdown opent de link in de YouTube Music app, met de titel in beeld. Je kaarten spelen dus nog steeds af, maar iemand moet de telefoon vasthouden en wegdraaien. Het werkt als noodoplossing, niet als eerste keuze.
 
-1. Kopieer de link naar je **openbare afspeellijst** (Spotify, Apple Music, Tidal, Deezer of YouTube Music).
-2. Plak deze in QRSong! en genereer je QR-code kaarten.
-3. Gebruik de QRSong! app om te scannen en nummers af te spelen, en raad vervolgens de **artiest**, **songtitel** en **jaar van uitgave**.
+## Waarom de jaartallen verschillen
 
-Wil je het nu meteen proberen? Begin hier: [/nl/generate/playlist](/[lang]/generate/playlist). Heb je inspiratie nodig? Bekijk onze zorgvuldig samengestelde selectie: [/nl/playlists](/[lang]/playlists).
+Waar in de tabel Met AI ondersteund staat, betekent dat dat de dienst niet betrouwbaar het originele releasejaar levert. Ontbrekende jaren worden daarom aangevuld en gecontroleerd, niet zomaar vertrouwd.
 
-## App-update: QRSong! companion app 1.5.0
+Dat is belangrijk, want een tijdlijnspel is alleen speelbaar als de jaartallen kloppen. Streamingmetadata gaat vaak op een heel specifieke manier mis: je krijgt het jaar van de versie die je afspeelt, niet van het origineel. Een remaster zet een nummer uit 1975 ineens in 2011. Bij Spotify en Apple Music is er meer om mee te werken. Bij de andere diensten ligt meer van het werk bij ons.
 
-Om multi-service afspelen te ondersteunen, hebben we **QRSong! app versie 1.5.0** uitgebracht voor iOS en Android. Naast stabiliteitsverbeteringen bevat de update:
+## Wat dit in de praktijk betekent
 
-- **Meer afspeelservices**, zodat je nummers kunt openen in de dienst die jij gebruikt
-- **Haptische feedback** voor een beter scan-en-speelgevoel
-- **Stabiliteitsverbeteringen** om scannen en afspelen soepel te houden tijdens feestjes en evenementen
+**Een dienst kiezen voor een nieuw deck:** Spotify of Apple Music als je een van de twee hebt. Tidal of Deezer zonder twijfel als je daarvoor betaalt. YouTube Music als dat is wat je hebt, met de wetenschap dat de titel zichtbaar zal zijn.
 
-Voor veel groepen is dit de echte winst: je kunt dezelfde spelavond houden, zelfs als niet alle gasten hetzelfde muziekplatform gebruiken.
+**Je kunt later wisselen.** De dienst is een instelling in de app, geen eigenschap van je kaarten. Koppel een ander account en hetzelfde deck speelt via die dienst.
 
-## Spotify-kaarten werken nu ook op andere diensten
+**Je gasten hebben jouw dienst niet nodig.** Afspelen gebeurt bij degene die scant, via diens eigen account. Eén persoon host, de rest speelt gewoon mee.
 
-Een van de belangrijkste wijzigingen achter de schermen is dat we **elke track in onze database hebben aangevuld met links voor de nieuwe diensten**. In de praktijk betekent dit:
+**Het deck maken en spelen staan los van elkaar.** Je kunt een playlistlink van een van de vijf diensten plakken, en de kaarten daarna afspelen via een van de vijf diensten. Ze hoeven niet overeen te komen.
 
-- QR-kaarten gegenereerd van **Spotify-afspeellijsten** kunnen ook worden afgespeeld via **Apple Music**, **Tidal**, **Deezer** of **YouTube Music**.
-- Je zit niet vast aan één platform wanneer je je kaarten print.
-- Het is makkelijker om oudere decks opnieuw te gebruiken bij nieuwe evenementen, zelfs als je streamingabonnement verandert.
+## Als je al kaarten hebt
 
-## Verschillende diensten hetzelfde laten aanvoelen (zelfs met hun eigenaardigheden)
+De gratis app leest ook kaarten van andere muziekkaartspellen, naast die van ons. Dus een retaildeck dat je al hebt, speelt via elk van deze diensten. Als je er eentje hebt gekocht die alleen Spotify ondersteunt en je hebt geen Spotify, dan is [dit de oplossing](/[lang]/hitster-without-spotify).
 
-Elke streamingdienst heeft zijn eigen eigenaardigheden, van afspeellijst-URL-formaten en metadata-verschillen tot hoe tracks worden herkend en geopend voor afspelen. Ons doel tijdens de ontwikkeling was eenvoudig: **houd de QRSong! ervaring consistent** voor elke gebruiker.
+Alle details staan op de [pagina met ondersteunde platforms](/[lang]/supported-platforms), en de app is gratis voor [iPhone en Android](/[lang]/download-app).
 
-Of je nu **fysieke QR-code kaarten** op premium papier maakt of kiest voor een **directe digitale download**, de ervaring blijft gericht op wat écht telt: scannen, afspelen en muziek omtoveren tot een interactief spel.
+## FAQ
 
-## Waarom multi-service ondersteuning belangrijk is voor feestjes en cadeaus
+### Welke streamingdienst is het best voor een muziekkaartspel?
 
-QRSong! is ontworpen voor gedeelde momenten, niet voor solo luisteren. Met meer ondersteunde diensten wordt het veel makkelijker om QRSong! te gebruiken voor:
+Spotify of Apple Music. Beide verbergen het volledige nummer tijdens het afspelen en halen het releasejaar uit de dienst zelf. Dat is precies wat een tijdlijnspel nodig heeft.
 
-- **Muzikale party trivia** (raad dat deuntje, raad de artiest, raad het jaar)
-- **Familie spellenavonden** waarbij niet iedereen dezelfde app gebruikt
-- **Unieke cadeaus voor muziekliefhebbers**, gepersonaliseerd met een afspeellijst
-- **Teamuitjes en ijsbrekers** voor bedrijven
-- **Pubquiz-prijzen** en muziekrondes
+### Werkt QRSong! zonder Spotify?
 
-Wil je laten zien hoe de kaarten eruitzien? Bekijk voorbeelden en voorbeeld-PDFs: [/nl/examples](/[lang]/user/examples). Benieuwd naar prijzen en verzending? Gebruik het prijsoverzicht en de calculator: [/nl/pricing](/[lang]/pricing) en bekijk de bezorginformatie: [/nl/shipping-info](/[lang]/shipping-info).
+Ja. Apple Music, Tidal, Deezer en YouTube Music werken allemaal, en je koppelt gewoon de dienst waarvoor je al betaalt. Alleen YouTube Music heeft een belangrijke beperking.
 
-## Veelgestelde vragen over de nieuwe diensten
+### Waarom toont YouTube Music de titel van het liedje?
 
-### Kan ik elke afspeellijstlink gebruiken?
+Omdat de link moet openen in de YouTube Music app, waar de titel tijdens het afspelen op het scherm staat. Dat kun je niet onderdrukken, dus dit is de enige dienst waarbij iemand de telefoon moet vasthouden en weg moet kijken.
 
-Je kunt **openbare afspeellijst-URL's** van Spotify, Apple Music, Tidal, Deezer en YouTube Music plakken. Als een afspeellijst privé is of niet toegankelijk, kan QRSong! deze mogelijk niet importeren.
+### Kan ik kaarten maken van een Apple Music of Tidal playlist?
 
-### Heb ik Spotify nodig om QRSong! te gebruiken?
+Ja. Plak een openbare playlistlink van een van de vijf diensten en het deck wordt daarvan gemaakt.
 
-Nee. Met de nieuwe integraties kun je QR-muziekkaarten maken en afspelen met meerdere streamingdiensten. De QRSong! app helpt je bij het kiezen van je favoriete afspeeldienst.
+### Hebben al mijn gasten hetzelfde abonnement nodig?
 
-### Bevatten fysieke QRSong! kaarten nog steeds digitale downloads?
+Nee. Alleen degene die scant heeft een account nodig, want het afspelen loopt via diens app. De rest luistert en raadt gewoon mee.
 
-Ja. Wanneer je een fysiek product koopt, krijg je ook een **gratis digitale download**, handig voor last-minute feestjes of om zelf thuis te printen.
+### Kan ik van dienst wisselen nadat ik kaarten heb gekocht?
 
-## Wat staat er op de planning: meer integraties met muziekdiensten
-
-We blijven toekomstige integraties met muziekdiensten verkennen. Ons doel is om van QRSong! de gemakkelijkste manier te maken om afspeellijsten om te zetten in **QR-code muziekkaarten**, ongeacht waar je muziek zich bevindt.
-
-Als je een platform hebt dat je graag ondersteund ziet, neem dan contact met ons op hier: [/nl/contact](/[lang]/contact). Je kunt de huidige lijst ook altijd bekijken: [/nl/supported-platforms](/[lang]/supported-platforms).
-
-## Probeer het: genereer QR-kaarten van je afspeellijst
-
-Klaar om een deck te maken voor je volgende event? Plak je afspeellijstlink en maak in een paar minuten je kaarten: [/nl/generate/playlist](/[lang]/generate/playlist).
-
-Geef je liever QRSong! als cadeau? Cadeaubonnen zijn hier te vinden: [/nl/giftcard](/[lang]/giftcard).
+Ja. De dienst is een instelling in de app, niet iets dat in de kaarten vastzit. Je kunt dus wisselen wanneer je wilt en hetzelfde deck blijft werken.

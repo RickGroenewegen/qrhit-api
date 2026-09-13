@@ -1,56 +1,58 @@
-Apple Music 用户有大好消息啦！现在你可以通过 Hitstalt 用 Apple Music 来玩 QRSong! 了，Hitstalt 是一款专为 QRSong! 体验打造的免费伴随应用。通过这次合作，你现有的 QRSong 二维码卡都能快速、稳定地在 Apple Music 上播放，不需要 Spotify，不用账号，也没有广告 🎵
+我刚推出 QRSong! 的时候，卡牌只能通过 Spotify 播放。一开始还好，后来就不行了：陆续有人发邮件来，说自己买了一副牌，坐下来准备玩，结果发现家里一直用的是 Apple Music。有一段时间，我能给出的诚实答案是一个要用第三方 app 的临时办法。它能用，但我并不喜欢把顾客引到那里去。
 
-## 什么是 Hitstalt？
+现在不用这样了。免费 QRSong! app 已经直接支持 Apple Music，同时也支持 Tidal、Deezer 和 YouTube Music。这篇文章会说明它怎么用，也会讲清楚它和 Spotify 比起来到底哪里更好或更差，因为这些差别比营销话术通常承认的更重要。
 
-Hitstalt 是一款免费的、无广告的 QRSong! 伴随应用，专为 Apple Music 用户设计。虽然它并不是官方的 QRSong! 应用，但我们与 Hitstalt 合作，让游戏能够通过 Apple Music 以一种简单且尊重隐私的方式完整运行。
+## 连接 Apple Music 大概只要一分钟
 
-- 兼容超过 98% 的 QRSong 卡片
-- 直接使用 Apple Music，无需登录
-- 扫描卡片后音乐立即播放
-- DJ 模式显示歌曲名、艺人和发行年份
-- 完全免费且无广告
-- 已获得 5.0 星好评，下载量超过 1,000 次
-- 稳定、快速的 Apple Music 集成，播放流畅
+1. 在 iPhone 或 Android 上安装免费的 QRSong! app。
+2. 打开设置，选择 Apple Music 作为你的服务。
+3. 用你自己的 Apple Music 账号登录一次。
+4. 用 app 扫描一张卡牌，歌曲就会播放。
 
-## 如何用 Apple Music 玩 QRSong!
+你不需要重新购买，也不需要重新打印。你已经拥有的卡牌可以照常使用，包括你在这些功能出现之前买的牌组。
 
-1. 在 iOS 设备上打开 Hitstalt 应用并允许访问相机。
-2. 扫描任意 QRSong 二维码卡片，歌曲会在 Apple Music 中立即播放。
-3. 随意切换播放顺序、暂停、调节音量，就像使用任何 Apple Music 播放功能一样。
+## Apple Music 是 Spotify 之外最好的选择
 
-就是这么简单。你的 QRSong 卡组、精选歌单和自定义套装都能通过 Hitstalt 在 Apple Music 上运行，无需切换服务，就能畅玩音乐问答。
+这里值得说得准确一点，因为这五个服务的表现并不完全一样，而这个差别会决定游戏到底好不好玩。
 
-## 兼容性及使用预期
+让猜歌游戏真正成为游戏的关键是 **隐藏播放**：app 必须在不显示歌曲信息的情况下开始播放。在 Apple Music 上，它正是这样做的，而且播放的是完整歌曲，不是三十秒试听。发行年份直接来自 Apple Music，这一点比听起来更重要：时间线类游戏能不能成立，取决于卡牌背面的年份是不是这首歌真正发行的年份。
 
-- **卡片覆盖率：**Hitstalt 可播放超过 98% 的 QRSong 卡片。如果 Apple Music 中缺少某曲目，跳过即可。
-- **速度：**扫描几乎是即时的，保证聚会和问答时游戏流程顺畅。
-- **隐私：**无需账号、无广告，专为极简且以游戏为先的体验而设计。
+Spotify 的表现也是一样。Tidal 和 Deezer 也会隐藏曲目信息，不过播放的是三十秒试听，不是完整歌曲，用来猜年份已经够了。YouTube Music 是能避免就尽量避免的那个：它完全没有隐藏播放，因为链接必须在 YouTube Music app 里打开，而歌名会显示在屏幕上。它仍然能播放你的卡牌，但总得有个人拿着手机，还要把眼睛移开。
 
-## 常见问题，快速解答
+所以如果你可以选择，就用 Apple Music 或 Spotify。如果你用的是 Tidal 或 Deezer，也不会失去真正影响游戏的东西。如果你只有 YouTube Music，它也能用，只是有这个限制。
+
+这些内容也整理在[支持的平台页面](/[lang]/supported-platforms)上。
+
+## 用 app 扫描，不要用相机
+
+你的手机相机能读出 QR 码，也会毁掉这一轮。相机会在你点开之前，就在链接预览里显示歌名，猜歌还没开始就结束了。它还会先打开浏览器，再尝试跳到音乐 app，这样很慢，有时候还会跳到错误的地方。
+
+app 会跳过这些麻烦。它会解析卡牌，把曲目发送到你连接的服务，并且在有人翻开卡牌之前，一直把歌名、艺人和年份藏起来。
+
+## 它也能读取你已经拥有的卡牌
+
+同一个扫描器也能读取 Hitster 卡牌和其他音乐 QR 卡，不只是我们的卡牌。如果你有一副零售版牌组，但没有 Spotify，你可以用这个免费 app 通过 Apple Music 来玩，完全不需要从我这里买任何东西。我宁愿大家知道这一点，而不是不知道。如果你想看更完整的说明，我另外写了一篇：[不用 Spotify 玩你的 Hitster 卡牌](/[lang]/hitster-without-spotify)。
+
+当一副牌因为大家都已经记住而不再好玩时，就是时候[用你自己的播放列表做一副牌](/[lang]/pricing)了。
+
+## 常见问题
 
 ### QRSong! 支持 Apple Music 吗？
 
-支持。通过我们与 Hitstalt 的合作，你可以使用 Apple Music 玩 QRSong!。在 Hitstalt 中扫描卡片，歌曲即可立即播放。
+支持，直接在免费的 QRSong! app 里就能用。你只需要连接一次 Apple Music 账号，然后用 app 扫描卡牌。不再需要第三方 app，你现有的卡牌也不需要做任何改动。
 
-### Hitstalt 真的是免费且无广告吗？
+### 我需要 Apple Music Premium 吗？
 
-是的。Hitstalt 完全免费且无广告。
+你需要一个普通的 Apple Music 订阅，个人或家庭都可以。app 是通过你自己的账号播放，所以你的方案能用什么，你就能得到什么。
 
-### 哪些 QRSong 卡片可在 Apple Music 上使用？
+### 我可以用 Apple Music 播放列表做一副牌吗？
 
-超过 98% 的卡片可使用。如果某个曲目在你所在地区的 Apple Music 不可用，请跳到下一张卡。
+可以。粘贴 Apple Music 播放列表链接，QRSong! 会为每一首歌生成一张卡牌，就像它处理 Spotify、Tidal、Deezer 和 YouTube Music 一样。
 
-### 我可以根据 Apple Music 歌单创建新卡片吗？
+### 在 Apple Music 上会隐藏歌名吗？
 
-目前，卡片创建使用 Spotify 歌单。一旦打印或下载后，你的卡片就可以通过 Hitstalt 在 Apple Music 上播放。不过这也同样需要一个免费 Spotify 账号。
+会，而且播放的是完整歌曲，不是试听。Tidal 和 Deezer 会隐藏三十秒试听。YouTube Music 没有隐藏播放，因为链接会在 YouTube Music app 里打开，歌名是可见的。
 
-## 提升 Apple Music 使用体验的小贴士
+### 之前那个第三方 Apple Music app 怎么了？
 
-- 开启相机权限，让扫描即刻生效。
-- 扫描实体卡片时请保证光线充足。
-- 在后台保持 Apple Music 打开，以更快速地播放。
-- 使用外接音箱，让聚会和问答的音效更佳。
-
-## 总结
-
-Hitstalt 是一款非官方却备受好评的 QRSong! 游戏 Apple Music 伴随应用。它提供即时、无广告的播放，并对 QRSong 卡片有出色的覆盖率，让 Apple Music 订阅者能够无缝享受完整的 QRSong 体验。
+那是在 Apple Music 还没有被直接支持之前的临时办法，现在我不会再建议任何人走那条路。请改用官方的 QRSong! app：它是免费的，支持五个服务，而且出了问题时，我真的能修。

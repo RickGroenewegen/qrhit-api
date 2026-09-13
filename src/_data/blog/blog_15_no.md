@@ -1,50 +1,52 @@
-Musikkbingo er det enkleste selskapsspillet jeg vet om å forklare, og det mest irriterende å forberede. Reglene tar ti sekunder: alle får et kort med sangtitler på, du spiller korte klipp, folk krysser av det de kjenner igjen, og førstemann med fullt kort roper bingo. Det er forberedelsene som sluker kvelden, fordi hver spiller trenger et unikt kort, og alle kortene må trekkes fra den samme sanglisten.
+Musikkbingo er det enkleste selskapsspillet jeg vet om å forklare, og det mest irriterende å forberede. Reglene tar ti sekunder: alle får et kort med sangtitler på, du spiller små klipp, folk krysser av det de kjenner igjen, og første fulle kort roper bingo. Det er forberedelsene som spiser opp kvelden, fordi hver spiller trenger et forskjellig kort, og alle kortene må trekkes fra den samme sangbanken.
 
-Jeg har laget disse for hånd, og jeg har laget verktøyet som gjør det for deg, så her får du begge metodene, helt ærlig. Start med den manuelle, for den er gratis, og til én fest er den faktisk helt fin.
+Jeg har laget slike for hånd, og jeg har laget verktøyet som gjør det for deg, så her er begge veiene, helt ærlig. Start med den manuelle, fordi den er gratis og faktisk helt fin for én fest.
 
 ## Lage musikkbingo-kort for hånd
 
 ### 1. Velg 40 til 60 sanger
 
-Færre enn 40, og de samme sangene dukker opp for fort, så flere blir ferdige samtidig og slutten blir flat. Flere enn 60, og spillet tar lang tid, fordi sjansen for at én spiller fyller kortet sitt synker raskt.
+Færre enn 40, og de samme sangene kommer for fort tilbake, så flere blir ferdige samtidig og slutten blir flat. Mer enn 60, og spillet tar lang tid, fordi sjansen for at én spiller fyller et kort faller raskt.
 
-Velg sanger folk kjenner igjen fra de første sekundene. En spilleliste til musikkbingo er ikke en god spilleliste: smale favoritter du elsker, kan drepe stemningen. Gå for refrenger folk kan rope med på.
+Velg sanger folk kjenner igjen fra de første sekundene. En spilleliste til musikkbingo er ikke en god spilleliste: obskure favoritter du elsker, dreper stemningen. Gå for refrenger folk kan rope med på.
 
-### 2. Bestem rutenettet
+### 2. Velg rutenettet
 
-Et 5x5-rutenett med et gratis felt i midten er klassikeren, og det gir 24 sanger per kort. Et 4x4 med 16 sanger går raskere og passer bedre for en gruppe som ikke kommer til å sitte stille i en time. Et 3x3 er en god barneversjon.
+Et 5x5-rutenett med en gratis midtrute er klassikeren, og det er 24 sanger per kort. Et 4x4 med 16 sanger går raskere og passer bedre for en gruppe som ikke sitter stille i en time. Et 3x3 er en god barneversjon.
 
-### 3. Lag kortene slik at ingen er like
+### 3. Lag kortene så ingen er like
 
-Det er her jobben ligger. Hvert kort trenger et tilfeldig utvalg fra sanglisten din, ellers vinner flere samtidig. For hånd betyr det at du blander listen for hvert kort og tar de første 24, før du legger dem inn i et rutenett i et regneark eller et designverktøy. Til et selskap med tolv personer er det tolv blandinger og tolv oppsett.
+Dette er den faktiske jobben. Hvert kort trenger et forskjellig tilfeldig utvalg fra sangbanken din, ellers vinner flere samtidig. For hånd betyr det at du stokker listen for hvert kort og tar de første 24, før du legger dem ut i et rutenett i et regneark eller et designverktøy. For en fest med tolv personer betyr det tolv stokkinger og tolv oppsett.
 
-Et regneark hjelper: legg sangene i en kolonne, legg til en kolonne med tilfeldige tall, sorter etter den, ta de 24 øverste, lim dem inn i et rutenett, og gjenta. Når malen er klar, tar det omtrent fem minutter per kort.
+Et regneark hjelper: legg sangene i en kolonne, legg til en kolonne med tilfeldige tall, sorter etter den, ta de øverste 24, lim dem inn i et rutenett, gjenta. Det tar omtrent fem minutter per kort når du først har malen.
 
 ### 4. Lag en vertsliste
 
-Du trenger ditt eget ark med alle sangene, slik at du kan følge med på hva som er spilt, og du må kunne spille hver sang raskt. Å lete etter neste låt mellom rundene er det som gjør en bingokveld treg.
+Du trenger ditt eget ark med alle sangene på, så du kan holde styr på hva som er spilt, og du må kunne spille hver sang raskt. Å lete etter neste låt mellom rundene er det som får en bingokveld til å dra ut.
 
 ### 5. Skriv ut og test ett kort
 
-Skriv ut ett kort først. Sjekk at teksten kan leses på tvers av bordet, og at rutenettlinjene tåler printeren din. Skriv deretter ut resten.
+Skriv ut ett kort først. Sjekk at teksten kan leses over et bord, og at rutenettet overlever skriveren din. Så skriver du ut resten.
 
 ## Det som vanligvis går galt
 
-**Alle vinner samtidig.** Nesten alltid fordi sangutvalget var for lite i forhold til kortstørrelsen, eller fordi kortene ikke var skikkelig randomisert. Hvis to kort deler tjue av tjuefire sanger, blir de ferdige innen en runde fra hverandre.
+**Alle vinner samtidig.** Nesten alltid fordi sangbanken var for liten i forhold til kortstørrelsen, eller fordi kortene ikke var ordentlig randomisert. Hvis to kort deler tjue av tjuefire sanger, blir de ferdige innen én runde av hverandre.
 
-**Ingen kjenner igjen noe.** Spillelisten ble valgt av én person med sterk smak. Musikkbingo er et spill for rommet, og det trenger sanger rommet kjenner.
+**Ingen kjenner igjen noe.** Spillelisten ble valgt av én person med sterk smak. Musikkbingo er et spill for en gruppe, og det trenger sanger mange kan.
 
-**Vertskvelden blir en jobb.** Finne hver låt, spille den, huske hva som har gått, sjekke et vinnerkort. Det er fire ting på én gang, samtidig som du egentlig også er på festen.
+**Vertskvelden blir en jobb.** Finne hver låt, spille den, huske hva som har gått, kontrollere et vinnende kort. Det er fire ting på én gang, samtidig som du egentlig også er på festen.
 
-**Vinnersjekken blir gjetting.** Når noen roper bingo, må du sjekke kortet deres mot alt som faktisk er spilt. På papir, med et rom som roper, er det der diskusjonene starter.
+**Sjekken blir gjetting.** Når noen roper bingo, må du sjekke kortet deres mot alt som faktisk er spilt. På papir, i et rom som roper, er det der diskusjonene starter.
 
-## Den raskere måten
+## Den raskere veien
 
-[QRSong!](/[lang]/music-bingo) gjør den samme jobben fra en spillelistelenke. Du limer inn en spilleliste fra Spotify, Apple Music, YouTube Music, Tidal eller Deezer, og den lager så mange ulike bingokort du trenger fra disse låtene, skikkelig randomisert og klart til utskrift.
+Det QRSong! faktisk lager, er QR-musikkort: ett kort per sang, med en QR-kode på forsiden og artist, tittel og utgivelsesår på baksiden. Du limer inn en spilleliste fra Spotify, Apple Music, YouTube Music, Tidal eller Deezer og får en kortstokk bygget fra den.
 
-Den delen jeg egentlig bygget det for, er vertskapet. Det finnes en vertsskjerm som spiller sangene og holder styr på hva som har gått, og når noen roper bingo, skanner du kortet deres og får vite med én gang om de faktisk har vunnet. Ingen kryssjekking av en liste ved et bråkete bord.
+[Musikkbingo](/[lang]/music-bingo) er ett av spillene den kortstokken kan brukes til, og det er der forberedelsene over forsvinner. Bingoarkene genereres fra sangene som allerede er på kortene dine, ordentlig randomisert, så mange som du har spillere.
 
-Fordi det kjører på QR-musikkort, kan den samme kortstokken også brukes til [tre andre spill](/[lang]/music-timeline): et tidslinjespill der du gjetter rekkefølgen, en quiz og et matchespill. Én kortstokk, fire måter å bruke den på, som er forskjellen på et spill du spiller én gang og en boks som tas frem igjen.
+Det jeg egentlig bygget det for, er det å være vert. Det finnes en vertsskjerm som spiller sangene og holder styr på hva som har gått, og når noen roper bingo, skanner du kortet deres, og den forteller deg med en gang om de faktisk har vunnet. Ingen kryssjekking av lister ved et bråkete bord.
+
+Bingo er et tillegg, ikke selve produktet. Kortene er produktet, og den samme kortstokken kan også brukes til [tre andre spill](/[lang]/music-timeline): et tidslinjespill der du gjetter, en quiz og et matchingspill. Én kortstokk, fire måter å bruke den på, som er forskjellen på et spill du spiller én gang og en eske som kommer frem igjen.
 
 Hvis du heller vil se hele greia først, forklarer [musikkbingo-siden](/[lang]/music-bingo) hvordan en runde fungerer, og [priser](/[lang]/pricing) dekker både PDF for utskrift hjemme og trykte kort.
 
@@ -52,24 +54,24 @@ Hvis du heller vil se hele greia først, forklarer [musikkbingo-siden](/[lang]/m
 
 ### Hvor mange sanger trenger du til musikkbingo?
 
-40 til 60 for et vanlig 5x5-kort. Under 40 overlapper kortene så mye at flere spillere blir ferdige samtidig. Over 60 tar spillet lang tid, fordi ingen enkeltkort fylles raskt nok.
+40 til 60 for et vanlig 5x5-kort. Under 40 overlapper kortene så mye at flere spillere blir ferdige samtidig. Over 60 tar spillet lang tid fordi ingen enkeltkort fylles opp.
 
 ### Hvor mange sanger er det på ett bingokort?
 
-24 på et 5x5-rutenett med et gratis felt i midten, 16 på et 4x4, 9 på et 3x3. 4x4 er det jeg ville valgt for en gruppe som vil spille noen runder i stedet for én lang.
+24 på et 5x5-rutenett med en gratis midtrute, 16 på et 4x4, 9 på et 3x3. 4x4 er det jeg ville valgt for en gruppe som vil spille noen runder i stedet for én lang.
 
-### Hvor langt bør hvert musikkklipp være?
+### Hvor lenge bør hvert sangklipp være?
 
-Omtrent 15 til 30 sekunder. Lenge nok til at folk som nesten kjenner igjen sangen rekker å ta den, kort nok til at spillet fortsetter å flyte. Hvis rommet sliter, spill refrenget i stedet for introen.
+Cirka 15 til 30 sekunder. Lenge nok til at folk som nesten kjenner den igjen, rekker å ta den, kort nok til at spillet holder tempoet. Hvis rommet sliter, spill refrenget i stedet for introen.
 
 ### Kan du lage musikkbingo-kort gratis?
 
-Ja, for hånd. Et regneark, en tilfeldig sortering og en printer får deg i mål, og til én fest er det et helt greit svar. Det koster en kveld i stedet for penger.
+Ja, for hånd. Et regneark, en tilfeldig sortering og en skriver får deg dit, og for én fest er det et helt greit svar. Det koster en kveld i stedet for penger.
 
-### Hvordan sjekker du et vinnerkort?
+### Hvordan sjekker du et vinnende kort?
 
-For hånd sammenligner du de avkryssede rutene med listen over det som er spilt, noe som går sakte og fort blir kranglete i et høyt rom. Å skanne kortet i stedet avgjør det på et sekund, og det er derfor vertsskjermen finnes.
+For hånd sammenligner du de avkryssede rutene med listen din over hva som er spilt, noe som er tregt og lett blir en diskusjon i et høylytt rom. Å skanne kortet i stedet avgjør det på et sekund, og det er derfor vertsskjermen finnes.
 
 ### Hvilke sanger fungerer best til musikkbingo?
 
-Sanger med gjenkjennelige refrenger som de fleste i rommet har hørt. Bland tiår, slik at ingen sin epoke mangler, og unngå smale albumspor selv om de er bedre låter. En bingospilleliste er laget for gjenkjenning, ikke for lytting.
+Sanger med gjenkjennelige refrenger som de fleste i rommet har hørt. Bland tiår, så ingen sin epoke mangler, og unngå obskure låter selv om de er bedre sanger. En bingospilleliste bygges for gjenkjenning, ikke for lytting.

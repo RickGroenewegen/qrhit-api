@@ -1,71 +1,57 @@
-Transformez votre goût musical en économies 🎵 Avec QRSong!, vous pouvez désormais gagner du crédit chaque fois que quelqu’un achète votre playlist mise en avant. Faites découvrir votre style musical à plus de monde et réduisez en même temps le coût de votre prochaine commande.
+Si tu crées un bon jeu de cartes, d’autres personnes en ont envie. Ça arrive plus souvent que je ne l’imaginais, et le programme de réduction existe parce que l’autre solution, c’était de voir les gens faire des captures d’écran de leur playlist et les envoyer à la main.
 
-## Qu’est-ce que le programme Réductions à Gagner ?
-
-Le programme Réductions à Gagner récompense les clients QRSong! qui choisissent de mettre leur playlist en avant sur notre site. Lorsqu’un internaute découvre et achète votre playlist, vous gagnez 2,50 € de crédit de réduction à utiliser sur vos prochaines commandes QRSong!. Il n’y a aucune limite à ce que vous pouvez gagner.
+Voici comment ça marche et, plus utilement, ce qui fait qu’une playlist est vraiment choisie par d’autres personnes.
 
 ## Comment ça marche
 
-1. Effectuez votre commande comme d’habitude, téléchargement numérique ou cartes QR physiques. Commencez ici : [créez votre playlist](/[lang]/generate/playlist).
-2. Optez pour le programme après le paiement. Utilisez le lien dans votre mail de confirmation pour ajouter un titre accrocheur et une description.
-3. Partagez votre lien unique sur les réseaux sociaux, avec vos amis, ou où vous voulez.
-4. Gagnez 2,50 € de crédit à chaque fois que quelqu’un achète votre playlist mise en avant. Le crédit est ajouté instantanément à votre compte.
+Quand tu crées un jeu de cartes, tu peux choisir de mettre la playlist en avant publiquement. Elle apparaît alors sur la [page des playlists](/[lang]/playlists), où n’importe qui peut la choisir comme point de départ pour ses propres cartes.
 
-Besoin d’inspiration avant de créer la vôtre ? Découvrez nos [playlists en avant](/[lang]/playlists) ou consultez de vraies photos de produits et des exemples de PDF dans [exemples](/[lang]/user/examples).
+Chaque fois que quelqu’un commande un jeu de cartes créé à partir de ta playlist mise en avant, tu gagnes du crédit pour ta prochaine commande. Tu ne vends rien et personne ne te paie : tu obtiens une réduction, et l’autre personne obtient une playlist à laquelle quelqu’un a vraiment réfléchi.
 
-## Ce qui est partagé
+Tu peux arrêter la mise en avant à tout moment, et une playlist retirée n’est plus proposée immédiatement.
 
-- Seulement le titre et la description de votre playlist que vous rédigez.
-- Vos informations personnelles ne sont jamais affichées.
-- Vous restez maître de la présentation de votre playlist.
+## Ce que les gens choisissent
 
-## Pourquoi participer
+Je peux voir quelles playlists mises en avant sont utilisées et lesquelles restent là, et le schéma est assez clair pour être partagé.
 
-- Gains illimités, pas de plafond sur votre solde de réductions.
-- Partage facile grâce à votre lien unique.
-- Crédit instantané dès qu’un achat est effectué.
-- Utilisation flexible, appliquez tout ou partie du crédit sur chaque commande.
+**Une idée précise bat une bonne playlist.** « Les chansons numéro un la semaine de ta naissance » est choisie. « Mes préférées » ne l’est pas, même si les morceaux sont excellents. Les gens qui parcourent les playlists cherchent un concept qu’ils peuvent donner à une pièce entière, pas ton goût personnel.
 
-## Parfait pour tous les usages de QRSong!
+**Nomme-la comme une étiquette de rayon.** Le titre est tout l’argument, parce que c’est tout ce qu’une personne voit avant de décider. « Tubes d’un seul été des années 90 » dit exactement quelle soirée elle va obtenir. « Vibes » ne dit rien.
 
-QRSong! transforme les playlists Spotify en cartes QR code scannables pour un quiz musical interactif. Les invités scannent une carte avec l’app QRSong! pour jouer un titre sur Spotify et deviner l’artiste, le titre et l’année. C’est idéal pour les soirées, les soirées en famille, les quiz de pub, la salle de classe et les cadeaux. Choisissez **les téléchargements numériques** pour jouer instantanément ou **les cartes imprimées premium** expédiées dans le monde entier. Chaque commande physique inclut un téléchargement numérique gratuit.
+**Construis-la pour qu’on reconnaisse les titres.** La même règle vaut que pour n’importe quel jeu de cartes : des refrains et des singles, pas des morceaux d’album. Une playlist mise en avant que personne ne peut deviner est commandée une fois et n’est jamais recommandée.
 
-Prêt à créer votre set ? Rendez-vous sur [créez votre playlist](/[lang]/generate/playlist), consultez [nos tarifs](/[lang]/pricing) et lisez [les avis](/[lang]/user/reviews).
+**Répartis les décennies, sauf si le concept est une décennie.** Un jeu chronologique a besoin d’écarts entre les années pour être jouable tout court.
 
-## Déjà client ?
+## Les occasions qui marchent bien
 
-Si vous avez passé une commande avant le lancement de cette fonctionnalité, vous pouvez toujours participer. Contactez-nous et nous vous enverrons votre lien promotionnel personnalisé : [contacter QRSong!](/[lang]/contact)
+Les jeux par décennie sont les plus fiables. Ensuite : les mariages, une année précise, les chansons de films, et les sélections propres à un pays que seule une personne qui vit là-bas saurait vraiment assembler.
+
+Celles qui marchent mal sont les très personnelles, ce qui est logique. Un jeu de cartes construit à partir de ta propre histoire est le meilleur cadeau possible pour les personnes qui en font partie, et un achat étrange pour quelqu’un qui ne te connaît pas. Garde-les privées et mets-les plutôt dans une [boîte cadeau](/[lang]/gift-box).
+
+## Les limites, honnêtement
+
+C’est une réduction sur ta prochaine commande, pas un revenu. Si tu mets une playlist en avant et que personne ne la choisit, il ne se passe rien et tu n’as rien perdu. Si l’un de tes jeux devient populaire, ta prochaine commande coûte moins cher. C’est tout le mécanisme, et je préfère le décrire simplement plutôt que l’habiller.
+
+Les détails et conditions actuelles sont sur la [page gagner une réduction](/[lang]/earn-discount).
 
 ## FAQ
 
-### Comment rejoindre le programme Réductions à Gagner ?
+### Comment gagner une réduction sur QRSong! ?
 
-Passez une commande, puis utilisez le lien dans votre email de confirmation pour vous inscrire et ajouter le titre et la description de votre playlist. Nouveau ici ? Commencez sur [créez votre playlist](/[lang]/generate/playlist).
+Mets en avant une playlist que tu as créée. Quand quelqu’un d’autre commande un jeu de cartes fait à partir d’elle, tu gagnes du crédit pour ta prochaine commande.
 
-### Combien je gagne par achat ?
+### Est-ce que je suis payé quand quelqu’un utilise ma playlist ?
 
-Vous gagnez 2,50 € de crédit de réduction chaque fois que quelqu’un achète votre playlist mise en avant.
+Non. Tu gagnes du crédit pour ta propre prochaine commande, pas un paiement. C’est un programme de réduction, pas un partage de revenus.
 
-### Quand le crédit est-il disponible ?
+### Puis-je arrêter de mettre une playlist en avant ?
 
-Immédiatement. Votre solde de réductions est mis à jour dès que l’achat est finalisé.
+Oui, à tout moment, et elle cesse immédiatement d’être proposée aux autres personnes.
 
-### Y a-t-il un plafond de gains ?
+### Quel type de playlist est le plus souvent choisi ?
 
-Non. Il n’y a pas de limite. Plus de gens achètent votre playlist, plus vous économisez.
+Celles dont le titre porte un concept clair. Les sélections par décennie, les années précises, les jeux pour mariage et les chansons de films marchent bien. Tout ce qui est nommé d’après ton propre goût est rarement choisi, parce que les gens cherchent une soirée qu’ils peuvent proposer à une pièce entière.
 
-### Comment utiliser ma réduction ?
+### Est-ce que les gens verront mon nom ?
 
-Au moment du paiement, appliquez votre crédit comme un solde et choisissez le montant à dépenser sur cette commande.
-
-### Qu’en est-il de la vie privée ?
-
-Seuls le titre et la description de la playlist que vous fournissez sont affichés. Vos données personnelles ne sont jamais partagées.
-
-### Besoin d’aide ?
-
-Visitez la [FAQ](/[lang]/faq) pour des réponses rapides ou contactez-nous via [contact](/[lang]/contact).
-
-## Commencez dès aujourd’hui
-
-Créez une playlist, mettez-la en avant et partagez votre lien. Votre prochaine commande pourrait être gratuite. Commencez ici : [créez votre playlist](/[lang]/generate/playlist). Besoin d’inspiration ? Parcourez nos [playlists en avant](/[lang]/playlists) ou découvrez nos formats et options d’expédition sur [nos tarifs](/[lang]/pricing).
+C’est la playlist qui est mise en avant, pas toi. Si tu préfères garder un jeu privé, ne le mets tout simplement pas en avant, et il reste à toi.

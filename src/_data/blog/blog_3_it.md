@@ -1,43 +1,59 @@
-## Personalizza le tue QRSong! cards con il nuovo designer
+Le persone passano più tempo nell'editor delle carte di QRSong! che in qualunque altra parte, e di solito per i motivi sbagliati. Quindi ecco cosa conta davvero su una carta musicale, e cosa è solo decorazione.
 
-QRSong! è felice di annunciare il lancio del nostro **QRSong! Card Designer**. Che tu voglia creare un regalo musicale unico, organizzare le tue playlist o rendere le tue card indimenticabili a un evento, il nostro designer ti permette di aggiungere facilmente un tocco personale. In questa guida scoprirai come personalizzare le tue QRSong! cards e troverai idee creative per rendere le tue playlist ancora più memorabili.
+## Il fronte ha un solo compito
 
-Il designer delle card si trova al passaggio 3 del processo d’ordine.
+Il QR code deve essere scansionabile da un lato all'altro del tavolo, con poca luce, tenuto in mano da qualcuno che ha bevuto qualcosa. Tutto il resto sul fronte viene dopo.
 
-### Funzionalità principali del QRSong! Card Designer
+Due regole coprono quasi tutto. Tieni il codice scuro su uno sfondo chiaro, perché chiaro su scuro funziona su alcuni telefoni e fallisce su altri, e non scoprirai quali fino alla festa. E lascia libera la zona di rispetto: il margine pulito attorno al codice fa parte del codice, e riempirlo con un'immagine di sfondo o un logo è il motivo più comune per cui una carta non viene scansionata.
 
-- **Aggiungi il tuo sfondo** – Carica immagini o scegli colori che si abbinano al tuo stile o al tema dell’evento.
-- **Carica un logo** – Inserisci il tuo logo personale, aziendale o dell’evento sul lato QR per un’identificazione immediata.
-- **Scegli una piccola icona** – Scegli tra tante icone per distinguere visivamente i tuoi set di card.
-- **Inserisci un testo personalizzato** – Aggiungi messaggi, nomi delle playlist o dettagli delle canzoni proprio sotto artista e titolo.
+Un'immagine di sfondo va benissimo. Un'immagine piena di dettagli proprio dietro al codice no. Se vuoi usare una fotografia, falla stare dietro alla carta e tieni pulita l'area in cui va il codice.
 
-### Vantaggi della personalizzazione delle tue QRSong! cards
+## Il retro è dove sta il gioco
 
-- **Regali ancora più speciali**: Personalizza un set per una persona cara con ricordi condivisi o canzoni preferite.
-- **Organizzazione delle playlist**: Dai uno stile unico a generi musicali, mood o eventi diversi.
-- **Card pronte per ogni evento**: Crea set a tema per feste, serate quiz o eventi aziendali.
-- **Esperienze memorabili**: Aggiungi messaggi significativi, come chi ha aggiunto ogni canzone o note speciali, per aumentare il valore delle card.
+Il retro contiene artista, titolo e anno di uscita. È la risposta, rivelata quando qualcuno gira la carta, quindi l'unica vera domanda di design è: si legge bene a distanza di un braccio, dall'altra parte del tavolo?
 
-### Modi creativi per usare i tuoi design
+Usa caratteri più grandi di quanto pensi. L'anno è la cosa che le persone strizzano gli occhi per leggere, ed è anche il punto su cui gira tutto il gioco della timeline.
 
-- **Playlist romantiche:** Prepara un set per il tuo partner con canzoni e messaggi che raccontano la vostra storia.
-- **Regali a tema musicale:** Sorprendi gli amici con set personalizzati basati sui loro generi preferiti o su eventi come l’Eurovision Song Contest.
-- **Playlist per famiglia e amici:** Aggiungi il nome di chi ha contribuito su ogni card per un mix collaborativo che celebra i gusti del gruppo.
-- **Set educativi:** Usa il testo extra per quiz musicali, curiosità sulle canzoni o fatti divertenti per imparare o animare le feste.
+## Dove la personalizzazione vale davvero
 
-### Come iniziare a creare le tue QRSong! cards
+Puoi mettere un messaggio tuo su qualsiasi carta, ed è questa funzione che trasforma un mazzo in un regalo. Non su tutte e cento: sulle cinque o sei che significano qualcosa. La canzone del primo ballo, con una frase sul primo ballo sul retro, arriva in modo molto diverso rispetto a un mazzo generico.
 
-1. [Crea la tua playlist personalizzata](/[lang]/generate/playlist) oppure scegli tra le [playlist in evidenza](/[lang]/playlists) per ispirarti.
-2. Usa il QRSong! Card Designer per caricare sfondi, loghi e scegliere le icone.
-3. Aggiungi un testo personalizzato sotto i dettagli di ogni canzone per rendere unica ogni card.
-4. Guarda l’anteprima delle tue card e ordina le versioni fisiche o scarica quelle digitali.
+Lo stesso vale per lo sfondo. Una sola fotografia usata su tutto il mazzo sembra un oggetto progettato. Una fotografia diversa su ogni carta sembra un album di ricordi, che a volte è proprio quello che vuoi e di solito no.
 
-Pronto a dare vita alle tue playlist? [Inizia subito a creare le tue QRSong! cards](/[lang]/generate/playlist) e rendi ogni momento musicale indimenticabile.
+## Realtà di stampa
 
-### Altri modi per arricchire la tua esperienza QRSong!
+Se stampi a casa, il design deve sopravvivere alla tua stampante. Prima di partire, controlla due cose su un foglio di prova:
 
-- Scopri la nostra [galleria prodotti](/[lang]/user/examples) per ispirarti e scaricare esempi di design.
-- Scopri le nostre [opzioni di prezzo](/[lang]/pricing) per ordini multipli e occasioni speciali.
-- Regala la musica con una [QRSong! gift card](/[lang]/giftcard).
-- Leggi cosa dicono i nostri clienti sulla [pagina delle recensioni](/[lang]/user/reviews).
-- Trova le risposte alle domande più frequenti nelle nostre [FAQ](/[lang]/faq).
+**Abbondanza.** Tutto ciò che arriva al bordo deve superare la linea di taglio, altrimenti basta un millimetro di spostamento per lasciare una striscia bianca su un lato.
+
+**Sfondi scuri.** Un design scuro a tutta pagina consuma inchiostro, e sulla carta non patinata delle stampanti di casa viene a chiazze. Inoltre rende più difficile posizionare bene il QR code. A casa i design più chiari perdonano di più; tieni quelli scuri e scenografici per le [carte stampate](/[lang]/pricing), che sono laminate e tengono l'inchiostro come si deve.
+
+## Parti da un preset
+
+Nell'editor ci sono sfondi già pronti, e partire da uno di questi cambiando i colori ti dà un mazzo più bello in cinque minuti rispetto a partire da zero in un'ora. Puoi vedere esempi finiti nella [pagina degli esempi](/[lang]/user/examples).
+
+Se il mazzo è un regalo, anche la [confezione regalo](/[lang]/gift-box) può riprendere il design, inclusa una foto nella finestra del coperchio, così la presentazione sta bene con le carte.
+
+Pronto a crearne uno? [Inizia da una playlist](/[lang]/generate/playlist).
+
+## FAQ
+
+### Posso usare le mie foto sulle carte?
+
+Sì, come sfondo sul fronte, e puoi aggiungere un messaggio personale alle singole carte. Tieni libera l'area attorno al QR code, perché la zona di rispetto fa parte di ciò che lo rende scansionabile.
+
+### Perché il mio QR code non si scansiona?
+
+Quasi sempre per uno di tre motivi: il codice è troppo piccolo, la zona di rispetto attorno al codice è coperta dalla grafica, oppure il contrasto è troppo basso. Un codice scuro su sfondo chiaro, da 2 cm o più, risolve quasi tutti i casi.
+
+### Posso mettere un design diverso su ogni carta?
+
+Puoi, ma di solito è meglio non farlo. Un solo sfondo per tutto il mazzo sembra un set progettato; uno diverso per ogni carta sembra un album di ricordi. I messaggi personali su una manciata di carte importanti sono la versione che funziona davvero.
+
+### Devo per forza progettare qualcosa?
+
+No. Ci sono preset, e un mazzo con uno sfondo preset e il layout predefinito ha già un aspetto perfettamente buono. L'editor c'è quando lo vuoi usare, non come passaggio obbligatorio da superare.
+
+### Cosa viene stampato sul retro?
+
+Artista, titolo e anno di uscita. L'anno è quello da tenere grande, perché è il punto su cui gira il gioco della timeline e quello che le persone cercano di leggere strizzando gli occhi dall'altra parte del tavolo.

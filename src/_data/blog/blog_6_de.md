@@ -1,43 +1,59 @@
-## Was dein Playlist-Titel über deine Party verrät
+Ich habe viele Playlists in Kartendecks verwandelt, und nach ungefähr zwanzig Tracks merkst du ziemlich sicher, ob ein Spieleabend funktionieren wird. Das Problem sind fast nie die Leute. Es ist die Songauswahl, und sie geht fast immer auf dieselben drei Arten schief.
 
-Hast du dich schon mal gefragt, was dein Spotify-Playlist-Titel über die Stimmung auf deiner Party oder den Vibe deines Spieleabends aussagt? Bei QRSong! haben wir tausende einzigartige Playlists in QR-Code-Karten für Musikspiele, Quizrunden und interaktiven Spaß verwandelt. Wenn man sich die riesige Sammlung an Playlist-Titeln anschaut, die unsere Nutzer erstellt haben, wird schnell klar: Jeder Titel erzählt seine eigene Geschichte. Hier kommt ein augenzwinkernder Blick darauf, was dein Playlist-Titel über dich verraten könnte – und welche Art von QRSong!-Erlebnis du wahrscheinlich hostest.
+## Der Fehler: Songs nehmen, die du liebst
 
-### Klassische Stimmungsmacher
+Das ist der große Punkt, und er erwischt alle, mich eingeschlossen.
 
-- **General Hits #1/2, Top 40, Your Top Songs 2020**: Dir geht’s darum, alle mit bekannten Songs glücklich zu machen. Perfekt für Eisbrecher und Mitsing-Momente – mit diesen Playlists ist die Tanzfläche voll und die Laune bestens.
-- **Disco Classics, Blues Classics, 80s & 90s Classics, Classic hits everyone knows**: Nostalgie ist deine Geheimwaffe. Du weißt, dass nichts einen Raum so vereint wie ein Hit von früher – deine Partys fühlen sich warm und einladend an.
+Eine Playlist, die du privat hören würdest, und eine Playlist, die ein gutes Ratespiel ergibt, sind zwei verschiedene Dinge. Deine liebsten Albumtracks erkennt niemand nach vier Sekunden. Der Geheimtipp, auf den du stolz bist, ist eine tote Karte: Eine Person nickt, niemand rät, die Runde stirbt.
 
-### Themenparty-Profis
+Eine Spieleplaylist wird für **Wiedererkennung** gebaut, nicht für Geschmack. Das heißt: Refrains, Singles und Songs, an denen damals niemand vorbeikam. Du kuratierst hier nicht, du suchst Sachen aus, die ein Raum laut reinrufen kann.
 
-- **Halloween Playlist 2024🎃, Kerst Hits Top 100, A Gröbming Xmas**: Deine Partys sind bis ins Detail geplant. Saisonale Playlists wie diese sorgen für die richtige Stimmung und zeigen dein kreatives Gastgeber-Talent – ideal für QRSong!-Spiele und Quizrunden mit Motto.
-- **Fiesta Latina, Reggeton y más, Bollywood Evergreen, K-Pop Songs**: Du liebst den internationalen Twist. Mit Hits aus aller Welt und abwechslungsreichen Genres bleiben deine Events frisch und inspiriert – perfekt, um die Mehrsprachen-Features von QRSong! zu zeigen.
+Mein Test ist: Könnte jemand diesen Song nach vier Sekunden Refrain summen? Wenn nicht, ist es eine schlechte Karte im Spiel und überall sonst ein völlig guter Song.
 
-### Musik-Quiz-Champions
+## Der Fehler: nur eine Ära
 
-- **The Ultimate Music Quiz, Guess the year, Music Quiz Game**: Du blühst im Wettbewerb auf und forderst deine Freunde gerne mit Musik-Wissen heraus. Diese Playlists sind wie gemacht für die Quiz- und Rätsel-Features von QRSong! – hier gibt’s garantiert viele Lacher und freundschaftliche Rivalität.
-- **Name that tune, One Hit Wonders, 500 Greatest Songs Of All Time**: Bei dir dreht sich alles ums Erinnern und Überraschen. Diese Titel versprechen knifflige Quizrunden und Ruhm für den, der am meisten weiß.
+Fast jeder baut ein Deck aus den eigenen besten Jahren. Das spielt sich wunderbar für Leute, die zur selben Zeit im selben Alter waren, und schließt alle anderen am Tisch aus.
 
-### Persönliche & verspielte Favoriten
+Gerade ein Timeline Spiel braucht Streuung. Wenn achtzig Karten alle aus 1995 bis 2005 sind, liegen die Jahre zu dicht beieinander und das richtige Einordnen wird eher Raten als Nachdenken. Du willst Abstände, über die Leute diskutieren können: war das vor oder nach dem hier.
 
-- **Mijn playlist #12, Rickster, John songs, Mommy's playlist😍**: Deine Playlists sind so einzigartig wie deine Gäste. Individuelle Namen machen alles persönlicher und zeigen, dass du dir bei jedem Song Gedanken gemacht hast – das sorgt für unvergessliche Party-Momente und Gesprächsstoff.
+Ziel auf eine echte Mischung über Jahrzehnte. Und sorg dann dafür, dass jeder Gast wenigstens ein paar Karten hat, die eindeutig zu ihm oder ihr gehören. Der Moment, in dem jemand einen Song erkennt, den sonst niemand erkennt, ist nämlich einer der besten Momente im Spiel.
 
-### Für jeden Anlass
+## Der Fehler: zu viele oder zu wenige
 
-- **Birthday Playlist, Vrijdag, Verjaardag papa**: Du findest immer einen Grund zum Feiern. Spezielle Event-Playlists machen jedes Treffen besonders und festlich – perfekt, um QRSong!-QR-Code-Karten als Party-Goodies oder Überraschung zu nutzen.
-- **Corporate team building, Wedding entertainment**: Bei dir gibt’s Musik zu jedem Anlass. Ob Business oder Vergnügen – deine Playlist-Titel zeigen, dass du immer für gute Stimmung sorgst.
+Für ein Timeline Spiel sind 80 bis 120 Songs der richtige Bereich. Unter 80 ist ein Abend zu schnell vorbei. Über 120 schneidest du stundenlang Karten aus und das Deck wird nie komplett gespielt.
 
-### Bereit für deine eigene Playlist?
+Bei [Musikbingo](/[lang]/music-bingo) ist die Rechnung anders, weil Karten aus einem Pool gezogen werden: 40 bis 60 Songs, sonst sind alle gleichzeitig fertig.
 
-Bei QRSong! kannst du jede Spotify-Playlist im Handumdrehen in eine physische oder digitale QR-Code-Karte verwandeln – für Spiele, Geschenke oder einfach, um Musik mal anders zu erleben. Lust bekommen? [Erstelle hier deine Playlist-QR-Karten](/[lang]/generate/playlist). Noch keine Idee? Schau dir unsere [vorgestellten Playlists](/[lang]/playlists) an oder lade Beispiel-PDFs von [unserer Beispielseite](/[lang]/user/examples) herunter.
+## Zwei Dinge, die leise wichtig sind
 
-### Tipps für den perfekten Playlist-Titel
+**Prüfe die Jahre.** Streamingdienste zeigen oft das Veröffentlichungsdatum der Version an, die du abspielst, nicht das Original. Ein Remaster macht aus einem Song von 1975 plötzlich 2011, und ein Timeline Spiel mit falschen Jahren ist eine Diskussion ohne richtige Antwort. Das ist der häufigste Fehler, der ein selbstgemachtes Deck kaputtmacht, und genau deshalb prüft QRSong! jedes Jahr, statt dem Dienst einfach zu vertrauen.
 
-- Sei konkret: Themen-Playlists (z.B. „90’s Dance Hits“) wecken Vorfreude und setzen Erwartungen.
-- Mach’s persönlich: Namen oder Insider-Witze sorgen für den Extra-Kick.
-- Emojis sparsam einsetzen: Sie bringen Pep, sollten aber zur Stimmung passen.
-- Denk an dein Publikum: Ist die Playlist fürs Quiz, als Hintergrundmusik oder für eine Dance-Session?
-- Trau dich was: Playlists wie „Songs über Essen“ oder „QR Song Top 4000“ bringen immer ein Lächeln.
+**Lass Songs weg, an denen eine Geschichte hängt.** In einem Deck für eine Gruppe ist der Track, der zwei Leuten im Raum alles bedeutet und den anderen acht nichts, eine langsame Karte. Heb dir solche Songs für ein [persönliches Deck als Geschenk](/[lang]/gift-box) auf, denn dort ist genau das der Punkt.
 
-### Bring deine Playlist mit QRSong! zum Leben
+## Gute Startpunkte
 
-Egal, wie dein Stil ist – der Playlist-Titel ist der erste Schritt zu einem unvergesslichen Musik-Erlebnis. Mit QRSong! kannst du interaktive Musikspiele, Quiz-Abende und persönliche Geschenke mit deinen Lieblingssongs von Spotify gestalten. [Erfahre mehr darüber, wie es funktioniert](/[lang]/faq), lies unsere [Nutzerbewertungen](/[lang]/user/reviews) oder [kontaktiere uns](/[lang]/contact), wenn du Hilfe bei der Planung deines nächsten Events brauchst.
+Wenn du ein Deck willst, das funktioniert, ohne dass du die Playlist selbst bauen musst, findest du fertige Decks nach Jahrzehnt, Genre und Anlass auf der [Playlist-Seite](/[lang]/playlists). Sie sind auf Wiedererkennung gebaut, nicht auf Geschmack, und genau diese Disziplin ist bei der eigenen Musik am schwersten.
+
+Oder füge deine eigene Playlist ein und schau, was passiert: [hier starten](/[lang]/generate/playlist).
+
+## FAQ
+
+### Wie viele Songs brauche ich, wenn ich Hitster selber erstellen will?
+
+80 bis 120 für ein Timeline Spiel, 40 bis 60 für Bingo. Bingo braucht weniger, weil jede Karte eine andere Auswahl aus dem Pool zieht. Ist der Pool zu groß, füllt am Ende niemand eine Karte.
+
+### Was macht einen guten Song für ein Musik Ratespiel aus?
+
+Wiedererkennung in ungefähr vier Sekunden. Refrains und Singles schlagen Albumtracks, und Songs, an denen damals niemand vorbeikam, schlagen die Songs, die du persönlich am besten findest. Das ist eine andere Fähigkeit als eine Playlist zu bauen, die du gern hörst.
+
+### Sollte ich Jahrzehnte mischen?
+
+Ja, aus zwei Gründen. Ein Timeline Spiel braucht verteilte Jahre, sonst wird das Einordnen zum Ratespiel. Und ein Deck aus nur einer Ära schließt alle aus, die nicht zur richtigen Zeit im richtigen Alter waren.
+
+### Warum ist das Veröffentlichungsjahr auf meinen Karten falsch?
+
+Weil Streamingdienste meistens das Jahr der Version melden, die du abspielst, statt das ursprüngliche Veröffentlichungsjahr. Remaster und Wiederveröffentlichungen sind die üblichen Schuldigen, und ein falsches Jahr macht ein Timeline Spiel leise kaputt.
+
+### Kann ich eine Playlist von jemand anderem benutzen?
+
+Ja, und oft ist das sogar besser als deine eigene, weil du nicht an den Songs hängst. Es gibt fertige Playlists nach Jahrzehnt, Genre und Anlass, wenn du dir die Auswahl komplett sparen willst.

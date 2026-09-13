@@ -1,33 +1,69 @@
-## QRSong! App Version 1.3.5 ist da!
+Ob du QRSong! nutzt oder Hitster Karten selber machst, ein Musikabend lässt sich erstaunlich leicht schlecht leiten. Die Karten machen den größten Teil der Arbeit, aber die halbe Stunde Aufbau und die ersten zehn Minuten entscheiden, ob die Leute drei Runden spielen oder zwölf. Hier ist, was ich dabei gelernt habe, inklusive der Dinge, die schiefgehen.
 
-Das neueste Update der QRSong! Begleit-App ist da – und mit Version 1.3.5 machen wir musikalische Erlebnisse noch zugänglicher und vielseitiger. Egal, ob du eine Party schmeißt, ein Quiz veranstaltest oder das perfekte Musikgeschenk suchst: Unsere App bringt jetzt noch mehr Features und Kompatibilität direkt auf dein Handy.
+## Bevor jemand ankommt
 
-## Unterstützung für Spotify Free Accounts ist da
+**Teste den Sound.** Handylautsprecher funktionieren nicht für eine Gruppe. Alles mit einem Bluetooth Lautsprecher reicht. Verbinde ihn, spiel eine Karte, stell die Lautstärke so ein, dass man den Track noch hört, während im Raum geredet wird, und lass sie so.
 
-Ein oft gewünschtes Feature ist endlich verfügbar: QRSong! funktioniert jetzt mit Spotify Premium und auch mit kostenlosen Spotify Accounts. Das heißt, wirklich jeder kann mitmachen, indem er QRSong! Karten scannt und sofort Songs abspielt – ganz ohne Abo. Wenn du einen kostenlosen Spotify Account nutzt, kannst du Playlists und Songs genauso einfach per QR-Code-Scan genießen.
+**Scanne selbst drei Karten.** Du prüfst, ob der Dienst verbunden ist, ob die Wiedergabe schnell startet und ob du weißt, was die App macht. Erst am Tisch zu merken, dass du abgemeldet bist, ist ein schlechter Start.
 
-Der einzige Unterschied: Beim Scan ohne Spotify Premium gibt’s einen kleinen Countdown, bevor der Song sichtbar abgespielt wird. Leider ist es technisch nicht möglich, den Song für Free User zu verstecken. Aber der Countdown gibt dir genug Zeit, dein Handy umzudrehen und trotzdem mitzumachen!
+**Lege die Einstellungen fest.** Songlänge und Startpunkt, beides in der App. Fünfzehn Sekunden und ein zufälliger Startpunkt sind schwer und gut für eine sichere Runde. Dreißig Sekunden ab dem Refrain sind freundlicher für eine gemischte Gruppe. Entscheide vorher, nicht mittendrin.
 
-## Mehr Kartentypen werden unterstützt
+**Leg die Antworten verdeckt hin.** Klingt offensichtlich. Die Zahl der Decks, die ich offen auf Tischen liegen gesehen habe, ist nicht klein.
 
-Wir wissen, dass Musikfans ganz unterschiedliche QR-Code-Karten nutzen – und unser neuestes Update erweitert die Unterstützung für Kartentypen anderer Hersteller. Jetzt kannst du noch mehr Musik-Karten mit unserer App scannen und abspielen. So wird es noch einfacher, QRSong! in deine Sammlung einzubauen, egal woher deine Karten stammen.
+## Die ersten zehn Minuten
 
-- Scanne Karten von führenden physischen QR-Code-Kartenmarken
-- Genieße mehr Kompatibilität mit verschiedenen Designs und Formaten
-- Nutze QRSong! Karten weiterhin für Quizspiele, Partys und mehr
+Spielt eine Runde ohne Punkte. Niemand versteht ein Spiel durch eine Erklärung, und alle verstehen es nach einer Karte. Scannen, laufen lassen, Leute rufen lassen, Karte umdrehen.
 
-### Hilf uns, jede Musikkarte zu unterstützen
+Starte mit einer Karte, die die meisten im Raum erkennen. Mit etwas völlig Unbekanntem zu eröffnen setzt den Ton, dass man dieses Spiel verliert, und die Hälfte am Tisch ist raus.
 
-Du hast eine QR-Code-Musikkarte, die noch nicht funktioniert? Wir wollen QRSong! mit allen Kartentypen kompatibel machen. Wenn du auf eine nicht unterstützte Karte stößt, sag uns einfach über unser [Kontaktformular](/[lang]/contact) Bescheid. Dein Feedback hilft uns, die App zu verbessern und musikalische Erlebnisse für alle noch besser zu machen.
+Erkläre eine Regel, nicht sechs. Bei einem Timeline Spiel ist es: „Leg die Karte dahin, wo du glaubst, dass sie auf die Linie gehört.“ Alles andere kannst du beantworten, wenn es auftaucht.
 
-## Entdecke alles, was QRSong! bietet
+## In Bewegung halten
 
-Du willst eigene Playlist-Karten erstellen oder dich von unseren Playlists inspirieren lassen? Dann schau bei unserem [Playlist-Generator](/[lang]/generate/playlist) vorbei oder entdecke unsere [vorgestellten Playlists](/[lang]/playlists). Du kannst auch [Produktbeispiele](/[lang]/user/examples) anschauen, Antworten in unserem [FAQ](/[lang]/faq) finden oder mehr über unsere [Preise](/[lang]/pricing) und [Geschenkkarten-Optionen](/[lang]/giftcard) erfahren.
+Was einen Musikabend tötet, ist Leerlauf zwischen Karten. Jemand scrollt, jemand sucht eine Antwort, ein Handy hat sich gesperrt.
 
-## Das ist neu in Version 1.3.5
+Eine Person scannt, den ganzen Abend. Das Handy herumzugeben fühlt sich fairer an und verdoppelt jede Pause. Wenn Leute sich abwechseln wollen, dann beim Raten.
 
-- Jetzt mit Unterstützung für kostenlose und Premium Spotify Accounts
-- Erweiterte Kompatibilität mit QR-Code-Musikkarten anderer Hersteller
-- Laufende Updates basierend auf eurem Feedback – meldet euch mit neuen Kartentypen
+Leg die gespielten Karten sichtbar auf einen Stapel. Bei einem Timeline Spiel ist dieser Stapel das Spielfeld, und bei Bingo klärst du damit einen umstrittenen Sieg.
 
-Lade dir die neueste Version der QRSong! App herunter und bring dein nächstes Musikerlebnis aufs nächste Level. Wir sind gespannt, wie du die neuen Features nutzt, um unvergessliche Momente mit Freunden, Familie und Kollegen zu schaffen. 🎵
+## Wenn die Luft rausgeht
+
+Jedes Deck hat einen Punkt, meistens ungefähr bei Karte vierzig, an dem die Aufmerksamkeit nachlässt. Zwei Dinge helfen:
+
+**Wechsle das Spiel.** Mit demselben Deck spielst du [Bingo](/[lang]/music-bingo), ein [Quiz](/[lang]/music-quiz) und eine [Timeline](/[lang]/music-timeline). Das Format in der Mitte zu wechseln setzt den Raum zurück, ohne dass jemand etwas Neues lernen muss.
+
+**Kürze die Snippets.** Geh auf zehn oder fünfzehn Sekunden runter. Schnellere Runden, mehr davon, und die Energie kommt zurück.
+
+## Was du mit der Person machst, die alles kennt
+
+An jedem Tisch sitzt eine. Zwei Optionen funktionieren: Mach sie zur Spielleitung, dann rät sie nicht mit und hat etwas zu tun, oder spielt in Paaren und setz sie mit jemandem zusammen, der die Musik gar nicht kennt.
+
+Bestrafe sie nicht mit Sonderregeln. Es ist eine Party, kein Turnier.
+
+## Wenn das Deck bekannt wird
+
+Ein festes Deck hört auf, ein Spiel zu sein, sobald alle es gelernt haben. Das ist der Moment, [ein neues aus einer anderen Playlist zu bauen](/[lang]/generate/playlist): ein anderes Jahrzehnt, ein Genre, das niemand am Tisch hört, oder eins aus Songs, die jeder Gast vorgeschlagen hat.
+
+Die kostenlose App gibt es für [iPhone und Android](/[lang]/download-app), und sie liest auch Karten aus anderen Musikkartenspielen. Ein Deck, das du schon hast, lässt sich also mit einem neuen mischen.
+
+## FAQ
+
+### Wie lange sollte jedes Lied in einem Musikspiel laufen?
+
+Fünfzehn bis dreißig Sekunden. Fünfzehn ist flott und schwer, dreißig ist entspannt. Länger, und die Leute hören auf zu raten und fangen an zuzuhören. Das ist schön, aber dann ist es kein Spiel mehr.
+
+### Wie viele Leute können mitspielen?
+
+Es funktioniert ab ungefähr drei bis zu einem Dutzend. Ab acht spielt ihr besser in Paaren: So bleiben alle dabei, und die schnellste Person beantwortet nicht jede Karte allein.
+
+### Brauche ich einen Lautsprecher?
+
+Praktisch ja. Handylautsprecher kommen nicht gegen einen Raum voller redender Leute an, und das Spiel hängt davon ab, dass alle den Track klar hören. Jeder Bluetooth Lautsprecher reicht.
+
+### Was mache ich, wenn jemand jedes Lied kennt?
+
+Mach die Person zur Spielleitung, damit sie scannt statt rät, oder spielt in Paaren und setz sie mit jemandem zusammen, der die Musik nicht kennt. Leute auf einer Party mit Handicaps zu belegen kommt schlecht an.
+
+### Wie verhindere ich, dass sich das Spiel zieht?
+
+Eine Person scannt den ganzen Abend, die gespielten Karten bleiben sichtbar, und du kürzt die Snippets, wenn die Aufmerksamkeit nachlässt. Zu einem anderen Spiel mit demselben Deck zu wechseln setzt den Raum auch zurück, ohne dass jemand etwas Neues lernen muss.

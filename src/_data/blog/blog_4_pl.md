@@ -1,53 +1,61 @@
-## QRSong! wersja 1.3.3: Ukryte odtwarzanie i nie tylko
+Jeśli zeskanujesz kartę muzyczną aparatem w telefonie, tytuł piosenki pojawi się w podglądzie linku, zanim w ogóle go dotkniesz. Runda skończona. Ktoś czyta tytuł na głos, wszyscy się śmieją i przechodzisz do następnej karty, już trochę mniej wciągnięty niż przed chwilą.
 
-Najnowsza aktualizacja aplikacji QRSong! już jest, a wraz z nią ekscytujące nowości, które sprawią, że muzyczne gry będą jeszcze ciekawsze. Wersja 1.3.3 jest już dostępna na Androida i iOS, wprowadzając ukryte odtwarzanie utworów, konfigurowalny timer fragmentów, losowe punkty startowe i kilka usprawnień wydajności. Przeczytaj, jak te funkcje urozmaicą Twoje doświadczenia z QRSong! i jak możesz je wykorzystać na imprezie, wieczorze gier z rodziną czy podczas integracji zespołu.
+Właśnie przez ten jeden szczegół istnieje aplikacja QRSong!, i warto to dobrze wyjaśnić, bo to różnica między zgadywanką muzyczną a stosem linków.
 
-### Odtwarzaj utwory ukryte w aplikacji
+## Co naprawdę robi ukryte odtwarzanie
 
-Jedna z najczęściej proszonych przez Was funkcji w końcu jest dostępna: **ukryte odtwarzanie bezpośrednio w aplikacji QRSong!** Teraz, gdy zeskanujesz kod QR playlisty, utwór odtwarza się w samej aplikacji, bez automatycznego otwierania Spotify. Dzięki temu możesz w pełni korzystać z **trybu tajemnicy**: utwory grają „w ukryciu”, a odpowiedź pozostaje sekretem, dopóki nie zdecydujesz się jej ujawnić. To idealne rozwiązanie na muzyczne quizy, takie jak *Jaka to melodia*, gdzie utrzymanie tytułu w tajemnicy to część zabawy.
+Aplikacja odczytuje kartę, rozpoznaje, jaki to utwór, i zaczyna go odtwarzać, nigdy nie pokazując, co to jest. Bez tytułu na ekranie, bez wykonawcy, bez roku, bez okładki albumu. Muzyka startuje, a pokój zaczyna się kłócić.
 
-- Graj w muzyczne gry bez przerw
-- Ukryj wykonawcę i tytuł podczas odtwarzania
-- Płynna zabawa bez ciągłego przełączania aplikacji
+Kiedy ktoś zgadnie albo się podda, odwracasz kartę. Odpowiedź jest wydrukowana z tyłu. To cała pętla gry, i działa tylko wtedy, gdy telefon milczy.
 
-### Ustawienia beta: Timer fragmentów i losowy start
+## Dlaczego aparat nie może tego zrobić
 
-Wersja 1.3.3 wprowadza nowe funkcje beta, które sprawią, że Twoje muzyczne wyzwania będą jeszcze bardziej dynamiczne:
+Kod QR zawiera URL. Aparat odczytuje URL, a podgląd i przeglądarka pokazują potem tytuł strony, który przy linku muzycznym jest nazwą piosenki. Nie ma ustawienia, które to wyłącza, bo z punktu widzenia telefonu to pomocna funkcja.
 
-- **Timer fragmentów**: Wybierz, jak długo ma grać fragment utworu (od szybkich 3 sekund po dłuższe zajawki). Możesz dzięki temu dostosować poziom trudności swoich muzycznych quizów.
-- **Losowy start**: Utwory mogą teraz zaczynać się od losowego miejsca, a nie zawsze od początku. Ta opcja dodaje nieprzewidywalności i emocji do zabaw typu „Zgadnij piosenkę” czy „Rozpoznaj gatunek”.
+Ścieżka przez aparat ma też drugi problem: najpierw otwiera przeglądarkę, a potem próbuje przekazać odtwarzanie do aplikacji muzycznej. Na niektórych telefonach to się nie udaje, na innych otwiera usługę, której nie używasz, i zawsze dokłada kilka sekund. Raz to nic. Osiemdziesiąt razy w jeden wieczór i nagle to jest wieczór o telefonach, nie o muzyce.
 
-### Pozostałe ulepszenia w wersji 1.3.3
+## Gdzie to działa, a gdzie nie
 
-- Lepsza wydajność baterii na dłuższe sesje gry
-- Poprawiona stabilność aplikacji na różnych urządzeniach
-- Nowoczesny wygląd edge-to-edge dla użytkowników Androida
+Tego większość osób nie wie, dopóki nie usiądzie do gry, a to decyduje, który serwis streamingowy warto wybrać:
 
-Dzięki tym zmianom korzystanie z QRSong! jest jeszcze płynniejsze i przyjemniejsze – zarówno w domu, jak i w podróży.
+- **Spotify i Apple Music**: ukryte odtwarzanie całego utworu. To pełne doświadczenie.
+- **Tidal i Deezer**: ukryte odtwarzanie z trzydziestosekundowego podglądu. To więcej niż dość, żeby zgadnąć rok, a tytuł nadal zostaje ukryty.
+- **YouTube Music**: brak ukrytego odtwarzania. Link musi otworzyć się w aplikacji YouTube Music, gdzie tytuł jest na ekranie. Karty działają, ale ktoś musi trzymać telefon i patrzeć w bok.
 
-### Jak korzystać z nowych funkcji
+Jeśli masz wybór, wybierz Spotify albo Apple Music. Pełne zestawienie jest na stronie [obsługiwanych platform](/[lang]/supported-platforms), a jeśli masz już karty, ale nie masz konta Spotify, [tutaj znajdziesz swoje opcje](/[lang]/hitster-without-spotify).
 
-Rozpoczęcie zabawy z najnowszą wersją QRSong! jest proste:
+## Dwa ustawienia, które warto zmienić
 
-1. Zaktualizuj aplikację do wersji 1.3.3 na swoim urządzeniu (dostępna na **Androida** i **iOS**).
-2. Zeskanuj kod QR playlisty (stwórz własną na [naszym generatorze playlist](/[lang]/generate/playlist) lub przejrzyj [polecane playlisty](/[lang]/playlists) dla inspiracji).
-3. Włącz ukryte odtwarzanie i dostosuj ustawienia fragmentów w menu beta aplikacji.
-4. Zacznij grać w swoje ulubione muzyczne gry – teraz z większą dawką tajemnicy i emocji!
+**Od którego momentu zaczyna się piosenka.** Domyślnie utwór startuje od początku, co przy wielu piosenkach oznacza intro, którego nikt nie rozpoznaje. Start w losowym miejscu robi grę trudniejszą i dużo lepszą w grupie, która zna swoją muzykę. Start od refrenu ułatwia grę mieszanej ekipie.
 
-### Idealna na każdą okazję
+**Jak długo gra utwór.** Krócej znaczy trudniej. Piętnaście sekund jest żwawe, trzydzieści jest wygodne, a przy dłuższym czasie ludzie przestają zgadywać i zaczynają słuchać, co jest przyjemnym sposobem na to, żeby gra po cichu przestała być grą.
 
-Nowe funkcje QRSong! 1.3.3 sprawiają, że to idealne narzędzie do:
+Oba ustawienia są w aplikacji i obu warto poświęcić minutę przed pierwszą rundą, zamiast odkrywać je w połowie wieczoru.
 
-- Organizowania muzycznych quizów na imprezach
-- Rodzinnych wieczorów z nietypowymi wyzwaniami
-- Integracji zespołu z muzycznymi quizami
-- Personalizowanych prezentów dla fanów muzyki (sprawdź nasze [karty podarunkowe](/[lang]/giftcard))
-- Interaktywnej rozrywki na weselach czy eventach
+## Czyta też inne talie
 
-Więcej zdjęć i przykładów znajdziesz na [stronie z przykładami](/[lang]/user/examples).
+Skaner nie jest ograniczony do naszych kart. Czyta karty Hitster i inne muzyczne karty QR, więc talia, którą już masz, działa w tej samej aplikacji, przez dowolny połączony serwis. To naprawdę przydatne, jeśli karty, które masz, przyszły z aplikacją obsługującą tylko jedną usługę.
 
-### Co dalej z QRSong!
+Aplikacja jest darmowa na iPhone'a i Androida: [pobierz ją tutaj](/[lang]/download-app).
 
-Zawsze słuchamy Waszych opinii i pracujemy nad nowymi funkcjami, by QRSong! był jeszcze lepszy. Śledź kolejne aktualizacje! Jeśli masz pytania lub potrzebujesz wsparcia, zajrzyj do [FAQ](/[lang]/faq) lub [skontaktuj się z nami](/[lang]/contact).
+## FAQ
 
-**Gotowy, by wypróbować nowe funkcje QRSong!?** Zaktualizuj aplikację do wersji 1.3.3 już dziś i odkryj nowy poziom muzycznej zabawy!
+### Dlaczego potrzebuję aplikacji do skanowania kart?
+
+Bo aparat w telefonie pokazuje tytuł piosenki w podglądzie linku, co zdradza odpowiedź, zanim utwór w ogóle wystartuje. Aplikacja rozpoznaje kartę i odtwarza ją bez pokazywania, co to jest.
+
+### Czy ukryte odtwarzanie działa w każdym serwisie streamingowym?
+
+Nie, i warto to wiedzieć, zanim wybierzesz serwis. Spotify i Apple Music ukrywają cały utwór. Tidal i Deezer ukrywają trzydziestosekundowy podgląd. YouTube Music w ogóle nie ma ukrytego odtwarzania.
+
+### Czy mogę zmienić, jak długo gra każda piosenka?
+
+Tak, w aplikacji. Krócej znaczy trudniej: piętnaście sekund jest żwawe, trzydzieści jest wygodne. Możesz też ustawić, żeby piosenki zaczynały się w losowym miejscu zamiast od początku, dzięki czemu ludzie nie rozpoznają samych intr, tylko utwory.
+
+### Czy aplikacja jest darmowa?
+
+Tak, na iPhone'a i Androida, bez wymaganego konta. To też jedyna obowiązkowa część zestawu, bo skanowanie aparatem zdradza odpowiedź.
+
+### Czy działa z kartami kupionymi gdzie indziej?
+
+Tak. Skaner czyta karty Hitster i inne muzyczne karty QR, nie tylko nasze, i odtwarza je przez dowolny połączony serwis.

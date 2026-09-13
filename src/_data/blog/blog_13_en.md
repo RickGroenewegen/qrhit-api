@@ -16,7 +16,7 @@ Everybody gets a card of song titles drawn from your deck. You play snippets, pe
 
 The part that is genuinely better than doing it by hand is verification. When somebody shouts bingo, you scan their card and the app tells you immediately whether they have actually won, instead of cross-referencing a list at a loud table. There is a host screen that plays the songs and tracks what has gone.
 
-Best for: larger groups, and anyone who wants a game that does not need turn-taking. More on the [music bingo page](/[lang]/music-bingo), and if you would rather build the cards yourself, [that is written up here](/[lang]/blog/how-to-make-music-bingo-cards).
+Best for: larger groups, and anyone who wants a game that does not need turn-taking. More on the [music bingo page](/[lang]/music-bingo), and if you would rather build the cards yourself, [that is written up here](/[lang]/blog/[post:15]).
 
 ## Music Quiz
 

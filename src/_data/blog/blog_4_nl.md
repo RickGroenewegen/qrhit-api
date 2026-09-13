@@ -1,53 +1,61 @@
-## QRSong! app versie 1.3.3: Verborgen afspelen en meer
+Als je een muziekkaart scant met de camera van je telefoon, verschijnt de titel van het liedje al in de linkpreview voordat je überhaupt hebt getikt. De ronde is voorbij. Iemand leest het voor, iedereen lacht, en je gaat door naar de volgende kaart met net iets minder zin dan daarvoor.
 
-De nieuwste update van de QRSong! app is er, met spannende nieuwe functies die muziekspelletjes nog leuker maken. Versie 1.3.3 is nu beschikbaar op zowel Android als iOS en introduceert verborgen afspelen van nummers, een aanpasbare snippet-timer, willekeurige startpunten en diverse prestatieverbeteringen. Lees verder om te ontdekken hoe deze functies jouw QRSong! ervaring verbeteren en hoe je ze kunt gebruiken op je volgende feestje, spelletjesavond met familie of teambuilding-event.
+Precies dat ene detail is waarom de QRSong! app bestaat. Het is de moeite waard om goed uit te leggen, want dit is het verschil tussen een muziek quiz spel en een stapel links.
 
-### Speel nummers verborgen in de app
+## Wat verborgen afspelen eigenlijk doet
 
-Eén van de meest gevraagde functies door onze gebruikers is eindelijk hier: **verborgen afspelen direct in de QRSong! app**. Nu, als je een afspeellijst QR-code scant, speelt het nummer gewoon in de app zelf af, zonder automatisch Spotify te openen. Zo kun je volop genieten van de **mystery-modus**: nummers worden “verborgen” afgespeeld, zodat het antwoord geheim blijft tot je het wilt onthullen. Perfect voor muziekquizzen zoals *Naam dat Lied*, waarbij het geheimhouden van het nummer juist de lol is.
+De app leest de kaart, zoekt uit welk nummer het is en begint het af te spelen zonder ooit te laten zien wat het is. Geen titel op het scherm, geen artiest, geen jaar, geen albumhoes. De muziek begint en de kamer gaat in discussie.
 
-- Ononderbroken muziekspelletjes spelen
-- Artiest en nummer blijven verborgen tijdens het spelen
-- Soepelere ervaring met minder app-geswitch
+Als iemand het weet, of opgeeft, draai je de kaart om. Het antwoord staat op de achterkant. Dat is de hele loop, en die werkt alleen als de telefoon stil blijft.
 
-### Beta-instellingen: Snippet-timer en willekeurige start
+## Waarom de camera dit niet kan
 
-Versie 1.3.3 brengt nieuwe beta-functies die je muzikale uitdagingen nog dynamischer maken:
+Een QR-code bevat een URL. Je camera leest die URL, en daarna laten zowel de preview als de browser de paginatitel zien. Bij een muzieklink is dat de naam van het nummer. Er is geen instelling die dat onderdrukt, want vanuit je telefoon gezien is hij gewoon behulpzaam.
 
-- **Snippet-timer**: Kies hoe lang elk fragment van een nummer wordt afgespeeld (van een snelle 3 seconden tot langere previews). Zo kun je de moeilijkheidsgraad van je muziekquiz aanpassen.
-- **Willekeurige start**: Nummers kunnen nu vanaf een willekeurig punt beginnen in plaats van altijd bij het begin. Dit zorgt voor extra verrassingen en spanning bij uitdagingen als “Raad het Lied” of “Herken het Genre”.
+De route via de camera heeft nog een tweede probleem: eerst opent er een browser, en daarna probeert die door te sturen naar een muziekapp. Op sommige telefoons mislukt dat, op andere opent er een dienst die je niet gebruikt, en het kost altijd een paar seconden extra. Eén keer is prima. Tachtig keer op een avond wordt het een avond over telefoons in plaats van muziek.
 
-### Overige verbeteringen in versie 1.3.3
+## Waar het werkt en waar niet
 
-- Betere batterijprestaties voor langere speelsessies
-- Verbeterde stabiliteit van de app op verschillende apparaten
-- Strak edge-to-edge design voor Android-gebruikers
+Dit is het deel dat de meeste mensen pas ontdekken als ze al klaar zitten om te spelen, en het bepaalt welke streamingdienst je wilt gebruiken:
 
-Deze updates zorgen voor een soepelere en aantrekkelijkere ervaring voor iedereen die QRSong! thuis of onderweg gebruikt.
+- **Spotify en Apple Music**: verborgen afspelen van het volledige nummer. Dit is de complete ervaring.
+- **Tidal en Deezer**: verborgen afspelen met een preview van dertig seconden. Ruim genoeg om een jaar te raden, en de titel blijft nog steeds verborgen.
+- **YouTube Music**: geen verborgen afspelen. De link moet openen in de YouTube Music app, waar de titel op het scherm staat. Je kaarten spelen wel af, maar iemand moet de telefoon vasthouden en wegkijken.
 
-### Zo gebruik je de nieuwe functies
+Als je kunt kiezen, neem dan Spotify of Apple Music. Het volledige overzicht staat op de [pagina met ondersteunde platforms](/[lang]/supported-platforms), en als je al kaarten hebt maar geen Spotify account, [dan lees je hier welke opties je hebt](/[lang]/hitster-without-spotify).
 
-Beginnen met de nieuwste QRSong! update is heel eenvoudig:
+## De twee instellingen die het waard zijn om aan te passen
 
-1. Update naar versie 1.3.3 op je apparaat (beschikbaar voor **Android** en **iOS**).
-2. Scan een afspeellijst QR-code (maak je eigen via onze [afspeellijstgenerator](/[lang]/generate/playlist) of blader door [uitgelichte afspeellijsten](/[lang]/playlists) voor inspiratie).
-3. Schakel verborgen afspelen in en pas de snippet-instellingen aan in het beta-instellingenmenu van de app.
-4. Begin met het spelen van je favoriete muziekspelletjes—nu met nog meer mysterie en plezier!
+**Waar het nummer begint.** Standaard begint een nummer aan het begin, wat bij veel liedjes een intro betekent die niemand herkent. Beginnen op een willekeurig punt maakt het spel moeilijker en veel beter met een groep die zijn muziek kent. Beginnen bij het refrein maakt het makkelijker voor een gemengde groep.
 
-### Perfect voor elke gelegenheid
+**Hoe lang het afspeelt.** Korter is moeilijker. Vijftien seconden is vlot, dertig is comfortabel, en bij alles wat langer is stoppen mensen met raden en beginnen ze te luisteren. Dat is gezellig, maar zo houdt een spel langzaam op een spel te zijn.
 
-De nieuwe functies in QRSong! 1.3.3 maken het de ideale tool voor:
+Allebei zitten ze in de app, en allebei zijn ze die ene minuut vóór de eerste ronde waard. Beter dan ze halverwege de avond pas ontdekken.
 
-- Muziekquizfeestjes organiseren
-- Spelletjesavonden met familie en unieke uitdagingen
-- Teambuildingactiviteiten met muziekquizzen
-- Persoonlijke cadeaus voor muziekliefhebbers (bekijk onze [cadeaubon-opties](/[lang]/giftcard))
-- Interactief entertainment op bruiloften of evenementen
+## Hij leest ook andere decks
 
-Voor meer productfoto’s en voorbeelden, bezoek [onze voorbeeldenpagina](/[lang]/user/examples).
+De scanner is niet beperkt tot onze kaarten. Hij leest Hitster kaarten en andere muziek QR kaarten, dus een deck dat je al hebt speelt via dezelfde app, op de dienst die jij hebt gekoppeld. Dat is echt handig als de kaarten die je hebt bij een app horen die maar één dienst ondersteunt.
 
-### Wat komt er nog aan voor QRSong!
+De app is gratis op iPhone en Android: [download hem hier](/[lang]/download-app).
 
-We luisteren altijd naar jullie feedback en werken aan nieuwe functies om QRSong! nóg beter te maken. Blijf op de hoogte voor toekomstige updates! Heb je vragen of hulp nodig? Bekijk onze [FAQ](/[lang]/faq) of [neem contact met ons op](/[lang]/contact).
+## FAQ
 
-**Klaar om de nieuwe QRSong! functies te proberen?** Update vandaag nog naar versie 1.3.3 en beleef het volgende niveau van muzikaal plezier!
+### Waarom heb ik een app nodig om de kaarten te scannen?
+
+Omdat de camera van je telefoon de titel van het nummer in de linkpreview laat zien, waardoor het antwoord al weggegeven is voordat de muziek begint. De app herkent de kaart en speelt hem af zonder te tonen wat het is.
+
+### Werkt verborgen afspelen op elke streamingdienst?
+
+Nee, en dit is handig om te weten voordat je er een kiest. Spotify en Apple Music verbergen het volledige nummer. Tidal en Deezer verbergen een preview van dertig seconden. YouTube Music heeft helemaal geen verborgen afspelen.
+
+### Kan ik aanpassen hoe lang elk nummer afspeelt?
+
+Ja, in de app. Korter is moeilijker: vijftien seconden is vlot, dertig is comfortabel. Je kunt nummers ook op een willekeurig punt laten beginnen in plaats van aan het begin, zodat mensen niet alleen intro's herkennen in plaats van liedjes.
+
+### Is de app gratis?
+
+Ja, op iPhone en Android, zonder account. Het is ook het enige onderdeel van de setup dat verplicht is, omdat scannen met de camera het antwoord weggeeft.
+
+### Werkt het met kaarten die ik ergens anders heb gekocht?
+
+Ja. De scanner leest Hitster kaarten en andere muziek QR kaarten, net als die van ons, en speelt ze af via de dienst die jij hebt gekoppeld.

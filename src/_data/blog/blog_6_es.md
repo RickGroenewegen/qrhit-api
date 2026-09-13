@@ -1,43 +1,59 @@
-## Lo que el título de tu playlist dice sobre tu fiesta
+He convertido muchas playlists en mazos, y se nota en unas veinte canciones si una noche de juego va a funcionar. El fallo casi nunca es la gente. Es la selección de canciones, y siempre sale mal de las mismas tres formas.
 
-¿Alguna vez te has preguntado qué revela el título de tu playlist de Spotify sobre el ambiente de tu fiesta o la energía de tu noche de juegos? En QRSong!, hemos convertido miles de playlists únicas en tarjetas QR para juegos musicales, trivias y diversión interactiva. Al revisar la enorme colección de títulos que han creado nuestros usuarios, queda claro que cada nombre cuenta su propia historia. Aquí tienes una mirada divertida a lo que tu playlist podría decir de ti—y el tipo de experiencia QRSong! que estás listo para organizar.
+## El error: elegir canciones que te encantan
 
-### Éxitos que nunca fallan
+Este es el grande, y nos pilla a todos, a mí también.
 
-- **General Hits #1/2, Top 40, Tus mejores canciones 2020**: Lo tuyo es mantener a todos contentos con canciones conocidas. Perfectas para romper el hielo y cantar juntos, estas playlists garantizan una pista de baile llena y sonrisas por doquier.
-- **Clásicos del disco, Clásicos del blues, Clásicos de los 80 y 90, Grandes éxitos que todos conocen**: La nostalgia es tu arma secreta. Sabes que nada une a la gente como un temazo del pasado, haciendo que tus reuniones sean cálidas y acogedoras.
+Una playlist que escucharías y una playlist que funciona como juego de adivinar canciones son cosas distintas. Tus canciones favoritas de un álbum no se reconocen en cuatro segundos. Esa rareza de la que te sientes orgulloso por conocer es una carta muerta: una persona asiente, nadie adivina, la ronda se apaga.
 
-### Maestros de las fiestas temáticas
+Una playlist de juego se construye para el **reconocimiento**, no para el gusto. Eso significa estribillos, singles y canciones que fueron imposibles de evitar en su momento. No estás haciendo de comisario musical, estás eligiendo cosas que una mesa va a gritar.
 
-- **Playlist de Halloween 2024🎃, Kerst Hits Top 100, A Gröbming Xmas**: Tus fiestas están planeadas hasta el último detalle. Playlists de temporada como estas crean el ambiente y muestran tus dotes creativas como anfitrión—ideales para juegos y rondas de trivia temáticas en QRSong!.
-- **Fiesta Latina, Reggaetón y más, Bollywood Evergreen, Canciones K-Pop**: Te encanta darle un giro cultural. Los éxitos internacionales y géneros eclécticos mantienen tus eventos frescos y con inspiración global, perfectos para presumir las funciones multilingües de QRSong!.
+La prueba que uso: ¿alguien podría tararearla después de cuatro segundos del estribillo? Si no, es una mala carta para un juego y una canción perfectamente buena en cualquier otro sitio.
 
-### Campeones de la trivia musical
+## El error: una sola época
 
-- **El Quiz Musical Definitivo, Adivina el año, Juego de Trivia Musical**: Te encanta la competencia y desafiar a tus amigos con tus conocimientos musicales. Estas playlists están hechas para las funciones de trivia y quiz de QRSong!—prepárate para muchas risas y rivalidad amistosa.
-- **Adivina la canción, One Hit Wonders, Las 500 mejores canciones de todos los tiempos**: Para ti, todo se trata de poner a prueba la memoria y sorprender. Estos títulos prometen rondas de trivia difíciles y derechos de presumir para quien salga ganador.
+Todo el mundo construye un mazo con sus propios años buenos. Funciona de maravilla para gente que tenía la misma edad en el mismo momento, y deja fuera a todos los demás en la mesa.
 
-### Selecciones personalizadas y divertidas
+Un juego de línea temporal necesita variedad especialmente. Si ochenta cartas son todas de 1995 a 2005, los años se apelotonan y colocar bien una carta se convierte en adivinar, no en razonar. Quieres huecos sobre los que la gente pueda discutir: ¿esto va antes o después de aquello?
 
-- **Mi playlist #12, Rickster, Canciones de John, Playlist de mamá😍**: Tus playlists son tan únicas como tus invitados. Los nombres personalizados hacen todo más especial y muestran que pensaste en cada canción—perfecto para momentos memorables y romper el hielo en la fiesta.
+Busca una mezcla real entre décadas. Luego asegúrate de que cada invitado tenga al menos unas cuantas cartas que sean claramente suyas, porque el momento en que alguien reconoce una canción que nadie más reconoce es el mejor momento del juego.
 
-### Para cualquier ocasión
+## El error: demasiadas, o demasiado pocas
 
-- **Playlist de cumpleaños, Viernes, Cumpleaños de papá**: Nunca dejas pasar una oportunidad para celebrar. Las playlists para eventos especiales hacen que cada reunión se sienta personal y festiva—perfectas para usar las tarjetas QR de QRSong! como recuerdos o sorpresas.
-- **Team building corporativo, Entretenimiento para bodas**: Llevas la música a todos los aspectos de la vida. Ya sea trabajo o diversión, los títulos de tus playlists demuestran que sabes cómo ponerle ritmo a cualquier ocasión.
+Para un juego de línea temporal, el rango está entre 80 y 120 canciones. Por debajo de 80, la noche se queda corta. Por encima de 120, te pasas horas recortando cartas y el mazo nunca llega a jugarse entero.
 
-### ¿Listo para crear la tuya?
+Para el [bingo musical](/[lang]/music-bingo) la cuenta es distinta, porque las tarjetas se sacan de una reserva: de 40 a 60 canciones, o todo el mundo termina a la vez.
 
-En QRSong!, te lo ponemos fácil para convertir cualquier playlist de Spotify en una tarjeta QR física o digital para juegos, regalos o simplemente una nueva forma de disfrutar la música. ¿Quieres empezar? [Crea tus tarjetas QR de playlists aquí](/[lang]/generate/playlist). ¿Necesitas inspiración? Explora nuestras [playlists destacadas](/[lang]/playlists) o descarga ejemplos en PDF desde [nuestra página de ejemplos](/[lang]/user/examples).
+## Dos cosas que importan en silencio
 
-### Tips para el título de playlist perfecto
+**Comprueba los años.** Los servicios de streaming muestran la fecha de lanzamiento de la versión que estás reproduciendo, no la original. Una remasterización pone una canción de 1975 en 2011, y un juego de línea temporal con años incorrectos acaba siendo una discusión sin respuesta buena. Esto es lo más habitual que rompe un mazo casero, y por eso QRSong! verifica cada año en vez de fiarse del servicio.
 
-- Sé específico: Las playlists temáticas (por ejemplo, "Éxitos dance de los 90") crean expectativas y emoción.
-- Hazlo personal: Agrega nombres o chistes internos para un toque único.
-- Usa emojis con moderación: Dan estilo, pero asegúrate de que encajen con el ambiente.
-- Piensa en tu público: ¿Será para trivia, música de fondo o una batalla de baile?
-- No temas ser creativo: Playlists como "Canciones sobre comida" o "QR Song Top 4000" siempre sacan una sonrisa.
+**Salta las canciones con una historia personal.** En un mazo pensado para un grupo, la canción que lo significa todo para dos personas de la sala y nada para las otras ocho es una carta lenta. Guárdalas para un [mazo personal como regalo](/[lang]/gift-box), donde eso es justo lo importante.
 
-### ¡Dale vida a tu playlist con QRSong!
+## Buenos puntos de partida
 
-Cualquiera que sea tu estilo, el título de tu playlist es el primer paso para una experiencia musical inolvidable. Con QRSong!, puedes crear juegos musicales interactivos, noches de trivia y regalos personalizados usando tus canciones favoritas de Spotify. [Descubre cómo funciona](/[lang]/faq), revisa nuestras [opiniones de usuarios](/[lang]/user/reviews) o [contáctanos](/[lang]/contact) para que te ayudemos a planear tu próximo evento.
+Si quieres un mazo que funcione sin tener que montar tú la playlist, hay opciones listas por década, género y ocasión en la [página de playlists](/[lang]/playlists). Están pensadas para el reconocimiento más que para el gusto, que es precisamente la disciplina difícil de aplicar a tu propia música.
+
+O pega la tuya y mira qué pasa: [empieza aquí](/[lang]/generate/playlist).
+
+## FAQ
+
+### ¿Cuántas canciones necesito para un juego de música?
+
+De 80 a 120 para un juego de línea temporal, de 40 a 60 para bingo. El bingo necesita menos porque cada tarjeta saca un subconjunto distinto de la reserva, y si la reserva es demasiado grande nadie llega a completar una tarjeta.
+
+### ¿Qué hace que una canción sea buena para un juego de adivinar canciones?
+
+Que se reconozca en unos cuatro segundos. Los estribillos y los singles ganan a las canciones de álbum, y las canciones que fueron inevitables en su momento ganan a las que tú valoras personalmente. Es una habilidad distinta a crear una playlist que disfrutas.
+
+### ¿Debería mezclar décadas?
+
+Sí, por dos razones. Un juego de línea temporal necesita que los años estén repartidos o colocar cartas se convierte en pura suposición, y un mazo de una sola época excluye a cualquiera que no tuviera la edad adecuada en el momento adecuado.
+
+### ¿Por qué el año de lanzamiento de mis cartas está mal?
+
+Porque los servicios de streaming suelen mostrar el año de la versión que estás reproduciendo, no el del lanzamiento original. Las remasterizaciones y reediciones suelen ser las culpables, y un año equivocado rompe en silencio un juego de línea temporal.
+
+### ¿Puedo usar una playlist hecha por otra persona?
+
+Sí, y a menudo es mejor que usar la tuya, porque no tienes apego a esas canciones. Hay playlists listas por década, género y ocasión si quieres saltarte la selección por completo.

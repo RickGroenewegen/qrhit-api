@@ -1,32 +1,61 @@
-## Cartes musicales QR physiques désormais disponibles dans le monde entier
+On me demande assez souvent si les cartes imprimées valent le coup par rapport au PDF à imprimer chez soi. La réponse honnête, c’est que ça dépend entièrement du nombre de fois où tu penses jouer, et je préfère dire ça plutôt que faire comme si la réponse était toujours oui.
 
-QRSong! est ravi d’annoncer que vous pouvez désormais commander de vraies cartes musicales QR physiques avec vos playlists Spotify préférées. Ces cartes, imprimées professionnellement, sont livrées directement chez vous, rendant plus simple que jamais la création d’expériences musicales interactives pour les fêtes, les cadeaux et les rassemblements entre amis.
+Voilà la vraie différence.
 
-### Commandez des cartes QR de haute qualité avec des playlists Spotify
+## Ce que t’apporte l’impression à la maison
 
-Chaque carte est imprimée sur un papier premium 350g en couleur, garantissant solidité et éclat. Après avoir collaboré avec un imprimeur professionnel, QRSong! propose maintenant une livraison rapide et fiable partout dans le monde. Que vous organisiez une soirée quiz musical, un cadeau d’anniversaire original ou un brise-glace mémorable pour une fête, ces cartes physiques sont prêtes à l’emploi dès leur arrivée.
+Tu télécharges un PDF préparé pour du A4 ou du Letter, tu l’imprimes en recto verso, puis tu le découpes. Ça ne coûte rien à part le papier et l’encre, tu l’as tout de suite, et pour une soirée unique c’est une très bonne solution.
 
-- Livraison mondiale avec lien de suivi inclus
-- Commandes traitées et expédiées sous 1 à 2 jours ouvrés
-- Cartes fabriquées en papier épais et de haute qualité pour un rendu premium
-- Compatibles avec l’application mobile QRSong! pour une lecture instantanée des playlists
+Deux choses peuvent mal se passer, et dans les deux cas ce sont des problèmes d’imprimante plutôt que de design.
 
-### Version feuille A4 pour plus de flexibilité
+**Décalage du recto verso.** Les imprimantes maison alignent rarement le deuxième côté exactement avec le premier. Quelques millimètres suffisent pour que l’année au dos ne soit plus centrée par rapport au QR code musique devant. Ça se joue très bien, ça fait juste maison.
 
-Pour ceux qui cherchent une option plus abordable, QRSong! propose désormais une **version feuille A4** des cartes musicales QR. Cette version utilise le même papier premium et la même qualité d’impression, mais arrive sous forme d’une feuille A4 complète à découper soi-même. C’est une solution économique pour ceux qui veulent personnaliser leurs cartes ou les distribuer en grande quantité lors d’événements et de rassemblements.
+**Transparence.** Sur du papier standard 80 g/m², on peut souvent lire la réponse à travers la carte quand quelqu’un la tient vers la lumière. Dans un jeu où il faut deviner, ça compte plus qu’on ne croit. Imprimer sur le papier le plus épais que ton imprimante accepte règle une bonne partie du problème.
 
-- Économisez avec le format feuille A4 à découper soi-même
-- Même papier 350g solide et en couleur
-- Parfait pour les projets créatifs, les salles de classe et les grands groupes
+Si tu choisis cette option, imprime une feuille de test avant tout le deck. Tous ceux qui sautent cette étape le regrettent vers la carte numéro soixante.
 
-### Pourquoi choisir QRSong! pour vos événements musicaux ?
+## Ce que t’apportent les cartes imprimées
 
-Avec QRSong!, transformez n’importe quelle playlist Spotify en une expérience tangible et à partager. Utilisez les cartes pour lancer des jeux de quiz musical, des défis « Devine la chanson » ou comme cadeaux originaux pour les fans de musique. Les cartes fonctionnent parfaitement avec l’appli QRSong!, ce qui permet de scanner et jouer les morceaux en un clin d’œil. Et avec la [création de playlists personnalisées](/[lang]/generate/playlist) et les [playlists sélectionnées](/[lang]/playlists), vous avez une infinité de choix musicaux à portée de main.
+Les nôtres sont imprimées sur du carton 350 g/m² avec un pelliculage brillant, découpées en 56 par 56 mm avec des coins arrondis, et livrées prêtes à jouer.
 
-### Comment commander vos cartes musicales QR
+Le poids du papier est le vrai sujet. À 350 g/m², rien ne se voit à travers, les cartes se mélangent comme de vraies cartes à jouer au lieu de coller entre elles, et elles survivent aux mains de toute une pièce de gens qui ont pris un verre. Un deck qui va servir vingt fois doit être un objet physique capable de tenir vingt soirées.
 
-1. Rendez-vous sur notre [générateur de playlists](/[lang]/generate/playlist) pour créer votre sélection personnalisée.
-2. Choisissez entre les cartes physiques ou l’option feuille A4 à découper.
-3. Finalisez votre commande et profitez d’une livraison rapide et suivie partout dans le monde.
+Le pelliculage fait le même travail contre les verres renversés, ce qui, sur une table de jeu, n’est pas une hypothèse abstraite.
 
-Vous avez encore des questions ? Consultez notre [FAQ](/[lang]/faq) ou [contactez-nous](/[lang]/contact) pour plus d’infos. Prêt à faire vibrer votre prochain événement ? Commandez vos cartes QRSong! dès aujourd’hui !
+## Comment décider
+
+Imprime chez toi si c’est pour une seule occasion, si tu le veux ce soir, ou si tu es encore en train de vérifier que les chansons sont les bonnes. C’est aussi la meilleure option si tu prépares plusieurs petits decks pour tester.
+
+Commande les cartes imprimées si c’est un cadeau, si tu penses y jouer plus qu’une poignée de fois, ou si le jeu va finir dans un endroit public comme un bureau ou un bar, où beaucoup de gens vont le manipuler.
+
+Il n’y a pas de mauvaise réponse ici, et la version numérique n’est pas une démo limitée : ce sont les mêmes cartes, les mêmes QR codes, les mêmes années vérifiées. La différence, c’est le papier.
+
+## Livraison
+
+Nous imprimons et expédions dans le monde entier. Les délais et les pays disponibles sont sur la [page de livraison](/[lang]/shipping-info), tenue à jour de façon précise plutôt qu’optimiste, parce qu’un jeu musical qui arrive après la soirée ne sert plus à rien.
+
+Si c’est un cadeau, la [boîte cadeau](/[lang]/gift-box) vaut le coup d’œil : une boîte imprimée pliable, avec une fenêtre dans le couvercle, qui accueille le deck et transforme une pile de cartes en quelque chose qui ressemble vraiment à un cadeau.
+
+Les deux options et leurs prix sont sur la [page des tarifs](/[lang]/pricing).
+
+## FAQ
+
+### Les cartes imprimées sont-elles meilleures que l’impression à la maison ?
+
+Pour jouer plusieurs fois, oui, surtout à cause du grammage : le 350 g/m² ne laisse pas voir la réponse à travers la carte et se mélange correctement. Pour une seule soirée, l’impression à la maison est vraiment suffisante et ne coûte rien.
+
+### Quelle est la taille des cartes ?
+
+56 par 56 mm avec des coins arrondis, imprimées sur du 350 g/m² avec un pelliculage brillant. C’est proche du papier de cartes à jouer standard, et c’est ce qui leur permet de se mélanger au lieu de coller.
+
+### Quel papier dois-je utiliser si je les imprime moi-même ?
+
+Au moins 250 g/m², idéalement 300 ou plus. En dessous, la réponse au dos se voit quand quelqu’un tient la carte vers la lumière, ce qui gâche la manche.
+
+### Est-ce que vous livrez à l’international ?
+
+Oui, dans le monde entier. Les pays actuels et les estimations de livraison sont sur la page de livraison.
+
+### Puis-je en imprimer une partie maintenant et commander le reste plus tard ?
+
+Oui. Les versions numérique et imprimée sont le même deck, donc les gens impriment souvent à la maison pour tester la playlist, puis commandent le set imprimé une fois contents des chansons.

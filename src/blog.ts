@@ -178,10 +178,35 @@ class Blog {
 
   /* ----------------------------------------------------------- rendering -- */
 
-  /** Replace the `[lang]` placeholder in internal links with the real locale. */
-  private replaceLangPlaceholders(content: string, locale: string): string {
+  /**
+   * Resolve the placeholders in internal links.
+   *
+   * `[lang]` becomes the locale. `[post:<id>]` becomes that post's slug IN THIS
+   * LOCALE, which is the only way a post-to-post link can work here: slugs are
+   * per locale, so a link written with the English slug 404s in the other
+   * eleven. Authors write `/[lang]/blog/[post:15]` and never have to know what
+   * the Swedish slug is.
+   *
+   * A reference to a post that does not exist in this locale is dropped back to
+   * the blog index rather than left dangling, because an untranslated sibling is
+   * a normal state and a 404 is not.
+   */
+  private resolvePlaceholders(
+    content: string,
+    locale: string,
+    index: BlogPostMeta[]
+  ): string {
     if (!content) return content;
-    return content.split('[lang]').join(locale);
+    const withPosts = content.replace(
+      /\[post:(\d+)\]/g,
+      (_match, id: string) => {
+        const target = index.find((p) => p.id === Number(id));
+        return target?.slugs?.[locale] ?? '';
+      }
+    );
+    // An unresolved reference leaves `/blog/` with a trailing slash; send those
+    // to the index.
+    return withPosts.replace(/\/blog\/(?=["')\s])/g, '/blog').split('[lang]').join(locale);
   }
 
   /**
@@ -320,7 +345,7 @@ class Blog {
       if (!markdown) return { success: false, error: 'Blog not found' };
 
       const { body, faq } = this.splitFaq(markdown);
-      const localized = this.replaceLangPlaceholders(body, locale);
+      const localized = this.resolvePlaceholders(body, locale, index);
 
       const blog = {
         ...this.metaFor(post, locale),
@@ -333,7 +358,7 @@ class Blog {
           // keeps formatting in the visible accordion; the SSR layer strips
           // tags again for the JSON-LD, where plain text is required.
           answer: this.render(
-            this.replaceLangPlaceholders(entry.answer, locale)
+            this.resolvePlaceholders(entry.answer, locale, index)
           ),
         })),
         allSlugs: post.slugs,

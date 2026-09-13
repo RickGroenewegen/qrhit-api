@@ -1,71 +1,57 @@
-Trasforma i tuoi gusti musicali in risparmi 🎵 Con QRSong! ora puoi guadagnare credito ogni volta che qualcuno acquista la tua playlist in evidenza. Fai scoprire a più persone il tuo stile musicale e riduci il costo del tuo prossimo ordine allo stesso tempo.
+Se crei un buon mazzo, altre persone lo vogliono. Succede più spesso di quanto mi aspettassi, e il programma sconto esiste perché l’alternativa era vedere persone fare screenshot della propria playlist e mandarla in giro a mano.
 
-## Cos8?9 Programma Guadagna Sconto?
-
-Il Programma Guadagna Sconto premia i clienti QRSong! che decidono di mettere in evidenza la loro playlist sul nostro sito. Quando qualcuno scopre e acquista la tua playlist, guadagni €2,50 di credito sconto da usare sui tuoi prossimi ordini QRSong!. Non ci sono limiti a quanto puoi guadagnare.
+Ecco come funziona e, cosa più utile, che cosa rende una playlist qualcosa che gli altri scelgono davvero.
 
 ## Come funziona
 
-1. Completa il tuo ordine come sempre, con download digitale o carte QR fisiche. Inizia qui: [crea la tua playlist](/[lang]/generate/playlist).
-2. Iscriviti dopo il checkout. Usa il link nella mail di conferma per inserire un titolo accattivante e una descrizione.
-3. Condividi il tuo link unico sui social, con gli amici o dove preferisci.
-4. Guadagna €2,50 di credito ogni volta che qualcuno acquista la tua playlist in evidenza. Il credito viene aggiunto al tuo account immediatamente.
+Quando crei un mazzo, puoi scegliere di mettere la playlist in vetrina pubblicamente. A quel punto appare nella [pagina delle playlist](/[lang]/playlists), dove chiunque stia curiosando può sceglierla come punto di partenza per le proprie carte.
 
-Hai bisogno di ispirazione prima di creare la tua? Esplora le nostre [playlist in evidenza](/[lang]/playlists) o guarda foto reali dei prodotti ed esempi di PDF in [esempi](/[lang]/user/examples).
+Ogni volta che qualcuno ordina un mazzo creato dalla tua playlist in vetrina, guadagni credito per il tuo prossimo ordine. Non stai vendendo nulla e nessuno ti paga: tu ottieni uno sconto, loro ottengono una playlist a cui qualcuno ha pensato davvero.
 
-## Cosa viene condiviso
+Puoi disattivare la vetrina in qualsiasi momento, e una playlist non più in vetrina smette subito di essere proposta.
 
-- Solo il titolo e la descrizione della playlist che scrivi tu.
-- Le tue informazioni personali non vengono mai mostrate.
-- Rimani sempre tu a controllare come viene presentata la tua playlist.
+## Che cosa viene scelto
 
-## Perch8?9 partecipare
+Posso vedere quali playlist in vetrina vengono usate e quali restano lì, e lo schema è abbastanza chiaro da valere la pena raccontarlo.
 
-- Guadagni illimitati, senza limiti sul tuo saldo sconto.
-- Condivisione facile con il tuo link unico.
-- Credito immediato non appena viene effettuato un acquisto.
-- Uso flessibile: scegli quanto credito utilizzare per ogni ordine.
+**Un’idea precisa batte una buona playlist.** "Canzoni che erano al numero uno la settimana in cui sei nato" viene scelta. "Le mie preferite" no, per quanto belle siano le canzoni. Chi naviga cerca un’idea da proporre a una stanza, non i tuoi gusti.
 
-## Perfetto per ogni utilizzo di QRSong!
+**Dalle un nome come fosse l’etichetta di uno scaffale.** Il titolo è tutta la presentazione, perché è l’unica cosa che una persona vede prima di decidere. "Meteore anni 90" dice esattamente che serata sta per arrivare. "Vibes" non dice niente.
 
-QRSong! trasforma le playlist di Spotify in schede con codice QR scansionabile per quiz musicali interattivi. Gli ospiti scansionano una scheda con l'app QRSong! per riprodurre un brano su Spotify e indovinare artista, titolo e anno.  perfetto per feste, serate in famiglia, quiz nei pub, aule scolastiche e regali. Scegli **download digitale** per suonare subito o **carte stampate premium** spedite in tutto il mondo. Ogni ordine di carte fisiche include un download digitale gratuito.
+**Costruiscila per essere riconoscibile.** Vale la stessa regola di qualsiasi mazzo da gioco: ritornelli e singoli, non brani nascosti negli album. Una playlist in vetrina che nessuno riesce a indovinare viene ordinata una volta e poi non la consiglia nessuno.
 
-Pronto per iniziare a creare il tuo set? Vai su [crea la tua playlist](/[lang]/generate/playlist), consulta [tariffe](/[lang]/pricing) e leggi le [recensioni](/[lang]/user/reviews).
+**Distribuisci i decenni, a meno che il concetto non sia proprio un decennio.** Un gioco sulla linea del tempo ha bisogno di spazi tra gli anni per essere giocabile.
 
-## Gi8?9 cliente?
+## Le occasioni che funzionano bene
 
-Se hai effettuato un ordine prima di questo lancio, puoi comunque partecipare. Contattaci e ti invieremo il tuo link promozionale personale: [contatta QRSong!](/[lang]/contact)
+I mazzi per decennio sono quelli più affidabili. Poi vengono matrimoni, un anno specifico, canzoni da film e raccolte legate a un Paese che solo qualcuno che vive lì saprebbe mettere insieme bene.
 
-## Domande Frequenti
+Quelli che funzionano male sono quelli molto personali, e ha senso. Un mazzo costruito sulla tua storia è il miglior regalo possibile per le persone che ne fanno parte, e un acquisto strano per uno sconosciuto. Tienili privati e mettili invece in una [confezione regalo](/[lang]/gift-box).
 
-### Come posso partecipare al Programma Guadagna Sconto?
+## I limiti, detti chiaramente
 
-Effettua un ordine, poi usa il link nella tua email di conferma per iscriverti e aggiungere titolo e descrizione della playlist. Sei nuovo? Inizia da [crea la tua playlist](/[lang]/generate/playlist).
+Questo è uno sconto sul tuo prossimo ordine, non un reddito. Se metti in vetrina una playlist e nessuno la sceglie, non succede nulla e non hai perso nulla. Se un tuo mazzo diventa popolare, il tuo prossimo ordine costa meno. Questo è tutto il meccanismo, e preferisco descriverlo in modo semplice invece di farlo sembrare più grande di quello che è.
 
-### Quanto guadagno per ogni acquisto?
+I dettagli e le condizioni aggiornate sono nella [pagina per guadagnare uno sconto](/[lang]/earn-discount).
 
-Guadagni €2,50 di credito sconto ogni volta che qualcuno acquista la tua playlist in evidenza.
+## FAQ
 
-### Quando  disponibile il credito?
+### Come guadagno uno sconto su QRSong!?
 
-Immediatamente. Il saldo sconto si aggiorna non appena l'acquisto  completato.
+Metti in vetrina una playlist che hai creato. Quando qualcun altro ordina un mazzo realizzato a partire da quella playlist, guadagni credito per il tuo prossimo ordine.
 
-### Esiste un limite di guadagno?
+### Vengo pagato quando qualcuno usa la mia playlist?
 
-No. Non c' nessun limite. Pi persone comprano la tua playlist, pi risparmi.
+No. Guadagni credito per il tuo prossimo ordine, non un pagamento. È un programma sconto, non una divisione dei ricavi.
 
-### Come uso il mio sconto?
+### Posso smettere di mettere in vetrina una playlist?
 
-Al checkout, applica il tuo credito come un saldo e scegli quanto usare per l'ordine.
+Sì, in qualsiasi momento, e smette subito di essere proposta ad altre persone.
 
-### E la privacy?
+### Che tipo di playlist viene scelta di più?
 
-Vengono mostrati solo il titolo e la descrizione della playlist che fornisci. I tuoi dati personali non vengono mai condivisi.
+Quelle con un concetto chiaro nel titolo. Raccolte per decennio, anni specifici, mazzi per matrimoni e canzoni da film funzionano bene; qualsiasi cosa chiamata in base ai tuoi gusti raramente viene scelta, perché chi naviga cerca una serata da proporre a una stanza.
 
-### E se ho bisogno di aiuto?
+### Le persone vedranno il mio nome?
 
-Visita le [FAQ](/[lang]/faq) per risposte rapide o contattaci tramite [contatto](/[lang]/contact).
-
-## Inizia oggi stesso
-
-Crea una playlist, mettila in evidenza e condividi il tuo link. Il tuo prossimo ordine potrebbe essere gratuito. Inizia qui: [crea la tua playlist](/[lang]/generate/playlist). Se cerchi ispirazione, scopri le [playlist in evidenza](/[lang]/playlists) o scopri di pi su formati e spedizioni in [tariffe](/[lang]/pricing).
+È la playlist a essere messa in vetrina, non tu. Se preferisci tenere privato un mazzo, semplicemente non metterlo in vetrina, e resta tuo.

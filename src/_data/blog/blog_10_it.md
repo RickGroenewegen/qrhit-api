@@ -1,87 +1,57 @@
-Scansiona. Abbina. Vinci. Scopri Music Match, un gioco party musicale dal ritmo serrato che unisce carte fisiche a Spotify, grazie alla tecnologia QRSong!. Creato da Source 1 Media di Leeuwarden con QRSong! come partner tecnico, questo gioco di carte trivia musicale interattivo trasforma ogni ritrovo in una battaglia ad alta energia di conoscenza e riflessi 🎵
+Music Match è un gioco di carte musicale creato da Source 1 Media a Leeuwarden, con QRSong! come partner tecnico per la scansione e la riproduzione. Vale la pena spiegarlo per quello che è, perché è un gioco diverso da quello timeline che molti conoscono, e funziona per un altro tipo di serata.
 
-## Cos’è Music Match?
+## Come si gioca
 
-Music Match è un gioco di carte musicali con codici QR in cui i giocatori gareggiano per scartare la propria mano abbinando le carte alla canzone in riproduzione su Spotify. È semplicissimo da imparare, veloce da giocare e perfetto per feste, serate in famiglia e eventi di squadra.
+Ognuno riceve una mano di carte. L'obiettivo è essere il primo a giocarle tutte.
 
-## Come si gioca a Music Match
+Una carta entra in gioco, la sua canzone viene scansionata, e puoi calare una carta dalla tua mano se ha qualcosa in comune: artista, genere, decennio e così via. Se non puoi fare un abbinamento, peschi.
 
-### Preparazione
+Se hai già giocato a giochi di carte, la struttura ti sembrerà subito familiare. La differenza è che l'abbinamento si fa sulla musica invece che su colori e numeri, quindi il turno si decide in base a ciò che riconosci, non solo in base alle carte che ti sono capitate.
 
-- Distribuisci 7 carte Match a ciascun giocatore.
-- Poni le carte QR a faccia in su al centro del tavolo.
-- Metti i cubetti di conquista al centro, sempre uno in meno rispetto al numero di giocatori.
-- Consegna il Gettone DJ a un giocatore per iniziare il round.
+## Perché funziona diversamente da un gioco timeline
 
-### Svolgimento
+Un gioco timeline è un rompicapo individuale fatto a turni: ricevi una canzone, la piazzi, hai ragione o hai torto. Music Match è un gioco di gestione della mano con altre persone al tavolo. Hai delle carte in mano, guardi cosa viene giocato, e decidi quando usare quella carta buona che stavi tenendo da parte.
 
-1. Il DJ scansiona una carta QR con l’app Music Match.
-2. La canzone parte su Spotify.
-3. Tutti corrono per giocare una carta che si abbini alla musica.
-4. Prendi un cubetto di conquista quando giochi. L’ultimo senza cubetto rischia penalità.
-5. Ribalta le carte giocate per vedere chi ha abbinato correttamente e passa al round successivo.
+Due conseguenze pratiche:
 
-## Sette modi per abbinare
+**È più veloce.** I round sono brevi e il ritmo non dipende da una sola persona che pensa.
 
-Ogni carta QR offre sette categorie, quindi ogni giocatore ha una possibilità di vincere, anche senza avere un’enciclopedia musicale.
+**Premia l'ampiezza più della precisione.** Sapere più o meno di che epoca e genere è un brano conta più che conoscere l'anno esatto di uscita. Questo lo rende molto più adatto a un tavolo misto, perché nessuno deve essere fissato con la musica per restare in partita.
 
-- **Artista**, identifica chi esegue la canzone.
-- **Titolo**, nomina il brano.
-- **Decennio**, abbina l’era della canzone.
-- **Paese**, indovina l’origine dell’artista.
-- **Voce**, solista maschile o femminile.
-- **Genere**, pop, rock, hip hop o un altro stile.
-- **#1 Top 40**, è stato un numero uno in classifica?
+## Per chi è
 
-## Strategie e colpi di scena per mantenere alta l’adrenalina
+Per gruppi in cui la cultura musicale non è uguale per tutti. Un gioco timeline può essere durissimo per chi non segue la musica da vicino; abbinare per genere e decennio è molto più accessibile, e anche un ospite che non sa quasi nulla ha comunque un ruolo vero nella partita.
 
-- **Artista e Titolo sono esclusivi**, una volta rivendicati in un round, gli altri non possono giocare nella stessa categoria.
-- **I cubetti di conquista aumentano la pressione**, se ne perdi uno e fai un abbinamento sbagliato rischi penalità doppie.
-- **Il Gettone DJ ruota**, il giocatore con meno carte diventa il nuovo DJ per mantenere il gioco dinamico.
-- **Le Carte Missione** aggiungono sorprese per sconvolgere la tua strategia.
+Per lo stesso motivo funziona meglio del gioco timeline anche con giocatori più giovani.
 
-## Disponibilità e lingue
+## La scansione è la stessa
 
-Music Match è disponibile nei principali rivenditori nei Paesi Bassi. L’edizione attuale è in olandese, ma altre versioni linguistiche arriveranno presto.
+Usa lo stesso meccanismo di scansione e riproduzione delle altre nostre carte: l'[app gratuita](/[lang]/download-app) legge la carta e riproduce la canzone tramite il tuo account di streaming, senza mostrare il titolo. Le [regole delle piattaforme](/[lang]/supported-platforms) sono identiche, incluso il fatto che YouTube Music non ha la riproduzione nascosta.
 
-## Powered by QRSong!, realizzato da Source 1 Media
+## Dove trovarlo
 
-Source 1 Media ha ideato l’esperienza di gioco e i componenti. QRSong! ha fornito la tecnologia per convertire i QR in Spotify, rendendo la scansione e la riproduzione istantanee e fluide. È la perfetta fusione tra il gioco di carte classico e lo streaming musicale moderno.
+Music Match è il gioco di Source 1 Media, venduto come prodotto a sé, ed esiste in edizione originale e in edizione K-pop. Se sei arrivato qui dal nostro sito, la [pagina di Music Match](/[lang]/music-match) lo spiega.
 
-## Crea il tuo gioco musicale con QRSong!
+Se invece quello che vuoi davvero è un mazzo con le tue canzoni, quello è l'altro lavoro che facciamo: [incolla una playlist](/[lang]/generate/playlist) e ottieni carte create da quella playlist, con cui puoi giocare a un gioco timeline, al [bingo](/[lang]/music-bingo) e a un [quiz](/[lang]/music-quiz).
 
-Vuoi un gioco musicale personalizzato per la tua prossima festa, per la scuola o per un evento di team building, o un regalo su misura per un appassionato di musica? QRSong trasforma qualsiasi playlist Spotify in carte QR pronte da giocare e in download digitali immediati.
+## FAQ
 
-- [Crea le tue carte musicali QR da qualsiasi playlist Spotify](/[lang]/generate/playlist)
-- [Esplora playlist in evidenza per ispirarti subito](/[lang]/playlists)
-- [Guarda foto del prodotto e PDF di esempio](/[lang]/user/examples)
-- [Controlla prezzi e opzioni di consegna](/[lang]/pricing)
-- [Invia una carta regalo QRSong](/[lang]/giftcard)
+### Che cos'è Music Match?
 
-Organizzi un evento o gestisci un’attività? Offriamo anche soluzioni per aziende e locali.
+Un gioco di carte musicale in cui abbini le carte dalla tua mano alla canzone in gioco per artista, genere o decennio, cercando di finire la mano per primo. È creato da Source 1 Media, con QRSong! per la scansione e la riproduzione.
 
-- [OnzeVibe per esperienze corporate](/[lang]/business)
-- [QR cards as a service](/[lang]/qr-cards-as-a-service)
-- [Music pub quiz service](/[lang]/pubquiz)
+### In cosa è diverso da un gioco musicale timeline?
 
-## Risposte rapide
+Un gioco timeline ti chiede di piazzare una canzone in base al suo anno di uscita, un giocatore alla volta. Music Match è un gioco di gestione della mano: i round sono più veloci, e premia il riconoscere più o meno che cos'è un brano invece di sapere gli anni esatti.
 
-### Serve Spotify per giocare?
+### Va bene per chi non sa molto di musica?
 
-Sì. Music Match riproduce le canzoni tramite Spotify. Assicurati che il dispositivo usato dal DJ abbia Spotify installato e pronto a riprodurre.
+Meglio di un gioco timeline, sì. Abbinare per genere o decennio è molto più semplice che dire l'anno di uscita, quindi un tavolo misto resta competitivo.
 
-### L’app è separata da QRSong?
+### Serve un'app?
 
-Music Match usa un’app dedicata per la scansione durante il gioco, alimentata dalla tecnologia QRSong! sotto il cofano. QRSong! offre anche un’app mobile per scansionare le carte di Music Match.
+Sì, l'app gratuita QRSong!, che riproduce le canzoni senza mostrare il titolo. Scansionare con la fotocamera del telefono mostrerebbe il nome della canzone e chiuderebbe il round.
 
-### Quanti giocatori ci possono partecipare?
+### Posso creare un mazzo Music Match dalla mia playlist?
 
-Music Match è pensato per gruppi da 3 a 7 giocatori. Raduna un tavolo e divertiti con round rapidi e competitivi che funzionano bene anche con più partecipanti.
-
-## Prossimi passi
-
-- Pianifica la tua prossima serata musicale con Music Match per energia party istantanea.
-- Crea il tuo quiz musicale QR con QRSong!, inizia qui, [crea le tue carte QR playlist](/[lang]/generate/playlist).
-- Domande su ordini personalizzati o spedizioni? [Contatta il nostro team](/[lang]/contact).
-
-Lascia che la musica suoni e che vinca il miglior abbinatore.
+No, Music Match è un gioco pubblicato con carte fisse. Se vuoi carte dalla tua playlist, quelli sono i mazzi QRSong!, e permettono di giocare a un gioco timeline, al bingo e a un quiz.

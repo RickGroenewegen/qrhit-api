@@ -1,87 +1,57 @@
-Scan. Match. Win. Maak kennis met Music Match, een supersnel muziekpraatspel dat fysieke kaarten combineert met Spotify, aangedreven door QRSong! technologie. Ontwikkeld door Source 1 Media uit Leeuwarden met QRSong! als technische partner, verandert dit interactieve muziektrivia-kaartspel elke bijeenkomst in een energieke strijd van kennis en reflexen 🎵
+Music Match is een kaartspel van Source 1 Media uit Leeuwarden, met QRSong! als technische partner achter het scannen en afspelen. Het is de moeite waard om het op zijn eigen manier uit te leggen, want het is een ander spel dan het timeline-spel dat de meeste mensen kennen, en het past bij een ander soort avond.
 
-## Wat is Music Match?
+## Zo speel je het
 
-Music Match is een QR-code muziekkaartspel waarbij spelers strijden om hun hand kwijt te raken door kaarten te matchen met het nummer dat op dat moment in Spotify speelt. Het is makkelijk te leren, snel te spelen en perfect voor feestjes, familiebijeenkomsten en teamuitjes.
+Iedereen krijgt kaarten op hand. Het doel is om als eerste al je kaarten kwijt te raken.
 
-## Hoe speel je Music Match
+Er komt een kaart in het spel, het liedje wordt gescand, en je mag een kaart uit je hand neerleggen als die ergens op matcht: de artiest, het genre, het decennium, enzovoort. Kun je niet matchen, dan pak je een kaart.
 
-### Voorbereiding
+Als je kaartspellen hebt gespeeld, voelt de vorm meteen bekend. Het verschil is dat je matcht op muziek in plaats van op kleuren en cijfers, dus de ronde wordt bepaald door wat je herkent, niet alleen door wat je gedeeld kreeg.
 
-- Deel 7 Match-kaarten uit aan elke speler.
-- Leg de QR-kaarten met de afbeelding naar boven in het midden.
-- Plaats de Claim Kubussen in het midden, altijd één minder dan het aantal spelers.
-- Geef de DJ-token aan één speler om de ronde te starten.
+## Waarom het anders speelt dan een timeline-spel
 
-### Spelverloop
+Een timeline-spel is eigenlijk een solo-puzzel om de beurt: je krijgt een liedje, je legt het neer, je hebt gelijk of niet. Music Match is een handmanagementspel met andere mensen erin. Je hebt kaarten vast, je kijkt wat er op tafel komt, en je kiest wanneer je die ene goede kaart speelt die je hebt bewaard.
 
-1. De DJ scant een QR-kaart met de Music Match-app.
-2. Het nummer wordt afgespeeld via Spotify.
-3. Ieder racet om een kaart te spelen die past bij de muziek.
-4. Grijp een Claim Kubus zodra je speelt. De laatste zonder kubus loopt het risico op strafpunten.
-5. Draai de gespeelde kaarten om om te zien wie juist matchte, en ga dan door naar de volgende ronde.
+Twee praktische gevolgen:
 
-## Zeven manieren om te matchen
+**Het is sneller.** Rondes zijn kort en het tempo hangt niet af van één persoon die lang nadenkt.
 
-Elke QR-kaart biedt zeven categorieën, zodat elke speler een kans heeft om te winnen, zelfs zonder encyclopedische muziekkennis.
+**Het beloont brede kennis meer dan precisie.** Ongeveer weten uit welk tijdperk en genre iets komt, is belangrijker dan exacte releasejaren kennen. Daardoor is het veel vriendelijker voor een gemengde tafel, want niemand hoeft een muziekfanaat te zijn om mee te kunnen doen.
 
-- **Artiest**, noem wie het nummer uitvoert.
-- **Titel**, geef de naam van het nummer.
-- **Decennium**, match het tijdperk van het nummer.
-- **Land**, raad het land van herkomst van de artiest.
-- **Vocalen**, mannelijke of vrouwelijke zangstem.
-- **Genre**, pop, rock, hiphop of een andere stijl.
-- **#1 Top 40**, stond het op nummer één in de hitlijst?
+## Voor wie het is
 
-## Strategieën en twists die het spannend houden
+Voor groepen waarin de muziekkennis nogal verschilt. Een timeline-spel kan hard zijn voor iemand die muziek niet heel actief volgt. Matchen op genre en decennium is een veel lagere drempel, en ook een gast die bijna niets weet speelt nog echt mee.
 
-- **Artiest en Titel zijn exclusief**, als één van beide in een ronde is gepakt, kan niemand anders die categorie spelen.
-- **Claim Kubussen verhogen de druk**, mis er één en een foute match kan dubbele strafpunten opleveren.
-- **DJ-token rouleert**, degene met de minste kaarten wordt de volgende DJ, zodat het lekker dynamisch blijft.
-- **Taakkaarten** voegen verrassingen toe om je strategie op z’n kop te zetten.
+Om dezelfde reden werkt het ook beter dan het timeline-spel voor jongere spelers.
 
-## Beschikbaarheid en taal
+## Het scannen is hetzelfde
 
-Music Match is verkrijgbaar bij grote retailers in Nederland. De huidige editie is in het Nederlands, met binnenkort meer taalversies.
+Het gebruikt hetzelfde scan-en-speelmechanisme als de rest van onze kaarten: de [gratis app](/[lang]/download-app) leest de kaart en speelt het liedje af via je eigen streamingaccount, zonder de titel te tonen. De [platformregels](/[lang]/supported-platforms) zijn hetzelfde, inclusief dat YouTube Music geen verborgen afspelen heeft.
 
-## Aangedreven door QRSong!, gemaakt door Source 1 Media
+## Hoe je het krijgt
 
-Source 1 Media ontwierp de game-ervaring en alle componenten. QRSong leverde de QR-naar-Spotify-technologie die instant scannen en afspelen vlekkeloos maakt. Het is de perfecte combinatie van klassiek kaartspel en moderne muziekstreaming.
+Music Match is het spel van Source 1 Media, verkocht als eigen product, en er is een originele editie en een K-popeditie. Als je vanaf onze site hier bent uitgekomen, vind je meer op de [Music Match-pagina](/[lang]/music-match).
 
-## Maak je eigen QR-muziekspel met QRSong!
+Als je eigenlijk een deck met je eigen liedjes wilt, dan is dat het andere wat wij doen: [plak een playlist](/[lang]/generate/playlist) en je krijgt kaarten die daarvan gemaakt zijn, waarmee je een timeline-spel, [bingo](/[lang]/music-bingo) en een [quiz](/[lang]/music-quiz) speelt.
 
-Wil je een op maat gemaakt muziekgame voor je volgende feestje, klas of teamuitje, of een gepersonaliseerd cadeau voor een musicalliefhebber? QRSong verandert elke Spotify-afspeellijst in kant-en-klare QR-kaarten en digitale downloads.
+## FAQ
 
-- [Maak je QR-muziekkaarten van elke Spotify-afspeellijst](/[lang]/generate/playlist)
-- [Blader door aanbevolen afspeellijsten voor directe inspiratie](/[lang]/playlists)
-- [Bekijk productfoto’s en voorbeeld-PDF’s](/[lang]/user/examples)
-- [Bekijk prijzen en bezorgopties](/[lang]/pricing)
-- [Verstuur een QRSong-cadeaukaart](/[lang]/giftcard)
+### Wat is Music Match?
 
-Een evenement organiseren of een bedrijf runnen? We bieden ook oplossingen voor bedrijven en locaties.
+Een muziekkaartspel waarbij je kaarten uit je hand matcht met het liedje dat in het spel is, op artiest, genre of decennium, terwijl je probeert als eerste je hand leeg te spelen. Het is gemaakt door Source 1 Media, met QRSong! voor het scannen en afspelen.
 
-- [OnzeVibe voor zakelijke evenementen](/[lang]/business)
-- [QR-kaarten als service](/[lang]/qr-cards-as-a-service)
-- [Muziek-pubquizservice](/[lang]/pubquiz)
+### Hoe verschilt het van een muziek timeline-spel?
 
-## Snelle antwoorden
+Een timeline-spel vraagt je om een liedje op releasejaar te plaatsen, één speler tegelijk. Music Match is een handmanagementspel: snellere rondes, en het beloont ongeveer weten wat iets is meer dan exacte jaren kennen.
 
-### Heb je Spotify nodig om te spelen?
+### Is het leuk voor mensen die niet veel van muziek weten?
 
-Ja. Music Match speelt nummers af via Spotify. Zorg dat het apparaat dat de DJ gebruikt Spotify geïnstalleerd heeft en klaar staat om te streamen.
+Beter dan een timeline-spel, ja. Matchen op genre of decennium is een veel lagere drempel dan een releasejaar noemen, dus een gemengde tafel blijft spannend.
 
-### Is de app los van QRSong?
+### Heb ik een app nodig?
 
-Music Match gebruikt zijn eigen app voor het scannen tijdens het spel, met QRSong!-technologie onder de motorkap. QRSong! biedt ook een mobiele app om Music Match-kaarten te scannen.
+Ja, de gratis QRSong! app, die de liedjes afspeelt zonder de titel te tonen. Scannen met een telefooncamera zou de naam van het liedje laten zien en de ronde verpesten.
 
-### Met hoeveel spelers kun je meedoen?
+### Kan ik een Music Match-deck maken van mijn eigen playlist?
 
-Music Match is ontworpen voor groepen van 3 tot 7 spelers. Verzamel een tafel vol spelers en geniet van snelle, competitieve rondes die goed schalen bij meer deelnemers.
-
-## Volgende stappen
-
-- Plan je volgende muziekavond met Music Match voor instant party-energie.
-- Bouw je eigen QR-muziekquiz met QRSong! en begin hier: [maak je playlist-QR-kaarten](/[lang]/generate/playlist).
-- Vragen over maatwerkbestellingen of verzending? [Neem contact op met ons team](/[lang]/contact).
-
-Laat de muziek spelen, en moge de beste matcher winnen.
+Nee, Music Match is een vast uitgegeven spel. Als je kaarten van je eigen playlist wilt, dan zijn QRSong! decks daarvoor, en daarmee speel je een timeline-spel, bingo en een quiz.

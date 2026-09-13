@@ -1,71 +1,57 @@
-Förvandla din musiksmak till besparingar 🎵 Med QRSong! kan du nu tjäna kredit varje gång någon köper din utvalda spellista. Introducera fler till din musikstil och sänk kostnaden för din nästa beställning på samma gång.
+Om du bygger en bra kortlek vill andra ha den. Det händer oftare än jag trodde, och rabattprogrammet finns för att alternativet var att folk tog skärmdumpar av sin spellista och skickade runt den manuellt.
 
-## Vad är rabattprogrammet?
+Här är hur det fungerar och, mer användbart, vad som gör att andra faktiskt väljer en spellista.
 
-Vårt rabattprogram belönar QRSong!-kunder som väljer att lyfta fram sin spellista på vår sajt. När någon upptäcker och köper din spellista får du 2,50 € i rabattkredit som du kan använda på framtida beställningar hos QRSong!. Det finns ingen gräns för hur mycket du kan tjäna.
+## Så fungerar det
 
-## Så funkar det
+När du gör en kortlek kan du välja att lyfta fram spellistan offentligt. Då visas den på [spellistesidan](/[lang]/playlists), där alla som bläddrar kan välja den som startpunkt för sina egna kort.
 
-1. Slutför din beställning som vanligt, antingen digital nedladdning eller fysiska QR-kort. Börja här: [skapa din spellista](/[lang]/generate/playlist).
-2. Gå med efter att du slutfört köpet. Klicka på länken i ditt bekräftelsemejl för att lägga till en lockande titel och en beskrivning.
-3. Dela din unika länk på sociala medier, med vänner eller var du vill.
-4. Tjäna 2,50 € i kredit varje gång någon köper din utvalda spellista. Krediten läggs till på ditt konto direkt.
+Varje gång någon beställer en kortlek byggd från din utvalda spellista får du kredit till din nästa beställning. Du säljer ingenting och ingen betalar dig: du får rabatt, de får en spellista som någon faktiskt har tänkt igenom.
 
-Behöver du inspiration innan du skapar din egen? Upptäck våra [utvalda spellistor](/[lang]/playlists) eller se riktiga produktbilder och exempel-PDF:er under [exempel](/[lang]/user/examples).
+Du kan sluta lyfta fram spellistan när som helst, och en spellista som inte längre är utvald slutar erbjudas direkt.
 
-## Vad delas
+## Det som blir valt
 
-- Endast den titel och beskrivning du själv lägger till för din spellista.
-- Dina personuppgifter visas aldrig.
-- Du har alltid kontroll över hur din spellista presenteras.
+Jag kan se vilka utvalda spellistor som används och vilka som bara ligger där, och mönstret är tillräckligt tydligt för att vara värt att dela.
 
-## Varför delta
+**En tydlig idé slår en bra spellista.** "Låtar som var etta veckan du föddes" blir vald. "Mina favoriter" blir det inte, hur bra låtarna än är. Folk som bläddrar letar efter ett koncept de kan ge till ett rum, inte efter din smak.
 
-- Obegränsade intäkter, ingen gräns för ditt rabattsaldo.
-- Enkelt att dela med din unika länk.
-- Omedelbar kredit i samma stund som ett köp genomförs.
-- Flexibel användning, använd så mycket eller lite kredit du vill per beställning.
+**Namnge den som en hyllskylt.** Titeln är hela säljpitchen, eftersom det är allt någon ser innan de bestämmer sig. "90-talets one-hit wonders" berättar exakt vilken kväll de får. "Vibes" berättar ingenting.
 
-## Perfekt för alla QRSong!-användningsområden
+**Bygg den för igenkänning.** Samma regel som för alla spelkortlekar: refränger och singlar, inte albumspår. En utvald spellista som ingen kan gissa beställs en gång och rekommenderas aldrig.
 
-QRSong! förvandlar Spotify-spellistor till skanningsbara QR-kort för interaktiva musikquiz. Gäster skannar ett kort med QRSong!-appen för att spela en låt på Spotify och gissa artist, låttitel och år. Det är perfekt för fester, familjekvällar, pubquiz, klassrum och presenter. Välj **digital nedladdning** för omedelbar spelning eller **premiumtryckta kort** som skickas över hela världen. Varje fysisk beställning inkluderar en gratis digital nedladdning.
+**Sprid årtiondena, om inte själva konceptet är ett årtionde.** Ett tidslinjespel behöver luckor mellan åren för att över huvud taget gå att spela.
 
-Redo att bygga ditt set? Gå till [skapa din spellista](/[lang]/generate/playlist), kolla [priser](/[lang]/pricing) och läs [recensioner](/[lang]/user/reviews).
+## Tillfällen som fungerar bra
 
-## Redan kund?
+Årtiondeskortlekar är de säkra korten. Efter det: bröllop, ett specifikt år, låtar från filmer och landspecifika set som bara någon som bor där skulle sätta ihop ordentligt.
 
-Om du gjorde en beställning innan den här funktionen lanserades kan du fortfarande gå med. Kontakta oss så skickar vi din personliga kampanjlänk: [kontakta QRSong!](/[lang]/contact)
+De som fungerar dåligt är de väldigt personliga, och det är rimligt. En kortlek byggd på din egen historia är den bästa möjliga presenten till personerna i den, och ett märkligt köp för en främling. Håll dem privata och lägg dem i en [presentförpackning](/[lang]/gift-box) i stället.
 
-## Vanliga frågor
+## De ärliga gränserna
 
-### Hur går jag med i rabattprogrammet?
+Det här är rabatt på din nästa beställning, inte en inkomst. Om du lyfter fram en spellista och ingen väljer den händer ingenting, och du har inte förlorat något. Om en av dina kortlekar blir populär blir din nästa beställning billigare. Det är hela mekanismen, och jag beskriver den hellre rakt än klär upp den.
 
-Lägg en beställning och använd sedan länken i ditt bekräftelsemejl för att gå med och lägga till din spellistetitel och beskrivning. Ny här? Börja på [skapa din spellista](/[lang]/generate/playlist).
+Detaljer och aktuella villkor finns på [sidan för rabatt](/[lang]/earn-discount).
 
-### Hur mycket tjänar jag per köp?
+## FAQ
 
-Du tjänar 2,50 € i rabattkredit varje gång någon köper din utvalda spellista.
+### Hur får jag rabatt på QRSong?
 
-### När blir krediten tillgänglig?
+Lyft fram en spellista som du har byggt. När någon annan beställer en kortlek gjord från den får du kredit till din nästa beställning.
 
-Omedelbart. Ditt rabattsaldo uppdateras så fort köpet är slutfört.
+### Får jag betalt när någon använder min spellista?
 
-### Finns det en maxgräns för hur mycket jag kan tjäna?
+Nej. Du får kredit till din egen nästa beställning i stället för en utbetalning. Det är ett rabattprogram, inte en intäktsdelning.
 
-Nej, det finns ingen gräns. Ju fler som köper din spellista, desto mer sparar du.
+### Kan jag sluta lyfta fram en spellista?
 
-### Hur använder jag min rabatt?
+Ja, när som helst, och då slutar den erbjudas till andra direkt.
 
-Vid kassan använder du din kod som ett saldo och väljer hur mycket kredit du vill spendera på beställningen.
+### Vilken typ av spellista väljs oftast?
 
-### Hur är det med integriteten?
+Sådana med ett tydligt koncept i titeln. Årtiondeset, specifika år, bröllopskortlekar och filmlåtar fungerar bra. Allt som är döpt efter din egen smak blir sällan valt, eftersom folk som bläddrar letar efter en kväll de kan ge till ett rum.
 
-Endast den titel och beskrivning du lägger till visas. Dina personliga uppgifter delas aldrig.
+### Kommer folk att se mitt namn?
 
-### Vad gör jag om jag behöver hjälp?
-
-Besök [vanliga frågor](/[lang]/faq) för snabba svar eller kontakta oss via [kontakt](/[lang]/contact).
-
-## Kom igång idag
-
-Skapa en spellista, lyft fram den och dela din länk. Din nästa beställning kan bli gratis. Börja här: [skapa din spellista](/[lang]/generate/playlist). Om du behöver inspiration, kolla in [utvalda spellistor](/[lang]/playlists) eller läs mer om format och frakt under [priser](/[lang]/pricing).
+Det är spellistan som lyfts fram, inte du. Om du hellre vill hålla en kortlek privat låter du bara bli att lyfta fram den, så förblir den din.

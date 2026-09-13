@@ -1,71 +1,57 @@
-Convierte tu gusto musical en ahorro 🎵 Con QRSong!, ahora puedes ganar crédito cada vez que alguien compre tu lista destacada. Presenta tu estilo musical a más personas y reduce el costo de tu próximo pedido al mismo tiempo.
+Si montas un buen mazo, otra gente lo quiere. Pasa más de lo que esperaba, y el programa de descuento existe porque la alternativa era que la gente hiciera capturas de su playlist y la mandara por ahí a mano.
 
-## ¿Qué es el Programa de Descuento por Ganancias?
-
-El Programa de Descuento por Ganancias recompensa a los clientes de QRSong! que deciden destacar su lista de reproducción en nuestro sitio. Cuando alguien descubre y compra tu lista, ganas €2,50 en crédito de descuento que puedes usar en futuros pedidos de QRSong!. No hay límite en lo que puedes ganar.
+Aquí tienes cómo funciona y, más útil todavía, qué hace que una playlist sea de las que otra gente elige de verdad.
 
 ## Cómo funciona
 
-1. Completa tu pedido como de costumbre, ya sea descarga digital o tarjetas QR físicas. Empieza aquí: [crea tu lista de reproducción](/[lang]/generate/playlist).
-2. Actívalo después de la compra. Usa el enlace en tu correo de confirmación para agregar un título y una descripción llamativos.
-3. Comparte tu enlace único en redes sociales, con amigos o donde quieras.
-4. Gana €2,50 de crédito cada vez que alguien compre tu lista destacada. El crédito se añade a tu cuenta al instante.
+Cuando creas un mazo, puedes elegir destacar la playlist públicamente. Entonces aparece en la [página de playlists](/[lang]/playlists), donde cualquiera que esté mirando puede elegirla como punto de partida para sus propias cartas.
 
-¿Necesitas inspiración antes de crear la tuya? Explora nuestras [listas destacadas](/[lang]/playlists) o mira fotos reales del producto y PDFs de ejemplo en [ejemplos](/[lang]/user/examples).
+Cada vez que alguien pide un mazo creado a partir de tu playlist destacada, ganas crédito para tu próximo pedido. No estás vendiendo nada y nadie te paga: tú consigues un descuento, ellos consiguen una playlist que alguien pensó de verdad.
 
-## Qué se comparte
+Puedes dejar de destacar una playlist en cualquier momento, y una playlist que ya no está destacada deja de ofrecerse inmediatamente.
 
-- Sólo el título y la descripción de la lista que escribas.
-- Tus datos personales nunca se muestran.
-- Conservas el control de cómo se presenta tu lista.
+## Qué elige la gente
 
-## Por qué participar
+Puedo ver qué playlists destacadas se usan y cuáles se quedan ahí, y el patrón está lo bastante claro como para contarlo.
 
-- Ganancias ilimitadas, sin límite en tu saldo de descuento.
-- Fácil de compartir con tu enlace único.
-- Crédito instantáneo en el momento de la compra.
-- Uso flexible, aplica tanto o tan poco crédito como desees por pedido.
+**Una idea concreta gana a una buena playlist.** "Canciones que fueron número uno la semana en que naciste" se elige. "Mis favoritas" no, por buenas que sean las canciones. La gente que mira busca un concepto que pueda poner delante de un grupo, no tu gusto personal.
 
-## Ideal para cualquier uso de QRSong!
+**Ponle nombre como si fuera una etiqueta de estantería.** El título es toda la propuesta, porque es lo único que ve alguien antes de decidir. "One-hit wonders de los 90" le dice exactamente qué tipo de noche va a tener. "Vibes" no le dice nada.
 
-QRSong! convierte playlists de Spotify en tarjetas con código QR que puedes escanear para un juego interactivo de trivia musical. Los invitados escanean una tarjeta con la app de QRSong! para reproducir una canción en Spotify y adivinar el artista, título y año. Es perfecto para fiestas, noches familiares, quizzes en el pub, aulas y regalos. Elige **descargas digitales** para juego instantáneo o **tarjetas impresas premium** enviadas a todo el mundo. Cada pedido físico incluye una descarga digital gratuita.
+**Hazla para que se pueda reconocer.** La misma regla que en cualquier mazo de juego: estribillos y singles, no temas escondidos de álbum. Una playlist destacada que nadie puede adivinar se pide una vez y no se recomienda nunca.
 
-¿Listo para empezar a crear tu set? Ve a [crea tu lista de reproducción](/[lang]/generate/playlist), consulta los [precios](/[lang]/pricing) y lee las [reseñas](/[lang]/user/reviews).
+**Reparte las décadas salvo que el concepto sea una década.** Un juego cronológico necesita huecos entre años para que se pueda jugar.
 
-## ¿Ya eres cliente?
+## Las ocasiones que funcionan bien
 
-Si hiciste un pedido antes de que lanzáramos esta función, aún puedes participar. Contáctanos y te enviaremos tu enlace promocional personal: [contacta con QRSong!](/[lang]/contact)
+Los mazos por décadas son los más fiables. Después vienen las bodas, un año concreto, canciones de películas y colecciones específicas de un país que solo alguien que vive allí montaría bien.
 
-## Preguntas frecuentes
+Las que funcionan peor son las muy personales, y tiene sentido. Un mazo creado desde tu propia historia es el mejor regalo posible para la gente que forma parte de ella y una compra rara para una persona desconocida. Mantén esos mazos privados y ponlos en una [caja de regalo](/[lang]/gift-box) en su lugar.
 
-### ¿Cómo me uno al Programa de Descuento por Ganancias?
+## Los límites, sin adornos
 
-Haz un pedido y luego usa el enlace en tu correo de confirmación para activar la función y añadir el título y la descripción de tu lista. ¿Eres nuevo? Empieza en [crea tu lista de reproducción](/[lang]/generate/playlist).
+Esto es un descuento en tu próximo pedido, no un ingreso. Si destacas una playlist y nadie la elige, no pasa nada y no has perdido nada. Si uno de tus mazos se vuelve popular, tu próximo pedido sale más barato. Ese es todo el mecanismo, y prefiero explicarlo claro antes que maquillarlo.
 
-### ¿Cuánto gano por compra?
+Los detalles y las condiciones actuales están en la [página para ganar descuento](/[lang]/earn-discount).
 
-Ganas €2,50 de crédito de descuento cada vez que alguien compra tu lista destacada.
+## FAQ
 
-### ¿Cuándo está disponible el crédito?
+### ¿Cómo gano un descuento en QRSong!?
 
-Inmediatamente. Tu saldo de descuento se actualiza tan pronto como se completa la compra.
+Destaca una playlist que hayas creado. Cuando otra persona pide un mazo hecho a partir de ella, ganas crédito para tu próximo pedido.
 
-### ¿Hay un máximo que puedo ganar?
+### ¿Me pagan cuando alguien usa mi playlist?
 
-No. No hay límite. Cuanta más gente compre tu lista, más ahorras.
+No. Ganas crédito para tu propio próximo pedido en vez de recibir un pago. Es un programa de descuento, no un reparto de ingresos.
 
-### ¿Cómo uso mi descuento?
+### ¿Puedo dejar de destacar una playlist?
 
-En el momento del pago, aplica tu código como un saldo y elige cuánto crédito quieres gastar en ese pedido.
+Sí, en cualquier momento, y deja de ofrecerse a otras personas inmediatamente.
 
-### ¿Y la privacidad?
+### ¿Qué tipo de playlist se elige más?
 
-Sólo se muestra el título y la descripción que proporcionas. Tus datos personales nunca se comparten.
+Las que tienen un concepto claro en el título. Los mazos por década, los años concretos, los mazos para bodas y las canciones de películas funcionan bien. Cualquier cosa con un nombre basado en tu propio gusto rara vez se elige, porque la gente que mira busca una noche que pueda poner delante de un grupo.
 
-### ¿Qué pasa si necesito ayuda?
+### ¿La gente verá mi nombre?
 
-Visita las [Preguntas frecuentes](/[lang]/faq) para respuestas rápidas o contáctanos a través de [contacto](/[lang]/contact).
-
-## Empieza hoy
-
-Crea una lista, destácala y comparte tu enlace. Tu próximo pedido podría salir gratis. Comienza aquí: [crea tu lista de reproducción](/[lang]/generate/playlist). Si necesitas inspiración, explora nuestras [listas destacadas](/[lang]/playlists) o conoce más sobre formatos y envíos en los [precios](/[lang]/pricing).
+Lo que se destaca es la playlist, no tú. Si prefieres mantener un mazo privado, simplemente no lo destaques, y seguirá siendo tuyo.

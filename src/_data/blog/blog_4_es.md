@@ -1,53 +1,61 @@
-## ¡QRSong! app versión 1.3.3: Reproducción oculta y más
+Si escaneas una carta musical con la cámara del móvil, el título de la canción aparece en la vista previa del enlace antes incluso de que lo hayas tocado. La ronda se acaba. Alguien lo lee en voz alta, todos se ríen y pasas a la siguiente carta con un poco menos de interés que antes.
 
-¡La última actualización de la app QRSong! ya está aquí, trayendo funciones nuevas y emocionantes que hacen los juegos musicales aún más divertidos. La versión 1.3.3 ya está disponible tanto en Android como en iOS, e incluye reproducción de canciones oculta, un temporizador de fragmentos personalizable, inicio aleatorio y varias mejoras de rendimiento. Sigue leyendo para descubrir cómo estas novedades mejoran tu experiencia con QRSong! y cómo puedes usarlas en tu próxima fiesta, noche de juegos en familia o evento de team-building.
+Ese detalle es el motivo por el que existe la app de QRSong!, y merece la pena explicarlo bien, porque es la diferencia entre un juego de adivinar canciones con QR y un montón de enlaces.
 
-### Reproduce canciones ocultas dentro de la app
+## Qué hace realmente la reproducción oculta
 
-¡Por fin llegó una de las funciones más pedidas por nuestros usuarios!: **reproducción oculta directamente en la app QRSong!**. Ahora, cuando escaneas un código QR de una playlist, la canción suena dentro de la app, sin abrir Spotify automáticamente. Así puedes disfrutar el modo **misterio total**: las canciones suenan “ocultas”, manteniendo la respuesta en secreto hasta que decidas revelarla. Es perfecto para juegos de trivia musical, como *Adivina la Canción*, donde mantener la identidad de la canción en secreto es parte de la diversión.
+La app lee la carta, averigua qué pista es y empieza a reproducirla sin enseñarte nunca cuál es. No hay título en pantalla, ni artista, ni año, ni portada del álbum. Empieza la música y la sala discute.
 
-- Disfruta juegos musicales sin interrupciones
-- Mantén el artista y la pista ocultos durante la partida
-- Experiencia más fluida, sin tener que cambiar de app
+Cuando alguien acierta, o se rinde, giras la carta. La respuesta está impresa detrás. Ese es todo el ciclo, y solo funciona si el teléfono no dice nada.
 
-### Ajustes beta: Temporizador de fragmentos e inicio aleatorio
+## Por qué la cámara no puede hacerlo
 
-La versión 1.3.3 trae nuevas funciones beta para que tus retos musicales sean aún más dinámicos:
+Un código QR contiene una URL. Tu cámara lee la URL, y tanto la vista previa como el navegador te muestran el título de la página, que en un enlace musical suele ser el nombre de la canción. No hay ningún ajuste para ocultarlo, porque desde el punto de vista del móvil está intentando ayudarte.
 
-- **Temporizador de fragmentos**: Elige cuánto dura cada fragmento de canción (desde unos rápidos 3 segundos hasta previews más largas). Así puedes ajustar la dificultad de tus juegos de trivia musical.
-- **Inicio aleatorio**: Ahora las canciones pueden empezar desde un punto aleatorio, no siempre desde el principio. Esta función le da un toque impredecible y emocionante a desafíos como “Adivina la Canción” o “Identifica el Género”.
+La ruta de la cámara tiene un segundo problema: primero abre un navegador y luego intenta pasar a una app de música. En algunos teléfonos falla, en otros abre un servicio que no usas, y siempre añade unos segundos. Una vez no pasa nada. Ochenta veces en una noche convierte la noche en algo sobre móviles en vez de sobre música.
 
-### Otras mejoras en la versión 1.3.3
+## Dónde funciona y dónde no
 
-- Mejor rendimiento de batería para sesiones de juego más largas
-- Mayor estabilidad de la app en todos los dispositivos
-- Nuevo diseño de borde a borde para usuarios de Android
+Esta es la parte que casi nadie sabe hasta que se sienta a jugar, y decide qué servicio de streaming te conviene:
 
-Estas actualizaciones aseguran una experiencia más fluida y atractiva para todos los que usan QRSong! en casa o donde sea.
+- **Spotify y Apple Music**: reproducción oculta de la pista completa. Esta es la experiencia completa.
+- **Tidal y Deezer**: reproducción oculta usando una previa de treinta segundos. Más que suficiente para adivinar un año, y el título sigue oculto.
+- **YouTube Music**: no hay reproducción oculta. El enlace tiene que abrirse en la app de YouTube Music, donde el título aparece en pantalla. Reproduce tus cartas, pero alguien tiene que sujetar el móvil y mirar hacia otro lado.
 
-### Cómo usar las nuevas funciones
+Si puedes elegir, elige Spotify o Apple Music. El desglose completo está en la [página de plataformas compatibles](/[lang]/supported-platforms), y si ya tienes cartas pero no tienes cuenta de Spotify, [aquí te cuento tus opciones](/[lang]/hitster-without-spotify).
 
-¡Empezar con la última actualización de QRSong! es facilísimo:
+## Los dos ajustes que merece la pena cambiar
 
-1. Actualiza a la versión 1.3.3 en tu dispositivo (disponible para **Android** y **iOS**).
-2. Escanea un código QR de playlist (crea la tuya en [nuestro generador de playlists](/[lang]/generate/playlist) o explora [playlists destacadas](/[lang]/playlists) para inspirarte).
-3. Activa la reproducción oculta y personaliza los fragmentos en el menú beta de la app.
-4. ¡Empieza a jugar tus juegos musicales favoritos—ahora con más misterio y emoción!
+**Dónde empieza la canción.** Por defecto, una pista empieza desde el principio, que en muchas canciones significa una intro que nadie reconoce. Empezar en un punto aleatorio hace que el juego sea más difícil y mucho mejor con un grupo que sabe de música. Empezar en el estribillo lo hace más fácil para un grupo mixto.
 
-### Perfecto para cualquier ocasión
+**Cuánto tiempo suena.** Cuanto más corto, más difícil. Quince segundos es ágil, treinta es cómodo, y con más tiempo la gente deja de adivinar y empieza a escuchar, que es una forma agradable de que un juego deje de ser juego sin hacer ruido.
 
-Las nuevas funciones de QRSong! 1.3.3 lo hacen ideal para:
+Los dos ajustes están en la app, y los dos merecen un minuto antes de la primera ronda en vez de descubrirlos a mitad de la noche.
 
-- Organizar fiestas de trivia musical
-- Noches de juegos en familia con retos únicos
-- Actividades de team-building usando quizzes musicales
-- Regalos personalizados para amantes de la música (mira nuestras [opciones de gift card](/[lang]/giftcard))
-- Entretenimiento interactivo en bodas o eventos
+## También lee otros mazos
 
-Para más imágenes y ejemplos, visita [nuestra página de ejemplos](/[lang]/user/examples).
+El escáner no está limitado a nuestras cartas. Lee cartas de Hitster y otras cartas musicales con QR, así que un mazo que ya tienes se puede jugar con la misma app, en el servicio que hayas conectado. Es realmente útil si las cartas que tienes venían con una app que solo soporta un servicio.
 
-### ¿Qué sigue para QRSong!?
+La app es gratis en iPhone y Android: [descárgala aquí](/[lang]/download-app).
 
-Siempre escuchamos tus sugerencias y trabajamos en nuevas funciones para hacer QRSong! aún mejor. ¡Estate atento a futuras actualizaciones! Si tienes dudas o necesitas ayuda, revisa nuestro [FAQ](/[lang]/faq) o [contáctanos](/[lang]/contact).
+## FAQ
 
-**¿Listo para probar las nuevas funciones de QRSong!?** ¡Actualiza a la versión 1.3.3 hoy y vive la próxima generación de diversión musical!
+### ¿Por qué necesito una app para escanear las cartas?
+
+Porque la cámara de tu móvil muestra el título de la canción en la vista previa del enlace, y eso revela la respuesta antes de que empiece a sonar. La app resuelve la carta y la reproduce sin enseñar qué es.
+
+### ¿La reproducción oculta funciona en todos los servicios de streaming?
+
+No, y conviene saberlo antes de elegir uno. Spotify y Apple Music ocultan la pista completa. Tidal y Deezer ocultan una previa de treinta segundos. YouTube Music no tiene reproducción oculta.
+
+### ¿Puedo cambiar cuánto tiempo suena cada canción?
+
+Sí, en la app. Cuanto más corto, más difícil: quince segundos es ágil, treinta es cómodo. También puedes hacer que las canciones empiecen en un punto aleatorio en vez de al principio, para que la gente no reconozca solo intros en lugar de canciones.
+
+### ¿La app es gratis?
+
+Sí, en iPhone y Android, y no hace falta crear una cuenta. También es la única parte obligatoria del montaje, porque escanear con la cámara revela la respuesta.
+
+### ¿Funciona con cartas que he comprado en otro sitio?
+
+Sí. El escáner lee cartas de Hitster y otras cartas musicales con QR además de las nuestras, y las reproduce con el servicio que hayas conectado.

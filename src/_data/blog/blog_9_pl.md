@@ -1,71 +1,57 @@
-Zamień swój muzyczny gust na oszczędności 🎵 Dzięki QRSong! możesz teraz zdobywać kredyt za każdym razem, gdy ktoś kupi Twoją wyróżnioną playlistę. Przedstaw więcej osób swojemu stylowi muzycznemu i jednocześnie obniż koszt następnego zamówienia.
+Jeśli zbudujesz dobrą talię, inni też chcą w nią grać. Zdarza się to częściej, niż się spodziewałem, a program rabatowy istnieje dlatego, że alternatywą było robienie zrzutów ekranu playlisty i ręczne rozsyłanie ich dalej.
 
-## Co to jest Program Zyskaj Rabat?
-
-Program Zyskaj Rabat nagradza klientów QRSong!, którzy decydują się promować swoją playlistę na naszej stronie. Gdy ktoś odkryje i kupi Twoją playlistę, otrzymujesz 2,50 € kredytu rabatowego, który możesz wykorzystać przy przyszłych zamówieniach w QRSong!. Nie ma limitu, ile możesz zarobić.
+Tu wyjaśniam, jak to działa i, co bardziej przydatne, co sprawia, że inni naprawdę wybierają daną playlistę.
 
 ## Jak to działa
 
-1. Złóż zamówienie jak zwykle – do pobrania w formie cyfrowej lub jako fizyczne karty z kodami QR. Zacznij tutaj: [stwórz swoją playlistę](/[lang]/generate/playlist).
-2. Przystąp do programu po finalizacji zamówienia. Skorzystaj z linku w mailu potwierdzającym, aby dodać chwytliwy tytuł i opis.
-3. Udostępnij swój unikalny link w mediach społecznościowych, znajomym lub gdziekolwiek chcesz.
-4. Zdobywaj 2,50 € kredytu za każdym razem, gdy ktoś kupi Twoją wyróżnioną playlistę. Kredyt jest dodawany do Twojego konta natychmiast.
+Kiedy tworzysz talię, możesz publicznie wyróżnić playlistę. Pojawi się wtedy na [stronie playlist](/[lang]/playlists), gdzie każdy może wybrać ją jako punkt wyjścia dla własnych kart.
 
-Potrzebujesz inspiracji, zanim stworzysz swoją playlistę? Sprawdź nasze [wyróżnione playlisty](/[lang]/playlists) lub zobacz zdjęcia rzeczywistych produktów i przykładowe pliki PDF w [przykładach](/[lang]/user/examples).
+Za każdym razem, gdy ktoś zamówi talię zbudowaną na podstawie twojej wyróżnionej playlisty, dostajesz środki na kolejne zamówienie. Nie sprzedajesz niczego i nikt ci nie płaci: ty dostajesz rabat, oni dostają playlistę, nad którą ktoś naprawdę pomyślał.
 
-## Co jest udostępniane
+Możesz wyłączyć wyróżnienie w dowolnym momencie, a niewyróżniona playlista od razu przestaje być proponowana innym.
 
-- Tylko tytuł i opis playlisty, które sam wpiszesz.
-- Twoje dane osobowe nigdy nie są ujawniane.
-- Masz pełną kontrolę nad sposobem prezentacji swojej playlisty.
+## Co ludzie wybierają
 
-## Dlaczego warto wziąć udział
+Widzę, które wyróżnione playlisty są używane, a które tylko leżą, i wzór jest na tyle wyraźny, że warto się nim podzielić.
 
-- Nieograniczone zarobki – brak limitu na saldo rabatowe.
-- Łatwe udostępnianie dzięki unikalnemu linkowi.
-- Natychmiastowy kredyt w momencie dokonania zakupu.
-- Elastyczne wykorzystanie – możesz użyć tyle kredytu, ile chcesz przy każdym zamówieniu.
+**Konkretny pomysł wygrywa z dobrą playlistą.** „Piosenki, które były numerem jeden w tygodniu twoich narodzin” zostaną wybrane. „Moje ulubione” nie, niezależnie od tego, jak dobre są utwory. Osoby przeglądające stronę szukają konceptu, który mogą dać grupie, a nie twojego gustu.
 
-## Idealne do każdego zastosowania QRSong!
+**Nazwij ją jak etykietę na półce.** Tytuł to cała prezentacja, bo tylko tyle widzi ktoś, zanim zdecyduje. „Przeboje jednego sezonu z lat 90.” mówi dokładnie, jaki wieczór dostajesz. „Klimat” nie mówi nic.
 
-QRSong! zamienia playlisty Spotify na skanowalne karty z kodami QR do interaktywnego quizu muzycznego. Goście skanują kartę za pomocą aplikacji QRSong!, aby odtworzyć utwór na Spotify i odgadnąć artystę, tytuł oraz rok. To doskonały pomysł na imprezy, wieczory rodzinne, quizy pubowe, zajęcia w klasie czy prezenty. Wybierz **pobranie cyfrowe** dla natychmiastowej zabawy albo **premium drukowane karty** wysyłane na cały świat. Do każdego fizycznego zamówienia dołączamy darmowe pobranie cyfrowe.
+**Buduj ją pod rozpoznawalność.** To ta sama zasada co przy każdej talii do gry: refreny i single, nie numery z albumów. Wyróżniona playlista, przy której nikt nie odpowie na pytanie co to za muzyka gra, zostanie zamówiona raz i nigdy nie będzie polecana.
 
-Gotowy, by zacząć tworzyć swój zestaw? Przejdź do [stworzenia playlisty](/[lang]/generate/playlist), sprawdź [cennik](/[lang]/pricing) i przeczytaj [opinie](/[lang]/user/reviews).
+**Rozłóż dekady, chyba że sam koncept to dekada.** Gra na osi czasu potrzebuje odstępów między latami, żeby w ogóle dało się w nią grać.
 
-## Już jesteś naszym klientem?
+## Okazje, które działają najlepiej
 
-Jeśli złożyłeś zamówienie przed wprowadzeniem tej funkcji, możesz się wciąż przyłączyć. Skontaktuj się z nami, a wyślemy Ci osobisty link promocyjny: [napisz do QRSong!](/[lang]/contact)
+Talie z dekadami są najpewniejsze. Potem: wesela, konkretny rok, piosenki z filmów i zestawy z danego kraju, które dobrze złoży tylko ktoś, kto tam mieszka.
 
-## Najczęściej zadawane pytania
+Najgorzej radzą sobie te bardzo osobiste, i to ma sens. Talia zbudowana z twojej własnej historii to najlepszy możliwy prezent dla osób, które są jej częścią, ale dziwny zakup dla obcej osoby. Zostaw je prywatne i włóż je zamiast tego do [pudełka prezentowego](/[lang]/gift-box).
 
-### Jak dołączyć do Programu Zyskaj Rabat?
+## Uczciwe ograniczenia
 
-Złóż zamówienie, a następnie skorzystaj z linku w mailu potwierdzającym, by dołączyć i dodać tytuł oraz opis swojej playlisty. Nowy? Zacznij od [stworzenia playlisty](/[lang]/generate/playlist).
+To rabat na twoje kolejne zamówienie, nie sposób na zarobek. Jeśli wyróżnisz playlistę i nikt jej nie wybierze, nic się nie dzieje i nic nie tracisz. Jeśli twoja talia stanie się popularna, kolejne zamówienie będzie tańsze. To cały mechanizm, i wolę opisać go prosto, niż go upiększać.
 
-### Ile zarabiam za każde zamówienie?
+Szczegóły i aktualne zasady są na [stronie o rabacie](/[lang]/earn-discount).
 
-Za każde kupno Twojej wyróżnionej playlisty otrzymujesz 2,50 € kredytu rabatowego.
+## FAQ
 
-### Kiedy kredyt jest dostępny?
+### Jak zdobyć rabat w QRSong!?
 
-Od razu. Twoje saldo rabatowe aktualizuje się w momencie zakończenia zakupu.
+Wyróżnij zbudowaną przez siebie playlistę. Kiedy ktoś inny zamówi talię na jej podstawie, dostajesz środki na kolejne zamówienie.
 
-### Czy jest jakiś maksymalny limit zarobków?
+### Czy dostanę pieniądze, gdy ktoś użyje mojej playlisty?
 
-Nie. Nie ma limitu. Im więcej osób kupi Twoją playlistę, tym więcej oszczędzasz.
+Nie. Dostajesz środki na własne kolejne zamówienie zamiast wypłaty. To program rabatowy, nie udział w przychodach.
 
-### Jak wykorzystać mój rabat?
+### Czy mogę przestać wyróżniać playlistę?
 
-Podczas finalizacji zamówienia użyj kodu jak salda i wybierz, ile kredytu chcesz przeznaczyć na to zamówienie.
+Tak, w dowolnym momencie, a playlista od razu przestaje być proponowana innym osobom.
 
-### A co z prywatnością?
+### Jaki rodzaj playlisty jest wybierany najczęściej?
 
-Wyświetlane są tylko tytuł i opis playlisty podane przez Ciebie. Twoje dane osobowe nigdy nie są udostępniane.
+Najczęściej te z jasnym konceptem w tytule. Zestawy z dekadami, konkretne roczniki, talie weselne i piosenki z filmów radzą sobie dobrze; wszystko nazwane według twojego gustu rzadko jest wybierane, bo osoby przeglądające szukają gotowego pomysłu na wieczór dla grupy.
 
-### Co jeśli potrzebuję pomocy?
+### Czy ludzie zobaczą moje imię?
 
-Odwiedź [sekcję FAQ](/[lang]/faq) po szybką odpowiedź lub skontaktuj się przez [formularz kontaktowy](/[lang]/contact).
-
-## Zacznij już dziś
-
-Stwórz playlistę, wyróżnij ją i podziel się swoim linkiem. Twoje następne zamówienie może być darmowe. Zacznij tutaj: [stwórz swoją playlistę](/[lang]/generate/playlist). Jeśli potrzebujesz inspiracji, przejrzyj [wyróżnione playlisty](/[lang]/playlists) lub dowiedz się więcej o formatach i wysyłce w [cenniku](/[lang]/pricing).
+Wyróżniona jest playlista, nie ty. Jeśli wolisz zachować talię prywatnie, po prostu jej nie wyróżniaj, a zostanie twoja.

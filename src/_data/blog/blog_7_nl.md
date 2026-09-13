@@ -1,33 +1,69 @@
-## Maak kennis met QRSong! app versie 1.3.5
+Een muziekavond is makkelijk slecht te organiseren. De kaarten doen het meeste werk, maar het halfuur voorbereiding en de eerste tien minuten bepalen of mensen drie rondes spelen of twaalf. Dit heb ik geleerd door dit soort avonden te draaien, inclusief de dingen die misgaan.
 
-De nieuwste update van de QRSong! companion app is er, en met versie 1.3.5 maken we muzikale ervaringen nog toegankelijker en veelzijdiger. Of je nu een feestje geeft, een quizavond organiseert of op zoek bent naar het perfecte muziekcadeau, onze app brengt nu nog meer functies en compatibiliteit binnen handbereik.
+## Voordat er iemand binnenkomt
 
-## Ondersteuning voor gratis Spotify-accounts is er!
+**Test het geluid.** Telefoonspeakers werken niet voor een groep. Alles met een bluetooth speaker erin werkt wel. Verbind hem, speel één kaart af, zet het volume zo dat een pratende kamer het nummer nog kan horen, en laat het zo staan.
 
-Een veelgevraagde functie is eindelijk beschikbaar: QRSong! werkt nu met zowel Spotify Premium als gratis Spotify-accounts. Dit betekent dat iedereen mee kan doen door QRSong!-kaarten te scannen en direct nummers af te spelen, zonder abonnement. Gebruik je een gratis Spotify-account? Dan kun je alsnog genieten van afspeellijsten en tracks met dezelfde soepele QR-code scanervaring.
+**Scan zelf drie kaarten.** Je checkt of de dienst verbonden is, of het afspelen snel start, en of je weet wat de app doet. Aan tafel ontdekken dat je bent uitgelogd is een slechte start.
 
-Het enige verschil is dat een scan zonder Spotify Premium een kleine aftelklok laat zien, waarna het nummer zichtbaar wordt afgespeeld. Helaas is het technisch niet mogelijk om het nummer voor gratis gebruikers te verbergen. Maar de countdown geeft je genoeg tijd om je telefoon om te draaien en gezellig mee te doen!
+**Kies de instellingen.** Lengte van het liedje en startpunt, allebei in de app. Vijftien seconden en een willekeurig startpunt is lastig en leuk voor een zelfverzekerde groep. Dertig seconden vanaf het refrein is vriendelijker voor een gemengde groep. Kies vooraf, niet tijdens het spelen.
 
-## Uitgebreide ondersteuning voor meer kaarttypes
+**Leg de antwoorden met de voorkant naar beneden.** Klinkt logisch. Toch heb ik vaak genoeg decks open en bloot op tafel zien liggen.
 
-We weten dat muziekliefhebbers allerlei soorten QR-codekaarten gebruiken, en onze nieuwste update breidt de ondersteuning uit voor kaarttypes van andere fabrikanten. Je kunt nu nog meer soorten muziekkaarten scannen en afspelen met onze app, waardoor het makkelijker wordt om QRSong! in je collectie te integreren, waar je kaarten ook vandaan komen.
+## De eerste tien minuten
 
-- Scan kaarten van toonaangevende fysieke QR-codekaartmerken
-- Geniet van bredere compatibiliteit met verschillende ontwerpen en formaten
-- Blijf QRSong!-kaarten gebruiken voor quizzen, feestjes en meer
+Speel één ronde zonder punten. Niemand snapt een spel door een uitleg, en iedereen snapt het na één kaart. Scan, laat afspelen, laat mensen roepen, draai de kaart om.
 
-### Help ons elke muziekkaart te ondersteunen
+Begin met een kaart die de meeste mensen in de kamer kennen. Openen met iets obscuurs zet meteen de toon dat dit een spel is dat je verliest, en dan haakt de halve tafel af.
 
-Heb je een QR-code muziekkaart die nog niet werkt? We willen QRSong! compatibel maken met elk kaarttype dat er is. Kom je een niet-ondersteunde kaart tegen, laat het ons weten via ons [contactformulier](/[lang]/contact). Jouw feedback helpt ons de app te verbeteren en naadloze muzikale ervaringen voor iedereen te brengen.
+Leg één regel uit, niet zes. Bij een tijdlijnspel is dat: "leg hem waar jij denkt dat hij op de lijn hoort". De rest kun je beantwoorden zodra het langskomt.
 
-## Ontdek alles wat QRSong! te bieden heeft
+## Het tempo erin houden
 
-Wil je je eigen afspeellijstkaarten maken of inspiratie opdoen met onze uitgelichte playlists? Bezoek dan onze [afspeellijstgenerator](/[lang]/generate/playlist) of bekijk onze [uitgelichte playlists](/[lang]/playlists). Je kunt ook [productvoorbeelden](/[lang]/user/examples) bekijken, antwoorden vinden in onze [FAQ](/[lang]/faq), of meer leren over onze [prijzen](/[lang]/pricing) en [cadeaubonopties](/[lang]/giftcard).
+Wat een muziekavond doodmaakt, is stilte tussen kaarten. Iemand die scrolt, iemand die een antwoord opzoekt, een telefoon die zichzelf heeft vergrendeld.
 
-## Samenvatting van de nieuwe functies in versie 1.3.5
+Eén persoon scant, de hele avond. De telefoon doorgeven voelt eerlijker, maar maakt elke pauze twee keer zo lang. Als mensen willen afwisselen, wissel dan af met raden.
 
-- Nu ondersteuning voor zowel gratis als Premium Spotify-accounts
-- Uitgebreide compatibiliteit met QR-code muziekkaarten van andere fabrikanten
-- Doorlopende updates op basis van jouw feedback – laat ons nieuwe kaarttypes weten
+Houd de gespeelde kaarten op een zichtbare stapel. Bij een tijdlijnspel is die stapel het bord, en bij bingo met muziek is het hoe je een betwiste winst oplost.
 
-Download de nieuwste versie van de QRSong! app en til je volgende muziekervaring naar een hoger niveau. We zijn benieuwd hoe jij deze nieuwe functies gebruikt om onvergetelijke momenten te creëren met vrienden, familie en collega’s. 🎵
+## Als de aandacht begint weg te zakken
+
+Elk deck heeft een moment, meestal rond veertig kaarten, waarop de aandacht daalt. Twee dingen helpen:
+
+**Verander het spel.** Met hetzelfde deck speel je [bingo](/[lang]/music-bingo), een [quiz](/[lang]/music-quiz) en een [tijdlijn](/[lang]/music-timeline). Halverwege van vorm wisselen reset de kamer zonder dat iemand iets nieuws hoeft te leren.
+
+**Maak de fragmenten korter.** Ga naar tien of vijftien seconden. Snellere rondes, meer rondes, en de energie komt terug.
+
+## Wat je doet met die ene persoon die alles weet
+
+Die zit aan elke tafel. Twee opties werken allebei: maak die persoon de host, dan doet hij of zij niet mee met raden en heeft diegene iets te doen, of speel in duo's en zet hem of haar bij iemand die de muziek helemaal niet kent.
+
+Geef geen handicap. Het is een feestje, geen toernooi.
+
+## Als het deck te bekend wordt
+
+Een vast deck stopt een spel te zijn zodra iedereen het kent. Dat is het moment om [een nieuwe te maken van een andere playlist](/[lang]/generate/playlist): een ander decennium, een genre waar niemand aan tafel naar luistert, of een deck met nummers die elke gast zelf heeft genomineerd.
+
+De gratis app staat op [iPhone en Android](/[lang]/download-app), en hij leest ook kaarten van andere muziekkaartspellen, dus een deck dat je al hebt kun je mengen met een nieuwe.
+
+## Veelgestelde vragen
+
+### Hoe lang moet elk liedje spelen in een muziekspel?
+
+Vijftien tot dertig seconden. Vijftien is vlot en moeilijk, dertig is comfortabel. Langer dan dat en mensen stoppen met raden en gaan luisteren. Dat is gezellig, maar dan is het geen spel meer.
+
+### Hoeveel mensen kunnen meedoen?
+
+Het werkt vanaf ongeveer drie tot twaalf mensen. Boven de acht kun je beter in duo's spelen: zo blijft iedereen betrokken en voorkom je dat de snelste persoon elke kaart beantwoordt.
+
+### Heb ik een speaker nodig?
+
+Eigenlijk wel. Telefoonspeakers komen niet over een kamer met pratende mensen heen, en het spel valt of staat ermee dat iedereen het nummer duidelijk hoort. Elke bluetooth speaker is genoeg.
+
+### Wat doe ik als iemand elk liedje kent?
+
+Maak die persoon de host, zodat hij of zij scant in plaats van raadt, of speel in duo's en zet diegene bij iemand die de muziek niet kent. Mensen een handicap geven op een feestje valt meestal slecht.
+
+### Hoe voorkom ik dat het spel gaat slepen?
+
+Laat één persoon de hele avond scannen, houd de gespeelde kaarten zichtbaar, en maak de fragmenten korter wanneer de aandacht daalt. Wisselen naar een ander spel met hetzelfde deck reset de kamer ook, zonder dat iemand iets nieuws hoeft te leren.

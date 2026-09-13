@@ -1,56 +1,58 @@
-Bonne nouvelle pour les utilisateurs d’Apple Music ! Vous pouvez désormais jouer à QRSong ! avec Apple Music grâce à Hitstalt, une appli compagnon gratuite conçue pour l’expérience QRSong !. Ce partenariat offre une lecture Apple Music rapide et fiable à partir de vos cartes QR QRSong existantes, sans Spotify, sans compte et sans pubs requises 🎵
+Quand j’ai lancé QRSong!, les cartes ne se lançaient qu’avec Spotify. Ça allait, jusqu’au moment où ça n’allait plus : je recevais régulièrement des mails de gens qui avaient acheté un jeu, s’étaient installés pour jouer, puis découvraient que toute la maison utilisait Apple Music. Pendant un temps, la réponse honnête était une solution de contournement avec une app tierce. Ça marchait, mais je n’étais pas ravi d’envoyer des clients vers ça.
 
-## Qu’est-ce que Hitstalt ?
+Ce n’est plus la réponse. Apple Music est maintenant pris en charge directement dans l’app gratuite QRSong!, avec Tidal, Deezer et YouTube Music. Cet article explique comment ça marche, et où c’est vraiment mieux ou moins bien que Spotify, parce que la différence compte plus que ce que le marketing veut bien dire.
 
-Hitstalt est une appli compagnon gratuite et sans pubs pour QRSong !, pensée spécialement pour les utilisateurs d’Apple Music. Ce n’est pas l’appli officielle QRSong !, mais nous nous sommes associés à Hitstalt pour rendre le jeu entièrement jouable avec Apple Music de façon simple et respectueuse de votre vie privée.
+## Connecter Apple Music prend environ une minute
 
-- Compatible avec plus de 98 % des cartes QRSong
-- Utilise directement Apple Music, aucun login requis
-- Scannez une carte et le morceau démarre instantanément
-- Le mode DJ affiche le titre, l’artiste et l’année de sortie
-- Entièrement gratuite et sans publicité
-- Note de 5,0 étoiles avec plus de 1 000 téléchargements
-- Intégration Apple Music stable et rapide pour un jeu fluide
+1. Installe l’app gratuite QRSong! sur iPhone ou Android.
+2. Ouvre les réglages et choisis Apple Music comme service.
+3. Connecte-toi une fois avec ton propre compte Apple Music.
+4. Scanne une carte avec l’app et la chanson se lance.
 
-## Comment jouer à QRSong ! avec Apple Music
+Il n’y a rien à racheter et rien à réimprimer. Les cartes que tu as déjà fonctionnent telles quelles, y compris les jeux que tu as achetés avant que tout ça existe.
 
-1. Ouvrez l’appli Hitstalt sur votre appareil iOS et autorisez l’accès à la caméra.
-2. Scannez n’importe quelle carte QRSong QR. Le morceau se lance immédiatement dans Apple Music.
-3. Mélangez, mettez en pause et ajustez le volume comme dans tout lecteur Apple Music.
+## Apple Music est la meilleure alternative à Spotify
 
-Et c’est tout. Vos decks QRSong, playlists à l’honneur et sets personnalisés fonctionnent tous avec Apple Music via Hitstalt, pour profiter du quiz musical sans changer de service.
+C’est la partie qui mérite d’être précise, parce que les cinq services ne se comportent pas exactement pareil et que la différence décide si le jeu fonctionne vraiment.
 
-## Compatibilité et à quoi s’attendre
+Ce qui transforme un jeu de devinettes en vrai jeu, c’est la **lecture cachée** : l’app doit lancer le morceau sans montrer ce que c’est. Sur Apple Music, c’est exactement ce qu’elle fait, et elle joue le morceau complet au lieu d’un extrait de trente secondes. Les années de sortie viennent directement d’Apple Music, ce qui compte plus qu’on ne le croit : un jeu de chronologie tient ou tombe selon que l’année au dos de la carte est bien l’année de sortie de la chanson.
 
-- **Couverture des cartes :** Hitstalt lit plus de 98 % des cartes QRSong. Si un morceau est absent d’Apple Music, passez simplement à la carte suivante.
-- **Vitesse :** Les scans sont quasi instantanés, pour garder le rythme lors de vos soirées et quiz.
-- **Confidentialité :** Aucun compte requis, pas de pubs, conçu pour une expérience minimaliste axée sur le jeu.
+Spotify fonctionne de la même façon. Tidal et Deezer cachent aussi le titre, mais avec un extrait de trente secondes au lieu du morceau complet, ce qui suffit largement pour deviner une année. YouTube Music est celui à éviter si tu as le choix : il n’a pas de lecture cachée, parce que le lien doit s’ouvrir dans l’app YouTube Music, où le titre est affiché. Tes cartes se lancent quand même, mais quelqu’un doit tenir le téléphone et regarder ailleurs.
 
-## FAQ, réponses rapides
+Donc si tu as le choix, Apple Music ou Spotify. Si tu es sur Tidal ou Deezer, tu ne perds rien d’important. Si YouTube Music est tout ce que tu as, ça marche, avec cette réserve.
 
-### QRSong ! prend-il en charge Apple Music ?
+Tu peux voir tout ça sur la [page des plateformes prises en charge](/[lang]/supported-platforms).
 
-Oui. Grâce à notre partenariat avec Hitstalt, vous pouvez jouer à QRSong ! avec Apple Music. Scannez vos cartes dans Hitstalt et la musique démarre instantanément.
+## Scanne dans l’app, pas avec l’appareil photo
 
-### Hitstalt est-il vraiment gratuit et sans pubs ?
+L’appareil photo de ton téléphone lira le QR code, et il ruinera aussi la manche. L’appareil photo affiche le titre de la chanson dans l’aperçu du lien avant même que tu appuies dessus, ce qui termine la devinette avant qu’elle commence. Il ouvre aussi d’abord un navigateur, puis essaie de passer à une app de musique, ce qui est lent et atterrit parfois au mauvais endroit.
 
-Oui. Hitstalt est totalement gratuit et ne comporte aucune publicité.
+L’app évite tout ça. Elle résout la carte, envoie le morceau vers le service que tu as connecté, et garde le titre, l’artiste et l’année hors de vue jusqu’à ce que quelqu’un retourne la carte.
 
-### Quelles cartes QRSong fonctionnent avec Apple Music ?
+## Elle lit aussi les cartes que tu possèdes déjà
 
-Plus de 98 % des cartes sont compatibles. Si un titre n’est pas dispo dans votre région, passez à la carte suivante.
+Le même scanner fonctionne avec les cartes Hitster et d’autres cartes musique avec QR code, pas seulement les nôtres. Si tu as un jeu acheté en magasin et que tu n’as pas Spotify, tu peux y jouer avec Apple Music dans l’app gratuite, sans jamais rien m’acheter. Je préfère que les gens le sachent, et si tu veux la version longue, je l’ai écrite à part : [jouer à tes cartes Hitster sans Spotify](/[lang]/hitster-without-spotify).
 
-### Puis-je créer de nouvelles cartes à partir des playlists Apple Music ?
+Quand le jeu n’est plus aussi drôle parce que tout le monde le connaît par cœur, c’est le bon moment pour [en créer un depuis ta propre playlist](/[lang]/pricing).
 
-Pour l’instant, la création de cartes utilise les playlists Spotify. Une fois imprimées ou téléchargées, vos cartes peuvent être jouées avec Apple Music via Hitstalt. Et c’est possible avec un compte Spotify gratuit.
+## FAQ
 
-## Astuces pour une expérience Apple Music optimale
+### QRSong! prend-il en charge Apple Music ?
 
-- Activez l’accès à la caméra pour des scans instantanés.
-- Privilégiez une bonne luminosité lors du scan des cartes imprimées.
-- Laissez Apple Music ouvert en arrière-plan pour une lecture plus rapide.
-- Utilisez des enceintes externes pour jouer en groupe ou lors de quiz.
+Oui, directement dans l’app gratuite QRSong!. Connecte ton compte Apple Music une fois, puis scanne tes cartes avec l’app. Il n’y a plus d’app tierce, et rien ne doit changer sur tes cartes existantes.
 
-## En bref
+### Ai-je besoin d’Apple Music Premium ?
 
-Hitstalt est un compagnon non officiel, très apprécié, pour Apple Music et le jeu QRSong !. Il offre une lecture instantanée, sans pubs, avec une excellente couverture des cartes QRSong, pour que les abonnés Apple Music profitent pleinement de l’expérience QRSong sans aucune friction.
+Tu as besoin d’un abonnement Apple Music normal, individuel ou familial. L’app passe par ton propre compte, donc tu profites de ce que ton forfait te donne.
+
+### Puis-je créer un jeu depuis une playlist Apple Music ?
+
+Oui. Colle un lien de playlist Apple Music et QRSong! crée une carte pour chaque morceau, exactement comme avec Spotify, Tidal, Deezer et YouTube Music.
+
+### Le titre de la chanson est-il caché sur Apple Music ?
+
+Oui, et le morceau complet est joué au lieu d’un extrait. Tidal et Deezer cachent un extrait de trente secondes. YouTube Music n’a pas de lecture cachée, parce que le lien s’ouvre dans l’app YouTube Music avec le titre visible.
+
+### Qu’est-il arrivé à l’app Apple Music tierce ?
+
+C’était une solution de contournement d’avant la prise en charge directe d’Apple Music, et ce n’est plus la voie que je conseillerais à quelqu’un. Utilise plutôt l’app officielle QRSong! : elle est gratuite, elle prend en charge cinq services, et c’est celle que je peux vraiment réparer quand quelque chose casse.

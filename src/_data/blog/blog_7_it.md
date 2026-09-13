@@ -1,33 +1,69 @@
-## Presentiamo QRSong! app versione 1.3.5
+Una serata musicale è una cosa facile da organizzare male. Le carte fanno gran parte del lavoro, ma la mezz’ora di preparazione e i primi dieci minuti decidono se le persone faranno tre round o dodici. Ecco cosa ho imparato facendole, compresi i pezzi che di solito vanno storti.
 
-È arrivato l’ultimo aggiornamento dell’app QRSong! e con la versione 1.3.5 rendiamo le esperienze musicali ancora più accessibili e versatili. Che tu stia organizzando una festa, una serata quiz o cercando il regalo musicale perfetto, la nostra app ora ti offre ancora più funzioni e compatibilità a portata di mano.
+## Prima che arrivi qualcuno
 
-## Supporto per account Spotify free
+**Prova l’audio.** Gli speaker del telefono non funzionano per un gruppo. Qualsiasi cassa Bluetooth va bene. Collegala, fai partire una carta, imposta il volume in modo che la stanza riesca ancora a sentire il brano anche mentre parla, e lascialo così.
 
-Una delle funzioni più richieste è finalmente arrivata: QRSong! ora funziona sia con Spotify Premium che con gli account Spotify free. Questo significa che tutti possono partecipare al divertimento scansionando le carte QRSong! e ascoltando subito le canzoni, senza bisogno di abbonamento. Se usi un account Spotify free, potrai comunque goderti playlist e brani con la stessa esperienza di scansione tramite QR code.
+**Scansiona tre carte da solo.** Stai controllando che il servizio sia collegato, che la riproduzione parta in fretta e che tu sappia cosa fa l’app. Scoprire al tavolo che sei uscito dall’account è un brutto inizio.
 
-L’unica differenza è che una scansione senza Spotify Premium mostrerà un piccolo conto alla rovescia, e poi la canzone verrà riprodotta in chiaro. Purtroppo, tecnicamente non è possibile nascondere la canzone per gli utenti free. Ma il conto alla rovescia ti darà il tempo di girare il telefono e unirti al divertimento!
+**Decidi le impostazioni.** Durata del brano e punto di partenza, entrambi nell’app. Quindici secondi e un punto di partenza casuale sono difficili e vanno bene per un gruppo sicuro. Trenta secondi dal ritornello sono più amichevoli per un gruppo misto. Scegli prima, non durante.
 
-## Supporto ampliato per più tipi di carte
+**Tieni le risposte coperte.** Sembra ovvio. Ma non sono pochi i mazzi che ho visto sparsi sul tavolo con la faccia in su.
 
-Sappiamo che gli amanti della musica usano diversi tipi di carte QR, e il nostro ultimo aggiornamento amplia il supporto anche per le carte di altri produttori. Ora puoi scansionare e ascoltare ancora più stili di carte musicali con la nostra app, rendendo più facile integrare QRSong! nella tua collezione, ovunque tu abbia preso le tue carte.
+## I primi dieci minuti
 
-- Scansiona carte dei principali brand di carte QR fisiche
-- Goditi una compatibilità più ampia con diversi design e formati
-- Continua a usare le carte QRSong! per quiz, feste e molto altro
+Fai un round senza punteggio. Nessuno capisce un gioco da una spiegazione, e tutti lo capiscono dopo una carta. Scansiona, lascia suonare, lascia gridare le risposte, gira la carta.
 
-### Aiutaci a supportare ogni carta musicale
+Inizia con una carta che quasi tutti nella stanza possono indovinare. Aprire con qualcosa di oscuro dà subito l’idea che sia un gioco in cui si perde, e metà tavolo stacca.
 
-Hai una carta musicale QR che ancora non funziona? Vogliamo rendere QRSong! compatibile con ogni tipo di carta esistente. Se trovi una carta non supportata, faccelo sapere usando il nostro [modulo di contatto](/[lang]/contact). Il tuo feedback ci aiuta a migliorare l’app e portare esperienze musicali senza interruzioni a tutti.
+Spiega una regola, non sei. Per un gioco a timeline è: "mettila nel punto in cui pensi che vada sulla linea". Tutto il resto si può chiarire quando salta fuori.
 
-## Scopri tutto ciò che QRSong! offre
+## Tenere il ritmo
 
-Vuoi creare le tue playlist card o lasciarti ispirare dalle playlist in evidenza? Inizia visitando il nostro [generatore di playlist](/[lang]/generate/playlist) oppure dai un’occhiata alle nostre [playlist in evidenza](/[lang]/playlists). Puoi anche vedere [esempi di prodotto](/[lang]/user/examples), trovare risposte nelle nostre [FAQ](/[lang]/faq), o scoprire di più su [prezzi](/[lang]/pricing) e [opzioni regalo](/[lang]/giftcard).
+La cosa che uccide una serata musicale è il vuoto tra una carta e l’altra. Qualcuno che scorre il telefono, qualcuno che cerca una risposta, un telefono che si è bloccato.
 
-## Riepilogo delle novità della versione 1.3.5
+Una persona scansiona, per tutta la sera. Passare il telefono in giro sembra più giusto e raddoppia la durata di ogni pausa. Se le persone vogliono fare a turno, fate a turno a indovinare.
 
-- Ora supporta sia gli account Spotify free che Premium
-- Compatibilità ampliata con carte musicali QR di altri produttori
-- Aggiornamenti continui basati sul tuo feedback – contattaci per nuovi tipi di carte
+Tieni le carte già giocate in una pila visibile. In un gioco a timeline quella pila è il tabellone, e nel bingo è il modo in cui risolvi una vittoria contestata.
 
-Scarica l’ultima versione dell’app QRSong! e porta la tua prossima esperienza musicale a un altro livello. Siamo curiosi di vedere come userai queste nuove funzioni per creare momenti indimenticabili con amici, famiglia e colleghi. 🎵
+## Quando comincia a calare
+
+Ogni mazzo ha un punto, di solito intorno alle quaranta carte, in cui l’attenzione cala. Due cose lo risolvono:
+
+**Cambia gioco.** Lo stesso mazzo funziona come [bingo](/[lang]/music-bingo), [quiz di musica](/[lang]/music-quiz) e [timeline](/[lang]/music-timeline). Cambiare formato a metà serata resetta la stanza senza introdurre nulla di nuovo da imparare.
+
+**Accorcia gli spezzoni.** Scendi a dieci o quindici secondi. Round più veloci, più round, e l’energia torna.
+
+## Cosa fare con la persona che sa tutto
+
+Ce n’è una a ogni tavolo. Due opzioni funzionano entrambe: farla diventare host, così esce dalla parte dell’indovinare e ha qualcosa da fare, oppure giocare in coppia e metterla con qualcuno che non conosce per niente quella musica.
+
+Non penalizzarla. È una festa, non un torneo.
+
+## Se il mazzo diventa troppo familiare
+
+Un mazzo fisso smette di essere un gioco quando tutti lo hanno imparato. Quello è il momento di [crearne un altro da una playlist diversa](/[lang]/generate/playlist): un altro decennio, un genere che nessuno al tavolo ascolta, oppure uno costruito con canzoni proposte da ogni ospite.
+
+L’app gratuita è su [iPhone e Android](/[lang]/download-app), e legge anche carte di altri giochi musicali, quindi un mazzo che hai già si mescola con uno nuovo.
+
+## FAQ
+
+### Quanto dovrebbe durare ogni brano in un gioco musicale?
+
+Da quindici a trenta secondi. Quindici è rapido e difficile, trenta è comodo. Più a lungo e le persone smettono di indovinare e iniziano ad ascoltare, che è piacevole ma non è più un gioco.
+
+### Quante persone possono giocare?
+
+Funziona da circa tre persone fino a una dozzina. Sopra le otto, giocate in coppia: tiene tutti coinvolti e impedisce alla persona più veloce di rispondere a ogni carta.
+
+### Mi serve una cassa?
+
+In pratica sì. Gli speaker del telefono non superano una stanza piena di persone che parlano, e il gioco dipende dal fatto che tutti sentano chiaramente il brano. Qualsiasi cassa Bluetooth basta.
+
+### Cosa faccio se qualcuno conosce ogni canzone?
+
+Fallo diventare host, così scansiona invece di indovinare, oppure giocate in coppia e mettilo con qualcuno che non conosce quella musica. Penalizzare le persone a una festa di solito finisce male.
+
+### Come evito che il gioco si trascini?
+
+Una persona scansiona per tutta la sera, tieni visibili le carte già giocate e accorcia gli spezzoni quando l’attenzione cala. Passare a un gioco diverso con lo stesso mazzo resetta anche la stanza senza che nessuno debba imparare qualcosa di nuovo.

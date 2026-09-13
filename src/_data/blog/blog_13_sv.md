@@ -1,76 +1,68 @@
-**QRSong!** kort förvandlar redan en Spotify-spellista till en fysisk, skannbar musikupplevelse. Nu kan de mer än att bara spela låtar.
+Klagomålet som ledde till det här var enkelt nog: folk gillade sin kortlek, spelade den några gånger, och sedan blev den stående på en hylla. Inte för att låtarna var fel, utan för att det bara fanns en sak att göra med dem.
 
-**QRGames!** är ett nytt set interaktiva musikspel som fungerar med dina befintliga QRSong! QR-kodskort och spellistor. Med ett engångsköp på **€5** låser du upp tre spellägen för ditt kortset. Ingen prenumeration, inga återkommande avgifter.
+Så nu kan en kortlek spelas på fyra sätt i stället för ett, med samma kort.
 
-## Vad är QRGames?
+## Timeline
 
-QRGames förvandlar dina **QRSong!-kort** till ett flexibelt verktyg för spelkvällar. Du använder spåren från dina egna Spotify-spellistor, sedan spelar ni tillsammans på telefoner och en delad skärm, eller solo beroende på vilket spel ni väljer.
+Originalet. En låt spelas, du gissar ungefär när den kom ut, och du lägger kortet på en linje framför dig. Hamnar det på rätt plats får du behålla det.
 
-Det är designat för verkliga ögonblick där musik samlar människor, bland annat:
+Det här är spelet som står och faller med att utgivningsåret stämmer, och därför verifierar vi varje år i stället för att lita på vad streamingtjänsten säger. En remaster som listas som 2011 när låten är från 1975 gör spelet ospelbart på ett sätt som inte märks förrän någon börjar bråka om det.
 
-- Husfester och födelsedagar
-- Familjens spelkvällar
-- Pubquiz-priser och musikquizrundor
-- Företagsevent och isbrytare
-- Bröllopsunderhållning och gästinteraktion
+Passar bäst för: ett bord som gillar att tjafsa om musik.
 
-## Tre nya musikspel du kan spela med QRSong-korten
+## Musikbingo
 
-### 1) Musiktrivia-quiz (flerspelarläge)
+Alla får en bingobricka med låttitlar hämtade från din kortlek. Du spelar snuttar, folk markerar det de känner igen, och första fulla brickan vinner.
 
-Tänk er en live quiz-kväll, men med *din* spellista som drivmedel. Hosta ett realtidsbaserat **musiktrivia-quiz** där spelarna ansluter via sina telefoner och tävlar om snabbast svar och högst träffsäkerhet.
+Det som faktiskt är bättre än att göra det för hand är verifieringen. När någon ropar bingo skannar du deras bricka och appen säger direkt om de faktiskt har vunnit, i stället för att du ska jämföra med en lista vid ett högljutt bord. Det finns en värdvy som spelar låtarna och håller koll på vad som redan har gått.
 
-Varje omgång spelar upp det faktiska spåret medan alla svarar. Du får en live topplista, och variationen med flera frågestilar håller det fräscht.
+Passar bäst för: större grupper, och alla som vill ha ett spel som inte kräver turtagning. Mer finns på [sidan om musikbingo](/[lang]/music-bingo), och om du hellre vill bygga brickorna själv har [jag skrivit om det här](/[lang]/blog/[post:15]).
 
-**Perfekt för:** tävlingsinriktade gäng, festunderhållning och alla som älskar ”name that tune” med en modern twist.
+## Musikquiz
 
-### 2) Musikbingo (upp till 100 spelare)
+En Kahoot-liknande frågerunda byggd av låtarna i din kortlek. Frågorna skapas från dina låtar, folk svarar på sina telefoner, och det finns poäng och streaks.
 
-**Musikbingo** är en klassiker som går hem hos stora grupper. Generera unika bingobrickor för upp till **100 spelare** över **10 omgångar**. Ladda ner en färdig PDF för utskrift, dela ut brickorna och sätt igång.
+Passar bäst för: en musikrunda på pubquiz, eller en grupp som vill ha poäng på en skärm i stället för kort på ett bord. Se [sidan om musikquiz](/[lang]/music-quiz).
 
-- Värden skannar och spelar spåren från spellistan
-- Brickorna är unika, så ingen spelare får samma upplevelse
-- Markering sker automatiskt, och vinnare kan verifieras direkt genom en skanning
+## Music Match
 
-**Perfekt för:** stora fester, företagsevent, bröllop och klassrum.
+Matcha kort från din hand på artist, genre eller årtionde och tävla om att bli av med alla kort först. Snabbare än Timeline och mycket snällare mot personer som inte följer musik så noga, eftersom det räcker långt att veta ungefär vad något är i stället för exakta årtal. [Music Match-sidan](/[lang]/music-match) går igenom det.
 
-### 3) Musiktidslinje (solo-utmaning)
+## Vilket spel passar när
 
-**Musiktidslinje** är ett snabbt solospel där du placerar spåren från din spellista i kronologisk ordning efter utgivningsår. Det låter enkelt, men avslöjar snabbt vem som verkligen har koll på musikhistorien.
+En grov guide efter att ha kört de här:
 
-**Perfekt för:** uppvärmning innan spelkvällen, ett snabbt avbrott eller när du vill utmana dig själv utan att hosta.
+- **Fyra till sex personer som kan musik:** Timeline.
+- **Åtta eller fler, blandade åldrar:** bingo.
+- **En grupp som vill tävla:** quiz.
+- **Blandade kunskaper, eller yngre spelare:** Music Match.
 
-## Hur du skaffar QRGames
+Och när en kortlek börjar kännas bekant gör ett spelbyte mer för att väcka liv i den än nya låtar gör. Korten är samma. Det som ändras är vad du blir ombedd att göra.
 
-QRGames är ett **engångsköp på €5** för ditt kortset.
+## Det du behöver
 
-- **Har du redan QRSong!-kort?** Aktivera QRGames i ditt konto för ditt befintliga set.
-- **Beställer du nya QRSong!-kort?** Lägg till QRGames i kassan.
+Samma kortlek och [gratisappen](/[lang]/download-app). Uppspelningsreglerna är identiska i alla fyra spelen, vilket betyder att [streamingtjänsten du väljer](/[lang]/supported-platforms) spelar roll på samma sätt: Spotify och Apple Music döljer hela låten, Tidal och Deezer döljer en förhandsvisning, YouTube Music döljer ingenting.
 
-Vill du skapa ett nytt set från en Spotify-spellista först? Börja här: [Skapa dina spellistekort](/[lang]/generate/playlist). Behöver du inspiration? Bläddra i: [Utvalda spellistor](/[lang]/playlists).
+Har du ingen kortlek än? [Börja med en spellista](/[lang]/generate/playlist).
 
-## Varför vi byggde QRGames
+## FAQ
 
-QRSong! skapades för att göra musiken delbar på ett personligt, fysiskt sätt genom att förvandla Spotify-spellistor till premium QR-kort du kan skanna med QRSong!-appen. Men många kunder förvandlade naturligt korten till festspel, familjeutmaningar och quizkvällar.
+### Vilka spel kan jag spela med QRSong!-kort?
 
-QRGames ger den energin struktur, tre distinkta format, oändligt många spellistor och en enkel setup som fungerar med de kort du redan älskar.
+Fyra: ett gissningsspel på tidslinje, musikbingo, ett Kahoot-liknande musikquiz och Music Match. Alla fyra använder samma kortlek och samma gratisapp.
 
-## Vanliga frågor om QRGames
+### Behöver jag olika kort för varje spel?
 
-### Måste jag ha en prenumeration för att spela?
+Nej, och det är poängen. En kortlek spelar alla fyra, så att byta spel är det som väcker liv i en kortlek som börjar kännas bekant, i stället för att köpa fler kort.
 
-Nej. QRGames är ett engångsköp, och du behåller åtkomsten för ditt kortset.
+### Vilket spel passar bäst för en stor grupp?
 
-### Använder spelen min egen Spotify-spellista?
+Bingo. Det kräver ingen turtagning, så ett dussin personer kan vara med hela tiden, och appen verifierar en vinnande bricka genom att skanna den i stället för att du kontrollerar den för hand.
 
-Ja. Spelen drivs av spåren i ditt QRSong!-spellisteset, så varje spel kan anpassas.
+### Skriver musikquizet sina egna frågor?
 
-### Är QRGames bara för fysiska kort?
+Ja, de skapas från låtarna i din kortlek, med poäng och streaks. Spelarna svarar på sina telefoner.
 
-QRSong! stödjer både fysiska kort och digitala nedladdningar. Vill du se exempel på vad du får? Besök: [Produktexempel och PDF:er](/[lang]/user/examples). Fysiska beställningar inkluderar en gratis digital nedladdning.
+### Fungerar spelen med alla streamingtjänster?
 
-## Redo att spela?
-
-Aktivera QRGames i ditt konto, eller lägg till det i din nästa beställning, sedan är det bara att ta med en telefon, en skärm och dina mest självsäkra musikälskare.
-
-Om du har frågor om setup, stödda plattformar eller hur skanning fungerar, kan du kontakta oss: [Kontakt](/[lang]/contact).
+De fungerar med alla fem, med samma brasklapp rakt igenom: Spotify och Apple Music döljer hela låten, Tidal och Deezer döljer en förhandsvisning på trettio sekunder, och YouTube Music har ingen dold uppspelning alls.

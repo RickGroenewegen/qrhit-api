@@ -1,86 +1,69 @@
-**🎵 Stora nyheter för musikälskare:** QRSong! stöder nu **Tidal**, **Deezer**, **Apple Music** och **YouTube Music**. Det betyder att du kan kopiera och klistra in en **länk till en offentlig spellista** från dessa tjänster i QRSong! och generera samma QR-kort som du redan känner igen från Spotify.
+QRSong! funkar med Spotify, Apple Music, YouTube Music, Tidal och Deezer. Det låter som fem likvärdiga val, men det är det inte, så det här är jämförelsen jag själv hade velat ha om jag skulle välja.
 
-Vi har också uppdaterat **QRSong!-kompanjonsappen** till **version 1.5.0** för iOS och Android, och lagt till fler uppspelningsalternativ så att du kan spela låtar med den musiktjänst du föredrar.
+Skillnaderna spelar större roll än de kanske låter, för en av dem avgör om spelet fungerar över huvud taget.
 
-## Nya musiktjänster som stöds av QRSong!
+## Funktionen som avgör allt: dold uppspelning
 
-QRSong! började med QR-kort för Spotify-spellistor. Nu kan du skapa QR-musikkort från:
+Ett gissa låten spel behöver starta låten utan att titeln visas. Det är ingen detalj, det är själva spelet.
 
-- **Apple Music-spellistor**
-- **Tidal-spellistor**
-- **Deezer-spellistor**
-- **YouTube Music-spellistor**
+| Tjänst | Dold uppspelning | Utgivningsår |
+|---|---|---|
+| Spotify | Hela låten | Från tjänsten |
+| Apple Music | Hela låten | Från tjänsten |
+| Tidal | 30 sekunders förhandslyssning | Med AI-hjälp |
+| Deezer | 30 sekunders förhandslyssning | Med AI-hjälp |
+| YouTube Music | **Ingen** | Med AI-hjälp |
 
-Denna uppdatering gör QRSong! till en mer flexibel **generator av musik-QR-koder** för fester, presenter och musikquiz, oavsett vilken streamingplattform dina vänner och din familj använder.
+**Spotify och Apple Music** ger hela upplevelsen: hela låten spelas, inget visas på skärmen och utgivningsåret kommer direkt från tjänsten.
 
-## Så här fungerar det: klistra in en spellistlänk och generera QR-kort
+**Tidal och Deezer** döljer också låten, men med en förhandslyssning på trettio sekunder i stället för hela låten. För att gissa året räcker det gott, och i praktiken avgörs de flesta rundor ändå under de första femton sekunderna.
 
-Arbetsflödet är designat för att kännas igen. Om du någonsin har genererat QR-kort från en Spotify-spellista är stegen i princip desamma:
+**YouTube Music** är den med en riktig brasklapp. Den har ingen dold uppspelning: efter en nedräkning öppnas länken i YouTube Music-appen med titeln på skärmen. Dina kort spelas fortfarande, men någon behöver hålla telefonen och vända bort den. Det funkar som reservlösning, inte som förstahandsval.
 
-1. Kopiera länken till din **offentliga spellista** (Spotify, Apple Music, Tidal, Deezer eller YouTube Music).
-2. Klistra in den i QRSong! och generera dina QR-kort.
-3. Använd QRSong!-appen för att skanna och spela låtar, och gissa sedan **artist**, **låttitel** och **utgivningsår**.
+## Varför åren skiljer sig åt
 
-Om du vill testa direkt, börja här: [/sv/generate/playlist](/[lang]/generate/playlist). Behöver du inspiration? Bläddra bland våra handplockade favoriter: [/sv/playlists](/[lang]/playlists).
+När tabellen säger "Med AI-hjälp" betyder det att tjänsten inte alltid skickar med ett pålitligt originalår, så de saknade åren fylls i och kontrolleras i stället för att bara litas på.
 
-## Appuppdatering: QRSong!-kompanjonsapp 1.5.0
+Det här spelar roll eftersom ett tidslinjespel bara går att spela om åren stämmer, och metadata i streamingtjänster är ofta fel på ett väldigt specifikt sätt: den visar versionen du spelar, inte originalet. En remaster lägger en låt från 1975 i 2011. På Spotify och Apple Music finns det mer att jobba med, på de andra ligger mer av jobbet hos oss.
 
-För att stödja uppspelning från flera tjänster släppte vi **QRSong!-appen version 1.5.0** för iOS och Android. Utöver stabilitetsförbättringar innehåller uppdateringen:
+## Vad det betyder i praktiken
 
-- **Fler uppspelningstjänster**, så att du kan öppna låtar i den tjänst du använder
-- **Haptisk feedback** för en bättre upplevelse när du skannar och spelar
-- **Stabilitetsförbättringar** för att hålla skanning och uppspelning smidig under fester och event
+**När du väljer tjänst för en ny kortlek:** Spotify eller Apple Music om du har någon av dem. Tidal eller Deezer utan tvekan om det är den du betalar för. YouTube Music om det är det du har, men då vet du att titeln kommer att synas.
 
-För många grupper är detta den verkliga vinsten: du kan köra samma spelkväll även om gästerna inte använder samma musiktjänst.
+**Du kan byta senare.** Tjänsten är en inställning i appen, inte något som sitter i korten. Koppla ett annat konto så spelas samma kortlek via det.
 
-## Spotify-korten spelas nu även upp på andra tjänster
+**Dina gäster behöver inte ha din tjänst.** Uppspelningen körs hos den som skannar, via personens eget konto. En person håller i spelet, alla andra bara spelar.
 
-En av de viktigaste förändringarna bakom kulisserna är att vi har **lagt till länkar för de nya tjänsterna till varje spår i vår databas**. I praktiken innebär det:
+**Att bygga kortleken och spela den är två olika saker.** Du kan klistra in en spellistelänk från vilken som helst av de fem tjänsterna, och spela de färdiga korten på vilken som helst av de fem. De behöver inte matcha.
 
-- QR-kort som genererats från **Spotify-spellistor** kan också spelas upp med **Apple Music**, **Tidal**, **Deezer** eller **YouTube Music**.
-- Du är inte bunden till en enda plattform när du skriver ut dina kort.
-- Det är enklare att återanvända tidigare kortlekar vid nya evenemang, även om din streamingprenumeration ändras.
+## Om du redan har kort
 
-## Få olika tjänster att kännas likadana (även med sina egenheter)
+Den gratis appen läser kort från andra musikspel också, inte bara våra, så en kortlek du redan äger kan spelas på vilken som helst av de här tjänsterna. Om du köpte en som bara stöder Spotify och du inte har Spotify, [så här kommer du runt det](/[lang]/hitster-without-spotify).
 
-Varje streamingtjänst har sina egenheter, från spellista-URL:ers format och metadata-skillnader till hur spår identifieras och öppnas för uppspelning. Vårt mål under hela utvecklingen var enkelt: **att behålla en konsekvent QRSong!-upplevelse** för varje användare.
+Alla detaljer finns på sidan om [plattformar som stöds](/[lang]/supported-platforms), och appen är gratis på [iPhone och Android](/[lang]/download-app).
 
-Oavsett om du skapar **fysiska QR-kort** tryckta på premiumpapper eller väljer en **omedelbar digital nedladdning**, förblir upplevelsen fokuserad på det som räknas: skanna, spela och förvandla musik till ett interaktivt spel.
+## FAQ
 
-## Varför stöd för flera tjänster är viktigt för fester och presenter
+### Vilken streamingtjänst är bäst för ett musik quiz spel?
 
-QRSong! är utformat för delade stunder, inte för ensamlyssning. Med fler stödda tjänster blir det mycket enklare att använda QRSong! för:
+Spotify eller Apple Music. Båda döljer hela låten medan den spelas och hämtar utgivningsåret från tjänsten själv, vilket är det ett tidslinjespel behöver.
 
-- **Festmusikquiz** (gissa låten, gissa artisten, gissa året)
-- **Familjespelkvällar** där inte alla använder samma app
-- **Unika gåvor till musikälskare**, personliga med en spellista
-- **Företagsteambuilding** och isbrytare
-- **Priser till pubquiz** och musikfrågor
+### Fungerar QRSong utan Spotify?
 
-Vill du visa hur korten ser ut? Se exempel och prov-PDF:er: [/sv/examples](/[lang]/user/examples). Nyfiken på pris och frakt? Använd prisöversikten och kalkylatorn: [/sv/pricing](/[lang]/pricing) och kolla leveransdetaljer: [/sv/shipping-info](/[lang]/shipping-info).
+Ja. Apple Music, Tidal, Deezer och YouTube Music funkar också, och du kopplar den tjänst du redan betalar för. Bara YouTube Music har en tydlig begränsning.
 
-## Vanliga frågor om de nya tjänsterna
+### Varför visar YouTube Music låttiteln?
 
-### Kan jag använda vilken spellistlänk som helst?
+För att länken måste öppnas i YouTube Music-appen, där titeln visas på skärmen under uppspelningen. Det finns inget sätt att dölja den, så det är den enda tjänsten där någon behöver hålla i telefonen och titta bort.
 
-Du kan klistra in **offentliga spellista-URL:er** från Spotify, Apple Music, Tidal, Deezer och YouTube Music. Om en spellista är privat eller inte åtkomlig kan QRSong! kanske inte importera den.
+### Kan jag skapa kort från en spellista på Apple Music eller Tidal?
 
-### Behöver jag Spotify för att använda QRSong!?
+Ja. Klistra in en offentlig spellistelänk från vilken som helst av de fem tjänsterna så byggs kortleken från den.
 
-Nej. Med de nya integrationerna kan du skapa och spela upp QR-musikkort med flera streamingtjänster. QRSong!-appen hjälper dig att välja din föredragna uppspelningstjänst.
+### Behöver alla gäster ha samma abonnemang?
 
-### Inkluderar fysiska QRSong!-kort fortfarande digital nedladdning?
+Nej. Bara personen som skannar behöver ett konto, eftersom uppspelningen går via den personens app. Alla andra lyssnar bara och gissar.
 
-Ja. När du köper en fysisk produkt får du även en **gratis digital nedladdning**, vilket är praktiskt för sista minuten-fester eller utskrift hemma.
+### Kan jag byta tjänst efter att jag har köpt kort?
 
-## Vad är nästa steg: fler integrationer av musiktjänster
-
-Vi kommer att fortsätta utforska fler integrationer med musiktjänster i framtiden. Vårt mål är att göra QRSong! till det enklaste sättet att förvandla spellistor till **musik-QR-koder**, oavsett var din musik finns.
-
-Om du har en plattform du gärna vill se stöd för, kontakta oss här: [/sv/contact](/[lang]/contact). Du kan också när som helst kolla den aktuella listan: [/sv/supported-platforms](/[lang]/supported-platforms).
-
-## Testa själv: generera QR-kort från din spellista
-
-Redo att sätta ihop en kortlek för ditt nästa evenemang? Klistra in din spellistlänk och skapa dina kort på några minuter: [/sv/generate/playlist](/[lang]/generate/playlist).
-
-Föredrar du att ge QRSong! som present? Presentkort finns här: [/sv/giftcard](/[lang]/giftcard).
+Ja. Tjänsten är en inställning i appen, inte något som är inbyggt i korten, så du kan byta när du vill och samma kortlek fortsätter att fungera.
