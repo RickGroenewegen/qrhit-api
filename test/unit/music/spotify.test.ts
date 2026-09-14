@@ -910,7 +910,7 @@ describe('Spotify.searchTracks', () => {
     );
     expect(res.success).toBe(true);
     expect(res.data.tracks).toEqual([
-      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', image: 'cover' },
+      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', artists: ['Star'], image: 'cover' },
     ]);
     expect(res.data).toMatchObject({
       totalCount: 25,

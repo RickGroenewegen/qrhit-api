@@ -21,6 +21,7 @@ import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
 import Excel from '../excel';
+import PlaylistFromExcel from '../playlistFromExcel';
 import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
@@ -3965,6 +3966,54 @@ export default async function adminRoutes(
         });
       } catch (error: any) {
         console.error('Error getting Excel job status:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get job status',
+        });
+      }
+    }
+  );
+
+  // Create a Spotify playlist in our account from an artist/title Excel sheet.
+  // The sheet is parsed inline; the matching + playlist creation runs in the
+  // background and is polled via the status route (CloudFront 30s limit).
+  fastify.post(
+    '/admin/playlist-from-excel',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const playlistFromExcel = PlaylistFromExcel.getInstance();
+        const upload = await playlistFromExcel.parseUpload(request.parts());
+        const jobId = playlistFromExcel.startJob(upload);
+
+        reply.send({
+          success: true,
+          jobId,
+          playlistName: upload.playlistName,
+          rows: upload.rows.length,
+        });
+      } catch (error: any) {
+        reply.status(400).send({
+          success: false,
+          error: error.message || 'Failed to start playlist creation',
+        });
+      }
+    }
+  );
+
+  fastify.get(
+    '/admin/playlist-from-excel/status/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { jobId } = request.params;
+        const job = await PlaylistFromExcel.getInstance().getJob(jobId);
+        if (!job) {
+          reply.status(404).send({ success: false, error: 'Job not found' });
+          return;
+        }
+        reply.send({ success: true, job });
+      } catch (error: any) {
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to get job status',

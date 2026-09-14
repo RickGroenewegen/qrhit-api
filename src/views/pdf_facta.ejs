@@ -1,0 +1,214 @@
+<%
+// Geometry of the facta artwork (assets/images/clients/facta/*.png, 2091x2091,
+// exported at 3x from the 697x697 Photoshop canvas). Positions below are given
+// in canvas pixels of that 697 grid and converted to mm on a 60mm card.
+const FACTA_CARD_MM = 60;
+const FACTA_PX_PER_MM = 96 / 25.4;
+const factaMm = (px) => (px / 697) * FACTA_CARD_MM;
+
+// Back: the white area inside the gradient frame runs x 78-617, y 84-616.
+// The labels in the artwork start at x 149, which is where our text column
+// starts too. Air is kept between the text and the frame on every side.
+const FACTA_TEXT_LEFT = factaMm(149);
+const FACTA_TEXT_WIDTH = factaMm(617) - 2.5 - FACTA_TEXT_LEFT;
+const FACTA_PANEL_TOP = factaMm(84) + 1.5;
+const FACTA_PANEL_HEIGHT = factaMm(616 - 84) - 3;
+
+// Front: the white rounded panel is 415x427 centred on the card; the QR in the
+// artwork is 329px, which is 28.3mm.
+const FACTA_QR_MM = 28;
+
+const FACTA = {
+    textLeft: FACTA_TEXT_LEFT.toFixed(2),
+    textWidth: FACTA_TEXT_WIDTH.toFixed(2),
+    panelTop: FACTA_PANEL_TOP.toFixed(2),
+    panelHeight: FACTA_PANEL_HEIGHT.toFixed(2),
+    boxWidthPx: FACTA_TEXT_WIDTH * FACTA_PX_PER_MM,
+    boxHeightPx: FACTA_PANEL_HEIGHT * FACTA_PX_PER_MM,
+    gapPx: 2 * FACTA_PX_PER_MM, // the gap between the three groups
+    sizes: [13, 12, 11, 10, 9],
+    lineHeight: 1.15,
+    minExtraSize: 8,
+};
+
+// 13px matches the artwork. Long artist/title combinations wrap onto extra
+// lines, so estimate the block height and step the size down until it fits
+// inside the white area of the card.
+function factaFit(track) {
+    const artist = (track.artist || '') + (track.extraArtistAttribute || '');
+    const name = (track.name || '') + (track.extraNameAttribute || '');
+    let size = FACTA.sizes[FACTA.sizes.length - 1];
+    for (const candidate of FACTA.sizes) {
+        size = candidate;
+        // ~0.47em is the average glyph advance for this typeface
+        const perLine = Math.max(8, Math.floor(FACTA.boxWidthPx / (candidate * 0.47)));
+        const lines =
+            3 + // the three labels
+            1 + // the year
+            Math.ceil(artist.length / perLine) +
+            Math.ceil(name.length / perLine);
+        if (lines * candidate * FACTA.lineHeight + 2 * FACTA.gapPx <= FACTA.boxHeightPx) break;
+    }
+    return {
+        size,
+        extraSize: Math.max(FACTA.minExtraSize, size - 3),
+    };
+}
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<!-- Open Sans is used as the web-safe stand-in for Verdana / Tahoma (same large
+     x-height, flat terminals and open apertures; neither is available on the
+     PDF rendering Lambda). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=block" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Open Sans', Verdana, Tahoma, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    .card-front, .card-back {
+        width: <%= FACTA_CARD_MM %>mm;
+        height: <%= FACTA_CARD_MM %>mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .card-back {
+        <% if (php.backgroundBackType === 'solid') { %>
+            <% if (php.useGradient) {
+                const firstStop = Math.max(0, php.gradientPosition - 50);
+                const secondStop = Math.min(100, php.gradientPosition + 50);
+                const bgColor = php.backgroundBackColor || '#ffffff';
+                const gradColor = php.gradientBackgroundColor || '#ffffff';
+                const degrees = php.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (php.backgroundBackColor) { %>
+            background-color: <%= php.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
+        <% } else { %>
+        background-color: transparent;
+        <% } %>
+    }
+    /* Used by the how-to card partial */
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
+    }
+    /* The client artwork is the card: full bleed on both sides. Nothing is
+       redrawn in CSS or SVG, it all comes from the images. */
+    .facta-card {
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .facta-front {
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/clients/facta/voorkant.png');
+    }
+    .facta-back {
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/clients/facta/achterkant.png');
+    }
+    .qr-code {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: <%= FACTA_QR_MM %>mm;
+        height: <%= FACTA_QR_MM %>mm;
+        z-index: 2;
+    }
+    /* Left aligned text block inside the white panel of the frame */
+    .facta-text {
+        position: absolute;
+        top: <%= FACTA.panelTop %>mm;
+        height: <%= FACTA.panelHeight %>mm;
+        left: <%= FACTA.textLeft %>mm;
+        width: <%= FACTA.textWidth %>mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        text-align: left;
+        overflow: hidden;
+        z-index: 2;
+        line-height: <%= FACTA.lineHeight %>;
+    }
+    .facta-group {
+        width: 100%;
+    }
+    .facta-group + .facta-group {
+        margin-top: 2mm;
+    }
+    .facta-label {
+        font-weight: 700;
+        color: #18223C;
+    }
+    .facta-value {
+        font-weight: 400;
+        color: #18223C;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+    .facta-extra {
+        font-weight: 400;
+        color: #18223C;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+</style>
+</head>
+<body>
+<% if (php.addHowToCard && startIndex === 0) { %>
+  <%- include('partials/howto_card') %>
+<% } %>
+<% tracks.forEach((track, index) => { %>
+    <div class="card-front facta-card facta-front">
+        <img class="qr-code" src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code">
+    </div>
+    <div style="page-break-after: always;"></div>
+    <% const facta = factaFit(track); %>
+    <div class="card-back facta-card facta-back">
+        <div class="facta-text" style="font-size: <%= facta.size %>px;">
+            <div class="facta-group">
+                <div class="facta-label">Artiest:</div>
+                <div class="facta-value"><%= track.artist %></div>
+                <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                    <div class="facta-extra" style="font-size: <%= facta.extraSize %>px;"><%= track.extraArtistAttribute %></div>
+                <% } %>
+            </div>
+            <div class="facta-group">
+                <div class="facta-label">Titel:</div>
+                <div class="facta-value"><%= track.name %></div>
+                <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                    <div class="facta-extra" style="font-size: <%= facta.extraSize %>px;"><%= track.extraNameAttribute %></div>
+                <% } %>
+            </div>
+            <div class="facta-group">
+                <div class="facta-label">Jaartal:</div>
+                <div class="facta-value"><%= track.year %></div>
+            </div>
+        </div>
+    </div>
+    <div style="page-break-after: always;"></div>
+<% }); %>
+</body>
+</html>

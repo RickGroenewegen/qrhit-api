@@ -1419,6 +1419,9 @@ class Spotify {
 
           // Adapt formatting based on the structure returned by SpotifyApi searchTracks
           const artist = item.artists?.[0]?.name || ''; // Access artist name directly
+          const artists = (item.artists || [])
+            .map((a: any) => a?.name || '')
+            .filter((name: string) => name.length > 0);
 
           const imageUrl = item.album?.images?.[0]?.url || ''; // Access image URL directly (use first image)
 
@@ -1430,6 +1433,7 @@ class Spotify {
             trackId: item.id || '', // Use item.id
             name: trackName,
             artist: artist,
+            artists: artists, // every credited artist, so "feat." tracks can be matched
             image: imageUrl,
             // Add other fields if needed and available from the API response
             // e.g., preview_url, external_urls.spotify
