@@ -111,6 +111,68 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // Price examples for the pricing page: one row per sample deck size with
+  // the PDF, sheets and printed-card totals in EUR. The page used to expose
+  // these figures only through its calculator, so a crawler saw exactly one
+  // price. Each cell is an order.getOrderType() call (itself cached per
+  // quantity); the finished table is cached for an hour so the SSR pass
+  // costs a single request.
+  fastify.get('/api/pricing/tiers', async (_request: any, reply: any) => {
+    const cacheKey = 'pricingTiers_v1';
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return reply.send(JSON.parse(cached));
+    }
+
+    const quantities = [50, 100, 150, 200, 300, 500];
+    const priceFor = async (
+      quantity: number,
+      digital: boolean,
+      subType: 'sheets' | 'none'
+    ): Promise<number | null> => {
+      try {
+        const orderType = await order.getOrderType(
+          quantity,
+          digital,
+          'cards',
+          '',
+          subType
+        );
+        const amount = orderType?.amount;
+        return typeof amount === 'number' && amount > 0 ? amount : null;
+      } catch (e: any) {
+        logger.log(
+          color.red.bold(`/api/pricing/tiers error: ${e.message || e}`)
+        );
+        return null;
+      }
+    };
+
+    const rows: Array<{
+      quantity: number;
+      digital: number | null;
+      sheets: number | null;
+      physical: number | null;
+    }> = [];
+    for (const quantity of quantities) {
+      const [digital, sheets, physical] = await Promise.all([
+        priceFor(quantity, true, 'none'),
+        priceFor(quantity, false, 'sheets'),
+        priceFor(quantity, false, 'none'),
+      ]);
+      rows.push({ quantity, digital, sheets, physical });
+    }
+
+    const payload = { success: true, data: { currency: 'EUR', rows } };
+    const complete = rows.every(
+      (row) => row.digital && row.sheets && row.physical
+    );
+    if (complete) {
+      await cache.set(cacheKey, JSON.stringify(payload), 3600);
+    }
+    return reply.send(payload);
+  });
+
   // Chat init endpoint - creates or resumes chat session
   fastify.post('/chat/init', async (request: any, reply: any) => {
     try {
