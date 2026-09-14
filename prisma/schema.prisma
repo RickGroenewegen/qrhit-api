@@ -675,6 +675,7 @@ model PaymentHasPlaylist {
   theme                    String? // Theme slug for app theming (e.g., "acme", "coca-cola")
   themeName                String? // User-readable theme name (e.g., "Acme Company")
   printerType              String                   @default("printnbind") // Printer type: "printnbind", "tromp", "schneiders" or "musicmatch"
+  template                 String? // Admin-chosen card template for this order only (e.g. "facta"); beats Playlist.template
   promotionalCredited      Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt    DateTime? // When the promotional credit was applied
   gamesEnabled             Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist

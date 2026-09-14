@@ -1532,6 +1532,8 @@ class Mollie {
             boxBackText: true,
             boxBackSelectedFont: true,
             boxBackSelectedFontSize: true,
+            // Production settings
+            template: true,
             // Bingo
             gamesEnabled: true,
             appleStoreFront: true,

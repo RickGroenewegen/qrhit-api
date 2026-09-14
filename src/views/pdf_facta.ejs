@@ -1,8 +1,12 @@
 <%
 // Geometry of the facta artwork (assets/images/clients/facta/*.png, 2091x2091,
 // exported at 3x from the 697x697 Photoshop canvas). Positions below are given
-// in canvas pixels of that 697 grid and converted to mm on a 60mm card.
-const FACTA_CARD_MM = 60;
+// in canvas pixels of that 697 grid and converted to mm on the card.
+//
+// The card follows the printer's page size (see printerPageSizeMm in pdf.ts):
+// Schneiders prints 56mm cards, every other printer 60mm. The artwork scales
+// with it, so the whole layout is expressed relative to the card size.
+const FACTA_CARD_MM = php.printerType === 'schneiders' ? 56 : 60;
 const FACTA_PX_PER_MM = 96 / 25.4;
 const factaMm = (px) => (px / 697) * FACTA_CARD_MM;
 
@@ -15,8 +19,8 @@ const FACTA_PANEL_TOP = factaMm(84) + 1.5;
 const FACTA_PANEL_HEIGHT = factaMm(616 - 84) - 3;
 
 // Front: the white rounded panel is 415x427 centred on the card; the QR in the
-// artwork is 329px, which is 28.3mm.
-const FACTA_QR_MM = 28;
+// artwork is 329px, which is 28.3mm on a 60mm card.
+const FACTA_QR_MM = factaMm(325).toFixed(2);
 
 const FACTA = {
     textLeft: FACTA_TEXT_LEFT.toFixed(2),

@@ -20,7 +20,7 @@ import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
 import { applyQrLogo, clampScale, resolveLogoPath } from './qr-logo';
-import PDF from './pdf';
+import PDF, { forcedPrinterTemplate } from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
@@ -1050,13 +1050,15 @@ class Generator {
 
           let printerTemplate = 'printer';
 
-          // A company list's forced template (CompanyList.forceTemplate) is
-          // written onto the playlist row, which is shared by every later
-          // order of that Spotify playlist. It only means something for the
-          // company (vibe) order itself; a public order of the same playlist
-          // must print the regular layout.
-          if (payment.vibe && playlist.template) {
-            printerTemplate = playlist.template;
+          // An admin-chosen order template, or the company list's forced
+          // template for company orders (see forcedPrinterTemplate).
+          const forcedTemplate = forcedPrinterTemplate(
+            playlist.orderTemplate,
+            playlist.template,
+            payment.vibe
+          );
+          if (forcedTemplate) {
+            printerTemplate = forcedTemplate;
           } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
           } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
@@ -1495,7 +1497,16 @@ class Generator {
       );
 
       let printerTemplate = 'printer';
-      if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
+      const forcedTemplate = forcedPrinterTemplate(
+        playlist.orderTemplate,
+        playlist.template,
+        payment.vibe
+      );
+      if (forcedTemplate) {
+        printerTemplate = forcedTemplate;
+      } else if (payment.vibe) {
+        printerTemplate = 'printer_vibe';
+      } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
         printerTemplate = PRINTER_TYPE.SCHNEIDERS;
       }
 

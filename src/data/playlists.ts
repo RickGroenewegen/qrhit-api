@@ -175,6 +175,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.frontOpacity,
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
+      payment_has_playlist.template AS orderTemplate,
       playlists.template,
       payment_has_playlist.theme,
       payment_has_playlist.themeName,
@@ -286,29 +287,26 @@ export async function updatePaymentHasPlaylist(
       updateData.themeName = themeName;
     }
 
-    // Get the paymentHasPlaylist to find the related playlistId
+    // The template is stored on the order itself, not on the playlist row:
+    // that row is shared by every order of the same Spotify playlist and
+    // carries the company list's forceTemplate (see forcedPrinterTemplate).
+    if (template !== undefined) {
+      updateData.template = template;
+    }
+
     const paymentHasPlaylist = await deps.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
-      select: { playlistId: true }
+      select: { id: true }
     });
 
     if (!paymentHasPlaylist) {
       return { success: false, error: 'PaymentHasPlaylist not found' };
     }
 
-    // Update PaymentHasPlaylist (eco, doubleSided, printerType)
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
       data: updateData,
     });
-
-    // Update Playlist template if provided
-    if (template !== undefined) {
-      await deps.prisma.playlist.update({
-        where: { id: paymentHasPlaylist.playlistId },
-        data: { template: template }
-      });
-    }
 
     // Reload the in-memory theme cache when theme data changed
     if (theme !== undefined || themeName !== undefined) {

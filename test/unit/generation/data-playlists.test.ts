@@ -361,12 +361,12 @@ describe('updatePaymentHasPlaylist', () => {
         boxEnabled: true,
         theme: '{"a":1}',
         themeName: 'Dark',
+        template: 'tpl-x',
       },
     });
-    expect(prisma.playlist.update).toHaveBeenCalledWith({
-      where: { id: 20 },
-      data: { template: 'tpl-x' },
-    });
+    // The template is per order; the shared playlist row is left alone so a
+    // company list's forceTemplate is never overwritten or leaked.
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
     expect(deps.appTheme.reload).toHaveBeenCalledTimes(1);
   });
 

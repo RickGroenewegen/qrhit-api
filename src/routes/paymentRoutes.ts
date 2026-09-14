@@ -13,7 +13,7 @@ import {
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
-import { isMultiCardTemplate } from '../pdf';
+import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
 import { maxCardsFor } from '../config/constants';
 
 import fs from 'fs/promises';
@@ -410,15 +410,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       if (payment.email) {
-        // A company list's forced template lives on the shared playlist row.
-        // It applies to company (vibe) orders only, and only to the
-        // single-card printer layout: public orders of the same playlist print
-        // the regular layout, and digital downloads and sheets keep their
-        // multi-card layout instead of coming out one card per page.
+        // An admin-chosen order template, or the company list's forced
+        // template for company orders (see forcedPrinterTemplate), replaces
+        // the single-card printer layout only: digital downloads and sheets
+        // keep their multi-card layout instead of coming out one card per page.
         const requestedTemplate: string = request.params.template;
+        const forcedTemplate = forcedPrinterTemplate(
+          php[0].template,
+          playlist.template,
+          payment.vibe
+        );
         const template =
-          payment.vibe && playlist.template && !isMultiCardTemplate(requestedTemplate)
-            ? playlist.template
+          forcedTemplate && !isMultiCardTemplate(requestedTemplate)
+            ? forcedTemplate
             : requestedTemplate;
 
         // Load how-to card translations if enabled

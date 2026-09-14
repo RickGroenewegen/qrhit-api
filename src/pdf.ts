@@ -35,6 +35,28 @@ export function isMultiCardTemplate(template: string): boolean {
 }
 
 /**
+ * The card template forced onto a single-card printer PDF, or null for the
+ * regular layout. Two sources, in order:
+ *
+ * 1. The order's own template (PaymentHasPlaylist.template), set by an admin
+ *    in the production settings of that order. It applies to any order on
+ *    any printer.
+ * 2. The playlist's template (Playlist.template), written from
+ *    CompanyList.forceTemplate. The playlist row is shared by every later
+ *    order of that Spotify playlist, so it only counts for company (vibe)
+ *    orders: a public order of the same playlist prints the regular layout.
+ */
+export function forcedPrinterTemplate(
+  orderTemplate: string | null | undefined,
+  playlistTemplate: string | null | undefined,
+  vibe: boolean | null | undefined
+): string | null {
+  if (orderTemplate) return orderTemplate;
+  if (vibe && playlistTemplate) return playlistTemplate;
+  return null;
+}
+
+/**
  * Page size (mm) for a single-card printer PDF. The template decides, not the
  * printer type: a playlist can force a company template on any printer, and
  * a 56 mm card on a 60 mm page leaves a white strip on two sides.
