@@ -410,6 +410,7 @@ export async function createSiteMap(
     '/terms-and-conditions',
     '/playlists',
     '/business',
+    '/corporate-gifts',
     '/qr-cards-as-a-service',
     '/pubquiz',
     '/shipping-info',
