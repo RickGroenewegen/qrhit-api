@@ -9,7 +9,26 @@ import ConvertApi from 'convertapi';
 import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { PDFDocument } from 'pdf-lib';
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * Printers whose prepress workflow has lost card text. Chromium embeds the
+ * Google-served Open Sans as Type 3 fonts and reuses subset names across
+ * fonts in one file; some RIPs drop that text entirely. For these printers
+ * every glyph is converted to a vector outline before the PDF is handed over.
+ */
+const OUTLINE_TEXT_PRINTER_TYPES = new Set<string>([
+  PRINTER_TYPE.TROMP,
+  PRINTER_TYPE.SCHNEIDERS,
+]);
+
+export function needsOutlinedText(printerType: string, payment: any): boolean {
+  return OUTLINE_TEXT_PRINTER_TYPES.has(printerType) || Boolean(payment?.vibe);
+}
 
 /**
  * Printer templates whose cards are 56 mm: the Schneiders layout and the
@@ -746,6 +765,9 @@ class PDF {
           await this.resizePDFPages(finalPath, pageSize, pageSize);
           await this.addBleed(finalPath, 3);
         }
+        if (needsOutlinedText(printerType, payment)) {
+          await this.outlineText(finalPath);
+        }
       } else if (template === 'printer_sheets') {
         await this.resizePDFPages(finalPath, 210, 297);
       }
@@ -934,6 +956,9 @@ class PDF {
         await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
       }
+      if (needsOutlinedText(printerType, payment)) {
+        await this.outlineText(finalPath);
+      }
     } else if (template === 'printer_sheets') {
       await this.resizePDFPages(finalPath, 210, 297);
     }
@@ -990,6 +1015,44 @@ class PDF {
 
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
+  }
+
+  /**
+   * Convert every glyph in the PDF to a vector outline with Ghostscript, so
+   * the file carries no fonts at all. Images are passed through untouched:
+   * no downsampling and Flate instead of JPEG, so the QR codes stay exact.
+   * The result replaces the input file in place.
+   */
+  public async outlineText(inputPath: string): Promise<void> {
+    const outputPath = `${inputPath}.outlined.tmp`;
+    try {
+      await execFileAsync('gs', [
+        '-q',
+        '-dBATCH',
+        '-dNOPAUSE',
+        '-dSAFER',
+        '-sDEVICE=pdfwrite',
+        '-dNoOutputFonts',
+        '-dCompatibilityLevel=1.7',
+        '-dDownsampleColorImages=false',
+        '-dDownsampleGrayImages=false',
+        '-dDownsampleMonoImages=false',
+        '-dAutoFilterColorImages=false',
+        '-dAutoFilterGrayImages=false',
+        '-sColorImageFilter=FlateEncode',
+        '-sGrayImageFilter=FlateEncode',
+        `-sOutputFile=${outputPath}`,
+        inputPath,
+      ]);
+      await fs.rename(outputPath, inputPath);
+    } catch (error) {
+      await fs.unlink(outputPath).catch(() => undefined);
+      throw error;
+    }
+
+    this.logger.log(
+      color.blue.bold(`Converted text to outlines (no embedded fonts): ${color.white.bold(inputPath)}`)
+    );
   }
 
   /**
