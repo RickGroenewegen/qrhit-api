@@ -105,6 +105,10 @@ describe('getYearFontSize', () => {
     expect(getYearFontSize('Montserrat, Arial, sans-serif')).toBe('42px');
   });
 
+  it('returns correct yearSize for Crimson Text (quoted family)', () => {
+    expect(getYearFontSize('"Crimson Text", Georgia, serif')).toBe('42px');
+  });
+
   it('matches by substring (font name anywhere in string)', () => {
     // selectedFont might just be the name
     expect(getYearFontSize('Caveat')).toBe('44px');
@@ -135,6 +139,10 @@ describe('getGoogleFontWeights', () => {
 
   it('returns multiple weights for Raleway', () => {
     expect(getGoogleFontWeights('Raleway, Arial, sans-serif')).toBe('400;700;800;900');
+  });
+
+  it('returns 400;600;700 for Crimson Text', () => {
+    expect(getGoogleFontWeights('"Crimson Text", Georgia, serif')).toBe('400;600;700');
   });
 
   it('returns multiple weights for Teko', () => {
