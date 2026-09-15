@@ -8,11 +8,11 @@ import Translation from '../translation';
 import Utils from '../utils';
 import {
   getYearFontSize,
-  getGoogleFontWeights,
   getGoogleFontName,
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
+import GoogleFonts from '../googleFonts';
 import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
 import { maxCardsFor } from '../config/constants';
 
@@ -447,7 +447,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           startIndex,
           howtoTranslations,
           getYearFontSize,
-          getGoogleFontWeights,
+          // Admin-chosen fonts outside fonts.ts get their weights from the
+          // Google catalogue; the fixed list resolves as before.
+          getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelper(php[0].selectedFont),
           getGoogleFontName,
           getFontWeight,
           getQrTotalModules,
@@ -483,7 +485,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         payment,
         php,
         count,
-        getGoogleFontWeights,
+        getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelper(php.selectedFont),
         getGoogleFontName,
         getFontWeight,
       });

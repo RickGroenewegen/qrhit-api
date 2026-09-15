@@ -24,6 +24,7 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
+import GoogleFonts, { familyToCss } from '../googleFonts';
 import { sendCatalogue } from '../http-cache';
 import { BACKGROUNDS } from '../backgrounds';
 import {
@@ -1396,6 +1397,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // -- GET /fonts (public, no auth) --
   fastify.get('/fonts', async (request, reply) => {
     return sendCatalogue(request, reply, { success: true, data: FONTS });
+  });
+
+  // -- GET /google-fonts/lookup?family= (public, no auth) --
+  // Resolves one Google family (an admin-chosen font outside the fixed list)
+  // to its weights, so any card preview can load the right stylesheet.
+  fastify.get('/google-fonts/lookup', async (request: any, reply) => {
+    const family = String(request.query?.family ?? '').trim();
+    if (!family) {
+      return reply.status(400).send({ success: false, error: 'family is required' });
+    }
+    const match = await GoogleFonts.getInstance().findFamily(family);
+    if (!match) {
+      return reply.status(404).send({ success: false, error: 'Unknown Google font' });
+    }
+    return sendCatalogue(request, reply, {
+      success: true,
+      data: { ...match, css: familyToCss(match) },
+    });
   });
 
   // -- GET /backgrounds (public, no auth) --

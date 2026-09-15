@@ -28,6 +28,8 @@ import SiteSettings from '../sitesettings';
 import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
 import Cache from '../cache';
+import GoogleFonts from '../googleFonts';
+import { sendCatalogue } from '../http-cache';
 import PrismaInstance from '../prisma';
 import Designer from '../designer';
 import { ChatService } from '../chat';
@@ -5801,6 +5803,17 @@ export default async function adminRoutes(
       reply.header('Content-Type', 'application/pdf');
       reply.header('Content-Disposition', `attachment; filename="shipment_labels_${Date.now()}.pdf"`);
       return reply.send(result.pdfBuffer);
+    }
+  );
+
+  // Full Google Fonts catalogue for the admin-only font picker in the card
+  // designer. Customers keep the fixed list from GET /fonts.
+  fastify.get(
+    '/admin/google-fonts',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const fonts = await GoogleFonts.getInstance().getCatalogue();
+      return sendCatalogue(request, reply, { success: true, data: fonts });
     }
   );
 }
