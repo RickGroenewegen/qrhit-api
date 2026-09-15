@@ -4,15 +4,20 @@
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
 <%#
-  Wandscheer: the single-card printer layout (pdf_printer.ejs) with one
-  change on the back. The track's extra name attribute is not a subtitle
+  Wandscheer: the single-card printer layout (pdf_printer.ejs) with two
+  changes on the back. The track's extra name attribute is not a subtitle
   under the track name here; it carries a second year (the "SRN year") and is
-  printed directly under the original year, in the card font.
+  printed directly under the original year. The font is fixed to Unna
+  regardless of the designer's choice: everything Unna Regular, the original
+  year Unna Bold.
 %>
-<%- include('partials/font-import-inline') %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unna:wght@400;700&display=block" rel="stylesheet">
 <style>
     body {
-        font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 400;
         margin: 0;
         padding: 0;
     }
@@ -93,18 +98,38 @@
     .text.artist {
         margin-left: 3mm;
         margin-right: 3mm;
-        font-size: 18px;
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 400;
+        font-size: 16px;
         overflow-wrap: break-word; /* Prevent breaking mid-word */
     }
     .text.year {
-        font-size: 40px;
-        font-weight: bold;
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 700;
+        font-size: 42px;
+        line-height: 1.1;
+    }
+    .text.extra-year {
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 400;
+        font-size: 16px;
+        /* Sits tight under the year: cancel its own top padding and part of the year's bottom padding. */
+        padding-top: 0;
+        margin-top: -1mm;
     }
     .text.name {
         margin-left: 3mm;
         margin-right: 3mm;
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 400;
         font-size: 16px;
         overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .text .extra-attribute {
+        font-family: 'Unna', Georgia, serif;
+        font-weight: 400;
+        font-size: 10px;
+        margin-top: 1mm;
     }
     .url, .url-bottom {
         font-size: 11px;
@@ -132,6 +157,11 @@
 </style>
 </head>
 <body>
+<!-- Force Unna 400 + 700 to be fetched before layout finalises (prevents faux-bold fallback in PDF renderer) -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;">
+    <span style="font-family:'Unna',serif;font-weight:400;">Unna Regular 0123456789</span>
+    <span style="font-family:'Unna',serif;font-weight:700;">Unna Bold 0123456789</span>
+</div>
 <% if (php.addHowToCard && startIndex === 0) { %>
   <%- include('partials/howto_card') %>
 <% } %>
@@ -169,25 +199,23 @@
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text artist" style="padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                    <div class="extra-attribute"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text" style="margin-top: 3mm;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
-                <div style="font-size:<%= getYearFontSize(php.selectedFont) %>;font-weight:bold;line-height:1.1;"><%= track.year %></div>
-                <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-size:<%= php.selectedFontSize || '16px' %>;margin-top: 1mm;"><%= track.extraNameAttribute %></div>
-                <% } %>
-            </div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text year" style="margin-top: 3mm;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
+            <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                <div class="text extra-year" style="padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;"><%= track.extraNameAttribute %></div>
+            <% } %>
+            <div class="text name" style="margin-top: 3mm;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.name %>
             </div>
         </div>
         <!-- Domain URL removed from back side - always hidden -->
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 5mm; right: 5mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 5mm; right: 5mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: 'Unna', Georgia, serif; font-weight: 400; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>

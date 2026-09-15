@@ -145,6 +145,10 @@ describe('getGoogleFontWeights', () => {
     expect(getGoogleFontWeights('"Crimson Text", Georgia, serif')).toBe('400;600;700');
   });
 
+  it('returns 400;700 for Unna', () => {
+    expect(getGoogleFontWeights('Unna, Georgia, serif')).toBe('400;700');
+  });
+
   it('returns multiple weights for Teko', () => {
     expect(getGoogleFontWeights('Teko, Arial, sans-serif')).toBe('300;400;500;600;700');
   });

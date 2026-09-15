@@ -55,6 +55,7 @@ export const FONTS: FontConfig[] = [
   { id: 'Roboto Condensed Bold', family: '"Roboto Condensed Bold", "Roboto Condensed", Arial, sans-serif', displayName: 'Roboto Condensed Bold (Compact)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Roboto Condensed', googleFontWeights: '400;700', fontWeight: '700' },
   { id: 'Raleway', family: 'Raleway, Arial, sans-serif', displayName: 'Raleway (ExtraBold/Black)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Raleway', googleFontWeights: '400;700;800;900' },
   { id: 'Crimson Text', family: '"Crimson Text", Georgia, serif', displayName: 'Crimson Text (Literary)', defaultSize: '16px', yearSize: '42px', googleFontName: 'Crimson Text', googleFontWeights: '400;600;700' },
+  { id: 'Unna', family: 'Unna, Georgia, serif', displayName: 'Unna (Classic Serif)', defaultSize: '16px', yearSize: '42px', googleFontName: 'Unna', googleFontWeights: '400;700' },
 ];
 
 /**
