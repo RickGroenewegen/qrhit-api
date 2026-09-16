@@ -266,8 +266,8 @@
   "extras.dielineDrawing": "Stansmestekening + dummy",
   "extras.cuttingDie": "Stansvorm",
   "extras.cuttingDieBox": "Stansmes {{compartments}}-vaks doosje",
-  "suggestions.docTitle": "Afspeellijstsuggesties",
-  "suggestions.editionName": "Afspeellijstsuggesties",
+  "suggestions.docTitle": "Playlist-suggesties",
+  "suggestions.editionName": "Playlist-suggesties",
   "suggestions.coverTagline": "Kant-en-klare afspeellijsten voor uw QRSong!-box, geselecteerd door ons muziekteam.",
   "suggestions.coverTrack1": "Zo kiest u",
   "suggestions.coverTrack1Note": "Eerst luisteren, dan beslissen",
@@ -275,7 +275,7 @@
   "suggestions.coverTrack2Note": "Op genre en taal",
   "suggestions.coverTrack3": "Volgende stappen",
   "suggestions.coverTrack3Note": "Bestellen en contact",
-  "suggestions.sheetTitle": "Afspeellijstsuggesties",
+  "suggestions.sheetTitle": "Playlist-suggesties",
   "suggestions.sectionTitle": "Onze suggesties",
   "suggestions.sectionMeta": "{{count}} playlists voor een doos met {{cardCount}} kaarten",
   "suggestions.intro": "Elke onderstaande playlist bevat minimaal {{cardCount}} nummers en past dus in een doos met {{cardCount}} kaarten. Beluister deze via de Spotify-link voordat u beslist. Liever uw eigen selectie? Stuur ons uw Spotify-playlist, dan gebruiken wij die.",
@@ -284,6 +284,6 @@
   "suggestions.openInSpotify": "Beluisteren op Spotify",
   "suggestions.genreUnknown": "Diversen",
   "suggestions.noResults": "Geen playlists komen overeen met deze selectie.",
-  "suggestions.footTitle": "Playlistsuggesties",
+  "suggestions.footTitle": "Playlist-suggesties",
   "suggestions.footNote": "Aantal nummers per {{date}}. Playlists worden regelmatig bijgewerkt."
 }
