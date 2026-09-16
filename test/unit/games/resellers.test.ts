@@ -617,14 +617,14 @@ describe('getPresetBackgrounds', () => {
     expect(h.prisma.resellerMedia.findMany).not.toHaveBeenCalled();
   });
 
-  it('builds 20 preset entries with frontend URLs and caches them for 24h', async () => {
+  it('builds 22 preset entries with frontend URLs and caches them for 24h', async () => {
     h.prisma.resellerMedia.findMany.mockResolvedValueOnce([
       { id: 31, filename: 'background1.png' },
       { id: 32, filename: 'background2.png' },
     ]);
 
     const result = await resellers.getPresetBackgrounds();
-    expect(result).toHaveLength(20);
+    expect(result).toHaveLength(22);
     expect(result[0]).toEqual({
       mediaId: 31,
       thumbnail:

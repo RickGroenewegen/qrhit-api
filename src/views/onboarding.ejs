@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0077be">
+    <meta name="theme-color" content="#18565e">
     <link rel="manifest" href="/assets/manifest.json?v=<%= version %>">
     <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
     <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
@@ -16,7 +16,7 @@
 
     <main class="onboarding-card" id="onboarding-card">
         <div class="logo-orbit">
-            <img src="/assets/images/logo_white.png?v=<%= version %>" alt="QRSong!" class="logo-img"/>
+            <img src="/assets/images/logo.png?v=<%= version %>" alt="QRSong!" class="logo-img" width="3334" height="669"/>
         </div>
 
         <h1 class="onboarding-heading">
@@ -24,10 +24,10 @@
         </h1>
 
         <div class="store-buttons">
-            <button data-magnetic onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="store-btn" aria-label="<%= translations.appStore %>">
+            <button onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="store-btn" aria-label="<%= translations.appStore %>">
                 <span class="btn-content"><i class="fab fa-apple"></i><span><%= translations.appStore %></span></span>
             </button>
-            <button data-magnetic onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="store-btn" aria-label="<%= translations.googlePlay %>">
+            <button onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="store-btn" aria-label="<%= translations.googlePlay %>">
                 <span class="btn-content"><i class="fab fa-google-play"></i><span><%= translations.googlePlay %></span></span>
             </button>
         </div>
@@ -38,7 +38,7 @@
             <span class="eq eq--mirror" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         </div>
 
-        <button data-magnetic onclick="window.open('<%= domain %>', '_blank');" class="secondary-link" aria-label="<%= translations.visit %>">
+        <button onclick="window.open('<%= domain %>', '_blank');" class="secondary-link" aria-label="<%= translations.visit %>">
             <span class="btn-content"><i class="fas fa-globe"></i><span><%= translations.visit %></span></span>
         </button>
     </main>

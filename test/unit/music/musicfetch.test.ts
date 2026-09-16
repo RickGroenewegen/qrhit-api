@@ -1,28 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import crypto from 'crypto';
 
 /**
  * Unit tests for src/musicfetch.ts with every I/O collaborator mocked:
  * axios (MusicFetch API), Bottleneck (rate limiter -> pass-through),
- * prisma, cache (Map-backed), logger (no-op) and ExternalCardService.
+ * prisma, logger (no-op) and ExternalCardService (scan-cache invalidation).
  *
  * MusicFetch instantiates all collaborators as instance-member
  * initializers, so all mocks are registered before the module import.
  */
 
 const h = vi.hoisted(() => {
-  const cacheStore = new Map<string, string>();
   return {
     axiosGet: vi.fn(),
-    cacheStore,
-    cacheGet: vi.fn(async (key: string) => cacheStore.get(key) ?? null),
-    cacheSet: vi.fn(async (key: string, value: string) => {
-      cacheStore.set(key, value);
-    }),
-    cacheDel: vi.fn(async (key: string) => {
-      cacheStore.delete(key);
-    }),
-    updateCardsWithSpotifyIdInCache: vi.fn(async () => undefined),
+    clearCacheForSpotifyId: vi.fn(async () => 0),
     prisma: {
       track: {
         findUnique: vi.fn(),
@@ -69,20 +59,10 @@ vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => h.prisma },
 }));
 
-vi.mock('../../../src/cache', () => ({
-  default: {
-    getInstance: () => ({
-      get: h.cacheGet,
-      set: h.cacheSet,
-      del: h.cacheDel,
-    }),
-  },
-}));
-
 vi.mock('../../../src/externalCardService', () => ({
   default: {
     getInstance: () => ({
-      updateCardsWithSpotifyIdInCache: h.updateCardsWithSpotifyIdInCache,
+      clearCacheForSpotifyId: h.clearCacheForSpotifyId,
     }),
   },
 }));
@@ -114,7 +94,6 @@ function fullServicesResponse() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.cacheStore.clear();
 });
 
 describe('fetchLinksForTrack', () => {
@@ -654,16 +633,6 @@ describe('processSingleExternalCard', () => {
           amazonMusicLink: 'am-old',
           tidalLink: 'td-old',
         },
-      ])
-      // cards for cache clearing (clearExternalCardCaches)
-      .mockResolvedValueOnce([
-        {
-          cardType: 'jumbo',
-          sku: 'aaaa0007',
-          countryCode: null,
-          playlistId: null,
-          cardNumber: '12',
-        },
       ]);
     h.prisma.externalCard.update.mockResolvedValue({});
 
@@ -688,18 +657,10 @@ describe('processSingleExternalCard', () => {
     expect(update.data).not.toHaveProperty('youtubeMusicLink'); // already set
     expect(update.data.musicFetchAttempts).toEqual({ increment: 1 });
 
-    // Cache invalidation: jumbo cards get one key per locale (8 locales).
-    expect(h.cacheDel).toHaveBeenCalledTimes(8);
-    const nlKey = `qrlink2_unknown_result_${crypto
-      .createHash('md5')
-      .update('https://hitstergame.com/nl/aaaa0007/12')
-      .digest('hex')}`;
-    expect(h.cacheDel).toHaveBeenCalledWith(nlKey);
-
-    expect(h.updateCardsWithSpotifyIdInCache).toHaveBeenCalledWith(
-      'abc123',
-      expect.objectContaining({ deezerLink: 'dz', tidalLink: 'td' })
-    );
+    // Cache invalidation is delegated to ExternalCardService, which clears
+    // the scan result of every card sharing the spotifyId.
+    expect(h.clearCacheForSpotifyId).toHaveBeenCalledTimes(1);
+    expect(h.clearCacheForSpotifyId).toHaveBeenCalledWith('abc123');
   });
 
   it('reports failure when every card already has all links', async () => {
@@ -725,44 +686,33 @@ describe('processSingleExternalCard', () => {
       'No new links found (all services already linked or unavailable)'
     );
     expect(h.prisma.externalCard.update).not.toHaveBeenCalled();
-    expect(h.cacheDel).not.toHaveBeenCalled();
+    expect(h.clearCacheForSpotifyId).not.toHaveBeenCalled();
   });
 
-  it('uses a musicmatch cache key for musicmatch cards', async () => {
+  it('still reports success when cache invalidation throws', async () => {
     fetchSpy.mockResolvedValueOnce({
       success: true,
       links: { deezerLink: 'dz' },
     });
-    h.prisma.externalCard.findMany
-      .mockResolvedValueOnce([
-        {
-          id: 1,
-          deezerLink: null,
-          youtubeMusicLink: null,
-          appleMusicLink: null,
-          amazonMusicLink: null,
-          tidalLink: null,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          cardType: 'musicmatch',
-          sku: null,
-          countryCode: null,
-          playlistId: 'pl-1',
-          cardNumber: '3',
-        },
-      ]);
+    h.prisma.externalCard.findMany.mockResolvedValueOnce([
+      {
+        id: 1,
+        deezerLink: null,
+        youtubeMusicLink: null,
+        appleMusicLink: null,
+        amazonMusicLink: null,
+        tidalLink: null,
+      },
+    ]);
     h.prisma.externalCard.update.mockResolvedValue({});
+    h.clearCacheForSpotifyId.mockRejectedValueOnce(new Error('redis down'));
 
-    await mf.processSingleExternalCard(card());
+    const res = await mf.processSingleExternalCard(card());
 
-    const expectedKey = `qrlink2_unknown_result_${crypto
-      .createHash('md5')
-      .update('https://api.musicmatchgame.com/pl-1/3')
-      .digest('hex')}`;
-    expect(h.cacheDel).toHaveBeenCalledTimes(1);
-    expect(h.cacheDel).toHaveBeenCalledWith(expectedKey);
+    // The links are in the database; a failed invalidation is only logged.
+    expect(res.success).toBe(true);
+    expect(res.cardsUpdated).toBe(1);
+    expect(h.clearCacheForSpotifyId).toHaveBeenCalledWith('abc123');
   });
 
   it('catches unexpected errors into the error field', async () => {
@@ -870,9 +820,7 @@ describe('updateExternalCardWithLinks', () => {
           amazonMusicLink: null,
           tidalLink: 'td-old',
         },
-      ])
-      // clearExternalCardCaches lookup
-      .mockResolvedValueOnce([]);
+      ]);
     h.prisma.externalCard.update.mockResolvedValue({});
 
     const res = await mf.updateExternalCardWithLinks(5);
@@ -897,10 +845,7 @@ describe('updateExternalCardWithLinks', () => {
     expect(byId[2]).not.toHaveProperty('processedByBatch');
     expect(byId[2].musicFetchAttempts).toEqual({ increment: 1 });
 
-    expect(h.updateCardsWithSpotifyIdInCache).toHaveBeenCalledWith(
-      'abc123',
-      expect.objectContaining({ deezerLink: 'dz', tidalLink: 'td' })
-    );
+    expect(h.clearCacheForSpotifyId).toHaveBeenCalledWith('abc123');
   });
 
   it('skips cache clearing when nothing new was added', async () => {
@@ -922,8 +867,7 @@ describe('updateExternalCardWithLinks', () => {
     expect(res).toEqual({ success: true, cardsUpdated: 0, servicesAdded: [] });
     // Attempt bookkeeping still happens for the card.
     expect(h.prisma.externalCard.update).toHaveBeenCalledTimes(1);
-    expect(h.updateCardsWithSpotifyIdInCache).not.toHaveBeenCalled();
-    expect(h.cacheDel).not.toHaveBeenCalled();
+    expect(h.clearCacheForSpotifyId).not.toHaveBeenCalled();
   });
 
   it('returns the empty result when something throws', async () => {

@@ -910,7 +910,7 @@ describe('Spotify.searchTracks', () => {
     );
     expect(res.success).toBe(true);
     expect(res.data.tracks).toEqual([
-      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', image: 'cover' },
+      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', artists: ['Star'], image: 'cover' },
     ]);
     expect(res.data).toMatchObject({
       totalCount: 25,
@@ -1256,6 +1256,50 @@ describe('Spotify.resolveSpotifyUrl', () => {
       spotifyUri: 'spotify:track:hitDE',
       links: { appleMusicLink: 'am', deezerLink: 'dl' },
     });
+  });
+
+  it('caches Hitster cards under a card-identity key shared by every URL shape', async () => {
+    holder.externalCardService.getCardByCountryKey.mockResolvedValueOnce({
+      spotifyId: 'hitNL',
+      spotifyLink: 'sl',
+      appleMusicLink: 'am',
+      tidalLink: 'tl',
+      youtubeMusicLink: 'yl',
+      deezerLink: 'dl',
+      amazonMusicLink: 'azl',
+    });
+
+    // Printed cards carry www. and no locale prefix.
+    const first = await spotify.resolveSpotifyUrl('www.hitstergame.com/nl/00181');
+    expect(first).toMatchObject({
+      success: true,
+      cached: false,
+      spotifyUri: 'spotify:track:hitNL',
+    });
+    expect(holder.cacheStore.has('qrlink2_extcard_country_nl_00181')).toBe(true);
+
+    // A locale-prefixed, www-less variant of the same card is served from
+    // that entry without a second lookup, so one invalidation covers both.
+    const second = await spotify.resolveSpotifyUrl(
+      'https://hitstergame.com/en/nl/00181'
+    );
+    expect(second).toMatchObject({
+      cached: true,
+      spotifyUri: 'spotify:track:hitNL',
+      links: { appleMusicLink: 'am', tidalLink: 'tl' },
+    });
+    expect(holder.externalCardService.getCardByCountryKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('caches an unmapped Hitster card only briefly', async () => {
+    await spotify.resolveSpotifyUrl('https://hitstergame.com/de/99998');
+    const write = holder.cacheSets.find(
+      (s) => s.key === 'qrlink2_extcard_country_de_99998'
+    );
+    expect(write?.ttl).toBe(60 * 60);
+    expect(holder.cacheStore.get('qrlink2_extcard_country_de_99998')).toContain(
+      'No mapping found'
+    );
   });
 
   it('resolves a Hitster Jumbo SKU card via the jumbo lookup', async () => {

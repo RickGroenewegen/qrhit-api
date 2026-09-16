@@ -236,11 +236,19 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         r: true,
       } : null;
 
+      // The scanner's user agent, read once and shared with the failure row
+      // below. In the log it is what separates a real phone from a crawler or a
+      // link checker, which is the difference between an unknown link worth
+      // chasing and noise.
+      const userAgent = request.headers['user-agent'] || null;
+
       // Log the unknown link scan, indicate if cached
       logger.log(
         color.blue.bold(
           `Unknown link scanned${result.cached ? ' (CACHED)' : ''}: ` +
             color.white.bold(`url="${url}"`) +
+            color.blue.bold(', ua=') +
+            color.white.bold(`"${userAgent ?? 'unknown'}"`) +
             color.blue.bold(', result=') +
             color.white.bold(
               JSON.stringify(responsePayload || {
@@ -256,7 +264,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       } else {
         // Log failed scan to database (skip if cached or blacklisted)
         if (!result.cached && !result.blacklisted) {
-          const userAgent = request.headers['user-agent'] || null;
           const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
           prisma.unknownLink.create({
             data: {
@@ -301,6 +308,22 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   fastify.get('/featured/:locale', async (request: any, _reply) => {
     const skipLocaleFilter = request.query.all === 'true';
     const playlists = await data.getFeaturedPlaylists(request.params.locale, skipLocaleFilter);
+    return { success: true, data: playlists };
+  });
+
+  // Playlists similar to a given one, for the "you might also like" row on a
+  // product page. Small on purpose: the product page renders this server-side,
+  // so it must not pull the whole catalogue down with it.
+  fastify.get('/featured/:locale/related/:slug', async (request: any, _reply) => {
+    const limit = Math.min(
+      12,
+      Math.max(1, parseInt(request.query.limit, 10) || 6)
+    );
+    const playlists = await data.getRelatedFeaturedPlaylists(
+      request.params.locale,
+      request.params.slug,
+      limit
+    );
     return { success: true, data: playlists };
   });
 
@@ -509,6 +532,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let td = null;
     let t = null;
     let st = null;
+    // A blocked playlist answers with every link empty, which the app and
+    // the web scanner already treat as "this code cannot be played". The
+    // flag is there so clients can tell it apart from an unknown track.
+    const b = result.blocked === true;
 
     if (result.success) {
       link = result.data.link;
@@ -532,7 +559,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       link = '?';
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st, b };
   });
 
   // Hitlist routes

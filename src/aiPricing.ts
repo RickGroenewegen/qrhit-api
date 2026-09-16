@@ -1,9 +1,10 @@
 /**
  * Per-model input/output token prices in USD per 1M tokens.
  *
- * Sources (May 2026):
- *   gpt-5.4-mini: https://pricepertoken.com/pricing-page/model/openai-gpt-5.4-mini
- *                 https://openai.com/api/pricing/
+ * Sources:
+ *   gpt-5.6 family (Sep 2026): https://developers.openai.com/api/docs/models
+ *   gpt-5.4-mini (May 2026, kept for historical aISearch rows):
+ *                 https://pricepertoken.com/pricing-page/model/openai-gpt-5.4-mini
  *
  * To add a new model, append an entry below. Prices are expressed per
  * million tokens (matching OpenAI's pricing convention) — the conversion
@@ -17,6 +18,18 @@ export interface ModelPricing {
 }
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
+  'gpt-5.6-sol': {
+    inputPerMillion: 4,
+    outputPerMillion: 20,
+  },
+  'gpt-5.6-terra': {
+    inputPerMillion: 2,
+    outputPerMillion: 12,
+  },
+  'gpt-5.6-luna': {
+    inputPerMillion: 0.2,
+    outputPerMillion: 1.2,
+  },
   'gpt-5.4-mini': {
     inputPerMillion: 0.75,
     outputPerMillion: 4.5,

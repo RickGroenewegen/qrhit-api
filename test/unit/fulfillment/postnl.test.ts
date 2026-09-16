@@ -190,6 +190,31 @@ describe('createShipmentLabels', () => {
     ]);
   });
 
+  it('maps EU parcel keys to product 4907 with the required ProductOptions', async () => {
+    fetchMock.mockResolvedValue(okResponse([[await labelBase64()], [await labelBase64()], [await labelBase64()]]));
+
+    const result = await postnl.createShipmentLabels([
+      makeCompany({ id: 1, countrycode: 'DE', productCode: '4907-2B' }) as any,
+      makeCompany({ id: 2, countrycode: 'DE', productCode: '4907-2C' }) as any,
+      makeCompany({ id: 3, countrycode: 'DE', productCode: '6972' }) as any,
+    ]);
+
+    expect(result.success).toBe(true);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.Shipments[0].ProductCodeDelivery).toBe('4907');
+    expect(body.Shipments[0].ProductOptions).toEqual([
+      { Characteristic: '005', Option: '025' },
+      { Characteristic: '101', Option: '013' },
+    ]);
+    expect(body.Shipments[1].ProductCodeDelivery).toBe('4907');
+    expect(body.Shipments[1].ProductOptions).toEqual([
+      { Characteristic: '005', Option: '025' },
+      { Characteristic: '101', Option: '012' },
+    ]);
+    expect(body.Shipments[2].ProductCodeDelivery).toBe('6972');
+    expect(body.Shipments[2]).not.toHaveProperty('ProductOptions');
+  });
+
   it('batches companies into groups of 4 per API request', async () => {
     const label = await labelBase64();
     fetchMock.mockResolvedValue(okResponse([[label]]));

@@ -8,7 +8,7 @@ import {
 import { clearPlaylistCache } from './misc';
 import { DataDeps } from './types';
 
-export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v3_';
+export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
 
 export async function getFeaturedPlaylists(
   deps: DataDeps,
@@ -55,6 +55,7 @@ export async function getFeaturedPlaylists(
       playlists.decadePercentage0,
       playlists.genreId,
       playlists.description_${locale} as description,
+      playlists.description_en as descriptionEnFallback,
       g.name_${locale} as genreName,
       playlists.promotionalActive as isPromotional,
       playlists.promotionalTitle,
@@ -96,9 +97,9 @@ export async function getFeaturedPlaylists(
     returnList = returnList.map((playlist) => {
       // Ensure description is available, fallback to English if not
       if (!playlist.description && locale !== 'en') {
-        const descriptionField = `description_en`;
-        playlist.description = playlist[descriptionField];
+        playlist.description = playlist.descriptionEnFallback;
       }
+      delete playlist.descriptionEnFallback;
 
       // Ensure genre name is available, fallback to English if not
       if (!playlist.genreName && playlist.genreId && locale !== 'en') {
@@ -138,6 +139,187 @@ export async function getFeaturedPlaylists(
     returnList = JSON.parse(cachedPlaylists);
   }
   return returnList;
+}
+
+// ── Playlist suggestions (admin PDF) ─────────────────────────────
+
+export interface PlaylistSuggestionOptions {
+  /** Playlist markets to include; empty = every market. International (untagged) playlists are always included. */
+  locales: string[];
+  /** Genre ids to include; empty = every genre. */
+  genreIds: number[];
+  /** Cards per box; only playlists with at least this many tracks qualify. */
+  cardCount: number;
+}
+
+function playlistLocales(featuredLocale: unknown): string[] {
+  return String(featuredLocale || '')
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Pure filter over the cached featured list, so the admin document can
+ * combine several markets and genres without a second raw SQL query.
+ * Mirrors the `FIND_IN_SET(locale) OR featuredLocale IS NULL` rule of
+ * getFeaturedPlaylists for every selected locale at once.
+ */
+export function filterPlaylistSuggestions(
+  playlists: any[],
+  opts: PlaylistSuggestionOptions
+): any[] {
+  const wantedLocales = new Set(opts.locales);
+  const wantedGenres = new Set(opts.genreIds);
+
+  const matchesLocale = (p: any): boolean => {
+    if (wantedLocales.size === 0) return true;
+    const own = playlistLocales(p.featuredLocale);
+    if (own.length === 0) return true;
+    return own.some((l) => wantedLocales.has(l));
+  };
+
+  return playlists
+    .filter((p) => matchesLocale(p))
+    .filter((p) => wantedGenres.size === 0 || wantedGenres.has(Number(p.genreId)))
+    .filter((p) => Number(p.numberOfTracks) >= opts.cardCount)
+    .sort((a, b) => {
+      // Explicitly localised playlists first, then by popularity.
+      const aLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(a.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      const bLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(b.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      if (aLocal !== bLocal) return aLocal - bLocal;
+      const score = Number(b.score || 0) - Number(a.score || 0);
+      if (score !== 0) return score;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+}
+
+export async function getPlaylistSuggestions(
+  deps: DataDeps,
+  docLocale: string,
+  opts: PlaylistSuggestionOptions
+): Promise<any[]> {
+  const all = await getFeaturedPlaylists(deps, docLocale, true);
+  return filterPlaylistSuggestions(all, opts);
+}
+
+/** Genres for the suggestions modal, with how many visible featured playlists each has. */
+export async function getGenresWithFeaturedCount(
+  deps: DataDeps
+): Promise<{ id: number; slug: string | null; name: string; featuredCount: number }[]> {
+  const genres = await deps.prisma.genre.findMany({
+    select: {
+      id: true,
+      slug: true,
+      name_en: true,
+      _count: {
+        select: {
+          Playlist: { where: { featured: true, featuredHidden: false } },
+        },
+      },
+    },
+    orderBy: { name_en: 'asc' },
+  });
+  return genres.map((g) => ({
+    id: g.id,
+    slug: g.slug,
+    name: g.name_en,
+    featuredCount: g._count.Playlist,
+  }));
+}
+
+/** Decade columns, weighted against each other to measure musical overlap. */
+const DECADE_KEYS = [
+  'decadePercentage2020',
+  'decadePercentage2010',
+  'decadePercentage2000',
+  'decadePercentage1990',
+  'decadePercentage1980',
+  'decadePercentage1970',
+  'decadePercentage1960',
+  'decadePercentage1950',
+  'decadePercentage1900',
+] as const;
+
+/**
+ * Playlists similar to `slug`, for the "you might also like" row on a product
+ * page.
+ *
+ * Why this exists: every product page used to be an orphan. The catalogue is
+ * ~600 pages that between them had no internal links at all, reachable only
+ * from the sitemap, and averaging ~13 impressions a month each. Linking
+ * siblings turns the catalogue into a connected graph a crawler can walk from
+ * any entry point, and gives each page inbound links from topically related
+ * pages rather than none.
+ *
+ * It reads the same cached list `getFeaturedPlaylists` builds and ranks in
+ * memory, so it costs no extra database work.
+ */
+export async function getRelatedFeaturedPlaylists(
+  deps: DataDeps,
+  locale: string,
+  slug: string,
+  limit: number = 6
+): Promise<any[]> {
+  const all = await getFeaturedPlaylists(deps, locale, true);
+  const source = all.find((p: any) => p.slug === slug);
+
+  // Most product pages are for playlists that were never featured, so the
+  // source is usually absent from this list. Returning nothing there left the
+  // majority of product pages with no related row at all — the opposite of the
+  // point, which is to link orphaned product pages to something. With no
+  // source to compare against, every affinity term below evaluates to 0 and
+  // the ordering falls through to `score`, i.e. the most popular featured
+  // playlists. That is a reasonable row for a page we know nothing else about.
+  const decadeVector = (p: any): number[] =>
+    DECADE_KEYS.map((k) => Number(p[k]) || 0);
+  const sourceDecades = source ? decadeVector(source) : DECADE_KEYS.map(() => 0);
+
+  const scored = all
+    .filter((p: any) => p.slug && p.slug !== slug)
+    .map((p: any) => {
+      // Same genre is the strongest signal a listener would agree with.
+      let affinity =
+        source && p.genreId && p.genreId === source.genreId ? 100 : 0;
+
+      // Then era overlap: sum of the smaller share in each decade, so two
+      // playlists that are both mostly 80s score near 100 and a 60s/2020s
+      // pair scores near 0.
+      const theirs = decadeVector(p);
+      affinity += sourceDecades.reduce(
+        (sum, share, i) => sum + Math.min(share, theirs[i]),
+        0
+      );
+
+      // A nudge toward playlists in the visitor's own market.
+      if (
+        source?.featuredLocale &&
+        p.featuredLocale === source.featuredLocale
+      ) {
+        affinity += 25;
+      }
+
+      return { playlist: p, affinity, score: Number(p.score) || 0 };
+    }) as Array<{ playlist: any; affinity: number; score: number }>;
+
+  scored.sort(
+    (a, b) =>
+      b.affinity - a.affinity ||
+      b.score - a.score ||
+      // Stable final tiebreak so server and client agree and the row does not
+      // reshuffle between renders.
+      String(a.playlist.slug).localeCompare(String(b.playlist.slug))
+  );
+
+  return scored.slice(0, limit).map((s) => s.playlist);
 }
 
 /**

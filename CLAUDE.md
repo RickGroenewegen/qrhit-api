@@ -53,9 +53,12 @@ German `du`), so that copy must never be reused for these documents. They read
 from a separate bundle instead:
 
 - `src/locales/business/{en,nl,de}.json` — flat dotted keys under the
-  `quotation.*`, `instructions.*`, `invoice_lines.*` and `pricing.*` prefixes
-  (`pricing.*` covers the retail/reseller price lists and the brochure
-  partials `front_page`, `product_info` and `closing_page` they share).
+  `quotation.*`, `instructions.*`, `invoice_lines.*`, `pricing.*` and
+  `suggestions.*` prefixes (`pricing.*` covers the retail/reseller price lists
+  and the brochure partials `front_page`, `product_info` and `closing_page`
+  they share; `suggestions.*` is the playlist suggestions brochure, which
+  reuses those partials through a translator that falls back to `pricing.*`
+  for any key it does not define itself).
 - Only these three languages are produced. `Translation.resolveBusinessLocale()`
   is the single fallback point: any other `Company.locale` becomes `en`. Missing
   keys fall back to the English string, never to `undefined`.
@@ -224,6 +227,31 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Feature flags** for development vs production behavior
 - **AWS configuration** for cloud services
 
+## OpenAI models and structured output
+
+Every OpenAI model name lives in `src/llmModels.ts` (sol / terra / luna text
+tiers, the image model, the TTS model); prices per 1M tokens are in
+`src/aiPricing.ts`. Bump the constants there, nowhere else. The root
+`translate.js` scripts in each repo are the exception: they are standalone and
+name the model inline.
+
+The GPT-5.6 family changed two Chat Completions rules, verified against the
+live API on 2026-09-16:
+
+- `temperature` other than 1 returns 400 unless `reasoning_effort: 'none'`.
+- Function tools (`tools` / legacy `functions`) return 400 whenever reasoning
+  is on. OpenAI's answer is the Responses API; ours is
+  `response_format: { type: 'json_schema' }`, which works with every
+  reasoning level. Structured calls read `message.content` and parse it.
+- `max_tokens` is rejected; use `max_completion_tokens`.
+
+Pick `reasoning_effort` per call, not globally: `'none'` for translation,
+classification and copy (fast, allows a temperature), `'low'` where the answer
+has to be right (release years, quiz alternatives, order extraction, playlist
+curation), `'medium'` for year audits, trivia facts and blog generation.
+`chat.ts` and `mail.ts` still use legacy `functions` on the luna tier with
+reasoning off, which the API accepts.
+
 ## Testing
 - Basic test setup in `test.js`
 - Run tests with `npm test`
@@ -235,6 +263,69 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Database migrations** handled by Prisma
 - **Multi-worker clustering** for scalability
 - **Static file serving** for public assets
+
+## Default card artwork and the 2026 cutover
+
+Order lines never store a background when the customer keeps the default; the
+card templates in `src/views/pdf_*.ejs` fall back to
+`assets/images/background_brand.png` (the cream brand artwork, same image the
+frontend shows). `assets/images/background_new.png` still holds the old blue
+artwork under its historical name.
+
+Orders from before the switch must keep the blue artwork on every
+regeneration or reprint, so `src/legacyBackground.ts` pins them explicitly:
+at startup the blue artwork is copied to `public/background/legacy_default_blue.png`
+(uploads are not in git), and the primary process runs a one-time UPDATE that
+sets that filename on every line with no background and no solid colour. The
+run is recorded in `app_settings` under `legacy_default_background_backfill`,
+so it never repeats; delete that row to run it again. Nothing to do at deploy
+beyond restarting the API.
+
+When changing the default artwork again, give the new file a new name (a
+warm Lambda keeps Chromium's image cache between renders) and repeat this
+cutover rather than overwriting the file.
+
+## Product feeds: Merchant Center and Channable
+
+Two modules publish the same catalogue and currently run side by side:
+
+- `src/merchantcenter.ts` pushes products straight into Google via the Merchant
+  API (4 AM cron), and generates the AI product images (1 AM cron).
+- `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron).
+
+The agency running the Merchant Center asked for the feed to go through
+Channable first; once they have Channable wired to Merchant Center, the Google
+push can be retired.
+
+**Channable has no API to push products into.** Its API only covers orders,
+offers, returns and shipments — `POST .../offers` can update stock and price on
+offers that already exist, but cannot create them. Projects and imports are
+web-app only. Product data enters exclusively through an import, so we host a
+CSV and Channable fetches it about once a day:
+
+```
+https://api.qrsong.io/channable/feed.csv?token=<CHANNABLE_FEED_TOKEN>
+        # add &country=DE for a single market's slice
+```
+
+`CHANNABLE_FEED_TOKEN` is the only new env var; a wrong or missing token 404s.
+`npx tsx test-channable.ts` builds the feed locally and prints a summary, and
+`POST /admin/channable/generate-feed` rebuilds it on demand.
+
+Anything both feeds have to agree on — the locale/country markets, the
+"localised + international" gating, product ids, PMax custom labels, shipping
+tiers — lives in `src/productFeed.ts` so the two cannot drift apart. Put new
+shared logic there rather than in either module.
+
+Two things `channable.ts` deliberately does NOT do:
+
+- It never touches `markedForMerchantCenter`. That flag is written by
+  `promotional.ts` / `adminRoutes.ts` and cleared only by the Google sync; a
+  second consumer would race with it. A feed is a full snapshot anyway.
+- It never generates product images, only reads what `merchantcenter.ts` has
+  already written under `public/products/`. **When `merchantcenter.ts` is
+  retired, its image-generation half has to move into `channable.ts` or a
+  shared module, or the feed will slowly lose images.**
 
 ## Key Security Considerations
 - **Input validation** on all endpoints

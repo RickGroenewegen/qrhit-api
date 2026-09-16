@@ -29,6 +29,14 @@ import TrackEnrichment, { EnrichmentData } from './trackEnrichment';
 import cluster from 'cluster';
 import crypto from 'crypto';
 import { CronJob } from 'cron';
+import {
+  EXTERNAL_CARD_CACHE_TTL_FAILURE,
+  EXTERNAL_CARD_CACHE_TTL_SUCCESS,
+  countryCardCacheKey,
+  hitifyCardCacheKey,
+  jumboCardCacheKey,
+  musicMatchCardCacheKey,
+} from './externalCardCacheKey';
 
 // Spotify Cache Key Prefixes
 export const CACHE_KEY_PLAYLIST = 'playlist2_';
@@ -1411,6 +1419,9 @@ class Spotify {
 
           // Adapt formatting based on the structure returned by SpotifyApi searchTracks
           const artist = item.artists?.[0]?.name || ''; // Access artist name directly
+          const artists = (item.artists || [])
+            .map((a: any) => a?.name || '')
+            .filter((name: string) => name.length > 0);
 
           const imageUrl = item.album?.images?.[0]?.url || ''; // Access image URL directly (use first image)
 
@@ -1422,6 +1433,7 @@ class Spotify {
             trackId: item.id || '', // Use item.id
             name: trackName,
             artist: artist,
+            artists: artists, // every credited artist, so "feat." tracks can be matched
             image: imageUrl,
             // Add other fields if needed and available from the API response
             // e.g., preview_url, external_urls.spotify
@@ -1568,6 +1580,41 @@ class Spotify {
   }
 
   /**
+   * Redis key for a matched card service. Derived from the card identity, not
+   * the scanned URL, so `www.` / locale / path variants share one entry and
+   * ExternalCardService can invalidate it exactly when the card changes.
+   */
+  private cardServiceCacheKey(match: CardServiceMatch): string {
+    switch (match.service) {
+      case 'musicmatch':
+        return musicMatchCardCacheKey(match.paymentHasPlaylistId, match.trackId);
+      case 'hitster':
+        return /^[a-z]+$/i.test(match.setSku)
+          ? countryCardCacheKey(match.setSku, match.cardNumber)
+          : jumboCardCacheKey(match.setSku, match.cardNumber);
+      case 'hitify':
+        return hitifyCardCacheKey(match.code);
+    }
+  }
+
+  /**
+   * Stores a card-service result: long TTL when resolved, short when not, so a
+   * card that only becomes known later is retried without manual clearing.
+   */
+  private async cacheCardServiceResult(
+    cacheKey: string,
+    result: ResolveSpotifyUrlResult
+  ): Promise<void> {
+    await this.cache.set(
+      cacheKey,
+      JSON.stringify(result),
+      result.success
+        ? EXTERNAL_CARD_CACHE_TTL_SUCCESS
+        : EXTERNAL_CARD_CACHE_TTL_FAILURE
+    );
+  }
+
+  /**
    * Dispatches a matched card service to its dedicated resolver. Each resolver
    * caches its own result under cacheKey.
    */
@@ -1628,7 +1675,7 @@ class Spotify {
         error: `No MusicMatch mapping found for payment_has_playlist ${paymentHasPlaylistId}, track ${trackId}`,
       };
     }
-    await this.cache.set(cacheKey, JSON.stringify(result));
+    await this.cacheCardServiceResult(cacheKey, result);
     return { ...result, cached: false };
   }
 
@@ -1675,7 +1722,7 @@ class Spotify {
           : `No mapping found for ${setSku}_${cardNumber}`,
       };
     }
-    await this.cache.set(cacheKey, JSON.stringify(result));
+    await this.cacheCardServiceResult(cacheKey, result);
     return { ...result, cached: false };
   }
 
@@ -1751,7 +1798,7 @@ class Spotify {
           success: false,
           error: `Unknown Hitify card: ${code}`,
         };
-        await this.cache.set(cacheKey, JSON.stringify(result));
+        await this.cacheCardServiceResult(cacheKey, result);
         return { ...result, cached: false };
       }
 
@@ -1831,7 +1878,7 @@ class Spotify {
         };
       }
 
-      await this.cache.set(cacheKey, JSON.stringify(result));
+      await this.cacheCardServiceResult(cacheKey, result);
       return { ...result, cached: false };
     } catch (e: any) {
       const result: ResolveSpotifyUrlResult = {
@@ -1903,8 +1950,16 @@ class Spotify {
         // If URL parsing fails, continue with original logic
       }
 
-      // Return any cached result first (covers all card services and native links)
-      const cached = await this.cache.get(cacheKey);
+      // Known physical card services (MusicMatch Game, Hitster, Hitify) are
+      // cached under a key derived from the card itself, never the scanned
+      // URL, so the entry can be invalidated when the card's links change.
+      const cardMatch = this.matchCardService(normalizedUrl);
+      const resultCacheKey = cardMatch
+        ? this.cardServiceCacheKey(cardMatch)
+        : cacheKey;
+
+      // Return any cached result first
+      const cached = await this.cache.get(resultCacheKey);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
@@ -1914,11 +1969,8 @@ class Spotify {
         }
       }
 
-      // Detect known physical card services (MusicMatch Game, Hitster, Hitify)
-      // and resolve them to a Spotify URI + music service links.
-      const cardMatch = this.matchCardService(normalizedUrl);
       if (cardMatch) {
-        return await this.resolveCardService(cardMatch, cacheKey);
+        return await this.resolveCardService(cardMatch, resultCacheKey);
       }
 
       // Check if URL is a native music service link (Deezer, YouTube Music, Tidal, Apple Music)

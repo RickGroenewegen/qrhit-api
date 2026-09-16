@@ -27,7 +27,7 @@ const h = vi.hoisted(() => {
     CACHE_KEY_PLAYLIST_DB: 'playlistdb2_',
     CACHE_KEY_TRACKS: 'tracks2_',
     CACHE_KEY_TRACK_COUNT: 'trackcount2_',
-    CACHE_KEY_FEATURED_PLAYLISTS: 'featuredPlaylists_v3_',
+    CACHE_KEY_FEATURED_PLAYLISTS: 'featuredPlaylists_v4_',
   };
 });
 

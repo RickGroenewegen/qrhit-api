@@ -52,6 +52,13 @@ Handlebars.registerHelper('gt', function (a: number, b: number) {
   return a > b;
 });
 
+// Joins its arguments into one string; used by the mail layout partial so a
+// template can build its <title> from several values in a single hash param.
+Handlebars.registerHelper('concat', function (...args: unknown[]) {
+  // The last argument is Handlebars' options object
+  return args.slice(0, -1).join('');
+});
+
 class Templates {
   public async render(templatePath: string, data: any): Promise<string> {
     // Ensure partials are registered before rendering

@@ -1,6 +1,37 @@
 import Logger from './logger';
 import { PDFDocument } from 'pdf-lib';
 
+interface PostNLProduct {
+  code: string;
+  options?: { Characteristic: string; Option: string }[];
+}
+
+// Keys are what the admin UI sends as productCode. Codes and options come from
+// developer.postnl.nl > Reference data > Product codes (Dutch domestic / International).
+// 4907 (Parcel EU) requires the 005-025 track & trace option plus a 2C/2B receiver option.
+// 6972 (Boxable Track & Trace) is the international letterbox packet; PostNL creates the
+// S10 barcode itself when the label request contains no barcode.
+const PRODUCTS: Record<string, PostNLProduct> = {
+  '2928': { code: '2928' },
+  '3085': { code: '3085' },
+  '4946': { code: '4946' },
+  '6972': { code: '6972' },
+  '4907-2C': {
+    code: '4907',
+    options: [
+      { Characteristic: '005', Option: '025' },
+      { Characteristic: '101', Option: '012' },
+    ],
+  },
+  '4907-2B': {
+    code: '4907',
+    options: [
+      { Characteristic: '005', Option: '025' },
+      { Characteristic: '101', Option: '013' },
+    ],
+  },
+};
+
 class PostNL {
   private static instance: PostNL;
   private logger = new Logger();
@@ -108,19 +139,23 @@ class PostNL {
       const allLabelBuffers: Buffer[] = [];
 
       for (const batch of batches) {
-        const shipments = batch.map((company) => ({
-          Addresses: [this.buildReceiverAddress(company)],
-          Contacts: [
-            {
-              ContactType: '01',
-              Email: company.contactemail || '',
+        const shipments = batch.map((company) => {
+          const product = PRODUCTS[company.productCode || '2928'] || { code: company.productCode || '2928' };
+          return {
+            Addresses: [this.buildReceiverAddress(company)],
+            Contacts: [
+              {
+                ContactType: '01',
+                Email: company.contactemail || '',
+              },
+            ],
+            Dimension: {
+              Weight: 1000,
             },
-          ],
-          Dimension: {
-            Weight: 1000,
-          },
-          ProductCodeDelivery: company.productCode || '2928',
-        }));
+            ProductCodeDelivery: product.code,
+            ...(product.options ? { ProductOptions: product.options } : {}),
+          };
+        });
 
         const requestBody = {
           Customer: {

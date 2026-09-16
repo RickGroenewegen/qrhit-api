@@ -5330,21 +5330,6 @@
     "sv",
     "no"
   ],
-  "voucher.claim": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv",
-    "no"
-  ],
   "voucher.turn": [
     "nl",
     "de",
@@ -9297,6 +9282,45 @@
     "no"
   ],
   "design_alter.imageBoxBack": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.discountPercentLine": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.discountCodeLine": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "voucher.claim": [
     "nl",
     "de",
     "fr",

@@ -2,6 +2,7 @@ import { color } from 'console-log-colors';
 import { ApiResult } from '../interfaces/ApiResult';
 import { serviceColumnMap, serviceCheckedColumnMap, serviceTypeMap } from '../providers/MusicProviderFactory';
 import { DataDeps } from './types';
+import { isPlaylistBlocked } from './playlists';
 
 export const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 
@@ -270,32 +271,10 @@ export async function getLink(
     )
   );
 
-  // Wait for blocked playlists to be initialized, but bounded: the wait
-  // itself drives a load attempt, and after a timeout we fail open for 30s
-  // so a sustained outage stalls one request per window, not every request.
-  if (
-    !deps.blockedPlaylistsInitialized &&
-    Date.now() >= deps.blockedFailOpenUntil
-  ) {
-    deps.logger.log(
-      color.yellow.bold('Waiting for blocked playlists to initialize...')
-    );
-    await Promise.race([
-      deps.ensureBlockedLoaded(),
-      new Promise((resolve) => setTimeout(resolve, 10000)),
-    ]);
-    if (!deps.blockedPlaylistsInitialized) {
-      deps.blockedFailOpenUntil = Date.now() + 30000;
-      deps.logger.log(
-        color.yellow.bold(
-          'Blocked playlists still initializing after 10s, skipping block check for 30s'
-        )
-      );
-    }
-  }
-
-  // Check if the playlist is blocked
-  if (php && deps.blockedPlaylists.has(Number(php))) {
+  // Live check against Redis on every scan, so an admin block applies on
+  // the next scan on every worker and server. Runs before the link cache
+  // lookup on purpose: cached links must never bypass it.
+  if (php && (await isPlaylistBlocked(deps, Number(php)))) {
     deps.logger.log(
       color.red.bold(
         `Blocked playlist access attempt for PaymentHasPlaylist ID ${color.white.bold(
@@ -305,6 +284,7 @@ export async function getLink(
     );
     return {
       success: false,
+      blocked: true,
       error: 'This playlist has been blocked',
     };
   }

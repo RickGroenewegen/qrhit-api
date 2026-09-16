@@ -24,6 +24,7 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
+import GoogleFonts, { familyToCss } from '../googleFonts';
 import { sendCatalogue } from '../http-cache';
 import { BACKGROUNDS } from '../backgrounds';
 import {
@@ -109,6 +110,68 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       maxCardsPhysical: MAX_CARDS_PHYSICAL,
       maxCardsDigital: MAX_CARDS,
     });
+  });
+
+  // Price examples for the pricing page: one row per sample deck size with
+  // the PDF, sheets and printed-card totals in EUR. The page used to expose
+  // these figures only through its calculator, so a crawler saw exactly one
+  // price. Each cell is an order.getOrderType() call (itself cached per
+  // quantity); the finished table is cached for an hour so the SSR pass
+  // costs a single request.
+  fastify.get('/api/pricing/tiers', async (_request: any, reply: any) => {
+    const cacheKey = 'pricingTiers_v1';
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return reply.send(JSON.parse(cached));
+    }
+
+    const quantities = [50, 100, 150, 200, 300, 500];
+    const priceFor = async (
+      quantity: number,
+      digital: boolean,
+      subType: 'sheets' | 'none'
+    ): Promise<number | null> => {
+      try {
+        const orderType = await order.getOrderType(
+          quantity,
+          digital,
+          'cards',
+          '',
+          subType
+        );
+        const amount = orderType?.amount;
+        return typeof amount === 'number' && amount > 0 ? amount : null;
+      } catch (e: any) {
+        logger.log(
+          color.red.bold(`/api/pricing/tiers error: ${e.message || e}`)
+        );
+        return null;
+      }
+    };
+
+    const rows: Array<{
+      quantity: number;
+      digital: number | null;
+      sheets: number | null;
+      physical: number | null;
+    }> = [];
+    for (const quantity of quantities) {
+      const [digital, sheets, physical] = await Promise.all([
+        priceFor(quantity, true, 'none'),
+        priceFor(quantity, false, 'sheets'),
+        priceFor(quantity, false, 'none'),
+      ]);
+      rows.push({ quantity, digital, sheets, physical });
+    }
+
+    const payload = { success: true, data: { currency: 'EUR', rows } };
+    const complete = rows.every(
+      (row) => row.digital && row.sheets && row.physical
+    );
+    if (complete) {
+      await cache.set(cacheKey, JSON.stringify(payload), 3600);
+    }
+    return reply.send(payload);
   });
 
   // Chat init endpoint - creates or resumes chat session
@@ -230,6 +293,49 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       reply.header('Content-Type', 'text/plain').send(robotsContent);
     } catch (error) {
       reply.status(500).send('Error serving robots.txt');
+    }
+  });
+
+  // Channable product feed.
+  //
+  // Channable imports products by fetching a data file from a URL once a day
+  // (it has no API to push products into), so this is the URL the agency
+  // configures as the import source. `?country=` serves that country's slice
+  // for a per-country Channable project; without it you get every market.
+  //
+  // A wrong or missing token 404s rather than 401s so the endpoint does not
+  // advertise its own existence to anyone poking at the API.
+  fastify.get('/channable/feed.csv', async (request: any, reply: any) => {
+    const expectedToken = process.env['CHANNABLE_FEED_TOKEN'];
+    if (!expectedToken || request.query?.token !== expectedToken) {
+      return reply.status(404).send({ error: 'Not found' });
+    }
+
+    try {
+      const { channable } = await import('../channable');
+
+      const requested = (request.query?.country || '').toUpperCase();
+      if (requested && !channable.getFeedCountries().includes(requested)) {
+        return reply.status(404).send({ error: 'Unknown country' });
+      }
+      const country = requested || undefined;
+
+      // Build inline only when nothing has been built yet (first boot). After
+      // that the 5 AM cron keeps it fresh — a full build is far too slow to
+      // run inside Channable's fetch.
+      if (!(await channable.feedExists(country))) {
+        await channable.generateFeed();
+      }
+
+      const feedContent = await fs.readFile(channable.getFeedPath(country));
+      const fileName = country ? `qrsong_feed_${country}.csv` : 'qrsong_feed.csv';
+
+      reply.header('Content-Disposition', `attachment; filename=${fileName}`);
+      reply.type('text/csv; charset=utf-8');
+      return reply.send(feedContent);
+    } catch (error: any) {
+      logger.log(color.red.bold(`Channable feed failed: ${error}`));
+      return reply.status(500).send({ error: 'Failed to build feed' });
     }
   });
 
@@ -1291,6 +1397,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // -- GET /fonts (public, no auth) --
   fastify.get('/fonts', async (request, reply) => {
     return sendCatalogue(request, reply, { success: true, data: FONTS });
+  });
+
+  // -- GET /google-fonts/lookup?family= (public, no auth) --
+  // Resolves one Google family (an admin-chosen font outside the fixed list)
+  // to its weights, so any card preview can load the right stylesheet.
+  fastify.get('/google-fonts/lookup', async (request: any, reply) => {
+    const family = String(request.query?.family ?? '').trim();
+    if (!family) {
+      return reply.status(400).send({ success: false, error: 'family is required' });
+    }
+    const match = await GoogleFonts.getInstance().findFamily(family);
+    if (!match) {
+      return reply.status(404).send({ success: false, error: 'Unknown Google font' });
+    }
+    return sendCatalogue(request, reply, {
+      success: true,
+      data: { ...match, css: familyToCss(match) },
+    });
   });
 
   // -- GET /backgrounds (public, no auth) --

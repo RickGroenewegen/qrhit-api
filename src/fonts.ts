@@ -2,8 +2,10 @@
  * Central font configuration — single source of truth for all fonts used
  * across the card designer, PDF templates, EJS partials, and the reseller API.
  *
- * NOTE: The Google Fonts <link> in the Angular frontend's index.html must stay
- * hardcoded (it must load before Angular boots). Keep it in sync manually.
+ * The Angular frontend fetches this list from GET /fonts (FontService) and
+ * builds its own Google Fonts <link> from it, so adding an entry here is enough.
+ * The frontend's e2e fixture (e2e/fixtures/data/fonts.json) mirrors this list
+ * and should be updated alongside it.
  */
 
 export interface FontConfig {
@@ -52,6 +54,8 @@ export const FONTS: FontConfig[] = [
   { id: 'Roboto Condensed', family: '"Roboto Condensed", Arial, sans-serif', displayName: 'Roboto Condensed (Compact)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Roboto Condensed', googleFontWeights: '400;700' },
   { id: 'Roboto Condensed Bold', family: '"Roboto Condensed Bold", "Roboto Condensed", Arial, sans-serif', displayName: 'Roboto Condensed Bold (Compact)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Roboto Condensed', googleFontWeights: '400;700', fontWeight: '700' },
   { id: 'Raleway', family: 'Raleway, Arial, sans-serif', displayName: 'Raleway (ExtraBold/Black)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Raleway', googleFontWeights: '400;700;800;900' },
+  { id: 'Crimson Text', family: '"Crimson Text", Georgia, serif', displayName: 'Crimson Text (Literary)', defaultSize: '16px', yearSize: '42px', googleFontName: 'Crimson Text', googleFontWeights: '400;600;700' },
+  { id: 'Unna', family: 'Unna, Georgia, serif', displayName: 'Unna (Classic Serif)', defaultSize: '16px', yearSize: '42px', googleFontName: 'Unna', googleFontWeights: '400;700' },
 ];
 
 /**

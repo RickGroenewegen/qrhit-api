@@ -5,7 +5,7 @@
     <title>QRSong Gift Voucher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Patrick+Hand&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;700;900&family=Patrick+Hand&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
     <style>
         @page {
             size: A4 portrait;
@@ -29,7 +29,7 @@
             right: -10%;
             width: 100%;
             height: 200%;
-            background: #4B96D1;
+            background: #18565e;
             clip-path: polygon(100% 0, 15% 100%, 100% 100%);
             z-index: -1;
         }
@@ -42,27 +42,32 @@
         }
         .tagline {
             font-size: 14px;
-            color: #333;
+            color: #18565e;
             margin-bottom: 20px;
             margin-top: 5px;
         }
         .gift-voucher {
-            font-size: 32px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-size: 26px;
             font-weight: 900;
             margin: 0;
             line-height: 1;
-            color: #1a1a1a;
+            color: #0b2c31;
             margin-top: 15px;
             margin-bottom: 15px;
-            letter-spacing: -0.5px;
+            letter-spacing: .02em;
+            text-transform: uppercase;
         }
         .amount {
             font-size: 80px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
             font-weight: 900;
             margin: 0;
             line-height: 0.9;
-            color: #1a1a1a;
-            letter-spacing: 5px;
+            color: #0b2c31;
+            letter-spacing: 2px;
             margin-bottom: 20px;
             position: relative;
             z-index: 2;
@@ -73,19 +78,26 @@
             margin: 15px 0;
             font-weight: 700;
             line-height: 1.4;
-            color: #333;
+            color: #18565e;
         }
         .instructions {
             margin: 25px 0;
         }
         .instructions h3 {
-            font-size: 16px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-weight: 800;
+            font-size: 14px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: #0b2c31;
             margin-bottom: 8px;
         }
         .instructions ol {
             margin: 0;
             padding-left: 20px;
             font-size: 12px;
+            color: #18565e;
         }
         .instructions li {
             margin-bottom: 4px;
@@ -94,21 +106,28 @@
             position: absolute;
             bottom: 15px;
             left: 15px;
-            background: #4B96D1;
-            color: white;
-            padding: 6px 15px;
-            border-radius: 4px;
+            background: #f79677;
+            color: #0b2c31;
+            padding: 8px 18px;
+            border: 2px solid #0b2c31;
+            border-radius: 999px;
+            box-shadow: 3px 3px 0 #0b2c31;
             text-decoration: none;
-            font-size: 14px;
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: .04em;
+            text-transform: uppercase;
         }
         .voucher-code {
             font-family: 'Fira Code', monospace;
             font-size: 16px;
-            color: #333;
-            background: rgba(255, 255, 255, 0.95);
+            color: #0b2c31;
+            background: rgba(255, 248, 243, 0.97);
             padding: 6px 14px;
-            border-radius: 8px;
-            border: 1px solid #4B96D1;
+            border-radius: 10px;
+            border: 2px solid #18565e;
             display: inline-block;
             z-index: 1;
         }
@@ -122,15 +141,13 @@
         }
         .greeting {
             font-family: 'Patrick Hand', cursive;
-            color: #1a1a1a;
-            background: rgba(255, 255, 255, 0.95);
+            color: #0b2c31;
+            background: #fff8f3;
             padding: 25px;
             border-radius: 15px;
-            -webkit-mask-image: -webkit-radial-gradient(white, black);
-            -webkit-transform: translateZ(0);
             position: relative;
-            isolation: isolate;
-            border: 2px solid #4B96D1;
+            border: 2px solid #18565e;
+            box-shadow: 4px 4px 0 #18565e;
             z-index: 1;
             margin-top: 20px;
             min-height: 200px;
@@ -138,7 +155,7 @@
         .greeting .title {
             font-size: 24px;
             margin-bottom: 20px;
-            color: #4B96D1;
+            color: #18565e;
         }
         .greeting .message {
             font-size: 18px;
@@ -148,13 +165,13 @@
         .greeting .signature {
             font-size: 20px;
             margin-top: 30px;
-            color: #4B96D1;
+            color: #18565e;
         }
         .greeting .signature span {
             font-size: 28px;
             margin-top: 15px;
             display: block;
-            color: #1a1a1a;
+            color: #0b2c31;
         }
     </style>
 </head>
@@ -162,7 +179,7 @@
     <div class="page">
         <div class="blue-triangle"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <h1 class="gift-voucher"><%= translations.title %></h1>

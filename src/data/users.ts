@@ -147,7 +147,8 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   playlists.name AS playlistName,
                   playlists.type AS productType,
                   playlists.giftcardAmount,
-                  playlists.featured
+                  playlists.featured,
+                  playlists.serviceType
       FROM        payment_has_playlist
       INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
       WHERE       payment_has_playlist.paymentId = ${paymentDetails[0].id}`;

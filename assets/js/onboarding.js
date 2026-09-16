@@ -66,10 +66,10 @@
         float n2 = fbm(uv * vec2(1.8, 2.2) - vec2(t * 0.6, t * 0.4) + 7.13);
 
         // Brand palette
-        vec3 deep  = vec3(0.008, 0.063, 0.122); // near-black blue
-        vec3 ocean = vec3(0.027, 0.247, 0.486); // brand mid-deep
-        vec3 cyan  = vec3(0.361, 0.784, 1.000); // brand-cyan #5cc8ff
-        vec3 violet= vec3(0.439, 0.357, 0.882); // accent
+        vec3 deep  = vec3(0.027, 0.122, 0.137); // disco-950 #071f23
+        vec3 ocean = vec3(0.094, 0.337, 0.369); // disco #18565e
+        vec3 cyan  = vec3(0.969, 0.588, 0.467); // pop #f79677
+        vec3 violet= vec3(0.498, 0.690, 0.714); // disco-300 #7fb0b6
 
         // Vertical wash from top (lit) to bottom (deep)
         vec3 base = mix(ocean, deep, smoothstep(0.0, 1.0, uv.y * 1.1));
@@ -79,14 +79,14 @@
         float band2 = smoothstep(0.55, 0.95, n2);
 
         vec3 col = base;
-        col = mix(col, cyan,   band1 * 0.35);
-        col = mix(col, violet, band2 * 0.18);
+        col = mix(col, cyan,   band1 * 0.22);
+        col = mix(col, violet, band2 * 0.22);
 
         // Pointer halo: gentle warm spotlight follows cursor (no-op on touch)
         vec2 ptr = u_pointer * 2.0 - 1.0;
         ptr.x *= u_resolution.x / u_resolution.y;
         float d = length(p - ptr);
-        col += vec3(0.20, 0.55, 0.95) * smoothstep(0.9, 0.0, d) * 0.10;
+        col += vec3(0.97, 0.59, 0.47) * smoothstep(0.9, 0.0, d) * 0.10;
 
         // Subtle film grain to defeat banding
         float grain = (hash(gl_FragCoord.xy + u_time) - 0.5) * 0.018;
@@ -180,62 +180,9 @@
   }
 
   /* ── Magnetic buttons ──────────────────────────────────────── */
-  function initMagnetic() {
-    if (reducedMotion) return;
-    // Skip magnetic on touch-primary devices — feels wrong on mobile
-    if (window.matchMedia('(hover: none)').matches) return;
-
-    const STRENGTH = 0.32;       // 0..1, how strongly the button follows cursor
-    const RADIUS   = 110;        // px, activation distance from button center
-    const els = document.querySelectorAll('[data-magnetic]');
-
-    els.forEach((el) => {
-      let raf = 0;
-      let target = { x: 0, y: 0 };
-      let current = { x: 0, y: 0 };
-      const content = el.querySelector('.btn-content') || el;
-
-      function loop() {
-        current.x += (target.x - current.x) * 0.18;
-        current.y += (target.y - current.y) * 0.18;
-        el.style.transform = `translate3d(${current.x * STRENGTH}px, ${current.y * STRENGTH}px, 0)`;
-        content.style.transform = `translate3d(${current.x * STRENGTH * 0.5}px, ${current.y * STRENGTH * 0.5}px, 0)`;
-        if (Math.abs(target.x - current.x) > 0.1 || Math.abs(target.y - current.y) > 0.1) {
-          raf = requestAnimationFrame(loop);
-        } else {
-          raf = 0;
-        }
-      }
-
-      el.addEventListener('pointermove', (e) => {
-        const r = el.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-        const dist = Math.hypot(dx, dy);
-        if (dist < RADIUS) {
-          target.x = dx;
-          target.y = dy;
-        } else {
-          target.x = 0;
-          target.y = 0;
-        }
-        if (!raf) raf = requestAnimationFrame(loop);
-      });
-
-      el.addEventListener('pointerleave', () => {
-        target.x = 0;
-        target.y = 0;
-        if (!raf) raf = requestAnimationFrame(loop);
-      });
-    });
-  }
-
   /* ── Init ──────────────────────────────────────────────────── */
   function init() {
     initShader();
-    initMagnetic();
   }
 
   if (document.readyState === 'loading') {

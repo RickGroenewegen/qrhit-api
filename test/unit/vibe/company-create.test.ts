@@ -198,7 +198,7 @@ describe('handleCompanyListCreate — happy path (companyadmin)', () => {
         slug: 'acme-co',
         numberOfCards: 200,
         numberOfTracks: 5,
-        playlistSource: 'voting',
+        playlistSource: 'own',
         status: 'new',
         qrvote: false,
       }),

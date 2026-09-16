@@ -10,6 +10,7 @@ import cluster from 'cluster';
 import Shipping from './shipping';
 import { CronJob } from 'cron';
 import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS } from './config/constants';
+import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
 
 interface RequiredDataItem {
   name: string;
@@ -199,7 +200,8 @@ export class ChatService {
   private async translateContentToDutch(content: string): Promise<string | null> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {
@@ -255,7 +257,8 @@ export class ChatService {
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {
@@ -344,7 +347,8 @@ export class ChatService {
   public async translateToDutch(messageId: number, content: string): Promise<void> {
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {
@@ -423,7 +427,8 @@ export class ChatService {
       : '';
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: LLM_MODEL_FAST,
+      reasoning_effort: 'none',
       temperature: 0.3,
       messages: [
         {
@@ -493,7 +498,8 @@ If the question is a greeting or general chat, return an empty array.`,
     const dataNames = requiredData.map(d => d.name);
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: LLM_MODEL_FAST,
+      reasoning_effort: 'none',
       temperature: 0,
       messages: [
         {
@@ -788,7 +794,8 @@ ${knowledgeContext}${toolContext}`,
     });
 
     const stream = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: LLM_MODEL_STANDARD,
+      reasoning_effort: 'none',
       temperature: 0.3,
       stream: true,
       messages,

@@ -18,6 +18,19 @@ import Fx from './services/fx';
 import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
+import { IMAGE_MODEL } from './llmModels';
+import {
+  LOCALE_COUNTRY_PAIRS,
+  ProductVariant,
+  buildOfferId,
+  buildProductId,
+  getGenreGroup,
+  getProductTypes,
+  getShippingCostForVariant,
+  getTracksLabel,
+  getTrackCountRange,
+  isPlaylistAllowedInCountry,
+} from './productFeed';
 
 // Display name of the API data source we push products into. The Merchant API
 // (unlike the retired Content API) has no "just insert a product" path: every
@@ -25,89 +38,6 @@ import { resolveQrSubDir } from './qrPaths';
 // one up by display name and create it on first run, unless
 // GOOGLE_MERCHANT_DATASOURCE pins an explicit one.
 const DATA_SOURCE_DISPLAY_NAME = 'QRSong! API feed';
-
-// Genre groupings for PMax campaign segmentation (custom_label_1)
-const GENRE_GROUPS: Record<string, string> = {
-  // Pop & Hits
-  pop: 'pop_hits',
-  kpop: 'pop_hits',
-  eurovision: 'pop_hits',
-  general: 'pop_hits',
-  // Rock & Metal
-  rock: 'rock_metal',
-  metal: 'rock_metal',
-  // Mood & Emotion
-  love: 'mood_emotion',
-  oldies: 'mood_emotion',
-  classical: 'mood_emotion',
-  // World & Dance
-  hiphop: 'world_dance',
-  electronic: 'world_dance',
-  rnb: 'world_dance',
-  raggae: 'world_dance',
-  // Other
-  jazz: 'other',
-  country: 'other',
-  sountracks: 'other',
-  '80s': 'other',
-};
-
-// Which playlist locales a target country is allowed to show, mirroring the
-// public /:locale/playlists page (src/data/country-locales.ts in the frontend).
-// A playlist is included for a country when it is international
-// (featuredLocale == null) OR its featuredLocale (comma-separated) intersects
-// this allowed set. This is the SAME "localised + international" rule the
-// website uses, ported here so the Merchant Center feed matches it instead of
-// doing a stricter single-locale exact match.
-const COUNTRY_ALLOWED_LOCALES: Record<string, string[]> = {
-  US: ['en'],
-  GB: ['en'],
-  AU: ['en'],
-  CA: ['en', 'fr'],
-  NL: ['nl', 'en'],
-  BE: ['nl', 'fr', 'en'],
-  DE: ['de', 'en'],
-  AT: ['de', 'en'],
-  CH: ['de', 'fr', 'it', 'en'],
-  ES: ['es', 'en'],
-  SE: ['sv', 'no', 'en'],
-  NO: ['no', 'sv', 'en'],
-};
-
-// True when a playlist's featuredLocale (possibly comma-separated, possibly
-// null/empty) is allowed to show in the given country. International playlists
-// (no featuredLocale) are always allowed. Mirrors isPlaylistAllowedInCountry()
-// in the frontend.
-function isPlaylistAllowedInCountry(
-  featuredLocale: string | null | undefined,
-  country: string
-): boolean {
-  if (!featuredLocale) return true; // international — always shown
-  const allowed = COUNTRY_ALLOWED_LOCALES[country];
-  if (!allowed) return false;
-  const locales = featuredLocale
-    .split(',')
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (locales.length === 0) return true;
-  return locales.some((l) => allowed.includes(l));
-}
-
-interface ProductVariant {
-  id: number; // Database ID
-  playlistId: string;
-  name: string;
-  description?: string;
-  image: string;
-  price: number;
-  numberOfTracks: number;
-  type: 'digital' | 'sheets' | 'physical';
-  locale: string;
-  country: string;
-  slug: string;
-  genre?: string;
-  genreSlug?: string; // Genre slug for PMax custom labels
-}
 
 // A Merchant API ProductInput plus the bare product id we use for lookups and
 // for the cleanup diff. Note the shape differences vs the old Content API
@@ -188,22 +118,9 @@ export class MerchantCenterService {
   private openai = new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] });
   private pdfService = new PDF();
 
-  // Mapping of locale-country combinations for Google Merchant Center
-  // Multiple countries can use the same language content
-  private localeCountryPairs: Array<{ locale: string; country: string }> = [
-    { locale: 'en', country: 'US' },
-    { locale: 'en', country: 'GB' }, // UK — English content, GBP
-    { locale: 'en', country: 'AU' }, // Australia — English content, AUD
-    { locale: 'en', country: 'CA' }, // Canada — English content, CAD
-    { locale: 'nl', country: 'NL' },
-    { locale: 'nl', country: 'BE' }, // Belgium using Dutch content
-    { locale: 'de', country: 'DE' },
-    { locale: 'de', country: 'AT' }, // Austria using German content
-    { locale: 'de', country: 'CH' }, // Switzerland using German content, CHF
-    { locale: 'es', country: 'ES' },
-    { locale: 'sv', country: 'SE' },
-    { locale: 'no', country: 'NO' },
-  ];
+  // Mapping of locale-country combinations we publish products for. Shared
+  // with the Channable feed via src/productFeed.ts so the two stay in step.
+  private localeCountryPairs = LOCALE_COUNTRY_PAIRS;
 
   // Per-country currency is resolved via the shared
   // `getCurrencyForCountry()` helper in `src/data/currency-map.ts` — it
@@ -769,17 +686,7 @@ export class MerchantCenterService {
         )
       : this.localeCountryPairs;
 
-    const productTypeNums: Array<{ type: string; num: number }> = [
-      { type: 'physical', num: 3 },
-    ];
-    const localeNumMap: { [key: string]: number } = {
-      en: 1,
-      nl: 2,
-      de: 3,
-      es: 4,
-      sv: 5,
-      no: 6,
-    };
+    const productTypes = ['physical'];
 
     for (const pair of pairsToProcess) {
       const { locale, country } = pair;
@@ -790,12 +697,10 @@ export class MerchantCenterService {
         continue;
       }
 
-      const localeNum = localeNumMap[locale] || 1;
-      for (const pt of productTypeNums) {
-        const uniqueId = `${playlist.id}_${pt.num}_${localeNum}`;
+      for (const type of productTypes) {
         // Must match the id built in createMerchantProduct:
         // "{contentLanguage}~{feedLabel}~{offerId}", feed label = country.
-        ids.push(`${locale}~${country}~${uniqueId}`);
+        ids.push(buildProductId({ id: playlist.id, type, locale, country }));
       }
     }
 
@@ -877,13 +782,9 @@ export class MerchantCenterService {
     // The Content API's targetCountry became feedLabel, and the "online:"
     // channel prefix of the old composite id is gone in v1. We keep using the
     // country code as the feed label so per-country targeting is unchanged.
-    const typeNum =
-      variant.type === 'digital' ? 1 : variant.type === 'sheets' ? 2 : 3;
-    const localeNum =
-      { en: 1, nl: 2, de: 3, es: 4, sv: 5, no: 6 }[variant.locale] || 1;
-    const uniqueId = `${variant.id}_${typeNum}_${localeNum}`;
+    const uniqueId = buildOfferId(variant);
     const feedLabel = country;
-    const productId = `${variant.locale}~${feedLabel}~${uniqueId}`;
+    const productId = buildProductId(variant);
 
     // Generate composite product image with the template (unique per variant)
     const imageKey = `${variant.playlistId}_${variant.type}_${variant.locale}`;
@@ -949,21 +850,7 @@ export class MerchantCenterService {
     // Create description
     let description = variant.description || '';
     // Add track count to description
-    const tracksLabel: { [key: string]: string } = {
-      en: `Contains ${variant.numberOfTracks} music tracks`,
-      nl: `Bevat ${variant.numberOfTracks} muzieknummers`,
-      de: `Enthält ${variant.numberOfTracks} Musiktitel`,
-      fr: `Contient ${variant.numberOfTracks} pistes musicales`,
-      es: `Contiene ${variant.numberOfTracks} pistas de música`,
-      it: `Contiene ${variant.numberOfTracks} brani musicali`,
-      pt: `Contém ${variant.numberOfTracks} faixas de música`,
-      pl: `Zawiera ${variant.numberOfTracks} utworów muzycznych`,
-      jp: `${variant.numberOfTracks}曲の音楽トラックを含む`,
-      cn: `包含${variant.numberOfTracks}首音乐曲目`,
-      sv: `Innehåller ${variant.numberOfTracks} musikspår`,
-      no: `Inneholder ${variant.numberOfTracks} musikkspor`,
-    };
-    description += ` ${tracksLabel[variant.locale] || tracksLabel['en']}`;
+    description += ` ${getTracksLabel(variant.numberOfTracks, variant.locale)}`;
 
     // Determine Google product category based on type
     let googleCategory = '5030'; // Default: Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts
@@ -1266,7 +1153,7 @@ export class MerchantCenterService {
         image: [baseFile, frontFile, backFile] as any,
         prompt,
         n: 1,
-        model: 'gpt-image-2',
+        model: IMAGE_MODEL,
         size: '1024x1024',
         quality: 'high',
       });
@@ -1713,42 +1600,21 @@ export class MerchantCenterService {
    * Get product type hierarchy for Google Shopping
    */
   private getProductTypes(variant: ProductVariant): string[] {
-    const types = ['Music', 'QR Codes'];
-
-    if (variant.genre) {
-      types.push(variant.genre);
-    }
-
-    switch (variant.type) {
-      case 'digital':
-        types.push('Digital Downloads');
-        break;
-      case 'sheets':
-        types.push('Printable');
-        break;
-      case 'physical':
-        types.push('Physical Product');
-        break;
-    }
-
-    return types;
+    return getProductTypes(variant);
   }
 
   /**
    * Get the genre group for PMax segmentation (custom_label_1)
    */
   private getGenreGroup(genreSlug?: string): string {
-    if (!genreSlug) return 'other';
-    return GENRE_GROUPS[genreSlug.toLowerCase()] || 'other';
+    return getGenreGroup(genreSlug);
   }
 
   /**
    * Get track count range for PMax segmentation (custom_label_3)
    */
   private getTrackCountRange(numberOfTracks: number): string {
-    if (numberOfTracks < 100) return 'small';
-    if (numberOfTracks <= 250) return 'medium';
-    return 'large';
+    return getTrackCountRange(numberOfTracks);
   }
 
   /**
@@ -1791,29 +1657,12 @@ export class MerchantCenterService {
     type: 'digital' | 'sheets' | 'physical',
     numberOfTracks: number
   ): number | null {
-    if (type === 'digital') return 0;
-
-    const costs = this.shippingCostsByCountry.get(country);
-    if (!costs || costs.length === 0) return null;
-
-    const TIERS = [80, 405, 1000];
-    let targetSize: number;
-    if (type === 'sheets') {
-      targetSize = TIERS[0];
-    } else {
-      targetSize =
-        TIERS.find((t) => numberOfTracks <= t) ?? TIERS[TIERS.length - 1];
-    }
-
-    // Exact tier match first; if not present, fall back to the smallest size
-    // >= targetSize, then to the largest available.
-    const exact = costs.find((c) => c.size === targetSize);
-    if (exact) return exact.cost;
-
-    const sorted = [...costs].sort((a, b) => a.size - b.size);
-    const next = sorted.find((c) => c.size >= targetSize);
-    if (next) return next.cost;
-    return sorted[sorted.length - 1].cost;
+    return getShippingCostForVariant(
+      this.shippingCostsByCountry,
+      country,
+      type,
+      numberOfTracks
+    );
   }
 
   /**

@@ -9,7 +9,83 @@ import ConvertApi from 'convertapi';
 import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { PDFDocument } from 'pdf-lib';
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * Printers whose prepress workflow has lost card text. Chromium embeds the
+ * Google-served Open Sans as Type 3 fonts and reuses subset names across
+ * fonts in one file; some RIPs drop that text entirely. For these printers
+ * every glyph is converted to a vector outline before the PDF is handed over.
+ */
+const OUTLINE_TEXT_PRINTER_TYPES = new Set<string>([
+  PRINTER_TYPE.TROMP,
+  PRINTER_TYPE.SCHNEIDERS,
+]);
+
+export function needsOutlinedText(printerType: string, payment: any): boolean {
+  return OUTLINE_TEXT_PRINTER_TYPES.has(printerType) || Boolean(payment?.vibe);
+}
+
+/**
+ * Printer templates whose cards are 56 mm: the Schneiders layout and the
+ * company templates built on it. Everything else prints 60 mm cards.
+ */
+const SMALL_CARD_TEMPLATES = new Set(['schneiders', 'kramp', 'banvo', 'gebo']);
+
+/**
+ * Multi-card layouts: digital downloads (six fold cards per A4 or Letter
+ * page) and A4 sheets. A playlist's forced company template only ever
+ * replaces the single-card printer layout, never one of these.
+ */
+const MULTI_CARD_TEMPLATES = new Set([
+  'digital',
+  'digital_double',
+  'digital_us',
+  'digital_double_us',
+  'printer_sheets',
+]);
+
+export function isMultiCardTemplate(template: string): boolean {
+  return MULTI_CARD_TEMPLATES.has(template);
+}
+
+/**
+ * The card template forced onto a single-card printer PDF, or null for the
+ * regular layout. Two sources, in order:
+ *
+ * 1. The order's own template (PaymentHasPlaylist.template), set by an admin
+ *    in the production settings of that order. It applies to any order on
+ *    any printer.
+ * 2. The playlist's template (Playlist.template), written from
+ *    CompanyList.forceTemplate. The playlist row is shared by every later
+ *    order of that Spotify playlist, so it only counts for company (vibe)
+ *    orders: a public order of the same playlist prints the regular layout.
+ */
+export function forcedPrinterTemplate(
+  orderTemplate: string | null | undefined,
+  playlistTemplate: string | null | undefined,
+  vibe: boolean | null | undefined
+): string | null {
+  if (orderTemplate) return orderTemplate;
+  if (vibe && playlistTemplate) return playlistTemplate;
+  return null;
+}
+
+/**
+ * Page size (mm) for a single-card printer PDF. The template decides, not the
+ * printer type: a playlist can force a company template on any printer, and
+ * a 56 mm card on a 60 mm page leaves a white strip on two sides.
+ */
+export function printerPageSizeMm(template: string, printerType: string): number {
+  if (SMALL_CARD_TEMPLATES.has(template)) {
+    return 56;
+  }
+  return printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+}
 
 interface LambdaPdfOptions {
   url: string;
@@ -580,12 +656,7 @@ class PDF {
     const numberOfTracks = playlist.numberOfTracks;
 
     // Determine if this is a digital template (multi-item per page) or printer template (single item, front/back)
-    const isDigitalTemplate =
-      template === 'digital' ||
-      template === 'digital_double' ||
-      template === 'digital_us' ||
-      template === 'digital_double_us' ||
-      template === 'printer_sheets';
+    const isDigitalTemplate = isMultiCardTemplate(template);
 
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
     const pagesPerTrack = isDigitalTemplate ? 1 : 2;
@@ -644,7 +715,7 @@ class PDF {
 
         if (!isDigitalTemplate) {
           // Printer templates - determine page size based on template
-          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerPageSizeMm(template, printerType);
           options['PageWidth'] = pageSize;
           options['PageHeight'] = pageSize;
         } else if (isUsTemplate) {
@@ -690,9 +761,12 @@ class PDF {
         if (payment.vibe) {
           await this.resizePDFPages(finalPath, 62, 62);
         } else {
-          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerPageSizeMm(template, printerType);
           await this.resizePDFPages(finalPath, pageSize, pageSize);
           await this.addBleed(finalPath, 3);
+        }
+        if (needsOutlinedText(printerType, payment)) {
+          await this.outlineText(finalPath);
         }
       } else if (template === 'printer_sheets') {
         await this.resizePDFPages(finalPath, 210, 297);
@@ -738,12 +812,7 @@ class PDF {
     const numberOfTracks = playlist.numberOfTracks;
 
     // Determine if this is a digital template (multi-item per page) or printer template (single item, front/back)
-    const isDigitalTemplate =
-      template === 'digital' ||
-      template === 'digital_double' ||
-      template === 'digital_us' ||
-      template === 'digital_double_us' ||
-      template === 'printer_sheets';
+    const isDigitalTemplate = isMultiCardTemplate(template);
 
     // Calculate chunking parameters
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
@@ -784,7 +853,7 @@ class PDF {
       options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
       // Printer templates - determine page size based on template
-      const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+      const pageSize = printerPageSizeMm(template, printerType);
       options.width = pageSize;
       options.height = pageSize;
     }
@@ -883,9 +952,12 @@ class PDF {
       if (payment.vibe) {
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+        const pageSize = printerPageSizeMm(template, printerType);
         await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
+      }
+      if (needsOutlinedText(printerType, payment)) {
+        await this.outlineText(finalPath);
       }
     } else if (template === 'printer_sheets') {
       await this.resizePDFPages(finalPath, 210, 297);
@@ -943,6 +1015,44 @@ class PDF {
 
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
+  }
+
+  /**
+   * Convert every glyph in the PDF to a vector outline with Ghostscript, so
+   * the file carries no fonts at all. Images are passed through untouched:
+   * no downsampling and Flate instead of JPEG, so the QR codes stay exact.
+   * The result replaces the input file in place.
+   */
+  public async outlineText(inputPath: string): Promise<void> {
+    const outputPath = `${inputPath}.outlined.tmp`;
+    try {
+      await execFileAsync('gs', [
+        '-q',
+        '-dBATCH',
+        '-dNOPAUSE',
+        '-dSAFER',
+        '-sDEVICE=pdfwrite',
+        '-dNoOutputFonts',
+        '-dCompatibilityLevel=1.7',
+        '-dDownsampleColorImages=false',
+        '-dDownsampleGrayImages=false',
+        '-dDownsampleMonoImages=false',
+        '-dAutoFilterColorImages=false',
+        '-dAutoFilterGrayImages=false',
+        '-sColorImageFilter=FlateEncode',
+        '-sGrayImageFilter=FlateEncode',
+        `-sOutputFile=${outputPath}`,
+        inputPath,
+      ]);
+      await fs.rename(outputPath, inputPath);
+    } catch (error) {
+      await fs.unlink(outputPath).catch(() => undefined);
+      throw error;
+    }
+
+    this.logger.log(
+      color.blue.bold(`Converted text to outlines (no embedded fonts): ${color.white.bold(inputPath)}`)
+    );
   }
 
   /**

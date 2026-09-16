@@ -6,6 +6,7 @@ import vibeRoutes from './routes/vibeRoutes';
 import musicRoutes from './routes/musicRoutes';
 import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import discountRoutes from './routes/discountRoutes';
 import publicRoutes from './routes/publicRoutes';
 import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
@@ -19,6 +20,8 @@ import replyFrom from '@fastify/reply-from';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import cluster from 'cluster';
+import Data from './data';
+import { ensureLegacyDefaultBackgroundFile } from './legacyBackground';
 import os from 'os';
 import Utils from './utils';
 import path from 'path';
@@ -160,6 +163,7 @@ class Server {
     await boxRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await discountRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -194,6 +198,9 @@ class Server {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     await this.setVersion();
     await this.createDirs();
+    if (cluster.isPrimary) {
+      await this.backfillLegacyDefaultBackground();
+    }
     await this.registerPlugins();
     await this.addAuthRoutes();
     await this.addRoutes();
@@ -219,7 +226,42 @@ class Server {
     await this.utils.createDir(`${publicDir}/avatars`);
     await this.utils.createDir(`${publicDir}/quiz_images`);
     await this.utils.createDir(`${publicDir}/companydata/assets`);
+    await this.utils.createDir(`${publicDir}/background`);
+    await this.utils.createDir(`${publicDir}/channable`);
     await this.utils.createDir(`${privateDir}/invoice`);
+
+    // Orders from before the brand artwork are pinned to the blue artwork in
+    // the uploads folder, which is not in git: make sure the file is there.
+    const copied = await ensureLegacyDefaultBackgroundFile(
+      process.env['ASSETS_DIR']!,
+      publicDir
+    );
+    if (copied) {
+      this.logger.log(
+        color.blue.bold('Copied the legacy default card background into public/background')
+      );
+    }
+  }
+
+  /**
+   * Pins pre-cutover order lines to the legacy artwork, once per database.
+   * Runs in the primary only; a failure must never keep the API from starting.
+   */
+  private async backfillLegacyDefaultBackground() {
+    try {
+      const affected = await Data.getInstance().backfillLegacyDefaultBackground();
+      if (affected !== null) {
+        this.logger.log(
+          color.blue.bold(
+            `Legacy default card background pinned on ${color.white.bold(affected)} order lines`
+          )
+        );
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Legacy default card background backfill failed: ${error}`)
+      );
+    }
   }
 
   public getWorkerId() {

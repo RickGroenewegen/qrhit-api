@@ -12,7 +12,9 @@ export interface BackgroundConfig {
   thumbnailFilename: string;
 }
 
-export const BACKGROUNDS: BackgroundConfig[] = Array.from({ length: 20 }, (_, i) => ({
+// 21 is the pre-2026 blue default artwork, 22 the teal brand variant; the
+// cream brand artwork is the built-in default and therefore not a preset.
+export const BACKGROUNDS: BackgroundConfig[] = Array.from({ length: 22 }, (_, i) => ({
   id: i + 1,
   filename: `background${i + 1}.png`,
   thumbnailFilename: `background${i + 1}_thumb.png`,

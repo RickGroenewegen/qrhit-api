@@ -11,7 +11,6 @@ import Data from '../data';
 import Charts from '../charts';
 import { OpenPerplex } from '../openperplex';
 import Push from '../push';
-import Discount from '../discount';
 import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
@@ -21,12 +20,15 @@ import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
 import Excel from '../excel';
+import PlaylistFromExcel from '../playlistFromExcel';
 import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
 import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
 import Cache from '../cache';
+import GoogleFonts from '../googleFonts';
+import { sendCatalogue } from '../http-cache';
 import PrismaInstance from '../prisma';
 import Designer from '../designer';
 import { ChatService } from '../chat';
@@ -36,6 +38,7 @@ import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import Translation from '../translation';
+import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import CalendarService from '../calendarService';
@@ -58,10 +61,10 @@ export default async function adminRoutes(
   const generator = Generator.getInstance();
   const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
+  const translation = new Translation();
   const designer = Designer.getInstance();
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
-  const discount = new Discount();
   const calendar = CalendarService.getInstance();
   const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
@@ -1130,6 +1133,33 @@ export default async function adminRoutes(
     }
   );
 
+  // Genres with their visible featured playlist counts (for the playlist
+  // suggestions document filter).
+  fastify.get(
+    '/admin/genres',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const genres = await data.getGenresWithFeaturedCount();
+      reply.send({ success: true, data: genres });
+    }
+  );
+
+  // Live "N matching playlists" count for the playlist suggestions modal.
+  // Same filters as GET /vibe/playlist-suggestions.
+  fastify.get(
+    '/admin/playlist-suggestions/count',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const parsed = parsePlaylistSuggestionOptions(request.query, translation);
+      if (!parsed.ok) {
+        reply.status(400).send({ error: parsed.error });
+        return;
+      }
+      const playlists = await data.getPlaylistSuggestions(parsed.opts.locale, parsed.opts);
+      reply.send({ success: true, count: playlists.length });
+    }
+  );
+
   // Get all featured playlists (featured = 1)
   fastify.get(
     '/admin/featured/all',
@@ -1586,7 +1616,8 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { paymentHasPlaylistId } = request.params;
-      const { addHowToCard, addHowToCardLocale } = request.body;
+      const { addHowToCard, addHowToCardLocale, howToCardNumberColor } =
+        request.body;
 
       if (!paymentHasPlaylistId) {
         reply.status(400).send({
@@ -1604,10 +1635,26 @@ export default async function adminRoutes(
         return;
       }
 
+      // Optional: hex color for the list numbers, null/empty clears it, undefined leaves it unchanged
+      let numberColor: string | null | undefined = undefined;
+      if (howToCardNumberColor === null || howToCardNumberColor === '') {
+        numberColor = null;
+      } else if (typeof howToCardNumberColor === 'string') {
+        if (!/^#[0-9a-fA-F]{6}$/.test(howToCardNumberColor)) {
+          reply.status(400).send({
+            success: false,
+            error: 'howToCardNumberColor must be a hex color like #ffffff',
+          });
+          return;
+        }
+        numberColor = howToCardNumberColor.toLowerCase();
+      }
+
       const result = await data.updateAddHowToCard(
         parseInt(paymentHasPlaylistId, 10),
         addHowToCard,
-        addHowToCardLocale
+        addHowToCardLocale,
+        numberColor
       );
 
       if (result.success) {
@@ -2819,94 +2866,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Discount code management
-  fastify.post(
-    '/admin/discount/create',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const result = await discount.createAdminDiscountCode(request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.get(
-    '/admin/discount/all',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const result = await discount.getAllDiscounts();
-      if (result.success) {
-        reply.send({ success: true, discounts: result.discounts });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.post(
-    '/admin/discount/search',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const { searchTerm = '', filter = '', balanceFilter = '', page = 1, limit = 12 } = request.body;
-      const result = await discount.searchDiscounts({
-        searchTerm,
-        filter,
-        balanceFilter,
-        page: Number(page),
-        limit: Number(limit),
-      });
-      if (result.success) {
-        reply.send({
-          success: true,
-          discounts: result.discounts,
-          total: result.total,
-          page: result.page,
-          totalPages: result.totalPages,
-        });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.delete(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.deleteDiscountCode(id);
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.put(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.updateDiscountCode(id, request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
+  // Discount code management lives in discountRoutes.ts.
 
   // Event calendar management
   fastify.post(
@@ -3401,6 +3361,29 @@ export default async function adminRoutes(
 
   // Generate AI product images for all featured playlists. Long-running, so
   // fire-and-forget and let the admin watch the API logs.
+  // Channable feed routes
+  fastify.post(
+    '/admin/channable/generate-feed',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const { channable } = await import('../channable');
+        // Fire-and-forget: a full build takes minutes, so don't hold the
+        // request open. Progress goes to the log.
+        channable.generateFeed();
+        reply.send({
+          success: true,
+          message: 'Channable feed build initiated',
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to build Channable feed',
+        });
+      }
+    }
+  );
+
   fastify.post(
     '/admin/merchant-center/generate-product-images',
     getAuthHandler(['admin']),
@@ -3619,6 +3602,27 @@ export default async function adminRoutes(
     }
   );
 
+  // Drop every cached card scan result (Hitster, MusicMatch, Hitify) so the
+  // next scan of any card re-reads its links from the database.
+  fastify.post(
+    '/admin/external-cards/clear-cache',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const cleared = await ExternalCardService.getInstance().clearAllCardCaches();
+
+        reply.send({ success: true, cleared });
+      } catch (error: any) {
+        console.error('Error clearing external card cache:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to clear external card cache',
+        });
+      }
+    }
+  );
+
   // Get external cards with search and filters
   fastify.get(
     '/admin/external-cards',
@@ -3743,6 +3747,11 @@ export default async function adminRoutes(
             ...(amazonMusicLink !== undefined && { amazonMusicLink }),
           },
         });
+
+        // Scans are served from Redis; drop this card's entry so the edited
+        // links are returned on the next scan.
+        const ExternalCardService = (await import('../externalCardService')).default;
+        await ExternalCardService.getInstance().clearCacheForCard(updated);
 
         reply.send({
           success: true,
@@ -3899,6 +3908,54 @@ export default async function adminRoutes(
         });
       } catch (error: any) {
         console.error('Error getting Excel job status:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get job status',
+        });
+      }
+    }
+  );
+
+  // Create a Spotify playlist in our account from an artist/title Excel sheet.
+  // The sheet is parsed inline; the matching + playlist creation runs in the
+  // background and is polled via the status route (CloudFront 30s limit).
+  fastify.post(
+    '/admin/playlist-from-excel',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const playlistFromExcel = PlaylistFromExcel.getInstance();
+        const upload = await playlistFromExcel.parseUpload(request.parts());
+        const jobId = playlistFromExcel.startJob(upload);
+
+        reply.send({
+          success: true,
+          jobId,
+          playlistName: upload.playlistName,
+          rows: upload.rows.length,
+        });
+      } catch (error: any) {
+        reply.status(400).send({
+          success: false,
+          error: error.message || 'Failed to start playlist creation',
+        });
+      }
+    }
+  );
+
+  fastify.get(
+    '/admin/playlist-from-excel/status/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { jobId } = request.params;
+        const job = await PlaylistFromExcel.getInstance().getJob(jobId);
+        if (!job) {
+          reply.status(404).send({ success: false, error: 'Job not found' });
+          return;
+        }
+        reply.send({ success: true, job });
+      } catch (error: any) {
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to get job status',
@@ -5686,6 +5743,17 @@ export default async function adminRoutes(
       reply.header('Content-Type', 'application/pdf');
       reply.header('Content-Disposition', `attachment; filename="shipment_labels_${Date.now()}.pdf"`);
       return reply.send(result.pdfBuffer);
+    }
+  );
+
+  // Full Google Fonts catalogue for the admin-only font picker in the card
+  // designer. Customers keep the fixed list from GET /fonts.
+  fastify.get(
+    '/admin/google-fonts',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const fonts = await GoogleFonts.getInstance().getCatalogue();
+      return sendCatalogue(request, reply, { success: true, data: fonts });
     }
   );
 }

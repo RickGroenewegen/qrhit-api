@@ -16,6 +16,7 @@ import Logger from './logger';
 import crypto from 'crypto';
 import cluster from 'cluster';
 import OpenAI from 'openai';
+import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
 import type {
@@ -1235,7 +1236,8 @@ class Mail {
   private async translateContactEmailToDutch(emailId: number, message: string): Promise<void> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {
@@ -1307,7 +1309,8 @@ class Mail {
 
       // Generate draft reply with knowledge and tool results
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_STANDARD,
+        reasoning_effort: 'none',
         temperature: 0.5,
         messages: [
           {
@@ -1351,7 +1354,8 @@ ${knowledgeContext}${toolContext}`,
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {

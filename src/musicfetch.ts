@@ -1,10 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import Bottleneck from 'bottleneck';
-import crypto from 'crypto';
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
-import Cache from './cache';
 import ExternalCardService from './externalCardService';
 
 export interface MusicLinks {
@@ -59,7 +57,6 @@ class MusicFetch {
   private static instance: MusicFetch;
   private logger = new Logger();
   private prisma = PrismaInstance.getInstance();
-  private cache = Cache.getInstance();
   private externalCardService = ExternalCardService.getInstance();
   private axiosInstance: AxiosInstance;
   private limiter: Bottleneck;
@@ -95,66 +92,13 @@ class MusicFetch {
   }
 
   /**
-   * Clear Redis cache and update in-memory cache for external cards with a given spotifyId
-   * Called after MusicFetch updates links for external cards
+   * Drop the cached scan result of every external card sharing a spotifyId.
+   * Called after MusicFetch writes new links so the next scan re-reads the
+   * database instead of serving the pre-update result.
    */
-  private async clearExternalCardCaches(
-    spotifyId: string,
-    newLinks: Partial<{
-      appleMusicLink: string | null;
-      tidalLink: string | null;
-      youtubeMusicLink: string | null;
-      deezerLink: string | null;
-      amazonMusicLink: string | null;
-    }>
-  ): Promise<void> {
+  private async clearExternalCardCaches(spotifyId: string): Promise<void> {
     try {
-      // Get all external cards with this spotifyId to find their URLs
-      const cards = await this.prisma.externalCard.findMany({
-        where: { spotifyId },
-        select: {
-          cardType: true,
-          sku: true,
-          countryCode: true,
-          playlistId: true,
-          cardNumber: true,
-        },
-      });
-
-      // Clear Redis cache for each card's possible URL patterns
-      for (const card of cards) {
-        const urls: string[] = [];
-
-        if (card.cardType === 'jumbo' && card.sku) {
-          // Hitster Jumbo URLs: https://hitstergame.com/{locale}/{sku}/{cardNumber}
-          // We need to cover various locales
-          const locales = ['nl', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl'];
-          for (const locale of locales) {
-            urls.push(`https://hitstergame.com/${locale}/${card.sku}/${card.cardNumber}`);
-          }
-        } else if (card.cardType === 'country' && card.countryCode) {
-          // Hitster Country URLs: https://hitstergame.com/{locale}/{countryCode}/{cardNumber}
-          const locales = ['nl', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl'];
-          for (const locale of locales) {
-            urls.push(`https://hitstergame.com/${locale}/${card.countryCode}/${card.cardNumber}`);
-          }
-        } else if (card.cardType === 'musicmatch' && card.playlistId) {
-          // MusicMatch URLs: https://api.musicmatchgame.com/{playlistId}/{cardNumber}
-          urls.push(`https://api.musicmatchgame.com/${card.playlistId}/${card.cardNumber}`);
-        }
-
-        // Delete each URL's cache entry
-        for (const url of urls) {
-          const cacheKey = `qrlink2_unknown_result_${crypto
-            .createHash('md5')
-            .update(url)
-            .digest('hex')}`;
-          await this.cache.del(cacheKey);
-        }
-      }
-
-      // Update in-memory cache in ExternalCardService
-      await this.externalCardService.updateCardsWithSpotifyIdInCache(spotifyId, newLinks);
+      await this.externalCardService.clearCacheForSpotifyId(spotifyId);
     } catch (error) {
       this.logger.log(
         color.yellow.bold(
@@ -772,7 +716,7 @@ class MusicFetch {
 
         // Clear Redis cache and update in-memory cache
         if (card.spotifyId) {
-          await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
+          await this.clearExternalCardCaches(card.spotifyId);
         }
       }
 
@@ -920,7 +864,7 @@ class MusicFetch {
 
       // Clear Redis cache and update in-memory cache if we updated any cards
       if (cardsUpdated > 0 && card.spotifyId) {
-        await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
+        await this.clearExternalCardCaches(card.spotifyId);
       }
 
       return { success: result.success, cardsUpdated, servicesAdded };

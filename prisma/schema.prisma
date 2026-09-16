@@ -45,6 +45,14 @@ model DiscountCode {
   promotional       Boolean             @default(false)
   promotionalUserId Int?
   promotionalUser   User?               @relation("PromotionalDiscountCode", fields: [promotionalUserId], references: [id], onDelete: SetNull)
+  // 'fixed' codes are EUR balance vouchers (amount = budget). 'percent' codes
+  // take `percent` off the goods subtotal and have no balance; their limits
+  // are maxUses / oncePerCustomer / maxDiscountAmount.
+  type              String              @default("fixed")
+  percent           Float?
+  maxDiscountAmount Float?
+  maxUses           Int?
+  oncePerCustomer   Boolean             @default(false)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
@@ -61,10 +69,20 @@ model DiscountCodedUses {
   discountCodeId Int
   payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   paymentId      Int?
+  // Lifecycle: 'reserved' while the checkout is open (counts until
+  // expiresAt), 'paid' once the payment settled, 'released' when the payment
+  // failed or was superseded. Legacy rows default to 'paid' so they keep
+  // counting exactly as before.
+  status         String       @default("paid")
+  expiresAt      DateTime?
+  email          String?      @db.VarChar(255)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([discountCodeId])
+  @@index([discountCodeId, status])
+  @@index([paymentId])
+  @@index([discountCodeId, email])
   @@map("discount_codes_uses")
 }
 
@@ -149,6 +167,15 @@ model Payment {
   profit                   Float                @default(0)
   discount                 Float                @default(0)
   volumeDiscount           Float                @default(0)
+  // pricingVersion 2 = VAT/profit computed net of discounts and the invoice
+  // rendered from the snapshot fields below (see src/services/invoice-lines.ts).
+  pricingVersion           Int                  @default(1)
+  discountPercent          Float?
+  discountPercentAmount    Float                @default(0)
+  discountCodes            String?              @db.VarChar(255)
+  discountWithoutTax       Float                @default(0)
+  discountVAT              Float                @default(0)
+  discountShipping         Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
   locale                   String               @default("en")
@@ -628,6 +655,13 @@ model PaymentHasPlaylist {
   printApiUploaded         Boolean                  @default(false)
   printApiUploadResponse   String?                  @db.Text
   printerPageCount         Int                      @default(0)
+  // sha256 of the design + track content the printer PDF on disk was built
+  // from (see src/printFingerprint.ts). Compared against the live data just
+  // before sending to the printer: a mismatch means an admin or customer
+  // changed something after generation, so the PDF is rebuilt before it is
+  // verified and shipped. Null on rows generated before this column existed,
+  // which is treated as "unknown, rebuild to be safe".
+  pdfFingerprint           String?                  @db.VarChar(64)
   suggestionsPending       Boolean                  @default(false)
   artistOnlyForMe          Boolean                  @default(false)
   titleOnlyForMe           Boolean                  @default(false)
@@ -668,6 +702,7 @@ model PaymentHasPlaylist {
   theme                    String? // Theme slug for app theming (e.g., "acme", "coca-cola")
   themeName                String? // User-readable theme name (e.g., "Acme Company")
   printerType              String                   @default("printnbind") // Printer type: "printnbind", "tromp", "schneiders" or "musicmatch"
+  template                 String? // Admin-chosen card template for this order only (e.g. "facta"); beats Playlist.template
   promotionalCredited      Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt    DateTime? // When the promotional credit was applied
   gamesEnabled             Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
@@ -707,6 +742,7 @@ model PaymentHasPlaylist {
   addHowToCard             Boolean                  @default(false) // Whether to include a how-to explanation card as first card in printer PDF
   addHowToCardLocale       String                   @default("en") @db.VarChar(5) // Locale for how-to card translations
   howToCardImage           String?                  @db.VarChar(255) // Custom square image filename for the how-to card "How to play" front side
+  howToCardNumberColor     String?                  @db.VarChar(9) // Optional hex color for the numbers in the how-to card's list bullets (falls back to backgroundBackColor)
   appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
   aiPrompt                 String?                  @db.VarChar(250) // Original user prompt if this playlist was AI-generated
   orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
@@ -1010,7 +1046,7 @@ model CompanyList {
   slug                    String
   background              String?
   background2             String?
-  playlistSource          String    @default("voting")
+  playlistSource          String    @default("own")
   playlistUrl             String?
   playlistUrlFull         String?
   qrColor                 String    @default("#000000")

@@ -39,7 +39,11 @@ vi.mock('../../../src/qr', async () => {
 });
 vi.mock('../../../src/pdf', async () => {
   const { h } = await import('./harness');
-  return { default: function () { return h.pdf; } };
+  const actual = await vi.importActual<typeof import('../../../src/pdf')>('../../../src/pdf');
+  return {
+    default: function () { return h.pdf; },
+    forcedPrinterTemplate: actual.forcedPrinterTemplate,
+  };
 });
 vi.mock('../../../src/order', async () => {
   const { h } = await import('./harness');

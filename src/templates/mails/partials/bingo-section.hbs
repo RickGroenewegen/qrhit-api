@@ -1,13 +1,13 @@
 {{#if hasBingo}}
-<!-- Music Bingo Section -->
-<table style="width: 100%; margin-top: 24px;" cellpadding="0" cellspacing="0" role="presentation">
+<!-- Music Bingo section (Disco band) -->
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 24px; border-collapse: separate;">
     <tr>
-        <td style="padding: 24px; background: linear-gradient(135deg, #8b9cf4 0%, #f4b8d4 100%); border-radius: 8px; text-align: center; color: #ffffff;">
-            <p style="margin: 0 0 8px; font-size: 24px;">🎵🎱</p>
-            <p style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #ffffff;">{{ translations.bingoSectionTitle }}</p>
-            <p style="margin: 0 0 16px; font-size: 14px; color: #ffffff;">{{ translations.bingoSectionDescription }}</p>
-            <a href="{{ bingoDownloadUrl }}" style="display: inline-block; padding: 12px 24px; background-color: #ffffff; color: #6b7fd4; font-weight: 600; text-decoration: none; border-radius: 6px;">{{ translations.bingoDownloadButton }}</a>
-            <p style="margin: 16px 0 0; font-size: 12px; color: #ffffff; opacity: 0.9;">{{ translations.bingoMoreInfo }}</p>
+        <td align="center" bgcolor="#18565e" style="padding: 28px 24px; background-color: #18565e; border: 2px solid #0b2c31; border-radius: 20px;">
+            <p style="margin: 0 0 8px; font-size: 24px; line-height: 30px;">🎵🎱</p>
+            <p style="margin: 0 0 8px; font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 900; font-size: 20px; line-height: 26px; letter-spacing: .02em; text-transform: uppercase; color: #feefe5;">{{ translations.bingoSectionTitle }}</p>
+            <p style="margin: 0 0 20px; font-size: 14px; line-height: 22px; color: #feefe5;">{{ translations.bingoSectionDescription }}</p>
+            {{> mail-btn-pop href=bingoDownloadUrl label=translations.bingoDownloadButton }}
+            <p style="margin: 16px 0 0; font-size: 12px; line-height: 18px; color: #c4d8da;">{{ translations.bingoMoreInfo }}</p>
         </td>
     </tr>
 </table>

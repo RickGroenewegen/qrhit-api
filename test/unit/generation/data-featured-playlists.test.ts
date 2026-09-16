@@ -159,7 +159,7 @@ describe('getFeaturedPlaylists', () => {
         id: 3,
         name: 'N',
         description: null,
-        description_en: 'fallback EN',
+        descriptionEnFallback: 'fallback EN',
         isPromotional: 0,
         genreId: null,
       },
@@ -167,6 +167,8 @@ describe('getFeaturedPlaylists', () => {
 
     const result = await getFeaturedPlaylists(deps, 'de');
     expect(result[0].description).toBe('B:fallback EN');
+    // The helper column never leaks into the cached/returned row.
+    expect(result[0]).not.toHaveProperty('descriptionEnFallback');
   });
 
   it('invalid locale falls back to en columns and cache key', async () => {

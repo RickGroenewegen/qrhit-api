@@ -60,10 +60,16 @@ export async function storePlaylists(
         giftcardMessage = cartItem.personalMessage!;
       }
 
-      const slug = slugify(cartItem.playlistName, {
-        lower: true,
-        strict: true,
-      });
+      // `strict: true` drops everything outside [a-z0-9-], so a playlist named
+      // entirely in CJK, or in emoji, or in punctuation slugifies to an empty
+      // string. That is how `/product/-2` and `/product/my-` became live,
+      // sitemap-listed URLs. Fall back to the playlist id, which at least
+      // resolves and reads as an identifier rather than a counter.
+      const slug =
+        slugify(cartItem.playlistName, {
+          lower: true,
+          strict: true,
+        }).replace(/^-+|-+$/g, '') || `playlist-${usePlaylistId}`;
 
       const playlistCreate = await deps.prisma.playlist.create({
         data: {
@@ -169,6 +175,8 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.frontOpacity,
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
+      payment_has_playlist.template AS orderTemplate,
+      playlists.template,
       payment_has_playlist.theme,
       payment_has_playlist.themeName,
       payment_has_playlist.gamesEnabled,
@@ -205,6 +213,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.addHowToCard,
       payment_has_playlist.addHowToCardLocale,
       payment_has_playlist.howToCardImage,
+      payment_has_playlist.howToCardNumberColor,
       playlists.numberOfTracks,
       payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
       playlists.featured,
@@ -278,29 +287,26 @@ export async function updatePaymentHasPlaylist(
       updateData.themeName = themeName;
     }
 
-    // Get the paymentHasPlaylist to find the related playlistId
+    // The template is stored on the order itself, not on the playlist row:
+    // that row is shared by every order of the same Spotify playlist and
+    // carries the company list's forceTemplate (see forcedPrinterTemplate).
+    if (template !== undefined) {
+      updateData.template = template;
+    }
+
     const paymentHasPlaylist = await deps.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
-      select: { playlistId: true }
+      select: { id: true }
     });
 
     if (!paymentHasPlaylist) {
       return { success: false, error: 'PaymentHasPlaylist not found' };
     }
 
-    // Update PaymentHasPlaylist (eco, doubleSided, printerType)
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
       data: updateData,
     });
-
-    // Update Playlist template if provided
-    if (template !== undefined) {
-      await deps.prisma.playlist.update({
-        where: { id: paymentHasPlaylist.playlistId },
-        data: { template: template }
-      });
-    }
 
     // Reload the in-memory theme cache when theme data changed
     if (theme !== undefined || themeName !== undefined) {
@@ -691,7 +697,8 @@ export async function updateAddHowToCard(
   deps: DataDeps,
   paymentHasPlaylistId: number,
   addHowToCard: boolean,
-  addHowToCardLocale?: string
+  addHowToCardLocale?: string,
+  howToCardNumberColor?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const php = await deps.prisma.paymentHasPlaylist.findUnique({
@@ -707,6 +714,9 @@ export async function updateAddHowToCard(
     if (addHowToCardLocale !== undefined) {
       data.addHowToCardLocale = addHowToCardLocale;
     }
+    if (howToCardNumberColor !== undefined) {
+      data.howToCardNumberColor = howToCardNumberColor;
+    }
 
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
@@ -717,7 +727,7 @@ export async function updateAddHowToCard(
       color.blue.bold(
         `Updated addHowToCard for playlist ${color.white.bold(
           paymentHasPlaylistId
-        )} to ${color.white.bold(addHowToCard)}${addHowToCardLocale ? ` (locale: ${addHowToCardLocale})` : ''}`
+        )} to ${color.white.bold(addHowToCard)}${addHowToCardLocale ? ` (locale: ${addHowToCardLocale})` : ''}${howToCardNumberColor !== undefined ? ` (number color: ${howToCardNumberColor || 'default'})` : ''}`
       )
     );
 
@@ -1136,6 +1146,91 @@ export async function loadBlockedFromCache(deps: DataDeps): Promise<boolean> {
       return false;
     }
   }
+}
+
+// How long a scan waits for the fallback list before failing open, and how
+// long it then skips the fallback so a sustained outage stalls one request
+// per window instead of every request.
+const BLOCKED_FALLBACK_WAIT_MS = 10000;
+const BLOCKED_FAIL_OPEN_MS = 30000;
+
+/**
+ * Live blocked check, run on every scan.
+ *
+ * Reads the shared Redis set directly so an admin toggle takes effect on the
+ * next scan on every worker and every server: the API runs one cluster
+ * worker per CPU, and their in-memory copies only resync hourly. That copy
+ * is now purely a fallback for when Redis is unreachable.
+ *
+ * Three outcomes from Redis:
+ *  - key present: the membership answer is authoritative.
+ *  - key absent (fresh Redis, version-bump deploy): rebuild from the
+ *    database, which also republishes the key, then answer from memory.
+ *  - error: answer from the in-memory copy, waiting a bounded time for it
+ *    to initialize and failing open after that.
+ */
+export async function isPlaylistBlocked(
+  deps: DataDeps,
+  paymentHasPlaylistId: number
+): Promise<boolean> {
+  if (!Number.isFinite(paymentHasPlaylistId)) {
+    return false;
+  }
+
+  try {
+    const { exists, member } = await deps.cache.setMembership(
+      BLOCKED_PLAYLISTS_CACHE_KEY,
+      String(paymentHasPlaylistId)
+    );
+    if (exists) {
+      return member;
+    }
+    deps.logger.log(
+      color.yellow.bold(
+        'Blocked playlists key missing in Redis, rebuilding from database'
+      )
+    );
+    await Promise.race([
+      deps.reloadBlocked(),
+      new Promise((resolve) =>
+        setTimeout(resolve, BLOCKED_FALLBACK_WAIT_MS).unref()
+      ),
+    ]);
+    return deps.blockedPlaylists.has(paymentHasPlaylistId);
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Live blocked check failed, using in-memory list: ${error.message}`
+      )
+    );
+  }
+
+  if (
+    !deps.blockedPlaylistsInitialized &&
+    Date.now() >= deps.blockedFailOpenUntil
+  ) {
+    deps.logger.log(
+      color.yellow.bold('Waiting for blocked playlists to initialize...')
+    );
+    await Promise.race([
+      deps.ensureBlockedLoaded(),
+      new Promise((resolve) =>
+        setTimeout(resolve, BLOCKED_FALLBACK_WAIT_MS).unref()
+      ),
+    ]);
+    if (!deps.blockedPlaylistsInitialized) {
+      deps.blockedFailOpenUntil = Date.now() + BLOCKED_FAIL_OPEN_MS;
+      deps.logger.log(
+        color.yellow.bold(
+          `Blocked playlists still initializing after ${
+            BLOCKED_FALLBACK_WAIT_MS / 1000
+          }s, skipping block check for ${BLOCKED_FAIL_OPEN_MS / 1000}s`
+        )
+      );
+    }
+  }
+
+  return deps.blockedPlaylists.has(paymentHasPlaylistId);
 }
 
 /** A single playlist entry in the MusicMatch export. */

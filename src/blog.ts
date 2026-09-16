@@ -1,18 +1,97 @@
-import PrismaInstance from './prisma';
+import fs from 'fs/promises';
+import path from 'path';
+import { marked } from 'marked';
+
 import Translation from './translation';
 import Cache from './cache';
 
-const CACHE_PREFIX = 'blog2';
-const SUPPORTED_LOCALES = Translation.ALL_LOCALES;
+/**
+ * File-backed blog.
+ *
+ * Posts used to live in a 60-column `blogs` table (slug/title/content/summary
+ * times twelve locales) edited through a back-office CMS. They now live as
+ * markdown on disk:
+ *
+ *   src/_data/blog/index.json           metadata for every post, all locales
+ *   src/_data/blog/blog_<id>_<lang>.md  one post body in one locale
+ *
+ * The public API shape is deliberately unchanged, so the frontend, the SSR
+ * renderer and the sitemap all keep working without edits: `getAllBlogs` and
+ * `getBlogBySlug` return the same fields they always did, with `content` as
+ * rendered HTML. What is new is `faq`, extracted from a trailing `## FAQ`
+ * section, which the SSR layer turns into FAQPage JSON-LD.
+ *
+ * The `blogs` table is intentionally left in place and unread. Dropping it in
+ * the same change that migrates off it would mean the rollback path is a
+ * database restore.
+ *
+ * Authoring happens in the growth-oracle `blog` pillar (`growth blog …`), not
+ * here. This class only reads.
+ */
 
-type BlogInput = {
-  [key: string]: any;
-};
+const CACHE_PREFIX = 'blog3';
+const SUPPORTED_LOCALES = Translation.ALL_LOCALES;
+const FALLBACK_LOCALE = 'en';
+
+/**
+ * Where the markdown lives. Resolved from this file rather than from cwd so it
+ * works the same under tsx, under the compiled build and under pm2, none of
+ * which agree on the working directory.
+ *
+ * The posts ship with the deploy: `npm run build` ends with `ncp ./src ./build`,
+ * which copies non-TypeScript files across, so `_data/blog` lands next to the
+ * compiled `blog.js` at `build/src/_data/blog`. `__dirname` is `src/` in dev and
+ * `build/src/` in production and the first candidate covers both; the second is
+ * a fallback for running the compiled entry point from the repo root.
+ */
+const CONTENT_DIRS = [
+  // tsx/dev: __dirname is <repo>/src. Production: `npm run build` ends with
+  // `ncp ./src ./build`, so __dirname is <repo>/build/src and the copy lands here.
+  path.join(__dirname, '_data', 'blog'),
+  // `npm run start:dev` runs `tsc -w`, which compiles but never runs that ncp
+  // step, so under the watcher the copy does NOT exist and __dirname is
+  // <repo>/build/src. Reach back to the real source tree instead of crashing.
+  path.join(__dirname, '..', '..', 'src', '_data', 'blog'),
+  // Last resort for any entry point started from the repo root.
+  path.join(process.cwd(), 'src', '_data', 'blog'),
+];
+
+export interface BlogFaqEntry {
+  question: string;
+  answer: string;
+}
+
+interface BlogPostMeta {
+  id: number;
+  date: string;
+  updated?: string;
+  author: string;
+  image?: string | null;
+  tags?: string[];
+  slugs: Record<string, string>;
+  titles: Record<string, string>;
+  summaries: Record<string, string>;
+}
 
 class Blog {
   private static instance: Blog;
-  private prisma = PrismaInstance.getInstance();
   private cache = Cache.getInstance();
+  private contentDir: string | null = null;
+  private indexPromise: Promise<BlogPostMeta[]> | null = null;
+  /**
+   * Content version, mixed into every cache key.
+   *
+   * Posts are files now, so "has the content changed" is answerable exactly:
+   * it is the modification time of index.json, which is rewritten by every
+   * authoring verb. Putting it in the key means a deploy or an edit invalidates
+   * the cache on its own.
+   *
+   * Without this, editing content left Redis serving the previous version for
+   * up to 24 hours: a removed post kept appearing in the overview and newly
+   * generated images never showed up, because the cached rows still had
+   * `image: null`. Manually flushing after every change is not a system.
+   */
+  private versionPromise: Promise<string> | null = null;
 
   public static getInstance(): Blog {
     if (!Blog.instance) {
@@ -21,374 +100,316 @@ class Blog {
     return Blog.instance;
   }
 
-  // Get all blogs for admin (includes inactive blogs)
-  public async getAllBlogsAdmin(locale: string) {
-    try {
-      // Validate locale
-      if (!SUPPORTED_LOCALES.includes(locale)) {
-        return { success: false, error: 'Invalid locale' };
+  /* ------------------------------------------------------------ loading -- */
+
+  private async resolveContentDir(): Promise<string> {
+    if (this.contentDir) return this.contentDir;
+    for (const candidate of CONTENT_DIRS) {
+      try {
+        await fs.access(path.join(candidate, 'index.json'));
+        this.contentDir = candidate;
+        return candidate;
+      } catch {
+        // try the next candidate
       }
+    }
+    throw new Error(
+      `no blog index.json found in: ${CONTENT_DIRS.join(', ')}`
+    );
+  }
 
-      const blogs = await this.prisma.blog.findMany({
-        orderBy: { createdAt: 'desc' },
-        select: this.getSelectObject(),
+  /**
+   * The index is read once per process and held in memory. It is a ~30 KB file
+   * that only changes on deploy, so re-reading it per request would buy nothing.
+   * Held as the promise rather than the value so concurrent first requests share
+   * one read instead of racing.
+   */
+  private loadIndex(): Promise<BlogPostMeta[]> {
+    if (!this.indexPromise) {
+      this.indexPromise = (async () => {
+        const dir = await this.resolveContentDir();
+        const raw = await fs.readFile(path.join(dir, 'index.json'), 'utf8');
+        const parsed = JSON.parse(raw);
+        const posts: BlogPostMeta[] = Array.isArray(parsed?.posts)
+          ? parsed.posts
+          : [];
+        // Newest first, which is the order the blog index renders in.
+        return posts.sort((a, b) =>
+          a.date === b.date ? b.id - a.id : b.date.localeCompare(a.date)
+        );
+      })().catch((error) => {
+        // Do not cache a failed read: a deploy that lands index.json a moment
+        // late would otherwise leave the process permanently blogless.
+        this.indexPromise = null;
+        throw error;
       });
+    }
+    return this.indexPromise;
+  }
 
-      // Transform blogs to include localized content
-      const localizedBlogs = blogs.map((blog) =>
-        this.transformBlogForLocale(blog, locale)
+  /** Modification time of index.json, as a short cache-key fragment. */
+  private contentVersion(): Promise<string> {
+    if (!this.versionPromise) {
+      this.versionPromise = (async () => {
+        const dir = await this.resolveContentDir();
+        const stat = await fs.stat(path.join(dir, 'index.json'));
+        return String(Math.floor(stat.mtimeMs));
+      })().catch(() => {
+        this.versionPromise = null;
+        // A version we cannot read must not become a stable key, or a transient
+        // failure would pin the cache to a bogus version for a day.
+        return `nover-${Date.now()}`;
+      });
+    }
+    return this.versionPromise;
+  }
+
+  private async readBody(id: number, locale: string): Promise<string | null> {
+    const dir = await this.resolveContentDir();
+    try {
+      return await fs.readFile(
+        path.join(dir, `blog_${id}_${locale}.md`),
+        'utf8'
       );
-
-      return { success: true, blogs: localizedBlogs };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
+    } catch {
+      return null;
     }
   }
 
-  // Get a single blog by id for admin (includes inactive blogs)
-  public async getBlogByIdAdmin(id: number, locale: string) {
-    try {
-      // Validate locale
-      if (!SUPPORTED_LOCALES.includes(locale)) {
-        return { success: false, error: 'Invalid locale' };
-      }
+  /* ----------------------------------------------------------- rendering -- */
 
-      const blog = await this.prisma.blog.findUnique({
-        where: { id },
-        select: this.getSelectObject(true),
+  /**
+   * Resolve the placeholders in internal links.
+   *
+   * `[lang]` becomes the locale. `[post:<id>]` becomes that post's slug IN THIS
+   * LOCALE, which is the only way a post-to-post link can work here: slugs are
+   * per locale, so a link written with the English slug 404s in the other
+   * eleven. Authors write `/[lang]/blog/[post:15]` and never have to know what
+   * the Swedish slug is.
+   *
+   * A reference to a post that does not exist in this locale is dropped back to
+   * the blog index rather than left dangling, because an untranslated sibling is
+   * a normal state and a 404 is not.
+   */
+  private resolvePlaceholders(
+    content: string,
+    locale: string,
+    index: BlogPostMeta[]
+  ): string {
+    if (!content) return content;
+    const withPosts = content.replace(
+      /\[post:(\d+)\]/g,
+      (_match, id: string) => {
+        const target = index.find((p) => p.id === Number(id));
+        return target?.slugs?.[locale] ?? '';
+      }
+    );
+    // An unresolved reference leaves `/blog/` with a trailing slash; send those
+    // to the index.
+    return withPosts.replace(/\/blog\/(?=["')\s])/g, '/blog').split('[lang]').join(locale);
+  }
+
+  /**
+   * Split a body into prose and its trailing FAQ section.
+   *
+   * The convention is a final `## …` heading whose children are all `### `
+   * questions and nothing else. Matching on structure rather than on the word
+   * "FAQ" is what makes it work in twelve languages without a translated
+   * keyword list. Mirrors `splitFaq` in the growth-oracle blog pillar, which is
+   * what `growth blog lint` validates against.
+   */
+  private splitFaq(markdown: string): { body: string; faq: BlogFaqEntry[] } {
+    const h2Re = /^##\s+(.+)$/gm;
+    const starts: number[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = h2Re.exec(markdown))) starts.push(match.index);
+    if (!starts.length) return { body: markdown, faq: [] };
+
+    const lastStart = starts[starts.length - 1];
+    const section = markdown.slice(lastStart);
+
+    const questionRe = /^###\s+(.+)$/gm;
+    const marks: { title: string; index: number; length: number }[] = [];
+    while ((match = questionRe.exec(section))) {
+      marks.push({
+        title: match[1].trim(),
+        index: match.index,
+        length: match[0].length,
       });
-      if (!blog) {
-        return { success: false, error: 'Blog not found' };
-      }
-
-      // Transform blog to include localized content (admin can see inactive blogs)
-      const localizedBlog = this.transformBlogForLocale(blog, locale);
-
-      return { success: true, blog: localizedBlog };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
     }
+    if (marks.length < 2) return { body: markdown, faq: [] };
+
+    const preamble = section.slice(section.indexOf('\n'), marks[0].index).trim();
+    if (preamble) return { body: markdown, faq: [] };
+
+    const faq: BlogFaqEntry[] = [];
+    for (let i = 0; i < marks.length; i++) {
+      const start = marks[i].index + marks[i].length;
+      const end = i + 1 < marks.length ? marks[i + 1].index : section.length;
+      const answer = section.slice(start, end).trim();
+      if (answer) faq.push({ question: marks[i].title, answer });
+    }
+
+    return { body: markdown.slice(0, lastStart).trim(), faq };
   }
 
-  // Create a new blog post (expects keys like title_en, content_en, summary_en, etc.)
-  public async createBlog(input: BlogInput) {
-    try {
-      if (!input.title_en) {
-        return {
-          success: false,
-          error: 'English title (title_en) is required',
-        };
-      }
-
-      const data: any = {};
-
-      // Create and ensure unique slugs for each locale
-      for (const locale of SUPPORTED_LOCALES) {
-        const title = input[`title_${locale}`];
-        if (title) {
-          const baseSlug = this.slugify(title);
-          let slug = baseSlug;
-          let counter = 1;
-          while (
-            await this.prisma.blog.findFirst({
-              where: { [`slug_${locale}`]: slug },
-            })
-          ) {
-            slug = `${baseSlug}-${counter}`;
-            counter++;
-          }
-          data[`slug_${locale}`] = slug;
-        }
-      }
-
-      data.active = input.active !== undefined ? input.active : false;
-      if (input.image) {
-        data.image = input.image;
-      }
-      if (input.image_instructions) {
-        data.image_instructions = input.image_instructions;
-      }
-      for (const locale of SUPPORTED_LOCALES) {
-        data[`title_${locale}`] = input[`title_${locale}`] || '';
-        data[`content_${locale}`] = input[`content_${locale}`] || '';
-        data[`summary_${locale}`] = input[`summary_${locale}`] || '';
-      }
-      const blog = await this.prisma.blog.create({ data });
-
-      // Clear blog caches after creating a new blog
-      await this.clearBlogCaches();
-
-      return { success: true, blog };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
+  /**
+   * Markdown to HTML.
+   *
+   * Headings start at h2 in the source because the post title is the page's h1,
+   * so nothing here needs to demote them. `marked` is configured without
+   * `gfm.breaks` so a single newline stays a space, which is what the migrated
+   * content assumes.
+   */
+  private render(markdown: string): string {
+    return marked.parse(markdown, { async: false }) as string;
   }
 
-  // Update an existing blog post
-  public async updateBlog(id: number, input: BlogInput) {
-    try {
-      const data: any = {};
-      if (input.hasOwnProperty('active')) {
-        data.active = input.active;
-      }
-      if (input.hasOwnProperty('image')) {
-        data.image = input.image;
-      }
-      if (input.hasOwnProperty('image_instructions')) {
-        data.image_instructions = input.image_instructions;
-      }
+  /* ------------------------------------------------------------- public -- */
 
-      // Handle slug updates for each locale
-      for (const locale of SUPPORTED_LOCALES) {
-        if (input.hasOwnProperty(`title_${locale}`)) {
-          data[`title_${locale}`] = input[`title_${locale}`];
-
-          // Update slug if title changed
-          const title = input[`title_${locale}`];
-          if (title) {
-            const baseSlug = this.slugify(title);
-            let slug = baseSlug;
-            let counter = 1;
-            while (
-              await this.prisma.blog.findFirst({
-                where: {
-                  [`slug_${locale}`]: slug,
-                  id: { not: id }, // Exclude current blog from check
-                },
-              })
-            ) {
-              slug = `${baseSlug}-${counter}`;
-              counter++;
-            }
-            data[`slug_${locale}`] = slug;
-          }
-        }
-        if (input.hasOwnProperty(`content_${locale}`)) {
-          data[`content_${locale}`] = input[`content_${locale}`];
-        }
-        if (input.hasOwnProperty(`summary_${locale}`)) {
-          data[`summary_${locale}`] = input[`summary_${locale}`];
-        }
-      }
-      const blog = await this.prisma.blog.update({
-        where: { id },
-        data,
-      });
-
-      // Clear blog caches after updating a blog
-      await this.clearBlogCaches();
-
-      return { success: true, blog };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
+  private metaFor(post: BlogPostMeta, locale: string) {
+    const pick = (map: Record<string, string> = {}) =>
+      map[locale] ?? map[FALLBACK_LOCALE] ?? '';
+    return {
+      id: post.id,
+      slug: pick(post.slugs),
+      active: true,
+      image: post.image ?? null,
+      image_instructions: null,
+      createdAt: post.date,
+      updatedAt: post.updated ?? post.date,
+      title: pick(post.titles),
+      summary: pick(post.summaries),
+    };
   }
 
-  // Delete a blog post
-  public async deleteBlog(id: number) {
-    try {
-      await this.prisma.blog.delete({ where: { id } });
-
-      // Clear blog caches after deleting a blog
-      await this.clearBlogCaches();
-
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // Get all blogs (public)
+  /** Every post that exists in this locale, newest first. */
   public async getAllBlogs(locale: string) {
     try {
-      // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
         return { success: false, error: 'Invalid locale' };
       }
 
-      // Check cache first
-      const cacheKey = `${CACHE_PREFIX}s:all:${locale}`;
-      const cachedBlogs = await this.cache.get(cacheKey);
+      const cacheKey = `${CACHE_PREFIX}s:all:${locale}:${await this.contentVersion()}`;
+      const cached = await this.cache.get(cacheKey);
+      if (cached) return { success: true, blogs: JSON.parse(cached) };
 
-      if (cachedBlogs) {
-        return { success: true, blogs: JSON.parse(cachedBlogs) };
+      const index = await this.loadIndex();
+
+      // A post is listed only where it has a body in this locale. Listing an
+      // untranslated post would link to a slug that does not exist, which is
+      // how you get 404s inside your own blog index.
+      const blogs = [];
+      for (const post of index) {
+        if (!post.slugs?.[locale]) continue;
+        const body = await this.readBody(post.id, locale);
+        if (!body) continue;
+        blogs.push(this.metaFor(post, locale));
       }
 
-      const blogs = await this.prisma.blog.findMany({
-        where: { active: true },
-        orderBy: { createdAt: 'desc' },
-        select: this.getSelectObject(),
-      });
-
-      // Transform blogs to include localized content
-      const localizedBlogs = blogs.map((blog) =>
-        this.transformBlogForLocale(blog, locale)
-      );
-
-      // Cache the result for 24 hours (86400 seconds)
-      await this.cache.set(cacheKey, JSON.stringify(localizedBlogs), 86400);
-
-      return { success: true, blogs: localizedBlogs };
+      await this.cache.set(cacheKey, JSON.stringify(blogs), 86400);
+      return { success: true, blogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
-  // Get a single blog by slug (public)
+  /** One post, by its slug in this locale. */
   public async getBlogBySlug(slug: string, locale: string) {
     try {
-      // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
         return { success: false, error: 'Invalid locale' };
       }
 
-      // Check cache first
-      const cacheKey = `${CACHE_PREFIX}:${slug}:${locale}`;
-      const cachedBlog = await this.cache.get(cacheKey);
+      const cacheKey = `${CACHE_PREFIX}:${slug}:${locale}:${await this.contentVersion()}`;
+      const cached = await this.cache.get(cacheKey);
+      if (cached) return { success: true, blog: JSON.parse(cached) };
 
-      if (cachedBlog) {
-        return { success: true, blog: JSON.parse(cachedBlog) };
+      const index = await this.loadIndex();
+
+      // Match this locale's slug first. Falling back to a match on ANY locale's
+      // slug keeps old inbound links alive: before the per-locale slugs existed
+      // every locale used the English one, and those URLs are still linked from
+      // the wild.
+      let post = index.find((p) => p.slugs?.[locale] === slug);
+      if (!post) {
+        post = index.find((p) =>
+          Object.values(p.slugs ?? {}).includes(slug)
+        );
       }
+      if (!post) return { success: false, error: 'Blog not found' };
 
-      // First, try to find the blog by the locale-specific slug
-      let blog = await this.prisma.blog.findFirst({
-        where: {
-          [`slug_${locale}`]: slug,
-          active: true,
-        },
-        select: this.getSelectObject(true),
-      });
+      const markdown =
+        (await this.readBody(post.id, locale)) ??
+        (await this.readBody(post.id, FALLBACK_LOCALE));
+      if (!markdown) return { success: false, error: 'Blog not found' };
 
-      // If not found, try to find the blog by any slug across all locales
-      if (!blog) {
-        const orConditions = SUPPORTED_LOCALES.map((loc) => ({
-          [`slug_${loc}`]: slug,
-        }));
+      const { body, faq } = this.splitFaq(markdown);
+      const localized = this.resolvePlaceholders(body, locale, index);
 
-        blog = await this.prisma.blog.findFirst({
-          where: {
-            AND: [{ OR: orConditions }, { active: true }],
-          },
-          select: this.getSelectObject(true),
-        });
+      const blog = {
+        ...this.metaFor(post, locale),
+        author: post.author,
+        tags: post.tags ?? [],
+        content: this.render(localized),
+        faq: faq.map((entry) => ({
+          question: entry.question,
+          // Answers are markdown too, and can contain links. Rendering them
+          // keeps formatting in the visible accordion; the SSR layer strips
+          // tags again for the JSON-LD, where plain text is required.
+          answer: this.render(
+            this.resolvePlaceholders(entry.answer, locale, index)
+          ),
+        })),
+        allSlugs: post.slugs,
+      };
 
-        if (blog) {
-          // Log which locale's slug matched
-          for (const loc of SUPPORTED_LOCALES) {
-            if (blog[`slug_${loc}`] === slug) {
-              break;
-            }
-          }
-        }
-      }
-
-      if (!blog) {
-        return { success: false, error: 'Blog not found' };
-      }
-
-      // Transform blog to include localized content
-      const localizedBlog = this.transformBlogForLocale(blog, locale);
-
-      // Add all language slugs to support proper hreflang tags
-      const allSlugs: { [key: string]: string } = {};
-      for (const loc of SUPPORTED_LOCALES) {
-        if (blog[`slug_${loc}`]) {
-          allSlugs[loc] = blog[`slug_${loc}`];
-        }
-      }
-      localizedBlog.allSlugs = allSlugs;
-
-      // Add a flag to indicate if a redirect is needed
-      const correctSlug = blog[`slug_${locale}`];
-      if (correctSlug && correctSlug !== slug) {
-        localizedBlog.shouldRedirect = true;
-        localizedBlog.correctSlug = correctSlug;
-      }
-
-      // Cache the result for 24 hours (86400 seconds)
-      await this.cache.set(cacheKey, JSON.stringify(localizedBlog), 86400);
-
-      return { success: true, blog: localizedBlog };
+      await this.cache.set(cacheKey, JSON.stringify(blog), 86400);
+      return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
-  private slugify(text: string): string {
-    return text
-      .toString()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]+/g, '')
-      .replace(/--+/g, '-');
-  }
-
-  // Helper: clear blog-related caches
-  private async clearBlogCaches(): Promise<void> {
-    // Clear all cached blog lists for all locales
-    for (const locale of SUPPORTED_LOCALES) {
-      await this.cache.del(`${CACHE_PREFIX}s:all:${locale}`);
+  /**
+   * Post metadata for the sitemap: one entry per post/locale pair that actually
+   * has a body file. Used by `createSiteMap` in place of the old Prisma query.
+   */
+  public async getSitemapEntries(
+    locale: string
+  ): Promise<{ slug: string; lastmod: string }[]> {
+    let index: BlogPostMeta[];
+    try {
+      index = await this.loadIndex();
+    } catch (error) {
+      // The sitemap is generated at boot. Throwing here took the whole API down
+      // when the content directory was missing, which is a bad trade: losing the
+      // blog URLs from one sitemap generation is recoverable, not starting is
+      // not. Loud, because a silent empty blog section is how this goes
+      // unnoticed for a week.
+      console.error(
+        `[blog] sitemap entries unavailable for "${locale}": ${
+          (error as Error).message
+        } — blog URLs will be missing from this sitemap`
+      );
+      return [];
     }
 
-    // Clear all individual blog caches using pattern
-    await this.cache.delPattern(`${CACHE_PREFIX}:*`);
-  }
-
-  // Helper: select all language fields
-  private getSelectObject(includeContent = false) {
-    const select: any = {
-      id: true,
-      active: true,
-      image: true,
-      image_instructions: true,
-      createdAt: true,
-      updatedAt: true,
-    };
-    for (const locale of SUPPORTED_LOCALES) {
-      select[`slug_${locale}`] = true;
-      select[`title_${locale}`] = true;
-      select[`summary_${locale}`] = true;
-      if (includeContent) select[`content_${locale}`] = true;
+    const entries: { slug: string; lastmod: string }[] = [];
+    for (const post of index) {
+      const slug = post.slugs?.[locale];
+      if (!slug) continue;
+      if (!(await this.readBody(post.id, locale))) continue;
+      entries.push({ slug, lastmod: post.updated ?? post.date });
     }
-    return select;
+    return entries;
   }
 
-  // Helper: transform blog data to include localized content without language suffixes
-  private transformBlogForLocale(blog: any, locale: string) {
-    // Create the transformed blog object
-    const transformedBlog: any = {
-      id: blog.id,
-      slug: blog[`slug_${locale}`] || blog.slug_en || '',
-      active: blog.active,
-      image: blog.image,
-      image_instructions: blog.image_instructions,
-      createdAt: blog.createdAt,
-      updatedAt: blog.updatedAt,
-      title: blog[`title_${locale}`] || blog.title_en || '',
-      summary: blog[`summary_${locale}`] || blog.summary_en || '',
-    };
-
-    // Include content if it exists in the original blog
-    if (
-      blog.hasOwnProperty(`content_${locale}`) ||
-      blog.hasOwnProperty('content_en')
-    ) {
-      let content = blog[`content_${locale}`] || blog.content_en || '';
-      // Replace [lang] placeholders with the actual locale
-      content = this.replaceLangPlaceholders(content, locale);
-      transformedBlog.content = content;
-    }
-
-    return transformedBlog;
-  }
-
-  // Helper: replace [lang] placeholders with the actual locale
-  private replaceLangPlaceholders(content: string, locale: string): string {
-    if (!content) return content;
-    return content.replace(/\[lang\]/g, locale);
+  /** Drop the rendered-post caches. Call after a deploy that changes content. */
+  public async clearCaches(): Promise<void> {
+    this.indexPromise = null;
+    this.versionPromise = null;
+    await this.cache.del(`${CACHE_PREFIX}*`);
   }
 }
 
