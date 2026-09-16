@@ -17,6 +17,7 @@ import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import Discount from '../discount';
 import Shipping from '../shipping';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
+import { createHash } from 'crypto';
 
 interface PriceResult {
   totalPrice: number;
@@ -44,6 +45,28 @@ interface PbApiCall {
  */
 const PB_SHIPPED_STATUSES = ['Verzonden', 'Afgeleverd', 'Afgehaald'];
 
+/**
+ * `/orders/calculate` checks the postal code format for a handful of
+ * countries (NL, BE, DE, FR, GB as of September 2026) and accepts anything
+ * for the rest, so a shipping quote needs a well-formed code only for those.
+ * NL is covered by the request builder's own placeholder address; the
+ * others get a capital-city code here. The city is never checked.
+ */
+const QUOTE_POSTCODES: Record<string, string> = {
+  BE: '1000',
+  DE: '10115',
+  FR: '75001',
+  GB: 'SW1A 1AA',
+};
+
+/** Track counts the stored shipping rates are keyed on (see getShippingCosts). */
+const SHIPPING_RATE_SIZES = [80, 405, 1000];
+/** How long a Print&Bind shipping quote is reused for the same cart shape. */
+const SHIPPING_QUOTE_TTL = 6 * 3600;
+/** After a network failure, skip quoting for this long and use stored rates. */
+const SHIPPING_QUOTE_BACKOFF_MS = 60 * 1000;
+const SHIPPING_QUOTE_TIMEOUT_MS = 5000;
+
 class PrintEnBind {
   private static instance: PrintEnBind;
   private prisma = PrismaInstance.getInstance();
@@ -56,6 +79,7 @@ class PrintEnBind {
   private discount = new Discount();
   private shipping = Shipping.getInstance();
   private pushover = new PushoverClient();
+  private shippingQuoteBlockedUntil = 0;
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -279,7 +303,8 @@ class PrintEnBind {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: any,
-    apiCalls?: PbApiCall[]
+    apiCalls?: PbApiCall[],
+    timeoutMs?: number
   ): Promise<{ ok: boolean; status: number; statusText: string; data: any }> {
     const url = `${this.pbBaseUrl()}${path}`;
     const authToken = await this.getAuthToken();
@@ -291,6 +316,9 @@ class PrintEnBind {
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(body);
+    }
+    if (timeoutMs) {
+      init.signal = AbortSignal.timeout(timeoutMs);
     }
 
     const response = await fetch(url, init);
@@ -1082,12 +1110,6 @@ class PrintEnBind {
         subType = 'sheets';
       }
 
-      const shippingResult = await this.getShippingCosts(
-        params.countrycode,
-        totalNumberOfTracks,
-        subType
-      );
-
       // Count the number of physical items
       let physicalItems = 0;
       let totalPrice = 0;
@@ -1106,13 +1128,40 @@ class PrintEnBind {
         totalProductPriceWithoutVAT += productPriceWithoutVAT;
       }
 
-      let freeShipping: boolean = false;
+      // Shipping: what Print&Bind quotes for this exact cart, with the
+      // stored per-country rates (plus their flat overrides) as the fallback
+      // when Print&Bind cannot be reached or does not quote.
+      const liveShipping =
+        physicalItems > 0
+          ? await this.quoteShippingCost(params.countrycode, orderItems)
+          : null;
+      const shippingResult =
+        liveShipping !== null
+          ? { cost: liveShipping }
+          : await this.getShippingCosts(
+              params.countrycode,
+              totalNumberOfTracks,
+              subType
+            );
+
       let shipping = 0;
       let handling = 0;
+      // What shipping would have cost when the multi-playlist promotion
+      // waives it; the checkout shows this as the saving.
+      let shippingSaved = 0;
 
       if (physicalItems > 0 && shippingResult) {
-        shipping = shippingResult!.cost || 0;
+        shipping = shippingResult.cost || 0;
         handling = 0;
+
+        if (liveShipping === null) {
+          // Flat rates that only ever applied on top of the stored table
+          if (params.countrycode === 'NL') {
+            shipping = 2.99;
+          } else if (['ES', 'NO', 'SE'].includes(params.countrycode)) {
+            shipping = 3.90;
+          }
+        }
 
         // Calculate total number of playlists ordered
         let totalPlaylists = 0;
@@ -1127,11 +1176,8 @@ class PrintEnBind {
           ['NL', 'DE', 'BE'].includes(params.countrycode) &&
           totalPlaylists >= 2
         ) {
+          shippingSaved = shipping;
           shipping = 0;
-        } else if (params.countrycode === 'NL') {
-          shipping = 2.99;
-        } else if (['ES', 'NO', 'SE'].includes(params.countrycode)) {
-          shipping = 3.90;
         }
       } else if (physicalItems > 0 && !shippingResult) {
         // No shipping rate for this country. Zeroing the total used to make the
@@ -1197,6 +1243,7 @@ class PrintEnBind {
           orderId: '',
           total: totalPrice,
           shipping,
+          shippingSaved,
           handling,
           taxRateShipping: taxRate,
           taxRate,
@@ -1903,22 +1950,205 @@ class PrintEnBind {
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
   /**
-   * v1 learned the delivery price per country by creating carts it never
-   * finished and reading their delivery record. The REST API prices delivery
-   * only on placed orders (`/orders/calculate` leaves it out) and
-   * `POST /orders` places a real order, so this probe is parked:
-   * `shipping_costs_new` keeps its current values and `getShippingCosts`
-   * keeps reading from it.
+   * Ask Print&Bind what delivery costs for a cart: one `POST
+   * /orders/calculate` carrying the same articles a real order would, minus
+   * the files. Calculate only fetches and checks a file when one is given;
+   * without it the `copies` count is priced as sent. Nothing is created.
+   *
+   * Returns `delivery_amount` in EUR ex VAT, or null when Print&Bind cannot
+   * be reached, rejects the request or does not quote, so the caller can fall
+   * back to the stored rates. Quotes are cached per country and article set;
+   * after a network failure quoting is skipped for a minute so a Print&Bind
+   * outage does not add a timeout to every checkout calculation.
+   */
+  public async quoteShippingCost(
+    countryCode: string,
+    cartItems: any[],
+    options: { fresh?: boolean } = {}
+  ): Promise<number | null> {
+    const country = (countryCode || 'NL').toUpperCase();
+    const articles: Record<string, any>[] = [];
+    for (const item of cartItems) {
+      if (item.productType !== 'cards') continue;
+      if (item.type !== 'physical' && item.type !== 'sheets') continue;
+      const orderItem = await this.createOrderItem(
+        parseInt(String(item.numberOfTracks), 10) || 0,
+        '',
+        item
+      );
+      const {
+        add_file_method: _addFileMethod,
+        file_url: _fileUrl,
+        file_overwrite: _fileOverwrite,
+        comment: _comment,
+        ...article
+      } = this.toPbArticle(orderItem);
+      // Real orders send one article per playlist copy; for pricing the
+      // same document N times is the same weight.
+      article.number = Math.max(1, parseInt(String(item.amount), 10) || 1);
+      articles.push(article);
+    }
+    if (articles.length === 0) {
+      return null;
+    }
+
+    const cacheKey = `pb_shipping_quote_${country}_${createHash('sha1')
+      .update(JSON.stringify(articles))
+      .digest('hex')}`;
+
+    try {
+      if (!options.fresh) {
+        const cached = await this.cache.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      }
+
+      if (Date.now() < this.shippingQuoteBlockedUntil) {
+        return null;
+      }
+
+      const request = this.buildOrderRequest(
+        {
+          email: 'orders@qrsong.io',
+          zipcode: QUOTE_POSTCODES[country],
+          countrycode: country,
+        },
+        articles,
+        { fast: false, orderComment: '' }
+      );
+      const result = await this.pbFetch(
+        'POST',
+        '/orders/calculate',
+        request,
+        undefined,
+        SHIPPING_QUOTE_TIMEOUT_MS
+      );
+      const raw = result.ok ? result.data?.data?.delivery_amount : undefined;
+      const cost =
+        typeof raw === 'number' ? raw : parseFloat(String(raw ?? ''));
+
+      if (!result.ok || !Number.isFinite(cost) || cost < 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `Print&Bind gave no shipping quote for ${color.white.bold(
+              country
+            )}: ${
+              result.ok
+                ? `delivery_amount missing in response`
+                : this.describePbError(result)
+            }; using stored rates`
+          )
+        );
+        return null;
+      }
+
+      await this.cache.set(cacheKey, JSON.stringify(cost), SHIPPING_QUOTE_TTL);
+      return cost;
+    } catch (error) {
+      this.shippingQuoteBlockedUntil = Date.now() + SHIPPING_QUOTE_BACKOFF_MS;
+      this.logger.log(
+        color.yellow.bold(
+          `Print&Bind shipping quote for ${color.white.bold(
+            country
+          )} failed (${error}); using stored rates for the next ${
+            SHIPPING_QUOTE_BACKOFF_MS / 1000
+          }s`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Refresh `shipping_costs_new` for the given countries from live quotes.
+   * v1 did this by creating carts it never finished and reading their
+   * delivery record; the REST API prices the same thing through
+   * `/orders/calculate` without creating anything. One quote per stored
+   * size (track count) per country, written where `getShippingCosts` reads.
+   * Started in the background by the admin bulk action.
    */
   public async calculateShippingCosts(countryCodes?: string[]): Promise<void> {
-    const codes = countryCodes || [];
+    const codes = (countryCodes || []).map((code) => code.toUpperCase());
     this.logger.log(
-      color.yellow.bold(
-        `Shipping cost calculation is not available on the Print&Bind REST API (calculate returns no delivery costs); keeping the stored rates${
-          codes.length > 0 ? ` for ${color.white.bold(codes.join(', '))}` : ''
-        }`
+      color.blue.bold(
+        `Refreshing stored shipping costs for ${color.white.bold(
+          codes.length
+        )} countries from Print&Bind: ${color.white.bold(codes.join(', '))}`
       )
     );
+
+    for (let i = 0; i < codes.length; i++) {
+      const countryCode = codes[i];
+      for (const size of SHIPPING_RATE_SIZES) {
+        try {
+          const cost = await this.quoteShippingCost(
+            countryCode,
+            [
+              {
+                productType: 'cards',
+                type: 'physical',
+                subType: 'none',
+                numberOfTracks: size,
+                amount: 1,
+              },
+            ],
+            { fresh: true }
+          );
+          if (cost === null) {
+            this.logger.log(
+              color.red.bold(
+                `[${i + 1}/${codes.length}] No shipping quote for ${color.white.bold(
+                  countryCode
+                )} at ${color.white.bold(size)} tracks; stored rate left as is`
+              )
+            );
+            continue;
+          }
+
+          const rounded = parseFloat(cost.toFixed(2));
+          const existing = await this.prisma.shippingCostNew.findFirst({
+            where: { country: countryCode, size },
+          });
+          if (existing) {
+            await this.prisma.shippingCostNew.update({
+              where: { id: existing.id },
+              data: { cost: rounded },
+            });
+          } else {
+            await this.prisma.shippingCostNew.create({
+              data: { country: countryCode, size, cost: rounded },
+            });
+          }
+          await this.cache.del(`shipping_costs_${countryCode}_${size}`);
+
+          this.logger.log(
+            color.blue.bold(
+              `[${i + 1}/${codes.length}] Stored shipping cost for ${color.white.bold(
+                countryCode
+              )} at ${color.white.bold(size)} tracks: ${color.white.bold(
+                rounded.toFixed(2)
+              )}`
+            )
+          );
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Error storing shipping cost for ${color.white.bold(
+                countryCode
+              )} at ${color.white.bold(size)} tracks: ${error}`
+            )
+          );
+        }
+      }
+      // Gentle pause between countries to stay clear of the API's request ceiling.
+      if (i < codes.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    // The shipping-info page caches its table for an hour; show new rates now.
+    await this.cache.del('shipping_info_by_country_v4');
   }
 
   public async getShippingCosts(

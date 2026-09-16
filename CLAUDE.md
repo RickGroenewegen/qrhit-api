@@ -102,8 +102,18 @@ REST API documented at https://www.printenbind.nl/api/docs (OpenAPI at
 - `POST /orders` places (checks out) the order immediately; there is no
   separate finish step. `processOrderRequest` therefore refuses to place
   orders on the live host unless `ENVIRONMENT=production` and runs
-  `/orders/calculate` instead. `/orders/calculate` never creates anything but
-  also does not price delivery.
+  `/orders/calculate` instead. `/orders/calculate` never creates anything.
+- `/orders/calculate` does price delivery: `delivery_amount` (EUR ex VAT,
+  already inside `amount`). It only fetches and checks a file when the
+  article carries one; leave the file fields off and `copies` is priced as
+  sent. That is how `quoteShippingCost` gets a shipping quote for a cart
+  without any PDF. Checkout (`calculateOrder`) charges that quote and falls
+  back to the stored `shipping_costs_new` rates plus their flat overrides
+  when Print&Bind is unreachable; the admin "calculate shipping costs" bulk
+  action refreshes that table from the same quotes.
+- Calculate validates the postal code format only for NL, BE, DE, FR and GB
+  (checked September 2026); every other country accepts any string. The
+  email domain must exist.
 - Products: `losbladig` (60x60 game cards, or A4 sheets) and `werkblad`
   (120x120 box insert cards). `accessory_item` is required for our account
   (`none` or the customer-specific `box_qrsong`). `borderless: true` and

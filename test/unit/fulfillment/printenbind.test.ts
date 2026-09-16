@@ -22,6 +22,7 @@ import {
   vi,
   beforeAll,
   beforeEach,
+  afterEach,
   afterAll,
 } from 'vitest';
 import fs from 'fs';
@@ -202,6 +203,8 @@ beforeEach(() => {
   });
   discountMock.calculateVolumeDiscount.mockResolvedValue(0);
   prismaMock.shippingCostNew.findFirst.mockResolvedValue({ cost: 5.95 });
+  // A failed quote backs off for a minute; do not let that leak between tests.
+  (peb as any).shippingQuoteBlockedUntil = 0;
   fetchMock.mockImplementation(async (url: any, init: any = {}) => {
     throw new Error(
       `Unexpected fetch in test: ${init?.method || 'GET'} ${url}`
@@ -522,6 +525,10 @@ describe('getOrderType', () => {
 
 // ---------------------------------------------------------------------------
 // calculateOrder — checkout totals
+//
+// The default fetch mock rejects every request, so Print&Bind is
+// "unreachable" here and shipping comes from the stored rates plus their
+// flat overrides. The live-quote path is covered in the next block.
 // ---------------------------------------------------------------------------
 describe('calculateOrder', () => {
   function cardsItem(overrides: Record<string, any> = {}): any {
@@ -545,6 +552,7 @@ describe('calculateOrder', () => {
       orderId: '',
       total: 49 + 2.99, // 51.99: product + flat NL shipping
       shipping: 2.99,
+      shippingSaved: 0,
       handling: 0,
       taxRateShipping: 21,
       taxRate: 21,
@@ -574,13 +582,23 @@ describe('calculateOrder', () => {
     expect(r.data.payment).toBe(2.99);
   });
 
-  it('gives free shipping to NL/DE/BE from 2 playlists', async () => {
+  it('gives free shipping to NL/DE/BE from 2 playlists and reports the waived flat rate', async () => {
     const r = await peb.calculateOrder({
       countrycode: 'NL',
       cart: { items: [cardsItem({ amount: 2 })] },
     });
     expect(r.data.shipping).toBe(0);
+    expect(r.data.shippingSaved).toBe(2.99);
     expect(r.data.total).toBe(98);
+  });
+
+  it('reports no saving when shipping is charged', async () => {
+    const r = await peb.calculateOrder({
+      countrycode: 'DE',
+      cart: { items: [cardsItem()] },
+    });
+    expect(r.data.shipping).toBe(5.95);
+    expect(r.data.shippingSaved).toBe(0);
   });
 
   it('uses the database shipping cost for other countries (DE, 1 playlist)', async () => {
@@ -712,6 +730,313 @@ describe('calculateOrder', () => {
     });
     expect(r.success).toBe(false);
     expect(r.error).toContain('Error calculating order');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// quoteShippingCost + calculateOrder with a live Print&Bind quote
+// ---------------------------------------------------------------------------
+describe('quoteShippingCost', () => {
+  function cardsItem(overrides: Record<string, any> = {}): any {
+    return {
+      productType: 'cards',
+      type: 'physical',
+      subType: 'none',
+      numberOfTracks: 100,
+      amount: 1,
+      price: 49,
+      ...overrides,
+    };
+  }
+
+  function quoteRoute(deliveryAmount: any, status = 200) {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders/calculate`,
+        response: () =>
+          jsonResponse(
+            status === 200
+              ? { data: { id: null, amount: 9.72, delivery_amount: deliveryAmount } }
+              : { message: 'Invalid zip code', errors: { postalcode: ['Invalid zip code'] } },
+            { status }
+          ),
+      },
+    ]);
+  }
+
+  it('posts the cart as file-less articles to /orders/calculate and returns delivery_amount', async () => {
+    quoteRoute(3.45);
+    const cost = await peb.quoteShippingCost('NL', [cardsItem()]);
+    expect(cost).toBe(3.45);
+
+    const [call] = sentRequests('POST', '/orders/calculate');
+    const req = body(call);
+    expect(req.country).toBe('NL');
+    expect(req.delivery_method).toBe('post');
+    expect(req.articles).toHaveLength(1);
+    const article = req.articles[0];
+    expect(article).toMatchObject({
+      product: 'losbladig',
+      number: 1,
+      copies: 200, // 100 tracks × 2 pages
+      size: 'custom',
+      size_custom_width: 60,
+      accessory_item: 'none',
+      add_inserts: false,
+    });
+    expect(article).not.toHaveProperty('add_file_method');
+    expect(article).not.toHaveProperty('file_url');
+    expect(article).not.toHaveProperty('file_overwrite');
+    expect(article).not.toHaveProperty('comment');
+    // 5s ceiling so a slow Print&Bind cannot stall the checkout
+    expect(call[1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('sends a well-formed postcode for the countries that validate it', async () => {
+    quoteRoute(7.85);
+    await peb.quoteShippingCost('DE', [cardsItem()]);
+    const req = body(sentRequests('POST', '/orders/calculate')[0]);
+    expect(req.country).toBe('DE');
+    expect(req.postalcode).toBe('10115');
+    expect(req.delivery_method).toBe('international');
+  });
+
+  it('keeps the placeholder address for countries that accept any postcode', async () => {
+    quoteRoute(18.31);
+    await peb.quoteShippingCost('US', [cardsItem()]);
+    const req = body(sentRequests('POST', '/orders/calculate')[0]);
+    expect(req.postalcode).toBe('1234AB');
+  });
+
+  it('folds playlist amount into number and carries the gift box accessory', async () => {
+    quoteRoute(5.95);
+    await peb.quoteShippingCost('NL', [
+      cardsItem({ amount: 3, boxEnabled: true, boxQuantity: 1 }),
+    ]);
+    const article = body(sentRequests('POST', '/orders/calculate')[0]).articles[0];
+    expect(article.number).toBe(3);
+    expect(article.accessory_group).toBe('packaging');
+    expect(article.accessory_item).toBe('box_qrsong');
+  });
+
+  it('quotes sheets as A4 articles', async () => {
+    quoteRoute(3.45);
+    await peb.quoteShippingCost('NL', [
+      cardsItem({ type: 'sheets', subType: 'sheets', numberOfTracks: 100 }),
+    ]);
+    const article = body(sentRequests('POST', '/orders/calculate')[0]).articles[0];
+    expect(article.size).toBe('a4');
+    expect(article.copies).toBe(18); // ceil(100/12) sheets × 2 sides
+  });
+
+  it('returns null without calling Print&Bind when nothing physical is in the cart', async () => {
+    const cost = await peb.quoteShippingCost('NL', [
+      { productType: 'giftcard', type: 'digital', amount: 1, price: 25 },
+      cardsItem({ type: 'digital' }),
+    ]);
+    expect(cost).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('serves a cached quote without calling Print&Bind', async () => {
+    cacheMock.get.mockResolvedValue('4.2');
+    const cost = await peb.quoteShippingCost('NL', [cardsItem()]);
+    expect(cost).toBe(4.2);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(String(cacheMock.get.mock.calls[0][0])).toMatch(/^pb_shipping_quote_NL_[0-9a-f]{40}$/);
+  });
+
+  it('caches a fresh quote for six hours, and `fresh` bypasses the cache', async () => {
+    cacheMock.get.mockResolvedValue('4.2');
+    quoteRoute(3.45);
+    const cost = await peb.quoteShippingCost('NL', [cardsItem()], { fresh: true });
+    expect(cost).toBe(3.45);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cacheMock.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^pb_shipping_quote_NL_/),
+      '3.45',
+      6 * 3600
+    );
+  });
+
+  it('returns null on a validation error (422)', async () => {
+    quoteRoute(null, 422);
+    expect(await peb.quoteShippingCost('DE', [cardsItem()])).toBeNull();
+    expect(cacheMock.set).not.toHaveBeenCalled();
+  });
+
+  it('returns null when the response carries no delivery_amount', async () => {
+    quoteRoute(undefined);
+    expect(await peb.quoteShippingCost('NL', [cardsItem()])).toBeNull();
+  });
+
+  it('backs off for a minute after a network failure', async () => {
+    fetchMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    expect(await peb.quoteShippingCost('NL', [cardsItem()])).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    quoteRoute(3.45);
+    expect(await peb.quoteShippingCost('NL', [cardsItem()])).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // not retried while blocked
+  });
+});
+
+describe('calculateOrder with a live Print&Bind quote', () => {
+  function cardsItem(overrides: Record<string, any> = {}): any {
+    return {
+      productType: 'cards',
+      type: 'physical',
+      subType: 'none',
+      numberOfTracks: 100,
+      amount: 1,
+      price: 49,
+      ...overrides,
+    };
+  }
+
+  function quoteRoute(deliveryAmount: number) {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders/calculate`,
+        response: () =>
+          jsonResponse({ data: { id: null, amount: 9.72, delivery_amount: deliveryAmount } }),
+      },
+    ]);
+  }
+
+  it('charges the quoted delivery_amount instead of the flat NL rate', async () => {
+    quoteRoute(3.45);
+    const r = await peb.calculateOrder({
+      countrycode: 'NL',
+      cart: { items: [cardsItem()] },
+    });
+    expect(r.success).toBe(true);
+    expect(r.data.shipping).toBe(3.45);
+    expect(r.data.payment).toBe(3.45);
+    expect(r.data.total).toBeCloseTo(49 + 3.45, 10);
+    expect(prismaMock.shippingCostNew.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('charges the quote for a country with no stored rate at all', async () => {
+    prismaMock.shippingCostNew.findFirst.mockResolvedValue(null);
+    quoteRoute(18.31);
+    const r = await peb.calculateOrder({
+      countrycode: 'US',
+      cart: { items: [cardsItem()] },
+    });
+    expect(r.success).toBe(true);
+    expect(r.data.shipping).toBe(18.31);
+  });
+
+  it('ignores the ES/NO/SE flat rate when Print&Bind quotes', async () => {
+    quoteRoute(8.61);
+    const r = await peb.calculateOrder({
+      countrycode: 'ES',
+      cart: { items: [cardsItem()] },
+    });
+    expect(r.data.shipping).toBe(8.61);
+  });
+
+  it('still ships free to NL/DE/BE from 2 playlists and reports the waived quote', async () => {
+    quoteRoute(5.95);
+    const r = await peb.calculateOrder({
+      countrycode: 'DE',
+      cart: { items: [cardsItem({ amount: 2 })] },
+    });
+    expect(r.data.shipping).toBe(0);
+    expect(r.data.shippingSaved).toBe(5.95);
+    expect(r.data.total).toBe(98);
+  });
+
+  it('does not quote digital-only carts', async () => {
+    const r = await peb.calculateOrder({
+      countrycode: 'NL',
+      cart: { items: [cardsItem({ type: 'digital' })] },
+    });
+    expect(r.data.shipping).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the stored rate and flat overrides when the quote fails', async () => {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders/calculate`,
+        response: () => jsonResponse({ message: 'Server error' }, { status: 500 }),
+      },
+    ]);
+    const nl = await peb.calculateOrder({
+      countrycode: 'NL',
+      cart: { items: [cardsItem()] },
+    });
+    expect(nl.data.shipping).toBe(2.99);
+
+    const de = await peb.calculateOrder({
+      countrycode: 'DE',
+      cart: { items: [cardsItem()] },
+    });
+    expect(de.data.shipping).toBe(5.95); // stored rate
+    expect(prismaMock.shippingCostNew.findFirst).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculateShippingCosts — admin bulk refresh of shipping_costs_new
+// ---------------------------------------------------------------------------
+describe('calculateShippingCosts', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('quotes every stored size per country and upserts the table', async () => {
+    const quotes: Record<string, number> = { '160': 3.45, '810': 5.95, '2000': 7.9 };
+    fetchMock.mockImplementation(async (url: any, init: any = {}) => {
+      expect(String(url)).toBe(`${PB}/orders/calculate`);
+      const copies = String(JSON.parse(init.body).articles[0].copies);
+      return jsonResponse({ data: { delivery_amount: quotes[copies] } });
+    });
+    prismaMock.shippingCostNew.findFirst.mockImplementation(async ({ where }: any) =>
+      where.size === 80 ? { id: 7, country: 'NL', size: 80, cost: 9 } : null
+    );
+
+    await peb.calculateShippingCosts(['nl']);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Fresh quotes: the cache is bypassed on the way in...
+    expect(cacheMock.get).not.toHaveBeenCalled();
+    expect(prismaMock.shippingCostNew.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { cost: 3.45 },
+    });
+    expect(prismaMock.shippingCostNew.create).toHaveBeenCalledWith({
+      data: { country: 'NL', size: 405, cost: 5.95 },
+    });
+    expect(prismaMock.shippingCostNew.create).toHaveBeenCalledWith({
+      data: { country: 'NL', size: 1000, cost: 7.9 },
+    });
+    // ...and the readers' caches are dropped on the way out.
+    expect(cacheMock.del).toHaveBeenCalledWith('shipping_costs_NL_80');
+    expect(cacheMock.del).toHaveBeenCalledWith('shipping_costs_NL_405');
+    expect(cacheMock.del).toHaveBeenCalledWith('shipping_costs_NL_1000');
+    expect(cacheMock.del).toHaveBeenCalledWith('shipping_info_by_country_v4');
+  });
+
+  it('leaves the stored rate alone when a size gets no quote', async () => {
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/orders/calculate`,
+        response: () => jsonResponse({ message: 'nope' }, { status: 422 }),
+      },
+    ]);
+    await peb.calculateShippingCosts(['DE']);
+    expect(prismaMock.shippingCostNew.update).not.toHaveBeenCalled();
+    expect(prismaMock.shippingCostNew.create).not.toHaveBeenCalled();
   });
 });
 
