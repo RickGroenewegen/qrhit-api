@@ -1,5 +1,7 @@
 import * as crypto from 'crypto';
+import * as dns from 'dns/promises';
 import * as fs from 'fs/promises';
+import * as net from 'net';
 import * as path from 'path';
 import axios from 'axios';
 import sharp from 'sharp';
@@ -24,6 +26,64 @@ const ART_DIR = 'suggestion_art';
 /** Public path of the thumbnail; the HTML view points every card here. */
 export function suggestionArtPath(playlistId: string): string {
   return `/vibe/playlist-suggestions/art/${encodeURIComponent(playlistId)}`;
+}
+
+/** True for loopback, private, link-local and other non-public addresses. */
+function isPrivateAddress(address: string): boolean {
+  if (net.isIPv4(address)) {
+    const [a, b] = address.split('.').map(Number);
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      a >= 224
+    );
+  }
+  const v6 = address.toLowerCase();
+  if (v6.startsWith('::ffff:')) return isPrivateAddress(v6.slice(7));
+  return (
+    v6 === '::' ||
+    v6 === '::1' ||
+    v6.startsWith('fc') ||
+    v6.startsWith('fd') ||
+    v6.startsWith('fe80')
+  );
+}
+
+/**
+ * `Playlist.image` is filled from client-supplied cart items, so treat the
+ * URL as untrusted: https only, a real hostname (no IP literals), and every
+ * resolved address must be public. Redirects are not followed so a public
+ * host cannot bounce us to an internal one.
+ */
+async function isSafeImageUrl(source: string): Promise<boolean> {
+  let url: URL;
+  try {
+    url = new URL(source);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) return false;
+  if (net.isIP(url.hostname)) return false;
+  try {
+    const records = await dns.lookup(url.hostname, { all: true });
+    return records.length > 0 && records.every((r) => !isPrivateAddress(r.address));
+  } catch {
+    return false;
+  }
+}
+
+/** Resolve a stored "/public/<file>" path and refuse anything outside PUBLIC_DIR. */
+function resolveCustomImage(publicDir: string, customImage: string): string | null {
+  if (customImage.includes('..') || customImage.includes('\0')) return null;
+  const relative = customImage.replace(/^\/?public\//, '');
+  const base = path.resolve(publicDir);
+  const target = path.resolve(base, relative);
+  return target.startsWith(base + path.sep) ? target : null;
 }
 
 /**
@@ -63,12 +123,16 @@ export async function getSuggestionArtwork(
   try {
     if (playlist.customImage) {
       // Stored as "/public/playlist_images/<file>", served from PUBLIC_DIR.
-      const relative = playlist.customImage.replace(/^\/?public\//, '');
-      original = await fs.readFile(path.join(publicDir, relative));
+      const file = resolveCustomImage(publicDir, playlist.customImage);
+      if (!file) return null;
+      original = await fs.readFile(file);
     } else {
+      if (!(await isSafeImageUrl(source))) return null;
       const response = await axios.get<ArrayBuffer>(source, {
         responseType: 'arraybuffer',
         timeout: 15000,
+        maxRedirects: 0,
+        maxContentLength: 10 * 1024 * 1024,
       });
       original = Buffer.from(response.data);
     }
