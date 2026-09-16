@@ -3266,6 +3266,58 @@ export default async function adminRoutes(
     }
   );
 
+  // Print & Bind API version toggle (bulk actions): v1 = legacy JSON API,
+  // v2 = REST API. Stored as an app setting so it survives restarts.
+  fastify.get(
+    '/admin/printenbind/api-version',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const info = await PrintEnBind.getInstance().getApiInfo();
+        reply.send({ success: true, ...info });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to read the Print&Bind API version',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/printenbind/api-version',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { version } = request.body || {};
+      if (version !== 'v1' && version !== 'v2') {
+        return reply.status(400).send({
+          success: false,
+          error: "version must be 'v1' or 'v2'",
+        });
+      }
+      try {
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const printEnBind = PrintEnBind.getInstance();
+        if (!printEnBind.apiUrlFor(version)) {
+          return reply.status(400).send({
+            success: false,
+            error: `${
+              version === 'v1' ? 'PRINTENBIND_V1_API_URL' : 'PRINTENBIND_API_URL'
+            } is not set on this server`,
+          });
+        }
+        await printEnBind.setApiVersion(version);
+        reply.send({ success: true, ...(await printEnBind.getApiInfo()) });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to switch the Print&Bind API version',
+        });
+      }
+    }
+  );
+
   // Print & Bind API
   fastify.post(
     '/admin/printenbind/update-payments',

@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/printers/printenbind.ts (the REAL module — the global
+ * Unit tests for src/printers/printenbindV2.ts, the REST API integration (the REAL module — the global
  * recording mock from test/setup.ts is removed via vi.unmock below).
  *
  * Collaborators are mocked at the module boundary:
@@ -30,7 +30,7 @@ import path from 'path';
 import { outbound } from '../../helpers/recording-mock';
 import { MAX_CARDS_PHYSICAL } from '../../../src/config/constants';
 
-vi.unmock('../../../src/printers/printenbind');
+vi.unmock('../../../src/printers/printenbindV2');
 
 // ---------------------------------------------------------------------------
 // Module-boundary mocks (hoisted)
@@ -132,7 +132,7 @@ vi.mock('cron', () => ({
   },
 }));
 
-import PrintEnBind from '../../../src/printers/printenbind';
+import PrintEnBind from '../../../src/printers/printenbindV2';
 
 // ---------------------------------------------------------------------------
 // Fixtures / helpers

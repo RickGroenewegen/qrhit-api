@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/printers/printenbind.ts (PrintEnBind class).
+ * Unit tests for src/printers/printenbindV2.ts (PrintEnBindV2 class).
  *
  * This module is globally mocked as a recording proxy in test/setup.ts.
  * We vi.unmock it here and re-mock all its heavy dependencies so the real
@@ -22,7 +22,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.unmock('../../src/printers/printenbind');
+vi.unmock('../../src/printers/printenbindV2');
 
 // ─── cluster: suppress the primary-worker cron scheduling ─────────────────
 vi.mock('cluster', () => ({ default: { isPrimary: false }, isPrimary: false }));
@@ -132,7 +132,7 @@ vi.mock('../../src/logger', () => ({
   },
 }));
 
-import PrintEnBind from '../../src/printers/printenbind';
+import PrintEnBind from '../../src/printers/printenbindV2';
 
 const pnb = PrintEnBind.getInstance();
 

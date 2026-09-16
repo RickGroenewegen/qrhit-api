@@ -91,9 +91,21 @@ than duplicating the mapping.
 
 ## Print&Bind (physical card printing)
 
-All Print&Bind code lives in `src/printers/printenbind.ts`; it talks to the
-REST API documented at https://www.printenbind.nl/api/docs (OpenAPI at
-`/api/openapi.json`). Keep changes to the integration inside that file.
+Two integrations exist and an admin toggle picks one at runtime:
+
+| file | API | env |
+|---|---|---|
+| `src/printers/printenbindV2.ts` | REST, https://www.printenbind.nl/api/docs (OpenAPI at `/api/openapi.json`) | `PRINTENBIND_API_URL` (`.../api/rest`) |
+| `src/printers/printenbindV1.ts` | legacy JSON (`/v1/orders`, `/v1/delivery`), kept as rollback | `PRINTENBIND_V1_API_URL` (bare `.../api`, the code appends `/v1`) |
+
+`src/printers/printenbind.ts` is the facade everything else imports. It reads
+the `printenbind_api_version` app setting (`v1` or `v2`, default `v2`) per
+call, owns the hourly tracking and box-instruction crons, and is what the
+bulk-actions "Print&Bind API" toggle flips through
+`/admin/printenbind/api-version`. Both integrations use the same
+`PRINTENBIND_API_KEY`; v1 sends it raw, v2 as a bearer token. Orders carry
+the order id of the API that placed them, so after a switch the tracking
+poll cannot see orders placed on the other API.
 
 - `PRINTENBIND_API_URL` / `PRINTENBIND_API_KEY`: development must point at
   `https://sandbox.printenbind.nl/api/rest` with the sandbox token; production
