@@ -355,7 +355,7 @@
   "voucher.transform": "Transforma as tuas playlists favoritas do Spotify em cartões musicais interativos para festas, noites de jogos com amigos e quizzes musicais!",
   "voucher.title": "Vale-presente",
   "voucher.turn": "Comece a criar suas próprias cartas de música em minutos!",
-  "voucher.claim": "Reclama o teu vale presente!",
+  "voucher.claim": "Pega teu vale-presente!",
   "voucher.goTo": "Vá para",
   "voucher.click": "Clique em 'Cartões-presente'",
   "voucher.enterCode": "Insira o código do voucher e clique em 'Resgatar'",
@@ -663,5 +663,7 @@
   "design_alter.imageCardFront": "Frente do cartão",
   "design_alter.imageCardBack": "Verso do cartão",
   "design_alter.imageBoxFront": "Inlay da caixa (frente)",
-  "design_alter.imageBoxBack": "Inlay da caixa (verso)"
+  "design_alter.imageBoxBack": "Inlay da caixa (verso)",
+  "invoice.discountPercentLine": "Desconto {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Código de desconto {{code}}"
 }

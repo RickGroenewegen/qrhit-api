@@ -12,7 +12,14 @@ import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
-import Discount from './discount';
+import Discount, { DiscountApplyError } from './discount';
+import {
+  allocateDiscount,
+  buildDiscountBase,
+  exVat,
+  goodsVatAfterDiscount,
+  round2,
+} from './services/discount-allocation';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
@@ -860,6 +867,19 @@ class Mollie {
   }
 
   private async cleanPayments(): Promise<void> {
+    try {
+      const swept = await this.discount.sweepExpiredReservations();
+      if (swept > 0) {
+        this.logger.log(
+          color.blue.bold(
+            `Released ${color.white.bold(swept)} expired discount reservation(s).`
+          )
+        );
+      }
+    } catch (error: any) {
+      this.logger.log(color.red.bold('Error sweeping discount reservations!'));
+    }
+
     try {
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
@@ -1745,9 +1765,48 @@ class Mollie {
         };
       }
 
+      const paymentClientResult = await this.getClient(clientIp);
+      const paymentClient = paymentClientResult.client;
+
+      // A second "Pay" click used to find the customer's own balance still
+      // reserved by their earlier, still-open Mollie payment, and then either
+      // refused the code or silently charged full price. Release those
+      // reservations first; cancelling the stale Mollie payment is a courtesy
+      // (iDEAL payments are usually not cancelable) and its failure is fine.
+      const customerEmail: string = String(
+        params.extraOrderData.email || ''
+      ).trim();
+      const cartCodes = Discount.normalizeCodes(params.cart.discounts);
+      if (cartCodes.length > 0 && customerEmail) {
+        const superseded = await this.discount.supersedeOpenReservations(
+          customerEmail,
+          cartCodes
+        );
+        for (const stalePaymentId of superseded.paymentIds) {
+          try {
+            await paymentClient.payments.cancel({ paymentId: stalePaymentId });
+            this.logger.log(
+              color.blue.bold('Cancelled superseded payment: ') +
+                color.white.bold(stalePaymentId)
+            );
+          } catch (e) {
+            this.logger.log(
+              color.yellow.bold(
+                `Could not cancel superseded payment ${color.white.bold(
+                  stalePaymentId
+                )}: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        }
+      }
+
+      // Throws DiscountApplyError when a code in the cart cannot be applied,
+      // so the customer is told instead of being charged the full amount.
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
-        calculateResult.data.total
+        calculateResult.data,
+        customerEmail
       );
 
       discountAmount = discountResult.discountAmount;
@@ -1758,11 +1817,13 @@ class Mollie {
         discountAmount = calculateResult.data.total;
       }
 
-      calculateResult.data.total -= discountAmount;
-      calculateResult.data.discount = discountAmount;
+      const discountBase = buildDiscountBase(calculateResult.data);
+      const allocation = allocateDiscount(discountAmount, discountBase);
 
-      const paymentClientResult = await this.getClient(clientIp);
-      const paymentClient = paymentClientResult.client;
+      calculateResult.data.total = round2(
+        calculateResult.data.total - discountAmount
+      );
+      calculateResult.data.discount = discountAmount;
 
       const translations = await this.translation.getTranslationsByPrefix(
         params.locale,
@@ -1978,32 +2039,22 @@ class Mollie {
         );
       }
 
-      const productVATPrice = parseFloat(
-        (
-          parseFloat(calculateResult.data.price) *
-          (calculateResult.data.taxRate / 100)
-        ).toFixed(2)
+      // VAT actually collected on the goods: products plus the VAT-inclusive
+      // box / QRGames add-ons, net of the goods share of the discount and of
+      // the volume discount (both are already inside `productsGross`).
+      // Reverse charge sets taxRate to 0, so this is correctly 0 as well.
+      const goodsTaxRate = calculateResult.data.taxRate ?? 0;
+      const goodsGross = round2(
+        discountBase.productsGross + discountBase.addonsGross
+      );
+      const productVATPrice = goodsVatAfterDiscount(
+        goodsGross,
+        allocation.discountGoods,
+        goodsTaxRate
       );
 
-      // Box and QRGames fees are VAT-INCLUSIVE add-ons charged at the product
-      // tax rate (boxTierPrice / QRGAMES_UPGRADE_PRICE are gross amounts) and
-      // are folded straight into `total`. Back out the embedded VAT so the
-      // order's total output VAT (and the invoice) reflects it — otherwise
-      // the line items under-sum the total by the add-on VAT. When reverse
-      // charge applies taxRate is 0, so this is correctly 0 as well.
-      const addonsTaxRate = calculateResult.data.taxRate ?? 0;
-      const addonsGross =
-        (calculateResult.data.boxFee || 0) +
-        (calculateResult.data.gamesFee || 0);
-      const addonsVATPrice = parseFloat(
-        (
-          addonsGross -
-          addonsGross / (1 + addonsTaxRate / 100)
-        ).toFixed(2)
-      );
-
-      const totalVATPrice = parseFloat(
-        (productVATPrice + shippingVATPrice + addonsVATPrice).toFixed(2)
+      const totalVATPrice = round2(
+        productVATPrice + shippingVATPrice - allocation.discountShippingVAT
       );
 
       const playlists = await Promise.all(
@@ -2123,8 +2174,17 @@ class Mollie {
         })
       );
 
-      let totalProfit = parseFloat(
-        (productPriceWithoutTax + shippingPriceWithoutTax).toFixed(2)
+      // Ex-VAT revenue: product + shipping price minus what the discount code
+      // and the volume discount took off, also ex-VAT.
+      const volumeDiscountExcl = exVat(
+        discountBase.volumeDiscount,
+        goodsTaxRate
+      );
+      let totalProfit = round2(
+        productPriceWithoutTax +
+          shippingPriceWithoutTax -
+          allocation.discountWithoutTax -
+          volumeDiscountExcl
       );
 
       if (params.cart.items[0].productType == 'giftcard') {
@@ -2136,34 +2196,22 @@ class Mollie {
         }
       }
 
-      delete params.extraOrderData.orderType;
-      delete params.extraOrderData.total;
-      delete params.extraOrderData.price;
-      delete params.extraOrderData.agreeTerms;
-      delete params.extraOrderData.agreeNoRefund;
-      // Strip form-echoed fields the server recomputes below. Without this,
-      // the client's remembered values (from the /order/calculate response)
-      // would spread in via `...params.extraOrderData` and overwrite our
-      // authoritative numbers — masking reverse-charge bugs (taxRate=0 on
-      // row, productVATPrice=2.26 stored from a stale calc) and in general
-      // opening a trust-the-client hole on VAT / shipping / totals.
-      delete params.extraOrderData.taxRate;
-      delete params.extraOrderData.taxRateShipping;
-      delete params.extraOrderData.shipping;
-      delete params.extraOrderData.volumeDiscount;
-      delete params.extraOrderData.gamesFee;
+      // Only the address/contact fields the checkout form owns may reach the
+      // Payment row. Everything the server computes (totals, VAT, discount,
+      // fees, status) is set explicitly below and must never be overwritten
+      // by whatever the client echoes back in extraOrderData.
+      const customerFields = Mollie.pickCustomerFields(params.extraOrderData);
 
-      // Use the tax rate the calculateOrder pipeline resolved (which
-      // already reflects reverse charge when applicable) instead of the
-      // raw country VAT — otherwise totalPriceWithoutTax ends up backed
-      // out of the wrong denominator for B2B reverse-charge orders.
-      const effectiveTaxRate = calculateResult.data.taxRate ?? 0;
-      const molliePaymentAmountWithoutTax = parseFloat(
-        (molliePaymentAmount / (1 + effectiveTaxRate / 100)).toFixed(2)
+      // Ex-VAT total = paid total minus the VAT actually collected. Backing
+      // it out of a single rate would be wrong whenever shipping is taxed at
+      // another rate than the goods, or when a discount is in play.
+      const molliePaymentAmountWithoutTax = round2(
+        molliePaymentAmount - totalVATPrice
       );
 
       const insertResult = await this.prisma.payment.create({
         data: {
+          ...customerFields,
           paymentId: molliePaymentId,
           vibe,
           user: {
@@ -2184,7 +2232,18 @@ class Mollie {
           test: false,
           profit: totalProfit,
           printApiPrice: 0,
+          shipping: useOrderType == 'physical' ? discountBase.shippingGross : 0,
+          volumeDiscount: discountBase.volumeDiscount,
           discount: discountAmount,
+          pricingVersion: 2,
+          discountPercent: discountResult.percent,
+          discountPercentAmount: discountResult.percentAmount,
+          discountCodes: discountResult.label
+            ? discountResult.label.substring(0, 255)
+            : null,
+          discountWithoutTax: allocation.discountWithoutTax,
+          discountVAT: allocation.discountVAT,
+          discountShipping: allocation.discountShipping,
           boxFee: calculateResult.data.boxFee || 0,
           gamesFee: calculateResult.data.gamesFee || 0,
           currency: presentmentCurrency,
@@ -2195,7 +2254,6 @@ class Mollie {
           vatIdChecked: calculateResult.data.vatIdChecked || null,
           boxInstructionsMailSent: false,
           PaymentHasPlaylist: { create: playlists },
-          ...params.extraOrderData,
         },
       });
 
@@ -2251,10 +2309,13 @@ class Mollie {
         },
       });
 
-      // Associate the payment with each discount use
-      for (const discountUseId of discountUseIds) {
-        await this.discount.associatePaymentWithDiscountUse(
-          discountUseId,
+      // Bind the reservations to the payment. Free orders have no webhook to
+      // settle them later, so they are confirmed right here.
+      if (molliePaymentStatus === 'paid') {
+        await this.discount.confirmDiscountUsesByIds(discountUseIds, paymentId);
+      } else {
+        await this.discount.attachPaymentToDiscountUses(
+          discountUseIds,
           paymentId
         );
       }
@@ -2328,6 +2389,16 @@ class Mollie {
         );
       }
 
+      // A code in the cart could not be applied: name it so the checkout can
+      // drop it and explain, rather than charging the full price in silence.
+      if (e instanceof DiscountApplyError) {
+        return {
+          success: false,
+          error: 'discount_failed',
+          discount: { code: e.code, message: e.messageKey },
+        };
+      }
+
       // Map the few failures the checkout has specific copy for onto stable
       // codes; everything else stays generic so we don't leak internals.
       const message = e instanceof Error ? e.message : '';
@@ -2343,6 +2414,43 @@ class Mollie {
         error,
       };
     }
+  }
+
+  /**
+   * The checkout form fields that are Payment columns. Anything else the
+   * client sends (echoed totals, VAT, discount, fees, status) is dropped.
+   */
+  public static pickCustomerFields(
+    extra: any
+  ): { fullname: string; email: string } & Record<string, any> {
+    const allowed = [
+      'isBusinessOrder',
+      'companyName',
+      'vatId',
+      'address',
+      'housenumber',
+      'city',
+      'zipcode',
+      'countrycode',
+      'marketingEmails',
+      'differentInvoiceAddress',
+      'invoiceAddress',
+      'invoiceHousenumber',
+      'invoiceCity',
+      'invoiceZipcode',
+      'invoiceCountrycode',
+      'fast',
+    ];
+    const out: { fullname: string; email: string } & Record<string, any> = {
+      fullname: String(extra?.fullname ?? ''),
+      email: String(extra?.email ?? ''),
+    };
+    for (const key of allowed) {
+      if (extra && extra[key] !== undefined) {
+        out[key] = extra[key];
+      }
+    }
+    return out;
   }
 
   public async canDownloadPDF(
@@ -2735,6 +2843,28 @@ class Mollie {
           (statusChanged ? '' : color.yellow.bold(' (replay — side effects skipped)'))
       );
 
+      // Discount reservations follow the payment status on EVERY webhook,
+      // replay or not. Both calls are idempotent, and a replayed failure
+      // webhook used to leave the balance locked forever because the release
+      // sat behind the status-flip claim.
+      if (this.failedPaymentStatus.includes(payment.status)) {
+        await this.discount.releaseDiscountUsesByPaymentId(dbPayment.id);
+      } else if (payment.status == 'paid') {
+        const confirmed = await this.discount.confirmDiscountUsesByPaymentId(
+          dbPayment.id
+        );
+        for (const shortfall of confirmed.shortfalls) {
+          this.logger.log(
+            color.red.bold('Discount shortfall: ') +
+              color.white.bold(shortfall.code) +
+              color.red.bold(' is over its budget by ') +
+              color.white.bold(`€${shortfall.over.toFixed(2)}`) +
+              color.red.bold(' after payment ') +
+              color.white.bold(payment.id)
+          );
+        }
+      }
+
       if (statusChanged || process.env['ENVIRONMENT'] == 'development') {
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
@@ -2776,8 +2906,6 @@ class Mollie {
             false,
             false
           );
-        } else if (this.failedPaymentStatus.includes(payment.status)) {
-          await this.discount.removeDiscountUsesByPaymentId(dbPayment.id);
         }
       }
     }
@@ -2887,6 +3015,13 @@ class Mollie {
         vibe: true,
         discount: true,
         volumeDiscount: true,
+        pricingVersion: true,
+        discountPercent: true,
+        discountPercentAmount: true,
+        discountCodes: true,
+        discountWithoutTax: true,
+        discountVAT: true,
+        discountShipping: true,
         currency: true,
         exchangeRate: true,
         totalPricePresentment: true,

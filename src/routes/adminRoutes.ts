@@ -11,7 +11,6 @@ import Data from '../data';
 import Charts from '../charts';
 import { OpenPerplex } from '../openperplex';
 import Push from '../push';
-import Discount from '../discount';
 import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
@@ -64,7 +63,6 @@ export default async function adminRoutes(
   const designer = Designer.getInstance();
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
-  const discount = new Discount();
   const calendar = CalendarService.getInstance();
   const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
@@ -2839,94 +2837,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Discount code management
-  fastify.post(
-    '/admin/discount/create',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const result = await discount.createAdminDiscountCode(request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.get(
-    '/admin/discount/all',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const result = await discount.getAllDiscounts();
-      if (result.success) {
-        reply.send({ success: true, discounts: result.discounts });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.post(
-    '/admin/discount/search',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const { searchTerm = '', filter = '', balanceFilter = '', page = 1, limit = 12 } = request.body;
-      const result = await discount.searchDiscounts({
-        searchTerm,
-        filter,
-        balanceFilter,
-        page: Number(page),
-        limit: Number(limit),
-      });
-      if (result.success) {
-        reply.send({
-          success: true,
-          discounts: result.discounts,
-          total: result.total,
-          page: result.page,
-          totalPages: result.totalPages,
-        });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.delete(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.deleteDiscountCode(id);
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.put(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.updateDiscountCode(id, request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
+  // Discount code management lives in discountRoutes.ts.
 
   // Event calendar management
   fastify.post(

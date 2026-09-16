@@ -657,5 +657,7 @@
   "design_alter.imageCardFront": "Kortets framsida",
   "design_alter.imageCardBack": "Kortets baksida",
   "design_alter.imageBoxFront": "Boxinlägg (fram)",
-  "design_alter.imageBoxBack": "Boxinlägg (bak)"
+  "design_alter.imageBoxBack": "Boxinlägg (bak)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattkod {{code}}"
 }

@@ -225,6 +225,44 @@
 					<td style="text-align:right;"><%= translations.totalInclVAT %></td>
 				</tr>
 
+				<% if (invoice) { %>
+					<% invoice.lines.forEach(function(line) { %>
+					<tr class="item">
+						<td><%= line.description %></td>
+						<td style="text-align:right;"><%= line.quantity %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate * line.unitExcl) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate * line.totalExcl) %></td>
+						<td style="text-align:right;"><%= line.rate === null ? '—' : (line.rate + '%') %></td>
+						<td style="text-align:right;"><%= line.rate === null ? '—' : moneyFormatter.format(displayRate * line.vat) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate * line.totalIncl) %></td>
+					</tr>
+					<% }); %>
+
+					<tr style="border-top: 2px solid #eed2bf;">
+						<td colspan="6" style="text-align:right; padding-top: 20px;"><strong><%= translations.subtotalExclVAT %>:</strong></td>
+						<td style="text-align:right; padding-top: 20px;"><strong><%= moneyFormatter.format(displayRate * invoice.summary.subtotalExcl) %></strong></td>
+					</tr>
+
+					<% if (payment.reverseCharge) { %>
+					<tr>
+						<td colspan="6" style="text-align:right; color: #0b2c31;"><strong><%= translations.reverseChargeLine || 'VAT reverse charged (0%)' %>:</strong></td>
+						<td style="text-align:right; color: #0b2c31;"><strong><%= moneyFormatter.format(0) %></strong></td>
+					</tr>
+					<% } else { %>
+						<% if (invoice.summary.goodsVat > 0) { %>
+						<tr>
+							<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= moneyFormatter.format(displayRate * invoice.summary.goodsVatBase) %>:</td>
+							<td style="text-align:right;"><%= moneyFormatter.format(displayRate * invoice.summary.goodsVat) %></td>
+						</tr>
+						<% } %>
+						<% if (orderType != 'digital' && invoice.summary.shippingVat > 0) { %>
+						<tr>
+							<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRateShipping %>% <%= translations.over %> <%= moneyFormatter.format(displayRate * invoice.summary.shippingVatBase) %> (<%= translations.shipping %>):</td>
+							<td style="text-align:right;"><%= moneyFormatter.format(displayRate * invoice.summary.shippingVat) %></td>
+						</tr>
+						<% } %>
+					<% } %>
+				<% } else { %>
 				<% playlists.forEach(function(playlist) {
 					const totalExclVAT = playlist.price - playlist.priceVAT;
 					const unitPriceExclVAT = totalExclVAT / playlist.amount;
@@ -344,6 +382,7 @@
 					<td colspan="6" style="text-align:right; color: #2e7d32;"><%= translations.discount %>:</td>
 					<td style="text-align:right; color: #2e7d32;">-<%= moneyFormatter.format(displayRate *totalDiscount) %></td>
 				</tr>
+				<% } %>
 				<% } %>
 
 				<tr class="total" style="border-top: 2px solid #0b2c31;">

@@ -658,5 +658,7 @@
   "design_alter.imageCardFront": "卡片正面",
   "design_alter.imageCardBack": "卡片背面",
   "design_alter.imageBoxFront": "盒内衬（正面）",
-  "design_alter.imageBoxBack": "盒内衬（背面）"
+  "design_alter.imageBoxBack": "盒内衬（背面）",
+  "invoice.discountPercentLine": "折扣 {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "优惠码 {{code}}"
 }

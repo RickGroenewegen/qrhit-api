@@ -360,7 +360,7 @@
   "voucher.transform": "Verwandle deine Lieblings-Spotify-Playlists in interaktive Musikkarten für Partys, Spieleabende mit Freunden und Musikquiz!",
   "voucher.title": "Geschenkgutschein",
   "voucher.turn": "Erstelle in Minuten deine eigenen Musikspielkarten!",
-  "voucher.claim": "Hol dir deinen Geschenkgutschein!",
+  "voucher.claim": "Hol dir deinen Gutschein!",
   "voucher.goTo": "Geh zu",
   "voucher.click": "Klick auf 'Geschenkkarten'",
   "voucher.enterCode": "Gib den Gutscheincode ein und klick auf 'Einlösen'",
@@ -668,5 +668,7 @@
   "design_alter.imageCardFront": "Karten-Vorderseite",
   "design_alter.imageCardBack": "Karten-Rückseite",
   "design_alter.imageBoxFront": "Box-Einlage (Vorne)",
-  "design_alter.imageBoxBack": "Box-Einlage (Hinten)"
+  "design_alter.imageBoxBack": "Box-Einlage (Hinten)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattcode {{code}}"
 }

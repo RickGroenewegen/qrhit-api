@@ -360,7 +360,7 @@
   "voucher.transform": "Verander je favoriete Spotify-afspeellijsten in interactieve muziekkaarten voor feestjes, spelavonden met vrienden en muziekquizzen!",
   "voucher.title": "Cadeaubon",
   "voucher.turn": "Binnen enkele minuten kun je je eigen muziekkaarten te maken!",
-  "voucher.claim": "Claim je cadeaubon!",
+  "voucher.claim": "Pak je cadeaubon!",
   "voucher.goTo": "Ga naar",
   "voucher.click": "Klik op 'Cadeaubonnen'",
   "voucher.enterCode": "Voer de vouchercode in en klik op 'Inwisselen'",
@@ -667,5 +667,7 @@
   "design_alter.imageCardFront": "Voorkant kaart",
   "design_alter.imageCardBack": "Achterkant kaart",
   "design_alter.imageBoxFront": "Doos inlay (voorkant)",
-  "design_alter.imageBoxBack": "Doos inlay (achterkant)"
+  "design_alter.imageBoxBack": "Doos inlay (achterkant)",
+  "invoice.discountPercentLine": "Korting {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Kortingscode {{code}}"
 }

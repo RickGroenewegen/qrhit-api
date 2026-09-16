@@ -45,6 +45,14 @@ model DiscountCode {
   promotional       Boolean             @default(false)
   promotionalUserId Int?
   promotionalUser   User?               @relation("PromotionalDiscountCode", fields: [promotionalUserId], references: [id], onDelete: SetNull)
+  // 'fixed' codes are EUR balance vouchers (amount = budget). 'percent' codes
+  // take `percent` off the goods subtotal and have no balance; their limits
+  // are maxUses / oncePerCustomer / maxDiscountAmount.
+  type              String              @default("fixed")
+  percent           Float?
+  maxDiscountAmount Float?
+  maxUses           Int?
+  oncePerCustomer   Boolean             @default(false)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
@@ -61,10 +69,20 @@ model DiscountCodedUses {
   discountCodeId Int
   payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   paymentId      Int?
+  // Lifecycle: 'reserved' while the checkout is open (counts until
+  // expiresAt), 'paid' once the payment settled, 'released' when the payment
+  // failed or was superseded. Legacy rows default to 'paid' so they keep
+  // counting exactly as before.
+  status         String       @default("paid")
+  expiresAt      DateTime?
+  email          String?      @db.VarChar(255)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([discountCodeId])
+  @@index([discountCodeId, status])
+  @@index([paymentId])
+  @@index([discountCodeId, email])
   @@map("discount_codes_uses")
 }
 
@@ -149,6 +167,15 @@ model Payment {
   profit                   Float                @default(0)
   discount                 Float                @default(0)
   volumeDiscount           Float                @default(0)
+  // pricingVersion 2 = VAT/profit computed net of discounts and the invoice
+  // rendered from the snapshot fields below (see src/services/invoice-lines.ts).
+  pricingVersion           Int                  @default(1)
+  discountPercent          Float?
+  discountPercentAmount    Float                @default(0)
+  discountCodes            String?              @db.VarChar(255)
+  discountWithoutTax       Float                @default(0)
+  discountVAT              Float                @default(0)
+  discountShipping         Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
   locale                   String               @default("en")

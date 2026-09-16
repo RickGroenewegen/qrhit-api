@@ -147,6 +147,8 @@
 	"invoice.discount": "Discount",
 	"invoice.volumeDiscount": "Volume discount",
 	"invoice.discountCode": "Discount code",
+	"invoice.discountPercentLine": "Discount {{code}} ({{percent}}%)",
+	"invoice.discountCodeLine": "Discount code {{code}}",
 	"invoice.vatId": "VAT ID",
 	"invoice.reverseChargeLine": "VAT reverse charged (0%)",
 	"invoice.reverseChargeHeading": "VAT reverse charged",

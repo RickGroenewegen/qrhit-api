@@ -51,6 +51,34 @@ describe('discount routes', () => {
     await prisma().discountCodedUses.create({
       data: { discountCodeId: exhausted.id, amount: 25 },
     });
+
+    // A reservation whose checkout window ran out and a released one: neither
+    // counts against the balance any more.
+    const stale = await prisma().discountCode.create({
+      data: { code: 'STALE-30', amount: 30 },
+    });
+    await prisma().discountCodedUses.createMany({
+      data: [
+        {
+          discountCodeId: stale.id,
+          amount: 30,
+          status: 'reserved',
+          expiresAt: new Date(Date.now() - 60_000),
+        },
+        { discountCodeId: stale.id, amount: 30, status: 'released' },
+      ],
+    });
+
+    await prisma().discountCode.create({
+      data: {
+        code: 'TEN-PCT',
+        type: 'percent',
+        amount: 0,
+        percent: 10,
+        maxDiscountAmount: 4,
+        maxUses: 5,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -144,6 +172,91 @@ describe('discount routes', () => {
         success: false,
         message: 'recaptchaFailed',
       });
+    });
+  });
+
+  describe('reservation lifecycle and cart evaluation', () => {
+    const cart = {
+      items: [
+        {
+          playlistId: 'pl-1',
+          playlistName: 'Mix',
+          productType: 'cards',
+          type: 'digital',
+          amount: 1,
+          price: 25,
+          numberOfTracks: 100,
+        },
+      ],
+      discounts: [] as { code: string }[],
+    };
+
+    it('ignores expired and released reservations when computing the balance', async () => {
+      const res = await check('STALE-30', false);
+      expect(res.json()).toMatchObject({
+        success: true,
+        fullAmount: 30,
+        amountLeft: 30,
+      });
+    });
+
+    it('prices a percent code against the cart (capped, digital order)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/discount/TEN-PCT/1',
+        payload: { token: 'tok', cart, countrycode: 'NL' },
+      });
+      expect(res.statusCode).toBe(200);
+      // 10% of €25 = 2.50, under the €4 cap.
+      expect(res.json()).toMatchObject({
+        success: true,
+        kind: 'percent',
+        percent: 10,
+        amount: 2.5,
+        label: 'TEN-PCT (10%)',
+      });
+    });
+
+    it('POST /discount/validate reports every cart code and rejects a second percent code', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/discount/validate',
+        payload: {
+          token: 'tok',
+          countrycode: 'NL',
+          cart: {
+            ...cart,
+            discounts: [
+              { code: 'ten-pct' },
+              { code: 'VALID-25' },
+              { code: 'NO-SUCH-CODE' },
+            ],
+          },
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.ok).toBe(false);
+      const byCode = Object.fromEntries(
+        body.discounts.map((d: any) => [d.code, d])
+      );
+      expect(byCode['TEN-PCT']).toMatchObject({ ok: true, amount: 2.5 });
+      // The voucher covers what is left after the percent code.
+      expect(byCode['VALID-25']).toMatchObject({ ok: true, amount: 22.5 });
+      expect(byCode['NO-SUCH-CODE']).toMatchObject({
+        ok: false,
+        message: 'discountCodeNotFound',
+      });
+    });
+
+    it('rejects a body without a cart', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/discount/validate',
+        payload: { token: 'tok' },
+      });
+      expect(res.statusCode).toBe(400);
     });
   });
 

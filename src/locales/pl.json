@@ -355,7 +355,7 @@
   "voucher.transform": "Zamień ulubione playlisty Spotify na interaktywne karty muzyczne na imprezy, wieczory gier z przyjaciółmi i quizy muzyczne!",
   "voucher.title": "Bon podarunkowy",
   "voucher.turn": "Zacznij tworzyć własne karty muzyczne w kilka minut!",
-  "voucher.claim": "Odbierz swój bon podarunkowy!",
+  "voucher.claim": "Zgarnij swój voucher!",
   "voucher.goTo": "Idź do",
   "voucher.click": "Kliknij 'Karty podarunkowe'",
   "voucher.enterCode": "Wpisz kod vouchera i kliknij 'Zrealizuj'",
@@ -663,5 +663,7 @@
   "design_alter.imageCardFront": "Przód karty",
   "design_alter.imageCardBack": "Tył karty",
   "design_alter.imageBoxFront": "Wkładka pudełka (przód)",
-  "design_alter.imageBoxBack": "Wkładka pudełka (tył)"
+  "design_alter.imageBoxBack": "Wkładka pudełka (tył)",
+  "invoice.discountPercentLine": "Zniżka {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Kod zniżkowy {{code}}"
 }

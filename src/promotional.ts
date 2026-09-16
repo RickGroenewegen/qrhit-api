@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import Utils from './utils';
+import Discount from './discount';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -20,6 +21,7 @@ class Promotional {
   private chatgpt = new ChatGPT();
   private translation = new Translation();
   private utils = new Utils();
+  private discount = new Discount();
 
   private constructor() {}
 
@@ -138,24 +140,17 @@ class Promotional {
           promotionalUserId: ownership.userId,
         },
         select: {
+          id: true,
           code: true,
           amount: true,
         },
       });
 
-      // Calculate amount used
+      // Calculate amount used (paid rows + unexpired reservations)
       let discountBalance = 0;
       if (discountCode) {
-        const totalUsed = await this.prisma.discountCodedUses.aggregate({
-          where: {
-            discountCode: {
-              promotional: true,
-              promotionalUserId: ownership.userId,
-            },
-          },
-          _sum: { amount: true },
-        });
-        discountBalance = discountCode.amount - (totalUsed._sum.amount || 0);
+        const usage = await this.discount.getLiveUsage(discountCode.id);
+        discountBalance = discountCode.amount - usage.amountUsed;
       }
 
       // Generate share link using existing product page (no language prefix - frontend handles redirection)
@@ -426,40 +421,39 @@ class Promotional {
       const quantity = paymentPlaylist.amount || 1;
       const creditAmount = PROMOTIONAL_CREDIT_AMOUNT * quantity;
 
-      // Get or create discount code for this user
-      const discountCodeData = await this.fetchOrCreateDiscountCode(
-        creator.id,
-        creator.displayName || undefined,
-        creator.email
-      );
-
-      // Add the credit amount to the discount code
-      const newTotalAmount = discountCodeData.amount + creditAmount;
-      await this.prisma.discountCode.updateMany({
-        where: {
-          promotional: true,
-          promotionalUserId: creator.id,
-        },
-        data: {
-          amount: newTotalAmount,
-        },
-      });
-
-      // Mark as credited to prevent duplicate credits
-      await this.prisma.paymentHasPlaylist.update({
-        where: { id: paymentPlaylist.id },
+      // Claim the line first so two webhooks for the same sale can never
+      // both credit it.
+      const claim = await this.prisma.paymentHasPlaylist.updateMany({
+        where: { id: paymentPlaylist.id, promotionalCredited: false },
         data: {
           promotionalCredited: true,
           promotionalCreditedAt: new Date(),
         },
       });
+      if (claim.count === 0) {
+        return { success: true, credited: false };
+      }
+
+      // The welcome credit belongs to the approval mail, not to a sale: a
+      // code minted here starts at 0, otherwise the first sale credited twice.
+      const discountCodeData = await this.fetchOrCreateDiscountCode(
+        creator.id,
+        creator.displayName || undefined,
+        creator.email,
+        0
+      );
+
+      // Atomic increment: a concurrent redeem or credit cannot lose an update.
+      const updated = await this.prisma.discountCode.update({
+        where: { id: discountCodeData.id },
+        data: { amount: { increment: creditAmount } },
+        select: { amount: true },
+      });
+      const newTotalAmount = updated.amount;
 
       // Calculate new balance (total amount minus what's been used)
-      const totalUsed = await this.prisma.discountCodedUses.aggregate({
-        where: { discountCodeId: discountCodeData.id },
-        _sum: { amount: true },
-      });
-      const newBalance = newTotalAmount - (totalUsed._sum.amount || 0);
+      const usage = await this.discount.getLiveUsage(discountCodeData.id);
+      const newBalance = newTotalAmount - usage.amountUsed;
 
       // Generate the promotional setup link - find the original payment via payment_has_playlist
       const paymentLink = await this.prisma.paymentHasPlaylist.findFirst({
@@ -526,13 +520,16 @@ class Promotional {
   }
 
   /**
-   * Fetch existing discount code for a user, or create a new one with 0 balance
-   * This ensures promotional users always have a discount code available
+   * Fetch the user's promotional discount code, or create one. The approval
+   * mail promises a welcome credit, so the approval flows create it with
+   * PROMOTIONAL_CREDIT_AMOUNT; a sale credit creates it with 0 and adds the
+   * credit itself.
    */
   public async fetchOrCreateDiscountCode(
     userId: number,
     userDisplayName?: string,
-    userEmail?: string
+    userEmail?: string,
+    initialAmount: number = PROMOTIONAL_CREDIT_AMOUNT
   ): Promise<{ id: number; code: string; amount: number }> {
     // Check if a discount code already exists for this user
     let discountCode = await this.prisma.discountCode.findFirst({
@@ -552,7 +549,7 @@ class Promotional {
       discountCode = await this.prisma.discountCode.create({
         data: {
           code,
-          amount: PROMOTIONAL_CREDIT_AMOUNT,
+          amount: initialAmount,
           description,
           promotional: true,
           promotionalUserId: userId,

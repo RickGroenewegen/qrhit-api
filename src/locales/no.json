@@ -644,5 +644,7 @@
   "design_alter.imageCardFront": "Kortforside",
   "design_alter.imageCardBack": "Kortbakside",
   "design_alter.imageBoxFront": "Boksinnlegg (forside)",
-  "design_alter.imageBoxBack": "Boksinnlegg (bakside)"
+  "design_alter.imageBoxBack": "Boksinnlegg (bakside)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattkode {{code}}"
 }

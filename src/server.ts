@@ -6,6 +6,7 @@ import vibeRoutes from './routes/vibeRoutes';
 import musicRoutes from './routes/musicRoutes';
 import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import discountRoutes from './routes/discountRoutes';
 import publicRoutes from './routes/publicRoutes';
 import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
@@ -162,6 +163,7 @@ class Server {
     await boxRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await discountRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {

@@ -21,6 +21,7 @@ import { color } from 'console-log-colors';
 import Formatters from '../formatters';
 import Logger from '../logger';
 import Fx from '../services/fx';
+import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -275,41 +276,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Check discount
-  fastify.post('/discount/:code/:digital', async (request: any, reply: any) => {
-    const result = await discount.checkDiscount(
-      request.params.code,
-      request.body.token,
-      utils.parseBoolean(request.params.digital)
-    );
-    reply.send(result);
-  });
-
-  // Get voucher
-  fastify.get(
-    '/discount/voucher/:type/:code/:paymentId',
-    async (request: any, reply: any) => {
-      const { type, code, paymentId } = request.params;
-      const discountDetails = await discount.getDiscountDetails(code);
-      const payment = await mollie.getPayment(paymentId);
-      if (discountDetails) {
-        try {
-          const translations = await translation.getTranslationsByPrefix(
-            payment.locale,
-            'voucher'
-          );
-          await reply.view(`voucher_${type}.ejs`, {
-            discount: discountDetails,
-            translations,
-          });
-        } catch (error) {
-          reply.status(500).send({ error: 'Internal Server Error' });
-        }
-      } else {
-        reply.status(404).send({ error: 'Code not found' });
-      }
-    }
-  );
+  // Discount check / validate / voucher routes live in discountRoutes.ts.
 
   // Invoice
   fastify.get('/invoice/:paymentId', async (request: any, reply) => {
@@ -350,21 +317,35 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         ? 1
         : presentmentTotal / payment.totalPrice;
     const moneyFormatter = formatters.currencyFormatter(invoiceCurrency);
+    const translations = await translation.getTranslationsByPrefix(
+      payment.locale,
+      'invoice'
+    );
+
+    // Payments written with the discount-aware math carry a snapshot the
+    // line builder renders from; older rows keep the legacy template block.
+    const invoice =
+      (payment.pricingVersion || 1) >= 2
+        ? buildInvoiceLines(
+            payment,
+            playlists,
+            orderType,
+            makeTranslator(translations as Record<string, string>)
+          )
+        : null;
 
     await reply.view(`invoice.ejs`, {
       payment,
       playlists,
       orderType,
+      invoice,
       ...formatters,
       moneyFormatter,
       invoiceCurrency,
       invoiceRate,
       displayRate,
       presentmentTotal,
-      translations: await translation.getTranslationsByPrefix(
-        payment.locale,
-        'invoice'
-      ),
+      translations,
       countries: await translation.getTranslationsByPrefix(
         payment.locale,
         'countries'

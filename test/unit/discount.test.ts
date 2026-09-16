@@ -75,7 +75,7 @@ function makePrismaImpls() {
 
 const prismaMock = {
   discountCode: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn() },
+  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   $transaction: vi.fn(),
 };
 
@@ -336,21 +336,37 @@ describe('Discount.removeDiscountUsesByPaymentId', () => {
 // associatePaymentWithDiscountUse
 // ──────────────────────────────────────────────
 
-describe('Discount.associatePaymentWithDiscountUse', () => {
-  it('updates the discountUse with paymentId', async () => {
+describe('Discount.attachPaymentToDiscountUses', () => {
+  it('binds the reserved rows to the payment', async () => {
+    prismaMock.discountCodedUses.updateMany.mockResolvedValueOnce({ count: 1 });
     const svc = makeSvc();
-    const res = await svc.associatePaymentWithDiscountUse(7, 99);
-    expect(res.success).toBe(true);
-    expect(prismaMock.discountCodedUses.update).toHaveBeenCalledWith({
-      where: { id: 7 },
+    await svc.attachPaymentToDiscountUses([7], 99);
+    expect(prismaMock.discountCodedUses.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: [7] } },
       data: { paymentId: 99 },
     });
   });
 
-  it('returns error on exception', async () => {
-    prismaMock.discountCodedUses.update.mockRejectedValueOnce(new Error('fail'));
+  it('does nothing for an empty id list', async () => {
     const svc = makeSvc();
-    const res = await svc.associatePaymentWithDiscountUse(7, 99);
+    await svc.attachPaymentToDiscountUses([], 99);
+    expect(prismaMock.discountCodedUses.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('Discount.releaseDiscountUsesByPaymentId', () => {
+  it('marks the rows released without deleting them', async () => {
+    prismaMock.discountCodedUses.updateMany.mockResolvedValueOnce({ count: 2 });
+    const svc = makeSvc();
+    const res = await svc.releaseDiscountUsesByPaymentId(99);
+    expect(res).toEqual({ success: true, count: 2, message: 'discountUsesReleasedSuccessfully' });
+    expect(prismaMock.discountCodedUses.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('returns error on exception', async () => {
+    prismaMock.discountCodedUses.updateMany.mockRejectedValueOnce(new Error('fail'));
+    const svc = makeSvc();
+    const res = await svc.releaseDiscountUsesByPaymentId(99);
     expect(res.success).toBe(false);
   });
 });

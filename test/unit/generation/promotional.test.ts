@@ -28,12 +28,18 @@ const h = vi.hoisted(() => {
       discountCode: {
         findFirst: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
         updateMany: vi.fn(),
       },
       discountCodedUses: { aggregate: vi.fn() },
-      paymentHasPlaylist: { findFirst: vi.fn(), update: vi.fn() },
+      paymentHasPlaylist: {
+        findFirst: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+      },
       user: { findUnique: vi.fn() },
     },
+    getLiveUsage: vi.fn(async () => ({ amountUsed: 4, useCount: 1 })),
     translateText: vi.fn(),
     clearPlaylistCache: vi.fn(async () => undefined),
     calcDecades: vi.fn(async () => undefined),
@@ -46,6 +52,12 @@ const h = vi.hoisted(() => {
 
 vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => h.prisma },
+}));
+// The real Discount class opens a Redis connection on construction.
+vi.mock('../../../src/discount', () => ({
+  default: class {
+    getLiveUsage = h.getLiveUsage;
+  },
 }));
 vi.mock('../../../src/logger', () => ({
   default: class {
@@ -163,19 +175,16 @@ describe('Promotional.getPromotionalSetup', () => {
       promotionalDeclined: null,
     });
     h.prisma.discountCode.findFirst.mockResolvedValue({
+      id: 3,
       code: 'AAAA-BBBB-CCCC-DDDD',
       amount: 10,
     });
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: 4 },
-    });
+    h.getLiveUsage.mockResolvedValueOnce({ amountUsed: 4, useCount: 1 });
 
     const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
 
-    expect(h.prisma.discountCodedUses.aggregate).toHaveBeenCalledWith({
-      where: { discountCode: { promotional: true, promotionalUserId: 7 } },
-      _sum: { amount: true },
-    });
+    // Balance counts paid rows and unexpired reservations only.
+    expect(h.getLiveUsage).toHaveBeenCalledWith(3);
     expect(res).toEqual({
       success: true,
       data: {
@@ -210,10 +219,11 @@ describe('Promotional.getPromotionalSetup', () => {
       promotionalDeclined: null,
     });
     h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.getLiveUsage.mockClear();
 
     const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
 
-    expect(h.prisma.discountCodedUses.aggregate).not.toHaveBeenCalled();
+    expect(h.getLiveUsage).not.toHaveBeenCalled();
     expect(res.data).toMatchObject({
       title: '',
       description: '',
@@ -422,11 +432,12 @@ describe('Promotional.creditPromotionalDiscount', () => {
       code: 'CODE-1111-2222-3333',
       amount: 10,
     });
-    h.prisma.discountCode.updateMany.mockResolvedValue({});
-    h.prisma.paymentHasPlaylist.update.mockResolvedValue({});
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: 4 },
-    });
+    // Atomic increment returns the new total.
+    h.prisma.discountCode.update.mockImplementation(async ({ data }: any) => ({
+      amount: 10 + data.amount.increment,
+    }));
+    h.prisma.paymentHasPlaylist.updateMany.mockResolvedValue({ count: 1 });
+    h.getLiveUsage.mockResolvedValue({ amountUsed: 4, useCount: 1 });
   });
 
   it('skips playlists that are not promotional', async () => {
@@ -443,7 +454,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
     h.prisma.user.findUnique.mockResolvedValue(null);
     const res = await promotional.creditPromotionalDiscount(2, 99);
     expect(res).toEqual({ success: true, credited: false });
-    expect(h.prisma.discountCode.updateMany).not.toHaveBeenCalled();
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
   });
 
   it('is idempotent: skips already-credited payment lines', async () => {
@@ -454,7 +465,15 @@ describe('Promotional.creditPromotionalDiscount', () => {
     });
     const res = await promotional.creditPromotionalDiscount(2, 99);
     expect(res).toEqual({ success: true, credited: false });
-    expect(h.prisma.discountCode.updateMany).not.toHaveBeenCalled();
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail')).toHaveLength(0);
+  });
+
+  it('credits nothing when another webhook claimed the line first', async () => {
+    h.prisma.paymentHasPlaylist.updateMany.mockResolvedValue({ count: 0 });
+    const res = await promotional.creditPromotionalDiscount(2, 99);
+    expect(res).toEqual({ success: true, credited: false });
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
     expect(outbound.calls('Mail')).toHaveLength(0);
   });
 
@@ -465,17 +484,19 @@ describe('Promotional.creditPromotionalDiscount', () => {
     expect(
       h.prisma.paymentHasPlaylist.findFirst.mock.calls[0][0].where
     ).toEqual({ paymentId: 99, playlistId: 2 });
-    // 2.5 * quantity(2) = 5 on top of the existing 10.
-    expect(h.prisma.discountCode.updateMany).toHaveBeenCalledWith({
-      where: { promotional: true, promotionalUserId: 7 },
-      data: { amount: 15 },
-    });
-    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
-      where: { id: 5 },
+    // The line is claimed before any money moves.
+    expect(h.prisma.paymentHasPlaylist.updateMany).toHaveBeenCalledWith({
+      where: { id: 5, promotionalCredited: false },
       data: {
         promotionalCredited: true,
         promotionalCreditedAt: expect.any(Date),
       },
+    });
+    // 2.5 * quantity(2) = 5, added atomically.
+    expect(h.prisma.discountCode.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { amount: { increment: 5 } },
+      select: { amount: true },
     });
 
     const mails = outbound.calls('Mail', 'sendPromotionalSaleEmail');
@@ -494,15 +515,17 @@ describe('Promotional.creditPromotionalDiscount', () => {
     ]);
   });
 
-  it('creates a discount code on the fly, which adds an extra initial 2.50 on top of the credit (suspected bug)', async () => {
-    // fetchOrCreateDiscountCode's docblock says "create a new one with 0
-    // balance" but it seeds amount=PROMOTIONAL_CREDIT_AMOUNT (src/promotional.ts
-    // ~line 552-562). creditPromotionalDiscount then adds the sale credit on
-    // top, so a first sale of quantity 1 yields a 5.00 balance, not 2.50.
+  it('creates a missing code with a 0 balance so the first sale credits exactly once', async () => {
+    // The welcome credit is handed out by the approval mail. A code minted
+    // by a sale used to be seeded with that credit AND get the sale credit
+    // on top, so a first sale of quantity 1 yielded 5.00 instead of 2.50.
     h.prisma.discountCode.findFirst.mockResolvedValue(null);
     h.prisma.discountCode.create.mockImplementation(async ({ data }: any) => ({
       id: 9,
       ...data,
+    }));
+    h.prisma.discountCode.update.mockImplementation(async ({ data }: any) => ({
+      amount: data.amount.increment,
     }));
     h.prisma.paymentHasPlaylist.findFirst.mockImplementation(
       async (args: any) =>
@@ -510,9 +533,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
           ? { id: 5, amount: 1, promotionalCredited: false }
           : null // no original payment -> no setup link
     );
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: null },
-    });
+    h.getLiveUsage.mockResolvedValue({ amountUsed: 0, useCount: 0 });
 
     const res = await promotional.creditPromotionalDiscount(2, 99);
 
@@ -520,7 +541,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
     expect(h.prisma.discountCode.create).toHaveBeenCalledWith({
       data: {
         code: expect.stringMatching(/^[0-9A-Z]{4}(-[0-9A-Z]{4}){3}$/),
-        amount: 2.5,
+        amount: 0,
         description: 'Promotional discount for user: Creator',
         promotional: true,
         promotionalUserId: 7,
@@ -528,13 +549,15 @@ describe('Promotional.creditPromotionalDiscount', () => {
         digital: false,
       },
     });
-    // 2.5 (seeded) + 2.5 (credit) = 5 after a single first sale.
-    expect(h.prisma.discountCode.updateMany).toHaveBeenCalledWith({
-      where: { promotional: true, promotionalUserId: 7 },
-      data: { amount: 5 },
+    expect(h.prisma.discountCode.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { amount: { increment: 2.5 } },
+      select: { amount: true },
     });
-    // Without an original payment the mail still goes out, with a null setup link.
+    // Without an original payment the mail still goes out, with a null setup
+    // link, and reports the 2.50 balance.
     const mails = outbound.calls('Mail', 'sendPromotionalSaleEmail');
+    expect(mails[0].args[4]).toBe(2.5);
     expect(mails[0].args[7]).toBeNull();
   });
 

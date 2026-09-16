@@ -355,7 +355,7 @@
   "voucher.transform": "Trasforma le tue playlist Spotify preferite in carte musicali interattive per feste, serate di giochi con amici e quiz musicali!",
   "voucher.title": "Buono regalo",
   "voucher.turn": "Inizia a creare le tue carte musicali in pochi minuti!",
-  "voucher.claim": "Richiedi il tuo buono regalo!",
+  "voucher.claim": "Prendi il tuo buono regalo!",
   "voucher.goTo": "Vai a",
   "voucher.click": "Clicca su 'Carte regalo'",
   "voucher.enterCode": "Inserisci il codice voucher e clicca su 'Riscatta'",
@@ -663,5 +663,7 @@
   "design_alter.imageCardFront": "Fronte carta",
   "design_alter.imageCardBack": "Retro carta",
   "design_alter.imageBoxFront": "Inlay scatola (fronte)",
-  "design_alter.imageBoxBack": "Inlay scatola (retro)"
+  "design_alter.imageBoxBack": "Inlay scatola (retro)",
+  "invoice.discountPercentLine": "Sconto {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Codice sconto {{code}}"
 }

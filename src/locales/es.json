@@ -359,7 +359,7 @@
   "voucher.transform": "Convierte tus listas de Spotify favoritas en tarjetas musicales interactivas para fiestas, noches de juegos con amigos y trivias musicales.",
   "voucher.title": "Vale de regalo",
   "voucher.turn": "¡Empieza a crear tus propias cartas de música en minutos!",
-  "voucher.claim": "¡Reclama tu vale de regalo!",
+  "voucher.claim": "¡Consigue tu vale regalo!",
   "voucher.goTo": "Ve a",
   "voucher.click": "Haz clic en 'Tarjetas de regalo'",
   "voucher.enterCode": "Introduce el código del vale y haz clic en 'Canjear'",
@@ -667,5 +667,7 @@
   "design_alter.imageCardFront": "Frente de la carta",
   "design_alter.imageCardBack": "Reverso de la carta",
   "design_alter.imageBoxFront": "Inserto caja (frente)",
-  "design_alter.imageBoxBack": "Inserto caja (detrás)"
+  "design_alter.imageBoxBack": "Inserto caja (detrás)",
+  "invoice.discountPercentLine": "Descuento {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Código descuento {{code}}"
 }
