@@ -38,6 +38,7 @@ import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import Translation from '../translation';
+import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import CalendarService from '../calendarService';
@@ -60,6 +61,7 @@ export default async function adminRoutes(
   const generator = Generator.getInstance();
   const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
+  const translation = new Translation();
   const designer = Designer.getInstance();
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
@@ -1128,6 +1130,33 @@ export default async function adminRoutes(
           error: result.error,
         });
       }
+    }
+  );
+
+  // Genres with their visible featured playlist counts (for the playlist
+  // suggestions document filter).
+  fastify.get(
+    '/admin/genres',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const genres = await data.getGenresWithFeaturedCount();
+      reply.send({ success: true, data: genres });
+    }
+  );
+
+  // Live "N matching playlists" count for the playlist suggestions modal.
+  // Same filters as GET /vibe/playlist-suggestions.
+  fastify.get(
+    '/admin/playlist-suggestions/count',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const parsed = parsePlaylistSuggestionOptions(request.query, translation);
+      if (!parsed.ok) {
+        reply.status(400).send({ error: parsed.error });
+        return;
+      }
+      const playlists = await data.getPlaylistSuggestions(parsed.opts.locale, parsed.opts);
+      reply.send({ success: true, count: playlists.length });
     }
   );
 

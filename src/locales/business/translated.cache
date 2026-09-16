@@ -1066,5 +1066,85 @@
   "quotation.total": [
     "nl",
     "de"
+  ],
+  "suggestions.docTitle": [
+    "nl",
+    "de"
+  ],
+  "suggestions.editionName": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTagline": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack1": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack1Note": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack2": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack2Note": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack3": [
+    "nl",
+    "de"
+  ],
+  "suggestions.coverTrack3Note": [
+    "nl",
+    "de"
+  ],
+  "suggestions.sheetTitle": [
+    "nl",
+    "de"
+  ],
+  "suggestions.sectionTitle": [
+    "nl",
+    "de"
+  ],
+  "suggestions.sectionMeta": [
+    "nl",
+    "de"
+  ],
+  "suggestions.intro": [
+    "nl",
+    "de"
+  ],
+  "suggestions.tracks": [
+    "nl",
+    "de"
+  ],
+  "suggestions.trackNote": [
+    "nl",
+    "de"
+  ],
+  "suggestions.openInSpotify": [
+    "nl",
+    "de"
+  ],
+  "suggestions.genreUnknown": [
+    "nl",
+    "de"
+  ],
+  "suggestions.noResults": [
+    "nl",
+    "de"
+  ],
+  "suggestions.footTitle": [
+    "nl",
+    "de"
+  ],
+  "suggestions.footNote": [
+    "nl",
+    "de"
   ]
 }

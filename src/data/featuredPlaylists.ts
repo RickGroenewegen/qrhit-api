@@ -8,7 +8,7 @@ import {
 import { clearPlaylistCache } from './misc';
 import { DataDeps } from './types';
 
-export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v3_';
+export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
 
 export async function getFeaturedPlaylists(
   deps: DataDeps,
@@ -55,6 +55,7 @@ export async function getFeaturedPlaylists(
       playlists.decadePercentage0,
       playlists.genreId,
       playlists.description_${locale} as description,
+      playlists.description_en as descriptionEnFallback,
       g.name_${locale} as genreName,
       playlists.promotionalActive as isPromotional,
       playlists.promotionalTitle,
@@ -96,9 +97,9 @@ export async function getFeaturedPlaylists(
     returnList = returnList.map((playlist) => {
       // Ensure description is available, fallback to English if not
       if (!playlist.description && locale !== 'en') {
-        const descriptionField = `description_en`;
-        playlist.description = playlist[descriptionField];
+        playlist.description = playlist.descriptionEnFallback;
       }
+      delete playlist.descriptionEnFallback;
 
       // Ensure genre name is available, fallback to English if not
       if (!playlist.genreName && playlist.genreId && locale !== 'en') {
@@ -138,6 +139,101 @@ export async function getFeaturedPlaylists(
     returnList = JSON.parse(cachedPlaylists);
   }
   return returnList;
+}
+
+// ── Playlist suggestions (admin PDF) ─────────────────────────────
+
+export interface PlaylistSuggestionOptions {
+  /** Playlist markets to include; empty = every market. International (untagged) playlists are always included. */
+  locales: string[];
+  /** Genre ids to include; empty = every genre. */
+  genreIds: number[];
+  /** Cards per box; only playlists with at least this many tracks qualify. */
+  cardCount: number;
+}
+
+function playlistLocales(featuredLocale: unknown): string[] {
+  return String(featuredLocale || '')
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Pure filter over the cached featured list, so the admin document can
+ * combine several markets and genres without a second raw SQL query.
+ * Mirrors the `FIND_IN_SET(locale) OR featuredLocale IS NULL` rule of
+ * getFeaturedPlaylists for every selected locale at once.
+ */
+export function filterPlaylistSuggestions(
+  playlists: any[],
+  opts: PlaylistSuggestionOptions
+): any[] {
+  const wantedLocales = new Set(opts.locales);
+  const wantedGenres = new Set(opts.genreIds);
+
+  const matchesLocale = (p: any): boolean => {
+    if (wantedLocales.size === 0) return true;
+    const own = playlistLocales(p.featuredLocale);
+    if (own.length === 0) return true;
+    return own.some((l) => wantedLocales.has(l));
+  };
+
+  return playlists
+    .filter((p) => matchesLocale(p))
+    .filter((p) => wantedGenres.size === 0 || wantedGenres.has(Number(p.genreId)))
+    .filter((p) => Number(p.numberOfTracks) >= opts.cardCount)
+    .sort((a, b) => {
+      // Explicitly localised playlists first, then by popularity.
+      const aLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(a.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      const bLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(b.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      if (aLocal !== bLocal) return aLocal - bLocal;
+      const score = Number(b.score || 0) - Number(a.score || 0);
+      if (score !== 0) return score;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+}
+
+export async function getPlaylistSuggestions(
+  deps: DataDeps,
+  docLocale: string,
+  opts: PlaylistSuggestionOptions
+): Promise<any[]> {
+  const all = await getFeaturedPlaylists(deps, docLocale, true);
+  return filterPlaylistSuggestions(all, opts);
+}
+
+/** Genres for the suggestions modal, with how many visible featured playlists each has. */
+export async function getGenresWithFeaturedCount(
+  deps: DataDeps
+): Promise<{ id: number; slug: string | null; name: string; featuredCount: number }[]> {
+  const genres = await deps.prisma.genre.findMany({
+    select: {
+      id: true,
+      slug: true,
+      name_en: true,
+      _count: {
+        select: {
+          Playlist: { where: { featured: true, featuredHidden: false } },
+        },
+      },
+    },
+    orderBy: { name_en: 'asc' },
+  });
+  return genres.map((g) => ({
+    id: g.id,
+    slug: g.slug,
+    name: g.name_en,
+    featuredCount: g._count.Playlist,
+  }));
 }
 
 /** Decade columns, weighted against each other to measure musical overlap. */

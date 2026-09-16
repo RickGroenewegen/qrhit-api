@@ -53,9 +53,12 @@ German `du`), so that copy must never be reused for these documents. They read
 from a separate bundle instead:
 
 - `src/locales/business/{en,nl,de}.json` — flat dotted keys under the
-  `quotation.*`, `instructions.*`, `invoice_lines.*` and `pricing.*` prefixes
-  (`pricing.*` covers the retail/reseller price lists and the brochure
-  partials `front_page`, `product_info` and `closing_page` they share).
+  `quotation.*`, `instructions.*`, `invoice_lines.*`, `pricing.*` and
+  `suggestions.*` prefixes (`pricing.*` covers the retail/reseller price lists
+  and the brochure partials `front_page`, `product_info` and `closing_page`
+  they share; `suggestions.*` is the playlist suggestions brochure, which
+  reuses those partials through a translator that falls back to `pricing.*`
+  for any key it does not define itself).
 - Only these three languages are produced. `Translation.resolveBusinessLocale()`
   is the single fallback point: any other `Company.locale` becomes `en`. Missing
   keys fall back to the English string, never to `undefined`.

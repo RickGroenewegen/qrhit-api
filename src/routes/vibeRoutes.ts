@@ -7,6 +7,11 @@ import Bookkeeping from '../bookkeeping';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
+import Data from '../data';
+import {
+  parsePlaylistSuggestionOptions,
+  playlistSuggestionQuery,
+} from '../playlistSuggestions';
 import {
   quotationVatContext,
   normalizeCountryIso,
@@ -26,6 +31,7 @@ export default async function vibeRoutes(
   const mollie = new Mollie();
   const bookkeeping = Bookkeeping.getInstance();
   const translation = new Translation();
+  const data = Data.getInstance();
 
 
   // Pull the optional order metrics (sent along by the calculators) out of a
@@ -598,6 +604,7 @@ export default async function vibeRoutes(
           id: true,
           companyId: true,
           numberOfCards: true,
+          numberOfBoxes: true,
           calculation: true,
           calculationTromp: true,
           calculationSchneider: true,
@@ -610,6 +617,7 @@ export default async function vibeRoutes(
       }
 
       const numberOfCards = list.numberOfCards;
+      const numberOfBoxes = list.numberOfBoxes;
 
       const listValue = (list as any)[listColumn] as string | null;
       if (listValue) {
@@ -618,6 +626,7 @@ export default async function vibeRoutes(
           source: 'list',
           calculation: listValue,
           numberOfCards,
+          numberOfBoxes,
         });
         return;
       }
@@ -638,6 +647,7 @@ export default async function vibeRoutes(
           source: 'company',
           calculation: companyValue,
           numberOfCards,
+          numberOfBoxes,
         });
         return;
       }
@@ -647,6 +657,7 @@ export default async function vibeRoutes(
         source: 'empty',
         calculation: null,
         numberOfCards,
+        numberOfBoxes,
       });
     }
   );
@@ -686,6 +697,7 @@ export default async function vibeRoutes(
         'numberOfTracks',
         'minimumNumberOfTracks',
         'numberOfCards',
+        'numberOfBoxes',
       ] as const;
       const dateFields = [
         'startAt',
@@ -3278,6 +3290,141 @@ export default async function vibeRoutes(
       } catch (error) {
         console.error('Error generating retail pricing PDF:', error);
         reply.status(500).send({ error: 'Failed to generate retail pricing PDF' });
+      }
+    }
+  );
+
+  // ============================================
+  // Playlist suggestions (featured playlists brochure)
+  // ============================================
+
+  // HTML view, screenshotted by Lambda for the PDF. Unauthenticated like the
+  // price lists: the Lambda carries no session, so every filter travels in
+  // the query string and is validated by parsePlaylistSuggestionOptions.
+  fastify.get(
+    '/vibe/playlist-suggestions',
+    async (request: any, reply: any) => {
+      try {
+        const parsed = parsePlaylistSuggestionOptions(request.query, translation);
+        if (!parsed.ok) {
+          reply.status(400).send({ error: parsed.error });
+          return;
+        }
+        const { locale, cardCount } = parsed.opts;
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+        const intlTag = translation.getIntlTag(locale);
+
+        // Cover and closing page are shared with the price lists and read
+        // their labels from `t`. The suggestions bundle overrides the copy
+        // that is specific to this document and falls through to `pricing.*`
+        // for everything else (edition/version/contact labels, closing page).
+        const suggestionsT = await translation.getBusinessTranslator(locale, 'suggestions');
+        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
+        const t = (key: string, vars?: Record<string, any>) => {
+          const own = suggestionsT(key, vars);
+          return own === key ? pricingT(key, vars) : own;
+        };
+
+        const formatDate = (date: Date) =>
+          new Intl.DateTimeFormat(intlTag, {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          }).format(date);
+        const formatNumber = (value: number) => new Intl.NumberFormat(intlTag).format(value);
+
+        const truncate = (text: string, max: number): string => {
+          const clean = String(text || '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (clean.length <= max) return clean;
+          const cut = clean.slice(0, max);
+          const lastSpace = cut.lastIndexOf(' ');
+          return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).replace(/[,;:.\s]+$/, '')}…`;
+        };
+
+        const rows = await data.getPlaylistSuggestions(locale, parsed.opts);
+        const playlists = rows.map((p: any) => {
+          const numberOfTracks = Number(p.numberOfTracks) || 0;
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.name,
+            genreName: p.genreName || t('genreUnknown'),
+            description: truncate(p.description, 200),
+            numberOfTracks,
+            showTrackNote: numberOfTracks > cardCount,
+            imageUrl: p.customImage ? `${baseUrl}${p.customImage}` : p.image,
+            spotifyUrl: `https://open.spotify.com/playlist/${p.playlistId}`,
+          };
+        });
+
+        await reply.view('playlist_suggestions.ejs', {
+          locale,
+          t,
+          playlists,
+          cardCount,
+          formatDate,
+          formatNumber,
+          baseUrl,
+        });
+      } catch (error) {
+        console.error('Error rendering playlist suggestions view:', error);
+        reply.status(500).send({ error: 'Failed to render playlist suggestions' });
+      }
+    }
+  );
+
+  // Playlist suggestions PDF download
+  fastify.post(
+    '/vibe/playlist-suggestions/pdf',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const parsed = parsePlaylistSuggestionOptions(request.body, translation);
+        if (!parsed.ok) {
+          reply.status(400).send({ error: parsed.error });
+          return;
+        }
+
+        const PDF = require('../pdf').default;
+        const pdfManager = new PDF();
+        const path = require('path');
+        const fs = require('fs').promises;
+
+        const tempDir = '/tmp';
+        const fileName = `playlist_suggestions_${Date.now()}.pdf`;
+        const filePath = path.join(tempDir, fileName);
+
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+        const htmlUrl = `${baseUrl}/vibe/playlist-suggestions?${playlistSuggestionQuery(parsed.opts)}`;
+
+        await pdfManager.generateFromUrl(htmlUrl, filePath, {
+          format: 'a4',
+          marginTop: 0,
+          marginBottom: 0,
+          marginLeft: 0,
+          marginRight: 0,
+        });
+
+        const pdfBuffer = await fs.readFile(filePath);
+
+        try {
+          await fs.unlink(filePath);
+        } catch (unlinkError) {
+          console.warn('Failed to delete temp file:', unlinkError);
+        }
+
+        const suggestionsT = await translation.getBusinessTranslator(parsed.opts.locale, 'suggestions');
+        const downloadFilename = `${suggestionsT('editionName').replace(/\s+/g, '_')}_${parsed.opts.cardCount}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+        reply.header('Content-Type', 'application/pdf');
+        reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+        reply.send(pdfBuffer);
+      } catch (error) {
+        console.error('Error generating playlist suggestions PDF:', error);
+        reply.status(500).send({ error: 'Failed to generate playlist suggestions PDF' });
       }
     }
   );

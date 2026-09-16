@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title><%= t('docTitle') %> - <%= formatDate(new Date()) %></title>
+
+    <%
+        var editionName = t('editionName');
+        var version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+        var PER_PAGE = 8;
+        var pages = [];
+        for (var i = 0; i < playlists.length; i += PER_PAGE) {
+            pages.push(playlists.slice(i, i + PER_PAGE));
+        }
+    %>
+
+    <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
+
+    <style>
+        /* Playlist cards: two columns, four rows, on the pricing sheet grid */
+        .suggestion-intro {
+            font-size: 10.5px;
+            line-height: 1.55;
+            color: var(--disco-70);
+            max-width: 150mm;
+            margin-bottom: 14px;
+        }
+
+        .suggestion-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6mm;
+        }
+
+        .suggestion-card {
+            display: flex;
+            gap: 5mm;
+            padding: 4mm;
+            border: 2px solid var(--disco-18);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.35);
+            min-height: 36mm;
+            break-inside: avoid;
+        }
+
+        .suggestion-art {
+            width: 26mm;
+            height: 26mm;
+            flex-shrink: 0;
+            border-radius: 2.5mm;
+            overflow: hidden;
+            background: var(--disco);
+        }
+
+        .suggestion-art img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .suggestion-body {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .suggestion-name {
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 10.5px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1.15;
+            color: var(--disco);
+            margin-bottom: 5px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .suggestion-genre {
+            display: inline-block;
+            align-self: flex-start;
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 6.5px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--disco);
+            border: 1.5px solid var(--disco-45);
+            border-radius: 99px;
+            padding: 2px 7px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        .suggestion-desc {
+            font-size: 8.5px;
+            line-height: 1.45;
+            color: var(--disco-70);
+            margin-bottom: 6px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        /* Footer: track-count sticker left, Spotify button right. The
+           "we select N tracks" hint is said once in the intro, not per card. */
+        .suggestion-foot {
+            margin-top: auto;
+            padding-top: 7px;
+            border-top: 1px solid var(--disco-18);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .suggestion-foot .sticker {
+            font-size: 7px;
+            padding: 3px 7px;
+            flex-shrink: 0;
+        }
+
+        .spotify-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 7px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--off);
+            background: var(--disco);
+            border-radius: 99px;
+            padding: 4px 9px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .spotify-link svg {
+            width: 9px;
+            height: 9px;
+            fill: var(--off);
+        }
+
+        .suggestion-empty {
+            padding: 30mm 10mm;
+            text-align: center;
+            font-size: 13px;
+            color: var(--disco-70);
+            border: 2px dashed var(--disco-18);
+            border-radius: var(--radius);
+        }
+    </style>
+</head>
+<body>
+
+    <%- include('partials/front_page', {
+        baseUrl: baseUrl,
+        formatDate: formatDate,
+        title: t('docTitle'),
+        subtitle: '',
+        editionName: editionName,
+        version: version
+    }) %>
+
+    <% if (pages.length === 0) { pages.push([]); } %>
+    <% pages.forEach(function (page, pageIndex) { %>
+    <div class="sheet">
+        <div class="sheet-head">
+            <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
+            <div class="sheet-head-right">
+                <div class="sheet-head-title"><%= t('sheetTitle') %></div>
+                <div class="sticker"><%= editionName %></div>
+            </div>
+        </div>
+
+        <div class="sheet-body">
+            <div class="section-title">
+                <h2><%= t('sectionTitle') %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= t('sectionMeta', { count: formatNumber(playlists.length), cardCount: formatNumber(cardCount) }) %></div>
+            </div>
+
+            <% if (pageIndex === 0) { %>
+            <p class="suggestion-intro">
+                <%= t('intro', { cardCount: formatNumber(cardCount) }) %>
+                <% if (playlists.some(function (p) { return p.showTrackNote; })) { %>
+                <%= t('trackNote', { cardCount: formatNumber(cardCount) }) %>
+                <% } %>
+            </p>
+            <% } %>
+
+            <% if (page.length === 0) { %>
+            <div class="suggestion-empty"><%= t('noResults') %></div>
+            <% } else { %>
+            <div class="suggestion-grid">
+                <% page.forEach(function (p) { %>
+                <div class="suggestion-card">
+                    <div class="suggestion-art">
+                        <% if (p.imageUrl) { %>
+                        <img src="<%= p.imageUrl %>" alt="" />
+                        <% } %>
+                    </div>
+                    <div class="suggestion-body">
+                        <div class="suggestion-name"><%= p.name %></div>
+                        <span class="suggestion-genre"><%= p.genreName %></span>
+                        <div class="suggestion-desc"><%= p.description %></div>
+                        <div class="suggestion-foot">
+                            <span class="sticker"><%= t('tracks', { count: formatNumber(p.numberOfTracks) }) %></span>
+                            <a class="spotify-link" href="<%= p.spotifyUrl %>" target="_blank" rel="noopener">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 1 1-.3-1.2c3.9-.9 7.3-.5 10 1.1.3.2.4.6.2.9zm1.2-2.7a.8.8 0 0 1-1.1.3c-2.8-1.7-7-2.2-10.3-1.2a.8.8 0 1 1-.4-1.5c3.7-1.1 8.4-.6 11.5 1.3.4.2.5.7.3 1.1zm.1-2.8C14.6 8.9 9 8.7 5.8 9.7a.9.9 0 1 1-.5-1.8c3.7-1.1 9.8-.9 13.6 1.4a.9.9 0 0 1-1 1.6z"/></svg>
+                                <%= t('openInSpotify') %>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+            <% } %>
+        </div>
+
+        <div class="sheet-foot">
+            <div><strong><%= t('footTitle') %></strong> &nbsp;<%= pageIndex + 1 %> / <%= pages.length %></div>
+            <div class="sheet-foot-note"><%= t('footNote', { date: formatDate(new Date()) }) %></div>
+        </div>
+    </div>
+    <% }); %>
+
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName
+    }) %>
+
+</body>
+</html>

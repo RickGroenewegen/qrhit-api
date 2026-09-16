@@ -794,6 +794,8 @@ class Vibe {
           numberOfTracks: true,
           minimumNumberOfTracks: true,
           numberOfCards: true,
+          numberOfBoxes: true,
+          printer: true,
           startAt: true,
           endAt: true,
           votingBackground: true,
