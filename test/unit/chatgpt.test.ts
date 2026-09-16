@@ -84,21 +84,17 @@ import { ChatGPT } from '../../src/chatgpt';
 
 const gpt = new ChatGPT();
 
-/** Builds a chat completion response carrying a single function tool call. */
-function toolCallResponse(name: string, args: unknown, rawArgs?: string) {
+/**
+ * Builds a chat completion response carrying a structured (json_schema)
+ * output. The schema name is accepted for readability at the call sites but
+ * plays no part in the response.
+ */
+function toolCallResponse(_name: string, args: unknown, rawArgs?: string) {
   return {
     choices: [
       {
         message: {
-          tool_calls: [
-            {
-              type: 'function',
-              function: {
-                name,
-                arguments: rawArgs ?? JSON.stringify(args),
-              },
-            },
-          ],
+          content: rawArgs ?? JSON.stringify(args),
         },
       },
     ],
@@ -106,9 +102,9 @@ function toolCallResponse(name: string, args: unknown, rawArgs?: string) {
   };
 }
 
-/** A completion with a plain message and no tool calls. */
+/** A completion with no message content (refusal or empty output). */
 const noToolCallResponse = {
-  choices: [{ message: { content: 'no function call here' } }],
+  choices: [{ message: { content: null } }],
   usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
 };
 
@@ -149,14 +145,13 @@ describe('ChatGPT.ask', () => {
     });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.4-mini');
-    expect(payload.temperature).toBe(1);
-    expect(payload.tool_choice).toEqual({
-      type: 'function',
-      function: { name: 'parseYear' },
-    });
-    expect(payload.tools[0].function.name).toBe('parseYear');
-    expect(payload.tools[0].function.parameters.required).toEqual([
+    expect(payload.model).toBe('gpt-5.6-terra');
+    expect(payload.reasoning_effort).toBe('low');
+    expect(payload.temperature).toBeUndefined();
+    expect(payload.tools).toBeUndefined();
+    expect(payload.response_format.type).toBe('json_schema');
+    expect(payload.response_format.json_schema.name).toBe('parseYear');
+    expect(payload.response_format.json_schema.schema.required).toEqual([
       'year',
       'reasoning',
     ]);
@@ -247,8 +242,9 @@ describe('ChatGPT.verifyList', () => {
     expect(prismaExecuteRaw).toHaveBeenCalledTimes(2);
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.4-mini');
-    expect(payload.tool_choice.function.name).toBe('parseYearMistakes');
+    expect(payload.model).toBe('gpt-5.6-terra');
+    expect(payload.reasoning_effort).toBe('medium');
+    expect(payload.response_format.json_schema.name).toBe('parseYearMistakes');
     expect(payload.messages[1].content).toContain(
       '"Song A" by Artist A (1990)'
     );
@@ -295,13 +291,13 @@ describe('ChatGPT.generatePlaylistDescription', () => {
     });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.4-mini');
-    expect(payload.temperature).toBe(1);
-    expect(payload.tool_choice.function.name).toBe('generateDescriptions');
+    expect(payload.model).toBe('gpt-5.6-terra');
+    expect(payload.reasoning_effort).toBe('none');
+    expect(payload.response_format.json_schema.name).toBe('generateDescriptions');
     expect(
-      Object.keys(payload.tools[0].function.parameters.properties)
+      Object.keys(payload.response_format.json_schema.schema.properties)
     ).toEqual(['description_en', 'description_nl']);
-    expect(payload.tools[0].function.parameters.required).toEqual([
+    expect(payload.response_format.json_schema.schema.required).toEqual([
       'description_en',
       'description_nl',
     ]);
@@ -318,7 +314,7 @@ describe('ChatGPT.generatePlaylistDescription', () => {
     );
     await gpt.generatePlaylistDescription('Party', tracks);
     const payload = createMock.mock.calls[0][0];
-    expect(payload.tools[0].function.parameters.required).toEqual([
+    expect(payload.response_format.json_schema.schema.required).toEqual([
       'description_en',
       'description_nl',
     ]);
@@ -353,8 +349,8 @@ describe('ChatGPT.determineGenre', () => {
     expect(await gpt.determineGenre('Hits', tracks, genres)).toBe(9);
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.tool_choice.function.name).toBe('determineGenre');
-    expect(payload.tools[0].function.parameters.properties.genreId.enum).toEqual(
+    expect(payload.response_format.json_schema.name).toBe('determineGenre');
+    expect(payload.response_format.json_schema.schema.properties.genreId.enum).toEqual(
       [0, 5, 9]
     );
     expect(payload.messages[1].content).toContain('5: (rock)');
@@ -429,7 +425,7 @@ describe('ChatGPT.translateTrustpilotReviews', () => {
     });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.tool_choice.function.name).toBe('translateReviews');
+    expect(payload.response_format.json_schema.name).toBe('translateReviews');
     expect(payload.messages[1].content).toContain('Title: Great');
   });
 
@@ -471,7 +467,7 @@ describe('ChatGPT.translateGenreNames', () => {
     expect(result).toEqual({ nl: 'Rock', de: 'Rock' });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.tools[0].function.parameters.required).toEqual(['nl', 'de']);
+    expect(payload.response_format.json_schema.schema.required).toEqual(['nl', 'de']);
   });
 
   it('returns {} when the response has no tool call', async () => {
@@ -490,16 +486,17 @@ describe('ChatGPT.translateGenreNames', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatGPT.askBlog', () => {
-  it('returns the generated blog and uses the gpt-5.5 model', async () => {
+  it('returns the generated blog and uses the sol model with medium reasoning', async () => {
     const blog = { title: 'My post', summary: 'Sum', content: '<p>Hi</p>' };
     createMock.mockResolvedValueOnce(toolCallResponse('generateBlog', blog));
 
     expect(await gpt.askBlog('Write about parties')).toEqual(blog);
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.5');
-    expect(payload.tool_choice.function.name).toBe('generateBlog');
-    expect(payload.tools[0].function.parameters.required).toEqual([
+    expect(payload.model).toBe('gpt-5.6-sol');
+    expect(payload.reasoning_effort).toBe('medium');
+    expect(payload.response_format.json_schema.name).toBe('generateBlog');
+    expect(payload.response_format.json_schema.schema.required).toEqual([
       'title',
       'content',
     ]);
@@ -536,7 +533,7 @@ describe('ChatGPT.askBlogStream', () => {
 
     const payload = createMock.mock.calls[0][0];
     expect(payload.stream).toBe(true);
-    expect(payload.model).toBe('gpt-5.5');
+    expect(payload.model).toBe('gpt-5.6-sol');
   });
 
   it('keeps a long first paragraph in the content and returns no summary', async () => {
@@ -572,7 +569,7 @@ describe('ChatGPT.translateText', () => {
       de: 'hallo',
     });
     const payload = createMock.mock.calls[0][0];
-    expect(payload.tool_choice.function.name).toBe('translateText');
+    expect(payload.response_format.json_schema.name).toBe('translateText');
     expect(payload.messages[1].content).toContain('hello');
   });
 
@@ -596,7 +593,7 @@ describe('ChatGPT.translateMessage', () => {
 
     const payload = createMock.mock.calls[0][0];
     expect(payload.messages[0].content).toContain('to English');
-    expect(payload.tool_choice.function.name).toBe('translate_email');
+    expect(payload.response_format.json_schema.name).toBe('translate_email');
   });
 
   it('falls back to the originals when no tool call is returned', async () => {
@@ -632,8 +629,8 @@ describe('ChatGPT.splitArtistOrString', () => {
     expect(segments).toEqual(['Raderberger', 'boorebürger']);
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.5');
-    expect(payload.tool_choice.function.name).toBe('splitText');
+    expect(payload.model).toBe('gpt-5.6-sol');
+    expect(payload.response_format.json_schema.name).toBe('splitText');
     expect(payload.messages[1].content).toContain('Raderbergerboorebürger');
   });
 
@@ -653,7 +650,7 @@ describe('ChatGPT.splitArtistOrString', () => {
 });
 
 describe('ChatGPT.extractOrders', () => {
-  it('returns extracted orders and uses temperature 0', async () => {
+  it('returns extracted orders with low reasoning and no temperature', async () => {
     const orders = [
       { orderId: '123', date: '01-02-2026', amount: 19.95 },
       { orderId: '456', date: '02-02-2026', amount: 5.5 },
@@ -663,8 +660,9 @@ describe('ChatGPT.extractOrders', () => {
     expect(await gpt.extractOrders('<table>...</table>')).toEqual({ orders });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.temperature).toBe(0);
-    expect(payload.tool_choice.function.name).toBe('extractOrders');
+    expect(payload.temperature).toBeUndefined();
+    expect(payload.reasoning_effort).toBe('low');
+    expect(payload.response_format.json_schema.name).toBe('extractOrders');
     expect(payload.messages[1].content).toContain('<table>...</table>');
   });
 
@@ -686,7 +684,7 @@ describe('ChatGPT.extractOrders', () => {
 describe('ChatGPT.generateQuizQuestions', () => {
   it('generates year questions locally and the other types via the LLM', async () => {
     createMock.mockImplementation(async (payload: any) => {
-      const name = payload.tool_choice.function.name;
+      const name = payload.response_format.json_schema.name;
       switch (name) {
         case 'generateTriviaQuestions':
           return toolCallResponse(name, {
@@ -780,7 +778,7 @@ describe('ChatGPT.generateQuizQuestions', () => {
 
     // The trivia call must request the interface language by name
     const triviaPayload = createMock.mock.calls.find(
-      (c) => c[0].tool_choice.function.name === 'generateTriviaQuestions'
+      (c) => c[0].response_format.json_schema.name === 'generateTriviaQuestions'
     )![0];
     expect(triviaPayload.messages[0].content).toContain('English');
   });
@@ -957,7 +955,7 @@ describe('ChatGPT.askWithImages', () => {
     expect(result).toEqual({ ok: true, count: 2 });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.5');
+    expect(payload.model).toBe('gpt-5.6-sol');
     expect(payload.response_format).toEqual({ type: 'json_object' });
     expect(payload.messages[0]).toEqual({
       role: 'system',
@@ -1016,7 +1014,7 @@ describe('ChatGPT.generateBlogImage', () => {
 
     expect(filename).toMatch(/^blog_\d+\.jpg$/);
     const editArgs = imagesEditMock.mock.calls[0][0];
-    expect(editArgs.model).toBe('gpt-image-2');
+    expect(editArgs.model).toBe('gpt-image-2.5-sunburst');
     expect(editArgs.prompt).toBe('A party scene');
     expect(editArgs.size).toBe('1536x1024');
     expect(editArgs.quality).toBe('high');

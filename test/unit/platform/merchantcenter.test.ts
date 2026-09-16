@@ -1448,7 +1448,7 @@ describe('generateAIProductImage', () => {
     );
     expect(h.openaiImagesEdit).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-image-2',
+        model: 'gpt-image-2.5-sunburst',
         n: 1,
         size: '1024x1024',
         quality: 'high',

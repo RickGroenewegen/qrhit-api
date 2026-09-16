@@ -9,6 +9,7 @@ import PrismaInstance from './prisma';
 import { GoogleGenAI } from '@google/genai';
 import OpenAI, { toFile } from 'openai';
 import sharp from 'sharp';
+import { IMAGE_MODEL } from './llmModels';
 
 interface AssetJobData {
   companyAssetId: number;
@@ -401,7 +402,7 @@ ${extraInstructions}`;
         imageInputs.push(await toFile(productPng, `product_${i + 1}.png`, { type: 'image/png' }));
 
         const response = await openai.images.edit({
-          model: 'gpt-image-2',
+          model: IMAGE_MODEL,
           image: imageInputs.length === 1 ? imageInputs[0] : imageInputs,
           prompt,
           size: '1024x1024',

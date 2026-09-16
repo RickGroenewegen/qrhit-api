@@ -3,6 +3,7 @@ import path from 'path';
 import OpenAI from 'openai';
 import Logger from './logger';
 import Utils from './utils'; // Import Utils
+import { TTS_MODEL } from './llmModels';
 
 class AudioClient {
   private static instance: AudioClient;
@@ -39,7 +40,7 @@ class AudioClient {
     instructions?: string
   ): Promise<string> {
     const voice = 'ash'; // Hardcoded voice
-    const model = 'gpt-4o-mini-tts'; // Hardcoded model
+    const model = TTS_MODEL;
     const randomString = this.utils.generateRandomString(); // Generate random string using Utils
     const outputFilename = `${randomString}.mp3`; // Use random string for filename
 

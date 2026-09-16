@@ -200,6 +200,31 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Feature flags** for development vs production behavior
 - **AWS configuration** for cloud services
 
+## OpenAI models and structured output
+
+Every OpenAI model name lives in `src/llmModels.ts` (sol / terra / luna text
+tiers, the image model, the TTS model); prices per 1M tokens are in
+`src/aiPricing.ts`. Bump the constants there, nowhere else. The root
+`translate.js` scripts in each repo are the exception: they are standalone and
+name the model inline.
+
+The GPT-5.6 family changed two Chat Completions rules, verified against the
+live API on 2026-09-16:
+
+- `temperature` other than 1 returns 400 unless `reasoning_effort: 'none'`.
+- Function tools (`tools` / legacy `functions`) return 400 whenever reasoning
+  is on. OpenAI's answer is the Responses API; ours is
+  `response_format: { type: 'json_schema' }`, which works with every
+  reasoning level. Structured calls read `message.content` and parse it.
+- `max_tokens` is rejected; use `max_completion_tokens`.
+
+Pick `reasoning_effort` per call, not globally: `'none'` for translation,
+classification and copy (fast, allows a temperature), `'low'` where the answer
+has to be right (release years, quiz alternatives, order extraction, playlist
+curation), `'medium'` for year audits, trivia facts and blog generation.
+`chat.ts` and `mail.ts` still use legacy `functions` on the luna tier with
+reasoning off, which the API accepts.
+
 ## Testing
 - Basic test setup in `test.js`
 - Run tests with `npm test`
