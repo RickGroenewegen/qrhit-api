@@ -9,8 +9,10 @@ import PrismaInstance from '../prisma';
 import Translation from '../translation';
 import Data from '../data';
 import {
+  getSuggestionArtwork,
   parsePlaylistSuggestionOptions,
   playlistSuggestionQuery,
+  suggestionArtPath,
 } from '../playlistSuggestions';
 import {
   quotationVatContext,
@@ -3355,7 +3357,8 @@ export default async function vibeRoutes(
             description: truncate(p.description, 200),
             numberOfTracks,
             showTrackNote: numberOfTracks > cardCount,
-            imageUrl: p.customImage ? `${baseUrl}${p.customImage}` : p.image,
+            // Small cached JPEG instead of the full-size source, see getSuggestionArtwork.
+            imageUrl: p.customImage || p.image ? `${baseUrl}${suggestionArtPath(p.playlistId)}` : null,
             spotifyUrl: `https://open.spotify.com/playlist/${p.playlistId}`,
           };
         });
@@ -3372,6 +3375,32 @@ export default async function vibeRoutes(
       } catch (error) {
         console.error('Error rendering playlist suggestions view:', error);
         reply.status(500).send({ error: 'Failed to render playlist suggestions' });
+      }
+    }
+  );
+
+  // Playlist artwork as a small cached JPEG for the brochure. Unauthenticated
+  // because the Lambda's Chromium fetches it while rendering the view.
+  fastify.get(
+    '/vibe/playlist-suggestions/art/:playlistId',
+    async (request: any, reply: any) => {
+      try {
+        const playlistId = String(request.params.playlistId || '');
+        if (!playlistId || playlistId.length > 64) {
+          reply.status(404).send({ error: 'Not found' });
+          return;
+        }
+        const jpeg = await getSuggestionArtwork(playlistId);
+        if (!jpeg) {
+          reply.status(404).send({ error: 'Not found' });
+          return;
+        }
+        reply.header('Content-Type', 'image/jpeg');
+        reply.header('Cache-Control', 'public, max-age=86400');
+        reply.send(jpeg);
+      } catch (error) {
+        console.error('Error serving playlist suggestion artwork:', error);
+        reply.status(500).send({ error: 'Failed to load artwork' });
       }
     }
   );

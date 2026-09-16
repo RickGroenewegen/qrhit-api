@@ -8,7 +8,7 @@
     <%
         var editionName = t('editionName');
         var version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
-        var PER_PAGE = 8;
+        var PER_PAGE = 10;
         var pages = [];
         for (var i = 0; i < playlists.length; i += PER_PAGE) {
             pages.push(playlists.slice(i, i + PER_PAGE));
@@ -27,20 +27,24 @@
             margin-bottom: 14px;
         }
 
+        /* minmax(0, 1fr): a plain 1fr honours the card's min-content width,
+           and the no-wrap Spotify button would push the second column off
+           the sheet. */
         .suggestion-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6mm;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 5mm;
         }
 
         .suggestion-card {
             display: flex;
-            gap: 5mm;
+            gap: 4mm;
             padding: 4mm;
             border: 2px solid var(--disco-18);
             border-radius: var(--radius-sm);
             background: rgba(255, 255, 255, 0.35);
-            min-height: 36mm;
+            min-height: 34mm;
+            min-width: 0;
             break-inside: avoid;
         }
 
@@ -116,9 +120,11 @@
             padding-top: 7px;
             border-top: 1px solid var(--disco-18);
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 5px 8px;
+            min-width: 0;
         }
 
         .suggestion-foot .sticker {

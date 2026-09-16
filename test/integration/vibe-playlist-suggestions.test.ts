@@ -194,6 +194,21 @@ describe('playlist suggestions document', () => {
       expect(none.body).not.toContain('best-fitting tracks');
     });
 
+    it('points every card at the cached artwork route and 404s for unknown playlists', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/vibe/playlist-suggestions?locale=en&cardCount=48',
+      });
+      expect(res.body).toContain('/vibe/playlist-suggestions/art/sugg-intl-250');
+      expect(res.body).not.toContain('https://i.scdn.co/image/x');
+
+      const art = await app.inject({
+        method: 'GET',
+        url: '/vibe/playlist-suggestions/art/does-not-exist',
+      });
+      expect(art.statusCode).toBe(404);
+    });
+
     it('rejects an unsupported card count', async () => {
       const res = await app.inject({
         method: 'GET',

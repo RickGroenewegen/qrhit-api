@@ -1,10 +1,97 @@
+import * as crypto from 'crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import axios from 'axios';
+import sharp from 'sharp';
 import Translation from './translation';
+import PrismaInstance from './prisma';
 import { PlaylistSuggestionOptions } from './data/featuredPlaylists';
 
 /** Box sizes the admin can pick a suggestion list for. */
 export const SUGGESTION_CARD_COUNTS = [48, 96, 192, 200] as const;
 
 const MAX_GENRE_IDS = 50;
+
+/**
+ * Artwork in the brochure is a 26 mm square, so 240 px is already ~2.3x
+ * print density. Spotify mosaics are 640 px JPEGs and admin uploads are
+ * 1600 px PNGs; embedding those made a 300-playlist PDF weigh 50 MB+.
+ */
+const ART_SIZE = 240;
+const ART_QUALITY = 74;
+const ART_DIR = 'suggestion_art';
+
+/** Public path of the thumbnail; the HTML view points every card here. */
+export function suggestionArtPath(playlistId: string): string {
+  return `/vibe/playlist-suggestions/art/${encodeURIComponent(playlistId)}`;
+}
+
+/**
+ * Returns a small JPEG for a playlist's artwork, generating and caching it
+ * on first use. The cache file is keyed on the source URL, so a new custom
+ * image yields a new file and stale thumbnails are simply never requested
+ * again. Returns null when the playlist or its image cannot be resolved.
+ */
+export async function getSuggestionArtwork(
+  playlistId: string
+): Promise<Buffer | null> {
+  const prisma = PrismaInstance.getInstance();
+  const playlist = await prisma.playlist.findUnique({
+    where: { playlistId },
+    select: { image: true, customImage: true },
+  });
+  if (!playlist) return null;
+
+  const source = playlist.customImage || playlist.image;
+  if (!source) return null;
+
+  const publicDir = process.env['PUBLIC_DIR'] as string;
+  const cacheDir = path.join(publicDir, ART_DIR);
+  const hash = crypto.createHash('md5').update(source).digest('hex').slice(0, 12);
+  const cacheFile = path.join(
+    cacheDir,
+    `${playlistId.replace(/[^a-zA-Z0-9_-]/g, '_')}_${hash}.jpg`
+  );
+
+  try {
+    return await fs.readFile(cacheFile);
+  } catch {
+    // not cached yet
+  }
+
+  let original: Buffer;
+  try {
+    if (playlist.customImage) {
+      // Stored as "/public/playlist_images/<file>", served from PUBLIC_DIR.
+      const relative = playlist.customImage.replace(/^\/?public\//, '');
+      original = await fs.readFile(path.join(publicDir, relative));
+    } else {
+      const response = await axios.get<ArrayBuffer>(source, {
+        responseType: 'arraybuffer',
+        timeout: 15000,
+      });
+      original = Buffer.from(response.data);
+    }
+  } catch (error) {
+    console.warn(`Could not load artwork for playlist ${playlistId}:`, (error as Error).message);
+    return null;
+  }
+
+  const thumbnail = await sharp(original)
+    .resize(ART_SIZE, ART_SIZE, { fit: 'cover' })
+    .flatten({ background: '#18565E' })
+    .jpeg({ quality: ART_QUALITY, mozjpeg: true })
+    .toBuffer();
+
+  try {
+    await fs.mkdir(cacheDir, { recursive: true });
+    await fs.writeFile(cacheFile, thumbnail);
+  } catch (error) {
+    console.warn('Could not cache suggestion artwork:', (error as Error).message);
+  }
+
+  return thumbnail;
+}
 
 export interface ParsedPlaylistSuggestionOptions extends PlaylistSuggestionOptions {
   /** Business locale the document itself is written in (nl / de / en). */
