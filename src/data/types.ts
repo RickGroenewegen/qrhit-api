@@ -26,4 +26,5 @@ export interface DataDeps {
   blockedPlaylistsInitialized: boolean;
   blockedFailOpenUntil: number;
   ensureBlockedLoaded(): Promise<void>;
+  reloadBlocked(): Promise<void>;
 }

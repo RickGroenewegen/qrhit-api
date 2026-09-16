@@ -1670,6 +1670,9 @@ export default async function vibeRoutes(
         const listIdParam = request.query.listId
           ? parseInt(request.query.listId)
           : null;
+        const contactUserIdParam = request.query.contactUserId
+          ? parseInt(request.query.contactUserId)
+          : null;
         let profitMargins = null;
         let calculatedPrices = null;
 
@@ -1692,11 +1695,35 @@ export default async function vibeRoutes(
         // Get company data directly from database - pass ['admin'] to include onlyForAdmin companies
         const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
-        const company = companies.find((c: any) => c.id === companyId);
+        const storedCompany = companies.find((c: any) => c.id === companyId);
 
-        if (!company) {
+        if (!storedCompany) {
           reply.status(404).send({ error: 'Company not found' });
           return;
+        }
+
+        // The quotation can be addressed to one of the company's contacts
+        // (a user linked to the company). The template prints the contact
+        // block from company.contact / contactemail / contactphone, so the
+        // chosen contact overrides those on a copy; without a valid contact
+        // the company's own stored contact fields are printed as before.
+        const company = { ...storedCompany };
+        if (contactUserIdParam && !isNaN(contactUserIdParam)) {
+          try {
+            const prisma = PrismaInstance.getInstance();
+            const contactUser = await prisma.user.findFirst({
+              where: { id: contactUserIdParam, companyId },
+              select: { displayName: true, email: true, phone: true },
+            });
+            if (contactUser) {
+              company.contact = contactUser.displayName || contactUser.email;
+              company.contactemail = contactUser.email;
+              company.contactphone =
+                contactUser.phone || storedCompany.contactphone || null;
+            }
+          } catch (e) {
+            console.error('Error loading quotation contact:', e);
+          }
         }
 
         // Lambda screenshots this route to produce the PDF and carries no
@@ -2009,6 +2036,7 @@ export default async function vibeRoutes(
           profitMargins,
           calculatedPrices,
           listId,
+          contactUserId,
         } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
 
         if (isNaN(companyId)) {
@@ -2024,7 +2052,8 @@ export default async function vibeRoutes(
           request.user.companyId,
           type || 'onzevibe',
           { isReseller, profitMargins, calculatedPrices },
-          listId ? Number(listId) : undefined
+          listId ? Number(listId) : undefined,
+          contactUserId ? Number(contactUserId) : undefined
         );
 
         if (!result.success) {

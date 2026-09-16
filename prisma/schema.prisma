@@ -1019,7 +1019,7 @@ model CompanyList {
   slug                    String
   background              String?
   background2             String?
-  playlistSource          String    @default("voting")
+  playlistSource          String    @default("own")
   playlistUrl             String?
   playlistUrlFull         String?
   qrColor                 String    @default("#000000")

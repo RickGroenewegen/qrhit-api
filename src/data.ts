@@ -91,9 +91,11 @@ class Data {
         }
       });
     } else {
-      // Worker processes: load blocked list from Redis cache
+      // Worker processes: keep an in-memory copy of the blocked list as a
+      // fallback for when Redis is unreachable. The live check in
+      // isPlaylistBlocked reads Redis per request, so this copy only has
+      // to be roughly fresh; the hourly sync is enough.
       this.loadBlockedFromCache().then(() => {
-        // Schedule hourly sync from Redis
         const blockedSyncJob = new CronJob('5 * * * *', async () => {
           await this.loadBlockedFromCache();
         });
@@ -386,14 +388,24 @@ class Data {
   }
 
   /**
-   * Deduplicated on-demand load, used by getLink when a request arrives
-   * before the list is initialized. Preempts any pending backoff timer so
-   * the waiting request drives an attempt right away. Never rejects.
+   * Deduplicated on-demand load, used by the blocked check when a request
+   * arrives before the list is initialized. Never rejects.
    */
   public ensureBlockedLoaded(): Promise<void> {
     if (this.blockedPlaylistsInitialized) {
       return Promise.resolve();
     }
+    return this.reloadBlocked();
+  }
+
+  /**
+   * Deduplicated reload of the in-memory fallback list (Redis first, DB
+   * when the key is absent). Concurrent callers share one attempt, so a
+   * burst of scans on a fresh Redis costs one query, not one per scan.
+   * Preempts any pending backoff timer so the waiting request drives an
+   * attempt right away. Never rejects.
+   */
+  public reloadBlocked(): Promise<void> {
     if (this.blockedLoadPromise) {
       return this.blockedLoadPromise;
     }

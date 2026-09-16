@@ -1742,7 +1742,7 @@ class Vibe {
           slug: slug,
           numberOfCards: numberOfCards,
           numberOfTracks: numberOfTracks,
-          playlistSource: playlistSource || 'voting', // Default to 'voting' if not provided
+          playlistSource: playlistSource || 'own', // Default to 'own' (existing playlist, no voting) if not provided
           playlistUrl: playlistUrl || null, // Set to null if not provided
           status: 'new', // Start with 'new' status
           qrvote: listData.qrvote ?? false, // Use provided qrvote value or default to false
@@ -3720,6 +3720,7 @@ class Vibe {
         // Original tiered pricing for 48 cards (before 30% reseller discount)
         // Tiers must match frontend QUANTITIES for profit margin lookup
         const priceTiers: { qty: number; price: number }[] = [
+          { qty: 75, price: 5.99 },
           { qty: 100, price: 5.31 },
           { qty: 150, price: 4.27 },
           { qty: 200, price: 3.61 },
@@ -3901,7 +3902,8 @@ class Vibe {
         clientPaysTotal: number;
       };
     },
-    listId?: number
+    listId?: number,
+    contactUserId?: number
   ): Promise<{
     success: boolean;
     data?: Buffer;
@@ -3965,6 +3967,9 @@ class Vibe {
       }
       if (listId) {
         queryParams.set('listId', String(listId));
+      }
+      if (contactUserId) {
+        queryParams.set('contactUserId', String(contactUserId));
       }
 
       // The Lambda that renders this URL has no session, so the company's
@@ -4076,6 +4081,7 @@ class Vibe {
             payload: JSON.stringify({
               state,
               pricingOptions: pricingOptions ?? null,
+              contactUserId: contactUserId ?? null,
             }),
           },
         });

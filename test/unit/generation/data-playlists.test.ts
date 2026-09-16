@@ -19,6 +19,7 @@ import {
   updatePlaylistTrackOrder,
   loadBlocked,
   loadBlockedFromCache,
+  isPlaylistBlocked,
   buildMusicMatchExport,
   BLOCKED_PLAYLISTS_CACHE_KEY,
   BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
@@ -50,6 +51,10 @@ function makeCache() {
       arrays.set(k, v);
     }),
     getArray: vi.fn(async (k: string) => arrays.get(k) ?? null),
+    setMembership: vi.fn(async (k: string, v: string) => ({
+      exists: arrays.has(k),
+      member: arrays.get(k)?.includes(v) ?? false,
+    })),
   };
 }
 
@@ -89,6 +94,10 @@ function makeDeps() {
       appTheme: { reload: vi.fn(async () => undefined) },
       utils: { isMainServer: vi.fn(async () => true) },
       blockedPlaylists: new Set<number>(),
+      blockedPlaylistsInitialized: true,
+      blockedFailOpenUntil: 0,
+      reloadBlocked: vi.fn(async () => undefined),
+      ensureBlockedLoaded: vi.fn(async () => undefined),
     } as any,
     prisma,
     cache,
@@ -1211,5 +1220,94 @@ describe('updatePlaylistTrackOrder', () => {
 
     expect(res).toEqual({ success: false, error: 'PaymentHasPlaylist not found' });
     expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('isPlaylistBlocked', () => {
+  it('answers from Redis when the key is present, ignoring the in-memory copy', async () => {
+    const { deps, cache } = makeDeps();
+    cache.arrays.set(BLOCKED_PLAYLISTS_CACHE_KEY, ['5']);
+    deps.blockedPlaylists.add(8); // stale local copy must not win
+
+    await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(true);
+    await expect(isPlaylistBlocked(deps, 8)).resolves.toBe(false);
+    expect(cache.setMembership).toHaveBeenCalledWith(
+      BLOCKED_PLAYLISTS_CACHE_KEY,
+      '5'
+    );
+    expect(deps.reloadBlocked).not.toHaveBeenCalled();
+  });
+
+  it('treats the empty sentinel key as nothing blocked', async () => {
+    const { deps, cache } = makeDeps();
+    cache.arrays.set(BLOCKED_PLAYLISTS_CACHE_KEY, [
+      BLOCKED_PLAYLISTS_EMPTY_SENTINEL,
+    ]);
+    deps.blockedPlaylists.add(5);
+
+    await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(false);
+  });
+
+  it('rebuilds the list when the key is absent and answers from memory', async () => {
+    const { deps } = makeDeps();
+    deps.reloadBlocked.mockImplementation(async () => {
+      deps.blockedPlaylists.add(5);
+    });
+
+    await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(true);
+    expect(deps.reloadBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the in-memory copy when Redis throws', async () => {
+    const { deps, cache } = makeDeps();
+    cache.setMembership.mockRejectedValue(new Error('redis gone'));
+    deps.blockedPlaylists.add(5);
+
+    await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(true);
+    await expect(isPlaylistBlocked(deps, 6)).resolves.toBe(false);
+  });
+
+  it('waits for the fallback list to initialize when Redis is down', async () => {
+    const { deps, cache } = makeDeps();
+    cache.setMembership.mockRejectedValue(new Error('redis gone'));
+    deps.blockedPlaylistsInitialized = false;
+    deps.ensureBlockedLoaded.mockImplementation(async () => {
+      deps.blockedPlaylistsInitialized = true;
+      deps.blockedPlaylists.add(5);
+    });
+
+    await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(true);
+    expect(deps.ensureBlockedLoaded).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails open for a window when Redis is down and the fallback never loads', async () => {
+    vi.useFakeTimers();
+    try {
+      const { deps, cache } = makeDeps();
+      cache.setMembership.mockRejectedValue(new Error('redis gone'));
+      deps.blockedPlaylistsInitialized = false;
+      deps.ensureBlockedLoaded.mockImplementation(
+        () => new Promise<void>(() => {})
+      );
+
+      const pending = isPlaylistBlocked(deps, 5);
+      await vi.advanceTimersByTimeAsync(10000);
+      await expect(pending).resolves.toBe(false);
+      expect(deps.blockedFailOpenUntil).toBeGreaterThan(Date.now());
+
+      // Inside the window the next scan does not wait again
+      await expect(isPlaylistBlocked(deps, 5)).resolves.toBe(false);
+      expect(deps.ensureBlockedLoaded).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never blocks on a non-numeric id', async () => {
+    const { deps, cache } = makeDeps();
+    cache.arrays.set(BLOCKED_PLAYLISTS_CACHE_KEY, ['NaN']);
+
+    await expect(isPlaylistBlocked(deps, Number('abc'))).resolves.toBe(false);
+    expect(cache.setMembership).not.toHaveBeenCalled();
   });
 });

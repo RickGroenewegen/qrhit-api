@@ -242,13 +242,13 @@ describe('createCompanyList', () => {
     expect('description_de' in data).toBe(false);
   });
 
-  it('defaults playlistSource to voting and playlistUrl to null', async () => {
+  it('defaults playlistSource to own and playlistUrl to null', async () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'A' });
     h.prisma.companyList.findFirst.mockResolvedValue(null);
     h.prisma.companyList.create.mockImplementation(async ({ data }: any) => data);
     await vibe.createCompanyList(1, valid);
     expect(h.prisma.companyList.create.mock.calls[0][0].data).toMatchObject({
-      playlistSource: 'voting',
+      playlistSource: 'own',
       playlistUrl: null,
       qrvote: false,
     });

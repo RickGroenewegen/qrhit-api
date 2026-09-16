@@ -1,6 +1,7 @@
 export interface ApiResult {
   success: boolean;
   error?: string;
+  blocked?: boolean; // The playlist (PaymentHasPlaylist) was blocked by an admin
   data?: any;
   needsReAuth?: boolean;
   authUrl?: string; // Add optional property for authorization URL

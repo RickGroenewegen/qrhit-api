@@ -1148,6 +1148,91 @@ export async function loadBlockedFromCache(deps: DataDeps): Promise<boolean> {
   }
 }
 
+// How long a scan waits for the fallback list before failing open, and how
+// long it then skips the fallback so a sustained outage stalls one request
+// per window instead of every request.
+const BLOCKED_FALLBACK_WAIT_MS = 10000;
+const BLOCKED_FAIL_OPEN_MS = 30000;
+
+/**
+ * Live blocked check, run on every scan.
+ *
+ * Reads the shared Redis set directly so an admin toggle takes effect on the
+ * next scan on every worker and every server: the API runs one cluster
+ * worker per CPU, and their in-memory copies only resync hourly. That copy
+ * is now purely a fallback for when Redis is unreachable.
+ *
+ * Three outcomes from Redis:
+ *  - key present: the membership answer is authoritative.
+ *  - key absent (fresh Redis, version-bump deploy): rebuild from the
+ *    database, which also republishes the key, then answer from memory.
+ *  - error: answer from the in-memory copy, waiting a bounded time for it
+ *    to initialize and failing open after that.
+ */
+export async function isPlaylistBlocked(
+  deps: DataDeps,
+  paymentHasPlaylistId: number
+): Promise<boolean> {
+  if (!Number.isFinite(paymentHasPlaylistId)) {
+    return false;
+  }
+
+  try {
+    const { exists, member } = await deps.cache.setMembership(
+      BLOCKED_PLAYLISTS_CACHE_KEY,
+      String(paymentHasPlaylistId)
+    );
+    if (exists) {
+      return member;
+    }
+    deps.logger.log(
+      color.yellow.bold(
+        'Blocked playlists key missing in Redis, rebuilding from database'
+      )
+    );
+    await Promise.race([
+      deps.reloadBlocked(),
+      new Promise((resolve) =>
+        setTimeout(resolve, BLOCKED_FALLBACK_WAIT_MS).unref()
+      ),
+    ]);
+    return deps.blockedPlaylists.has(paymentHasPlaylistId);
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Live blocked check failed, using in-memory list: ${error.message}`
+      )
+    );
+  }
+
+  if (
+    !deps.blockedPlaylistsInitialized &&
+    Date.now() >= deps.blockedFailOpenUntil
+  ) {
+    deps.logger.log(
+      color.yellow.bold('Waiting for blocked playlists to initialize...')
+    );
+    await Promise.race([
+      deps.ensureBlockedLoaded(),
+      new Promise((resolve) =>
+        setTimeout(resolve, BLOCKED_FALLBACK_WAIT_MS).unref()
+      ),
+    ]);
+    if (!deps.blockedPlaylistsInitialized) {
+      deps.blockedFailOpenUntil = Date.now() + BLOCKED_FAIL_OPEN_MS;
+      deps.logger.log(
+        color.yellow.bold(
+          `Blocked playlists still initializing after ${
+            BLOCKED_FALLBACK_WAIT_MS / 1000
+          }s, skipping block check for ${BLOCKED_FAIL_OPEN_MS / 1000}s`
+        )
+      );
+    }
+  }
+
+  return deps.blockedPlaylists.has(paymentHasPlaylistId);
+}
+
 /** A single playlist entry in the MusicMatch export. */
 export interface MusicMatchPlaylist {
   /** payment_has_playlist.id */

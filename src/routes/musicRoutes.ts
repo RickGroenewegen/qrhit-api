@@ -532,6 +532,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let td = null;
     let t = null;
     let st = null;
+    // A blocked playlist answers with every link empty, which the app and
+    // the web scanner already treat as "this code cannot be played". The
+    // flag is there so clients can tell it apart from an unknown track.
+    const b = result.blocked === true;
 
     if (result.success) {
       link = result.data.link;
@@ -555,7 +559,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       link = '?';
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st, b };
   });
 
   // Hitlist routes

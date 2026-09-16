@@ -184,15 +184,57 @@ class Cache {
     return deletedCount;
   }
 
+  /**
+   * Replaces a set atomically. DEL + SADD run inside MULTI/EXEC so a
+   * concurrent reader never observes the key as absent or half-written
+   * between the two commands.
+   */
   async setArray(key: string, values: string[]): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
-    await this.executeCommand('del', cacheKey); // Ensure the key is empty before setting new values
-    await this.executeCommand('sadd', cacheKey, ...values);
+    const results = await this.client
+      .multi()
+      .del(cacheKey)
+      .sadd(cacheKey, ...values)
+      .exec();
+    const failed = results?.find(([error]) => error);
+    if (failed) {
+      this.logManager.log('Redis command error:' + failed[0]!.message);
+      throw failed[0];
+    }
   }
 
   async getArray(key: string): Promise<string[]> {
     let cacheKey = `${this.version}:${key}`;
     return await this.executeCommand('smembers', cacheKey);
+  }
+
+  /**
+   * Probes a set in a single round trip and tells "key not written" apart
+   * from "value not a member". Readers that must not fail open on an absent
+   * key (fresh Redis, version-bump deploy) need that distinction.
+   */
+  async setMembership(
+    key: string,
+    value: string
+  ): Promise<{ exists: boolean; member: boolean }> {
+    let cacheKey = `${this.version}:${key}`;
+    const results = await this.client
+      .multi()
+      .exists(cacheKey)
+      .sismember(cacheKey, value)
+      .exec();
+    if (!results) {
+      throw new Error('Redis transaction returned no result');
+    }
+    const failed = results.find(([error]) => error);
+    if (failed) {
+      this.logManager.log('Redis command error:' + failed[0]!.message);
+      throw failed[0];
+    }
+    return {
+      exists: results[0]![1] === 1,
+      member: results[1]![1] === 1,
+    };
   }
 
   async valueExistsInArray(key: string, value: string): Promise<boolean> {
