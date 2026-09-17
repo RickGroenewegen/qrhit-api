@@ -1374,7 +1374,7 @@ class Mollie {
     // timer (canBeSentToPrinterAt) ran out. `notSubmitted` is the old name of
     // this flag, still sent by dashboards loaded before the rename. Orders on
     // printer hold are parked on purpose and have their own filter.
-    const needsAttentionFilter = {
+    const needsAttentionFilter: Prisma.PaymentWhereInput = {
       printApiStatus: 'Created',
       printerHold: false,
       PaymentHasPlaylist: {
