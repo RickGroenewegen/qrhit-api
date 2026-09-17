@@ -5769,6 +5769,47 @@ export default async function adminRoutes(
     }
   );
 
+  // Everyone a shipment label can go to: each company plus the users on its
+  // Contacts tab. Contacts have no address of their own, they ship to the
+  // company's.
+  fastify.get(
+    '/admin/shipment-labels/recipients',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const companies = await prisma.company.findMany({
+          orderBy: [{ test: 'asc' }, { name: 'asc' }],
+          select: {
+            id: true,
+            name: true,
+            test: true,
+            address: true,
+            housenumber: true,
+            city: true,
+            zipcode: true,
+            countrycode: true,
+            contact: true,
+            contactemail: true,
+            User: {
+              orderBy: { displayName: 'asc' },
+              select: { id: true, displayName: true, email: true },
+            },
+          },
+        });
+
+        return reply.send({
+          companies: companies.map(({ User, ...company }) => ({
+            ...company,
+            contacts: User,
+          })),
+        });
+      } catch (error: any) {
+        logger.log(color.red.bold(`Error loading shipment label recipients: ${error.message}`));
+        return reply.status(500).send({ error: 'Failed to load recipients' });
+      }
+    }
+  );
+
   // Create PostNL shipment labels for selected companies
   fastify.post(
     '/admin/shipment-labels',

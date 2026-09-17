@@ -1193,6 +1193,56 @@ describe('admin routes — wave 2 coverage', () => {
     });
   });
 
+  describe('GET /admin/shipment-labels/recipients', () => {
+    it('returns each company with the users on its Contacts tab', async () => {
+      const company = await prisma().company.create({
+        data: {
+          name: 'Labels Wave2 BV',
+          address: 'Kade',
+          housenumber: '5',
+          city: 'Utrecht',
+          zipcode: '3511AA',
+          countrycode: 'NL',
+          contact: 'Anna',
+          contactemail: 'anna@labels.test',
+        },
+      });
+      const contact = await createTestUser({ displayName: 'Bram' });
+      await prisma().user.update({
+        where: { id: contact.user.id },
+        data: { companyId: company.id },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/admin/shipment-labels/recipients',
+        headers,
+      });
+      expect(res.statusCode).toBe(200);
+
+      const found = res.json().companies.find((c: any) => c.id === company.id);
+      expect(found).toMatchObject({
+        name: 'Labels Wave2 BV',
+        address: 'Kade',
+        contact: 'Anna',
+        contactemail: 'anna@labels.test',
+      });
+      expect(found.User).toBeUndefined();
+      expect(found.contacts).toEqual([
+        { id: contact.user.id, displayName: contact.user.displayName, email: contact.user.email },
+      ]);
+    });
+
+    it('rejects a customer token', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/admin/shipment-labels/recipients',
+        headers: customerHeaders,
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
   // ====================================================================
   // AUTH MATRIX — unauthenticated / wrong-group rejections
   // ====================================================================
@@ -1215,6 +1265,7 @@ describe('admin routes — wave 2 coverage', () => {
       { method: 'POST',   url: '/admin/merchant-center/generate-product-images' },
       { method: 'POST',   url: '/admin/shipping/create-all' },
       { method: 'POST',   url: '/admin/shipment-labels' },
+      { method: 'GET',    url: '/admin/shipment-labels/recipients' },
       { method: 'POST',   url: '/admin/mail-octopus/resync' },
       { method: 'GET',    url: '/day_report' },
       { method: 'GET',    url: '/monthly_report' },

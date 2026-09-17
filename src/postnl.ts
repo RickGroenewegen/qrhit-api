@@ -105,7 +105,7 @@ class PostNL {
   public async createShipmentLabels(companies: { id: number; name: string; contact: string; address: string; housenumber: string; city: string; zipcode: string; countrycode: string; contactemail: string; productCode?: string }[]): Promise<{
     success: boolean;
     pdfBuffer?: Buffer;
-    errors?: { companyId: number; companyName: string; missingFields: string[] }[];
+    errors?: { companyId: number; companyName: string; contact: string; missingFields: string[] }[];
     error?: string;
   }> {
     try {
@@ -114,13 +114,15 @@ class PostNL {
       }
 
       // Validate all addresses
-      const validationErrors: { companyId: number; companyName: string; missingFields: string[] }[] = [];
+      const validationErrors: { companyId: number; companyName: string; contact: string; missingFields: string[] }[] = [];
       for (const company of companies) {
         const missingFields = this.validateCompanyAddress(company);
         if (missingFields.length > 0) {
           validationErrors.push({
             companyId: company.id,
             companyName: company.name,
+            // One company can have several recipients, the name tells them apart
+            contact: company.contact || '',
             missingFields,
           });
         }
