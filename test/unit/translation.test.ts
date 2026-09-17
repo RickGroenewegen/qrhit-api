@@ -10,7 +10,6 @@ const { prismaMock, translateTextMock } = vi.hoisted(() => {
     prismaMock: {
       playlist: delegate(),
       genre: delegate(),
-      trustPilot: delegate(),
       companyList: delegate(),
       blog: delegate(),
       eventBase: delegate(),

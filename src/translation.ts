@@ -256,7 +256,6 @@ class Translation {
     }> = [
       { model: 'Playlist', delegate: prisma.playlist, fields: ['description'] },
       { model: 'genre', delegate: prisma.genre, fields: ['name'] },
-      { model: 'TrustPilot', delegate: prisma.trustPilot, fields: ['title', 'message'] },
       { model: 'CompanyList', delegate: prisma.companyList, fields: ['description'] },
       { model: 'Blog', delegate: prisma.blog, fields: ['title', 'content', 'summary'] },
       { model: 'EventBase', delegate: prisma.eventBase, fields: ['name', 'description', 'body'] },

@@ -4,7 +4,7 @@ import Mail from '../mail';
 import Push from '../push';
 import Suggestion from '../suggestion';
 import Designer from '../designer';
-import Trustpilot from '../trustpilot';
+import Reviews from '../reviews';
 import AudioClient from '../audio';
 import Generator from '../generator';
 import Qr from '../qr';
@@ -47,7 +47,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const push = Push.getInstance();
   const suggestion = Suggestion.getInstance();
   const designer = Designer.getInstance();
-  const trustpilot = Trustpilot.getInstance();
+  const reviews = Reviews.getInstance();
   const audio = AudioClient.getInstance();
   const generator = Generator.getInstance();
   const qr = new Qr();
@@ -413,18 +413,19 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/reviews/:locale/:amount/:landingPage',
     async (request: any, _reply) => {
-      const amount = parseInt(request.params.amount) || 0;
-      return await trustpilot.getReviews(
-        true,
-        amount,
-        request.params.locale,
-        utils.parseBoolean(request.params.landingPage)
-      );
+      // `?apps=1` adds the App Store and Google Play reviews (4 stars and up).
+      // Only the reviews page asks for them; everywhere else is Trustpilot only.
+      return await reviews.getReviews({
+        locale: request.params.locale,
+        amount: parseInt(request.params.amount) || 0,
+        landingPage: utils.parseBoolean(request.params.landingPage),
+        includeApps: utils.parseBoolean(request.query?.apps),
+      });
     }
   );
 
   fastify.get('/reviews_details', async (_request: any, _reply) => {
-    return await trustpilot.getCompanyDetails();
+    return await reviews.getScores();
   });
 
   fastify.get('/unsent_reviews', async (request: any, _reply) => {

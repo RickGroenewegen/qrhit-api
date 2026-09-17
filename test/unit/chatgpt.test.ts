@@ -11,7 +11,6 @@ const {
   imagesEditMock,
   prismaQueryRaw,
   prismaExecuteRaw,
-  trustpilotUpdate,
   sharpChain,
   sharpFactory,
 } = vi.hoisted(() => {
@@ -30,7 +29,6 @@ const {
     imagesEditMock: vi.fn(),
     prismaQueryRaw: vi.fn(),
     prismaExecuteRaw: vi.fn(),
-    trustpilotUpdate: vi.fn(),
     sharpChain: chain,
     sharpFactory: vi.fn(() => chain),
   };
@@ -48,7 +46,6 @@ vi.mock('../../src/prisma', () => ({
     getInstance: () => ({
       $queryRaw: prismaQueryRaw,
       $executeRaw: prismaExecuteRaw,
-      trustPilot: { update: trustpilotUpdate },
     }),
   },
 }));
@@ -113,7 +110,6 @@ beforeEach(() => {
   imagesEditMock.mockReset();
   prismaQueryRaw.mockReset();
   prismaExecuteRaw.mockReset();
-  trustpilotUpdate.mockReset();
   sharpFactory.mockClear();
   sharpChain.jpeg.mockClear();
   sharpChain.resize.mockClear();
@@ -368,84 +364,6 @@ describe('ChatGPT.determineGenre', () => {
       toolCallResponse('determineGenre', null, '!')
     );
     expect(await gpt.determineGenre('Hits', tracks, genres)).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// translateTrustpilotReviews
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.translateTrustpilotReviews', () => {
-  it('does nothing when there are no reviews', async () => {
-    await gpt.translateTrustpilotReviews([] as any, ['nl']);
-    expect(createMock).not.toHaveBeenCalled();
-  });
-
-  it('updates only reviews whose target locale columns are still empty', async () => {
-    const reviews = [
-      {
-        id: 1,
-        locale: 'en-US',
-        title_en: 'Great',
-        message_en: 'Nice product',
-        title_nl: '',
-        message_nl: '',
-      },
-      {
-        id: 2,
-        locale: 'en-US',
-        title_en: 'Okay',
-        message_en: 'Fine',
-        title_nl: 'Al vertaald',
-        message_nl: 'Bestaat al',
-      },
-    ] as any[];
-
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('translateReviews', {
-        translations: [
-          {
-            reviewIndex: 0,
-            translations: { nl: { title: 'Geweldig', message: 'Leuk product' } },
-          },
-          {
-            reviewIndex: 1,
-            translations: { nl: { title: 'Nieuw', message: 'Nieuw bericht' } },
-          },
-        ],
-      })
-    );
-
-    await gpt.translateTrustpilotReviews(reviews as any, ['nl']);
-
-    expect(trustpilotUpdate).toHaveBeenCalledTimes(1);
-    expect(trustpilotUpdate).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { title_nl: 'Geweldig', message_nl: 'Leuk product' },
-    });
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.response_format.json_schema.name).toBe('translateReviews');
-    expect(payload.messages[1].content).toContain('Title: Great');
-  });
-
-  it('survives a malformed translation response without writing', async () => {
-    const reviews = [
-      {
-        id: 3,
-        locale: 'en-US',
-        title_en: 'T',
-        message_en: 'M',
-        title_nl: '',
-        message_nl: '',
-      },
-    ] as any[];
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('translateReviews', null, 'bad')
-    );
-
-    await gpt.translateTrustpilotReviews(reviews as any, ['nl']);
-    expect(trustpilotUpdate).not.toHaveBeenCalled();
   });
 });
 

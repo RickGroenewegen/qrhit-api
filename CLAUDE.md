@@ -313,6 +313,33 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Customer reviews: a committed JSON file
+
+`src/reviews.ts` serves `/reviews/:locale/:amount/:landingPage` and
+`/reviews_details` from `src/_data/reviews/reviews.json`. It only reads. The
+file is written by the growth-oracle `reviews` pillar, run from the frontend
+repo (`npm run growth -- reviews fetch`), and holds every Trustpilot, App Store
+and Google Play review in its original language plus all site locales, with each
+platform's score. See the frontend's CLAUDE.md for the workflow.
+
+This replaced a RapidAPI Trustpilot reseller that was called when the API
+booted and a ChatGPT pass that translated the results in batches of five with a
+pause in between, which is what made startup take minutes. Nothing review
+related runs at boot or on a cron any more. `RAPID_API_KEY` is still needed: the
+Spotify scrapers, `music.ts` and `data/musicLinks.ts` use it.
+
+- Like the blog, the file reaches production through `ncp ./src ./build` at the
+  end of `npm run build`, and `CONTENT_FILES` in `reviews.ts` has the same
+  `tsc -w` fallback as the blog's `CONTENT_DIRS`.
+- The parsed file is held in memory and its mtime re-checked at most once a
+  minute, so a `growth reviews fetch` under a running dev API shows up without a
+  restart. There is no Redis layer to flush.
+- Filtering lives here, not in the frontend: hidden reviews never leave the
+  API, app store reviews are only returned with `?apps=1` and only at 4 stars
+  and up.
+- The `trustpilot` table (`TrustPilot` model) is left in place and unread, so
+  rolling back is a deploy.
+
 ## Product feeds: Merchant Center and Channable
 
 Two modules publish the same catalogue and currently run side by side:

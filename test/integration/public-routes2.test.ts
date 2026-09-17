@@ -48,10 +48,6 @@ describe('public routes — wave 2 coverage', () => {
     vi.restoreAllMocks();
   });
 
-  // NOTE: GET /reviews_details (trustpilot.getCompanyDetails) is NOT tested here
-  // because it makes a live external HTTP call to RapidAPI that times out in the
-  // test environment. The endpoint is covered structurally by the route registration.
-
   // ====================================================================
   // GET /upload_contacts
   // ====================================================================
@@ -330,7 +326,6 @@ describe('public routes — wave 2 coverage', () => {
     });
   });
 
-  // NOTE: GET /reviews/:locale/:amount/:landingPage is covered by public-extra.test.ts
-  // (seeds local trustPilot DB records and queries them). External API call tests would
-  // timeout in the test environment.
+  // NOTE: GET /reviews/:locale/:amount/:landingPage and /reviews_details are
+  // covered by public-extra.test.ts and test/unit/reviews.test.ts.
 });
