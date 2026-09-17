@@ -4,8 +4,9 @@
  *
  * Tiers follow OpenAI's own GPT-5.6 naming:
  *   sol   - unsuffixed tier: long-form writing, vision, hard string parsing
- *   terra - mini tier: the default for structured work (quiz, years, playlists)
+ *   terra - mini tier: the default for structured work (quiz, years)
  *   luna  - nano tier: cheap utility calls (chat helpers, mail translation)
+ *           and the AI playlist generator, where a customer waits on it
  *
  * Chat Completions on the GPT-5.6 family rejects `temperature` other than 1
  * and rejects function tools whenever reasoning is on. Structured JSON is

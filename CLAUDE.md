@@ -275,8 +275,15 @@ live API on 2026-09-16:
 
 Pick `reasoning_effort` per call, not globally: `'none'` for translation,
 classification and copy (fast, allows a temperature), `'low'` where the answer
-has to be right (release years, quiz alternatives, order extraction, playlist
-curation), `'medium'` for year audits, trivia facts and blog generation.
+has to be right (release years, quiz alternatives, order extraction),
+`'medium'` for year audits, trivia facts and blog generation.
+
+The AI playlist generator (`aiPlaylist.ts`) is the exception to "structured
+work runs on terra": it uses luna with reasoning `'none'`, because a customer
+watches a progress bar while it runs and the curation batches are sequential.
+Measured on 2026-09-17, terra + `'low'` took 26s for the keyword call and 6.5s
+per 100-candidate batch against 10s and 1.5s for luna + `'none'`, with the same
+tracks picked. Most of the gap is terra's token speed, not the reasoning.
 `chat.ts` and `mail.ts` still use legacy `functions` on the luna tier with
 reasoning off, which the API accepts.
 

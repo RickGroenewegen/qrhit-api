@@ -281,6 +281,157 @@ describe('admin order routes', () => {
         ).toBe(0);
       });
     });
+
+    describe('needs attention filter', () => {
+      const HOUR = 60 * 60 * 1000;
+      const paymentDbIds: number[] = [];
+      let playlistDbId: number;
+
+      // One physical order per case: what the customer did, where the approval
+      // timer stands and how far the order got at the printer
+      const cases = [
+        {
+          paymentId: 'tr_attention_approved',
+          approved: true,
+          timerOffset: 12 * HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_expired',
+          approved: false,
+          timerOffset: -HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_waiting',
+          approved: false,
+          timerOffset: 12 * HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_submitted',
+          approved: true,
+          timerOffset: -HOUR,
+          printApiStatus: 'Submitted',
+        },
+      ];
+
+      beforeAll(async () => {
+        const playlist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-attention',
+            name: 'Attention Mix',
+            slug: 'attention-mix',
+            image: 'img.png',
+          },
+        });
+        playlistDbId = playlist.id;
+
+        const orderType = await prisma().orderType.findFirstOrThrow({
+          where: { name: 'cards-500' },
+        });
+        const user = await prisma().user.findFirstOrThrow({
+          where: { userId: 'order-user' },
+        });
+
+        for (const [index, orderCase] of cases.entries()) {
+          const payment = await prisma().payment.create({
+            data: {
+              userId: user.id,
+              paymentId: orderCase.paymentId,
+              orderId: `QR90010${index}`,
+              status: 'paid',
+              fullname: 'Attention Customer',
+              email: 'attention@test.qrsong.io',
+              totalPrice: 60.5,
+              productPriceWithoutTax: 50,
+              shippingPriceWithoutTax: 0,
+              productVATPrice: 10.5,
+              shippingVATPrice: 0,
+              totalVATPrice: 10.5,
+              taxRate: 21,
+              countrycode: 'NL',
+              address: 'Orderstraat 3',
+              city: 'Utrecht',
+              zipcode: '3511AB',
+              housenumber: '3',
+              printApiStatus: orderCase.printApiStatus,
+              canBeSentToPrinter: true,
+              canBeSentToPrinterAt: new Date(Date.now() + orderCase.timerOffset),
+            },
+          });
+          paymentDbIds.push(payment.id);
+
+          await prisma().paymentHasPlaylist.create({
+            data: {
+              paymentId: payment.id,
+              playlistId: playlist.id,
+              amount: 1,
+              numberOfTracks: 100,
+              orderTypeId: orderType.id,
+              type: 'physical',
+              userConfirmedPrinting: orderCase.approved,
+              price: 60.5,
+              priceWithoutVAT: 50,
+              priceVAT: 10.5,
+            },
+          });
+        }
+      });
+
+      afterAll(async () => {
+        await prisma().paymentHasPlaylist.deleteMany({
+          where: { paymentId: { in: paymentDbIds } },
+        });
+        await prisma().payment.deleteMany({
+          where: { id: { in: paymentDbIds } },
+        });
+        await prisma().playlist.delete({ where: { id: playlistDbId } });
+      });
+
+      const search = async (payload: Record<string, unknown>) => {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/orders',
+          headers,
+          payload,
+        });
+        expect(res.statusCode).toBe(200);
+        return res.json();
+      };
+
+      const paymentIds = (body: any) =>
+        body.data.map((payment: any) => payment.paymentId).sort();
+
+      it('returns approved and timed-out orders that are still Created', async () => {
+        const body = await search({ needsAttention: true });
+        expect(body.totalItems).toBe(2);
+        expect(paymentIds(body)).toEqual([
+          'tr_attention_approved',
+          'tr_attention_expired',
+        ]);
+      });
+
+      it('still answers to the old notSubmitted flag', async () => {
+        expect((await search({ notSubmitted: true })).totalItems).toBe(2);
+      });
+
+      it('reports the count while the filter is off', async () => {
+        const body = await search({});
+        expect(body.totalItems).toBe(5);
+        expect(body.needsAttentionCount).toBe(2);
+      });
+
+      it('counts within the other active filters', async () => {
+        expect(
+          (await search({ textSearch: 'tr_attention_expired' }))
+            .needsAttentionCount
+        ).toBe(1);
+        expect(
+          (await search({ textSearch: 'Order Mix' })).needsAttentionCount
+        ).toBe(0);
+      });
+    });
   });
 
   describe('payment info', () => {

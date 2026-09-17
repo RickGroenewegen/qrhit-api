@@ -10,7 +10,7 @@ import Cache from './cache';
 import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
-import { LLM_MODEL_STANDARD } from './llmModels';
+import { LLM_MODEL_FAST } from './llmModels';
 
 // Redis cache key prefix for AI-prompt → spotifyPlaylistId lookup.
 // Lives only between AI playlist creation and the eventual PaymentHasPlaylist
@@ -57,7 +57,12 @@ export interface AIPlaylistSnapshot {
 }
 
 const SERVICE_TYPE = 'ai';
-const MODEL = LLM_MODEL_STANDARD;
+// Luna with reasoning off, measured 2026-09-17 on a 100-candidate batch:
+// terra + 'low' took 26s for keywords and 6.5s per curation batch, luna +
+// 'none' 10s and 1.5s, with the same picks. Curation batches run one after
+// another, so the per-call time is multiplied.
+const MODEL = LLM_MODEL_FAST;
+const REASONING_EFFORT = 'none' as const;
 const KEYWORD_LIMIT = 100;
 const PER_KEYWORD_LIMIT = 50;
 const CURATION_BATCH_SIZE = 100;
@@ -715,7 +720,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nUser locale: ${locale}\n\nReturn as many keywords as the theme genuinely warrants (1 if a single artist, more for broad themes; max ${KEYWORD_LIMIT}) and a year range only if explicitly implied.`,
         },
       ],
-      reasoning_effort: 'low',
+      reasoning_effort: REASONING_EFFORT,
       response_format: {
         type: 'json_schema',
         json_schema: {
@@ -907,7 +912,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nAlready tried (do not repeat any of these):\n${alreadyTried.join(', ')}\n\nReturn up to ${KEYWORD_LIMIT} additional keywords (artist names mainly). Empty list is OK.`,
         },
       ],
-      reasoning_effort: 'low',
+      reasoning_effort: REASONING_EFFORT,
       response_format: {
         type: 'json_schema',
         json_schema: {
@@ -1343,7 +1348,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}${yearHint}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
         },
       ],
-      reasoning_effort: 'low',
+      reasoning_effort: REASONING_EFFORT,
       response_format: {
         type: 'json_schema',
         json_schema: {

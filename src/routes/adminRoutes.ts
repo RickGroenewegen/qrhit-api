@@ -506,11 +506,13 @@ export default async function adminRoutes(
         itemsPerPage: request.body.itemsPerPage || 10,
       };
 
-      const { payments, totalItems } = await mollie.getPaymentList(search);
+      const { payments, totalItems, needsAttentionCount } =
+        await mollie.getPaymentList(search);
 
       reply.send({
         data: payments,
         totalItems,
+        needsAttentionCount,
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });

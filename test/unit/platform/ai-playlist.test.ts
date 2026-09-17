@@ -115,7 +115,7 @@ import AIPlaylistGenerator, {
 import { CostTracker } from '../../../src/aiPricing';
 
 const gen = AIPlaylistGenerator.getInstance();
-const MODEL = 'gpt-5.6-terra';
+const MODEL = 'gpt-5.6-luna';
 
 /**
  * Chat completion carrying a structured (json_schema) output + usage. The
@@ -340,7 +340,7 @@ describe('thinkKeywords (private)', () => {
 
     const payload = h.createMock.mock.calls[0][0];
     expect(payload.model).toBe(MODEL);
-    expect(payload.reasoning_effort).toBe('low');
+    expect(payload.reasoning_effort).toBe('none');
     expect(payload.tools).toBeUndefined();
     expect(payload.response_format.type).toBe('json_schema');
     const system = payload.messages[0];
@@ -711,7 +711,7 @@ describe('run (happy path)', () => {
     );
 
     // Final AISearch row: status, delivered count, keywords, year range and
-    // the real CostTracker math (3000 in + 300 out tokens of gpt-5.6-terra).
+    // the real CostTracker math (3000 in + 300 out tokens of gpt-5.6-luna).
     expect(h.prismaMock.aISearch.update).toHaveBeenCalledWith({
       where: { jobId: JOB },
       data: expect.objectContaining({
@@ -726,8 +726,8 @@ describe('run (happy path)', () => {
         spotifyPlaylistUrl: 'https://open.spotify.com/playlist/PL1',
         inputTokens: 3000,
         outputTokens: 300,
-        // 3000/1e6*2 + 300/1e6*12
-        totalCostUsd: 0.0096,
+        // 3000/1e6*0.2 + 300/1e6*1.2
+        totalCostUsd: 0.00096,
         durationMs: expect.any(Number),
       }),
     });
@@ -855,7 +855,7 @@ describe('run (keyword expansion)', () => {
           inputTokens: 390,
           outputTokens: 65,
           totalCostUsd: parseFloat(
-            ((390 / 1e6) * 2 + (65 / 1e6) * 12).toFixed(6)
+            ((390 / 1e6) * 0.2 + (65 / 1e6) * 1.2).toFixed(6)
           ),
           // NOTE: actual behavior — only the FIRST-round keywords are
           // persisted; expansion keywords (Agnetha) are not.
@@ -951,7 +951,7 @@ describe('run (error paths)', () => {
       // still counts toward cost.
       inputTokens: 5,
       outputTokens: 1,
-      totalCostUsd: parseFloat(((5 / 1e6) * 2 + (1 / 1e6) * 12).toFixed(6)),
+      totalCostUsd: parseFloat(((5 / 1e6) * 0.2 + (1 / 1e6) * 1.2).toFixed(6)),
     });
     // No keywords gathered → JsonNull sentinel.
     expect(data.keywords).toBe(Prisma.JsonNull);

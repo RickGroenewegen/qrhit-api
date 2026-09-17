@@ -1292,7 +1292,11 @@ class Mollie {
 
   public async getPaymentList(
     search: OrderSearch & { page: number; itemsPerPage: number }
-  ): Promise<{ payments: any[]; totalItems: number }> {
+  ): Promise<{
+    payments: any[];
+    totalItems: number;
+    needsAttentionCount: number;
+  }> {
     const whereClause =
       Array.isArray(search.status) && search.status.length > 0
         ? { status: { in: search.status } }
@@ -1363,18 +1367,33 @@ class Mollie {
           }
         : {};
 
-    // Not submitted filter - if true, only include payments with printApiStatus = 'Created' AND at least one physical playlist with userConfirmedPrinting = true (Judged)
-    const notSubmittedClause =
-      typeof search.notSubmitted === 'boolean' && search.notSubmitted
-        ? {
-            printApiStatus: 'Created',
-            PaymentHasPlaylist: {
-              some: {
-                type: 'physical',
-                userConfirmedPrinting: true,
-              },
+    // Needs attention filter - physical orders that should have gone to the
+    // printer but are still on printApiStatus = 'Created': either the customer
+    // approved printing (userConfirmedPrinting, shown as Judged) or the approval
+    // timer (canBeSentToPrinterAt) ran out. `notSubmitted` is the old name of
+    // this flag, still sent by dashboards loaded before the rename.
+    const needsAttentionFilter = {
+      printApiStatus: 'Created',
+      PaymentHasPlaylist: {
+        some: {
+          type: 'physical',
+        },
+      },
+      OR: [
+        {
+          PaymentHasPlaylist: {
+            some: {
+              type: 'physical',
+              userConfirmedPrinting: true,
             },
-          }
+          },
+        },
+        { canBeSentToPrinterAt: { lte: new Date() } },
+      ],
+    };
+    const needsAttentionClause =
+      search.needsAttention === true || search.notSubmitted === true
+        ? needsAttentionFilter
         : {};
 
     // Printer type filter - if provided, only include payments with at least one physical playlist with matching printerType
@@ -1408,24 +1427,34 @@ class Mollie {
     // Every playlist-scoped filter keys on PaymentHasPlaylist, so they have to
     // be combined with AND: spreading them into one object would let the last
     // one silently drop the others
-    const playlistClauses = [
-      printerHoldClause,
-      notSubmittedClause,
-      printerTypeClause,
-      serviceTypeClause,
-    ].filter((clause) => Object.keys(clause).length > 0);
+    const buildWhereFilter = (attentionClause: object) => {
+      const playlistClauses = [
+        printerHoldClause,
+        attentionClause,
+        printerTypeClause,
+        serviceTypeClause,
+      ].filter((clause) => Object.keys(clause).length > 0);
 
-    const whereFilter = {
-      vibe: false,
-      ...whereClause,
-      ...textSearchClause,
-      ...finalizedClause,
-      ...(playlistClauses.length > 0 ? { AND: playlistClauses } : {}),
+      return {
+        vibe: false,
+        ...whereClause,
+        ...textSearchClause,
+        ...finalizedClause,
+        ...(playlistClauses.length > 0 ? { AND: playlistClauses } : {}),
+      };
     };
 
-    const totalItems = await this.prisma.payment.count({
-      where: whereFilter,
-    });
+    const whereFilter = buildWhereFilter(needsAttentionClause);
+
+    // What the list would hold with the needs attention filter switched on and
+    // every other filter left as it is; the dashboard shows it next to the
+    // checkbox
+    const [totalItems, needsAttentionCount] = await Promise.all([
+      this.prisma.payment.count({ where: whereFilter }),
+      this.prisma.payment.count({
+        where: buildWhereFilter(needsAttentionFilter),
+      }),
+    ]);
 
     const payments = await this.prisma.payment.findMany({
       where: whereFilter,
@@ -1594,7 +1623,7 @@ class Mollie {
       },
     });
 
-    return { payments, totalItems };
+    return { payments, totalItems, needsAttentionCount };
   }
 
   public async deletePayment(
