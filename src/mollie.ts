@@ -31,6 +31,7 @@ import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
+import { extractPrintErrorMessage } from './printers/printErrorMessage';
 import Mail from './mail';
 import Fx from './services/fx';
 import SpotifyProvider from './providers/SpotifyProvider';
@@ -1391,6 +1392,12 @@ class Mollie {
           },
         },
         { canBeSentToPrinterAt: { lte: new Date() } },
+        // The printer refused the order: marked as sent, yet no printer order
+        // id. The hourly pass never retries these.
+        {
+          sentToPrinter: true,
+          OR: [{ printApiOrderId: null }, { printApiOrderId: '' }],
+        },
       ],
     };
     const needsAttentionClause =
@@ -1642,7 +1649,8 @@ class Mollie {
           (php) => php.type === 'physical' && php.userConfirmedPrinting
         ) ||
           (payment.canBeSentToPrinterAt !== null &&
-            payment.canBeSentToPrinterAt <= now))
+            payment.canBeSentToPrinterAt <= now) ||
+          (payment.sentToPrinter && !payment.printApiOrderId))
     );
 
     const suggestionCounts =
@@ -1678,15 +1686,20 @@ class Mollie {
       );
 
       let reason: 'printer-error' | 'open-corrections' | 'not-sent' = 'not-sent';
+      let printerError: string | null = null;
       if (payment.sentToPrinter && !payment.printApiOrderId) {
         // The send was attempted and the printer refused it; sentToPrinter
         // stays set so the hourly pass does not retry
         reason = 'printer-error';
+        printerError = extractPrintErrorMessage(payment.printApiOrderResponse);
       } else if (openCorrections > 0 || correctionsPending) {
         reason = 'open-corrections';
       }
 
-      return { ...payment, attention: { reason, openCorrections } };
+      return {
+        ...payment,
+        attention: { reason, openCorrections, printerError },
+      };
     });
 
     return {
