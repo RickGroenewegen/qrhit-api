@@ -1950,6 +1950,47 @@ describe('handleTrackingMails', () => {
     expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(1);
   });
 
+  it.each(['Afgeleverd', 'Afgehaald'])(
+    'closes old %s orders without mailing the customer, queueing the box mail or creating a shipment',
+    async (status) => {
+      const oldOrderRow = {
+        ...orderRow,
+        createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+      };
+      prismaMock.payment.findMany.mockResolvedValue([oldOrderRow]);
+      prismaMock.payment.findUnique.mockResolvedValue(payment);
+      prismaMock.payment.update.mockResolvedValue({});
+      orderWithStatus(status);
+
+      await peb.handleTrackingMails();
+
+      expect(prismaMock.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            printApiShipped: true,
+            printApiStatus: 'Shipped',
+            boxInstructionsMailSent: true,
+          }),
+        })
+      );
+      expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(0);
+      expect(shippingMock.createShipment).not.toHaveBeenCalled();
+    }
+  );
+
+  it('still mails old orders that Print&Bind reports as Verzonden', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([
+      { ...orderRow, createdAt: new Date('2025-06-01') },
+    ]);
+    prismaMock.payment.findUnique.mockResolvedValue(payment);
+    prismaMock.payment.update.mockResolvedValue({});
+    orderWithStatus('Verzonden');
+
+    await peb.handleTrackingMails();
+
+    expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(1);
+  });
+
   it('falls back to the stored tracking link when no tracking code is available yet', async () => {
     prismaMock.payment.findMany.mockResolvedValue([orderRow]);
     prismaMock.payment.findUnique.mockResolvedValue(payment);

@@ -43,6 +43,14 @@ interface PbApiCall {
 const PB_SHIPPED_STATUSES = ['Verzonden', 'Afgeleverd', 'Afgehaald'];
 
 /**
+ * A delivered or picked-up order only gets the tracking mail when it was
+ * placed this recently. The v1 poll only knew `Verzonden`, so every order that
+ * went straight to `Afgeleverd` stayed open for good; those customers received
+ * their parcel long ago and must not be mailed about it now.
+ */
+const LATE_TRACKING_MAIL_MAX_AGE_DAYS = 30;
+
+/**
  * `/orders/calculate` checks the postal code format for a handful of
  * countries (NL, BE, DE, FR, GB as of September 2026) and accepts anything
  * for the rest, so a shipping quote needs a well-formed code only for those.
@@ -2294,6 +2302,10 @@ class PrintEnBindV2 {
         },
       });
 
+      const lateMailCutoff = new Date(
+        Date.now() - LATE_TRACKING_MAIL_MAX_AGE_DAYS * 24 * 60 * 60 * 1000
+      );
+
       if (unshippedOrders.length > 0) {
         for (const order of unshippedOrders) {
           const payment = await this.prisma.payment.findUnique({
@@ -2327,7 +2339,13 @@ class PrintEnBindV2 {
                 payment.printApiTrackingLink ||
                 '';
 
-              // Update order status and tracking link
+              const isStale =
+                pbOrder.status !== 'Verzonden' &&
+                order.createdAt < lateMailCutoff;
+
+              // Update order status and tracking link. A stale order is also
+              // flagged as box-mailed, or the box-instructions cron would mail
+              // it 24 hours from now.
               await this.prisma.payment.update({
                 where: { id: order.id },
                 data: {
@@ -2335,8 +2353,22 @@ class PrintEnBindV2 {
                   printApiShippedAt: new Date(),
                   printApiStatus: 'Shipped',
                   printApiTrackingLink: trackingLink,
+                  ...(isStale ? { boxInstructionsMailSent: true } : {}),
                 },
               });
+
+              if (isStale) {
+                this.logger.log(
+                  color.yellow.bold(
+                    `Closed old order ${color.white.bold(
+                      order.printApiOrderId
+                    )} (${color.white.bold(
+                      pbOrder.status
+                    )}) without sending a tracking email`
+                  )
+                );
+                continue;
+              }
 
               if (trackingLink && trackingLink.length > 0) {
                 // Invoice is now sent with confirmation email, not tracking email

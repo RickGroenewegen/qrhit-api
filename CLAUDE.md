@@ -134,6 +134,12 @@ poll cannot see orders placed on the other API.
   PostNL / international URLs because `shipping.ts` parses
   `code/country/postalcode` off the URL tail.
 - Sandbox orders can be cancelled with `DELETE /orders/{id}`.
+- The tracking poll treats `Afgeleverd` / `Afgehaald` as shipped too, but
+  only mails orders placed in the last 30 days. v1 only knew `Verzonden`, so
+  every order that skipped it stayed `Submitted` forever; the first v2 poll
+  after the September 2026 deploy mailed tracking links for orders delivered
+  a year earlier. Older ones are now closed without a mail or a TrackingMore
+  shipment.
 
 ## Adding New Music Services
 
