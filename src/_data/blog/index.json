@@ -1,6 +1,75 @@
 {
   "posts": [
     {
+      "id": 18,
+      "date": "2026-09-17",
+      "author": "Rick Groenewegen",
+      "image": "blog_18.jpg",
+      "tags": [
+        "music match",
+        "k-pop",
+        "party games"
+      ],
+      "slugs": {
+        "en": "music-match-k-pop-edition",
+        "nl": "music-match-k-pop-edition-een-k-pop-kaartspel-voor-elke-generatie",
+        "de": "music-match-k-pop-edition-ein-k-pop-kartenspiel-fur-jede-generation",
+        "fr": "music-match-k-pop-edition-un-jeu-de-cartes-musique-a-qr-code-pour-toutes-les-gen",
+        "es": "music-match-k-pop-edition-un-juego-de-canciones-con-qr-de-k-pop-para-cada-genera",
+        "it": "music-match-k-pop-edition-un-gioco-di-carte-k-pop-per-ogni-generazione",
+        "pt": "music-match-k-pop-edition-um-jogo-de-cartas-k-pop-para-todas-as-geracoes",
+        "pl": "music-match-k-pop-edition-k-popowa-gra-karciana-i-quiz-muzyczny-dla-kazdego-poko",
+        "jp": "music-match-k-pop-edition-a-k-pop-card-game-for-every-generation",
+        "cn": "music-match-k-pop-edition-a-k-pop-card-game-for-every-generation",
+        "sv": "music-match-k-pop-edition-ett-k-pop-kortspel-for-varje-generation",
+        "no": "music-match-k-pop-edition-et-k-pop-kortspill-for-alle-generasjoner"
+      },
+      "titles": {
+        "en": "Music Match K-Pop Edition: a K-pop card game for every generation",
+        "nl": "Music Match K-Pop Edition: een K-pop kaartspel voor elke generatie",
+        "de": "Music Match K-Pop Edition: ein K-Pop-Kartenspiel für jede Generation",
+        "fr": "Music Match K-Pop Edition : un jeu de cartes musique à QR code pour toutes les générations",
+        "es": "Music Match K-Pop Edition: un juego de canciones con QR de K-pop para cada generación",
+        "it": "Music Match K-Pop Edition: un gioco di carte K-pop per ogni generazione",
+        "pt": "Music Match K-Pop Edition: um jogo de cartas K-pop para todas as gerações",
+        "pl": "Music Match K-Pop Edition: k-popowa gra karciana i quiz muzyczny dla każdego pokolenia",
+        "jp": "Music Match K-Pop Edition：世代をこえて遊べるK-popカードゲーム",
+        "cn": "Music Match K-Pop 版：适合每一代粉丝的 K-pop 卡牌游戏",
+        "sv": "Music Match K-Pop Edition: ett K-pop-kortspel för varje generation",
+        "no": "Music Match K-Pop Edition: et K-pop kortspill for alle generasjoner"
+      },
+      "summaries": {
+        "en": "The K-pop edition of Music Match: match songs on generation, agency, members and more. How it plays, what changed from the original, and who it suits.",
+        "nl": "Lees hoe Music Match K-Pop Edition werkt: de nieuwe K-pop categorieën, wat anders is dan het origineel en voor wie dit muziek kaartspel leuk is.",
+        "de": "Die K-Pop-Edition von Music Match: Songs nach Generation, Agency, Members und mehr matchen. So läuft eine Runde, was neu ist und für wen es passt.",
+        "fr": "Découvre le jeu musique QR code Music Match K-Pop : catégories, règles, applis nécessaires, prix et à qui cette édition convient.",
+        "es": "La edición K-pop de Music Match: empareja canciones por generación, agencia, miembros y más. Cómo se juega, qué cambió y para quién es.",
+        "it": "La K-Pop Edition di Music Match: come funziona, cosa cambia dall’originale e per chi è pensato questo gioco di carte con QR code musica.",
+        "pt": "A edição K-pop do Music Match: combina músicas por geração, agência, membros e mais. Vê como se joga, o que mudou no original e para quem é.",
+        "pl": "K-popowa edycja Music Match: dopasowujesz piosenki po generacji, wytwórni, składzie i nie tylko. Jak się gra, co zmieniono i dla kogo jest.",
+        "jp": "Music MatchのK-pop版を紹介。世代、事務所、メンバー数で曲を合わせる遊び方、変更点、音楽イベントの企画に向くかがわかります。",
+        "cn": "了解 Music Match K-Pop 版怎么玩，和原版有什么不同，以及它更适合哪些 K-pop 粉丝一起开局。",
+        "sv": "K-pop-utgåvan av Music Match: matcha låtar på generation, agency, medlemmar och mer. Så spelas det, vad som ändrats och vem det passar.",
+        "no": "K-pop-utgaven av Music Match: match låter på generasjon, selskap, medlemmer og mer. Slik spilles det, hva som er nytt, og hvem det passer for."
+      },
+      "imagePrompt": "The scramble of a Music Match K-Pop round, a dynamic close-up at table height on a dark wooden table at night: in the centre a few pink Claim Cubes like reference 1, with three hands from different sides lunging for them at the same moment, one slapping a cream Match Card face down on the table. In the foreground a phone held low is scanning a blue QR Card like reference 2, and a small fan of cream Match Cards like reference 3 lies next to the round DJ Token. The hot pink Music Match K-Pop Edition box like reference 1 stands slightly out of focus behind them, beside a softly glowing pastel heart-shaped fan lightstick with no logo. Magenta and electric blue concert-style light spills across the table, with motion blur on the hands only.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/music-match-kpop-components.jpg",
+          "note": "the real Music Match K-Pop Edition: the hot pink box, pink Claim Cubes marked with an M, the round DJ Token, blue QR Cards and cream Match Cards"
+        },
+        {
+          "path": "blog-image-references/music-match-kpop-qr-cards.jpg",
+          "note": "real Music Match K-Pop QR Cards: rectangular, bright blue with a QR code in a pink frame on the front, and a pink ANSWERS side listing artist, title, artist type, members, generation, agency and release year"
+        },
+        {
+          "path": "blog-image-references/music-match-kpop-match-cards.jpg",
+          "note": "real Music Match K-Pop Match Cards: rectangular, cream, with a category name along the edges and a small padlock icon in the corners; the faint 'bakbak' watermark is a shop watermark, not part of the product"
+        }
+      ],
+      "autoProductReferences": false
+    },
+    {
       "id": 17,
       "date": "2026-09-12",
       "author": "Rick Groenewegen",
@@ -52,7 +121,13 @@
         "sv": "Så blir företagspresenter ett musikquiz som används på riktigt: låt teamet välja låtarna och se minimiorder, leveranstid och val du kan anpassa.",
         "no": "Slik lager du en firmagave som faktisk blir brukt: et musikk quiz spill med låter teamet velger selv, med minstekjøp, leveringstid og valg."
       },
-      "imagePrompt": "A branded gift box open on an office desk, printed cards inside a compartment, a lanyard and a keyboard just in frame"
+      "imagePrompt": "Corporate gifting, shot like a premium product campaign: on a pale oak reception desk in a bright modern office, three stacked QRSong business boxes like reference 3, the top one open with its lid leaning against the stack and its coral tray showing four compartments of QR music cards with personalised back designs like reference 3. The lids carry a simple made-up geometric company emblem in teal and coral with no words. A coral satin ribbon curls in the foreground, a staff lanyard and a closed laptop sit soft in the background, and morning sun through tall windows casts long window-frame shadows across the desk.",
+      "referenceImages": [
+        {
+          "path": "src/assets/images/optimized/business_product_192@2x.png",
+          "note": "the real QRSong business box: a lid printed with the company's own artwork and a coral tray with four compartments of cards"
+        }
+      ]
     },
     {
       "id": 16,
@@ -106,7 +181,7 @@
         "no": "Slik bruker du QR-koder på plakater, merch og plateomslag: statisk eller dynamisk, hvor lenken bør gå, og hva som må til for at den skanner.",
         "jp": "ポスター、物販、レコードにQRコードを載せるなら。静的と動的の違い、SpotifyやApple Musicへの誘導先、読み取れる印刷ルールがわかります。"
       },
-      "imagePrompt": "A gig merch table at a small venue: a stack of records, a hand-lettered sign with a QR code, someone's hand reaching for it"
+      "imagePrompt": "The merch table of a small music venue just after a gig, shot low and close in moody light: a hand holds a phone up to scan a big black QR code printed on a kraft-paper sign propped in a wooden stand, beside a crate of vinyl records in plain unprinted sleeves and a pile of folded band t-shirts with no print visible. Behind, out of focus, the empty stage glows under teal and coral lights, a guitar leaning against an amplifier. The phone screen is only a soft blur."
     },
     {
       "id": 15,
@@ -160,9 +235,12 @@
         "sv": "Gör bingobrickor för musikbingo själv med kalkylark och skrivare, eller skapa dem från en spellista. Du får antal låtar, fallgropar och vinstkoll.",
         "no": "Slik lager du musikkbingo-kort for hånd eller fra en spilleliste, hvor mange sanger du trenger, hva som går galt, og hvordan du sjekker en vinner."
       },
-      "imagePrompt": "A printed music bingo card lying on a table, matching the reference card's layout exactly: a 5x5 grid of song titles with a FREE centre square. Several squares crossed off in pen, the pen resting on the card, a couple more cards nearby",
+      "imagePrompt": "The winning moment of a music bingo night, a tight close-up at table height: a printed music bingo sheet exactly like reference 3 (a 5x5 grid of song titles with a FREE centre square) lies on a wooden table, five squares in one diagonal line stamped with translucent coral dabber circles, and a coral bingo dauber rests on the sheet. Behind it, out of focus, more bingo sheets, a small stack of QR music cards and a glowing bluetooth speaker, with warm string lights in the dark background.",
       "referenceImages": [
-        "blog-image-references/music-bingo-card.png"
+        {
+          "path": "blog-image-references/music-bingo-card.png",
+          "note": "a real music bingo sheet: a 5x5 grid of song titles with a FREE centre square"
+        }
       ]
     },
     {
@@ -213,7 +291,18 @@
         "sv": "En vikbar tryckt presentbox med fönster i locket, för upp till 190 kort. Läs vad du kan visa i fönstret och när boxen faktiskt hjälper.",
         "no": "En sammenleggbar trykt eske med vindu i lokket, med plass til 190 kort. Hva du bør legge bak vinduet, og hvorfor en personlig kortstokk betyr mest."
       },
-      "updated": "2026-09-12"
+      "updated": "2026-09-12",
+      "imagePrompt": "The moment a gift is opened, photographed from just above: two hands lift the QRSong gift box of reference 3 out of a nest of crinkled coral tissue paper. The window in its lid shows a personal photo of a happy golden retriever on a beach. Beside it the lid of a second, opened box reveals neat piles of QR music cards with personalised artwork like reference 4. A loose teal ribbon and torn kraft wrapping paper lie around on a linen tablecloth, soft window light from the side.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/qrsong-gift-box-window.jpg",
+          "note": "the real QRSong gift box: square, pale peach cardboard with a faint music-note pattern and a window in the lid that shows a personal picture"
+        },
+        {
+          "path": "blog-image-references/qrsong-box-open-with-cards.jpg",
+          "note": "real QRSong cards with personalised designs in an open box: fronts with custom artwork and a white QR panel, backs in a custom colour and font"
+        }
+      ]
     },
     {
       "id": 13,
@@ -263,7 +352,14 @@
         "cn": "同一副卡牌可以玩时间线、音乐宾果、音乐问答和 Music Match。这里讲每种适合什么人，以及为什么换玩法比加新歌更能让一副牌重新好玩。",
         "sv": "Timeline, bingo, quiz och Music Match funkar med samma kort. Här får du veta vilket musikspel som passar vilken grupp och varför att byta spel hjälper.",
         "no": "Timeline, musikk bingo, musikk quiz med lyd og Music Match bruker samme kort. Se hva som passer for ulike grupper, og hvorfor bytte spill hjelper."
-      }
+      },
+      "imagePrompt": "One deck, four games: a graphic overhead flat lay on a warm off-white tabletop divided into four tidy zones, with a single stack of QR music cards in the exact centre. Top left, Timeline: five card backs in a row, their release years climbing from left to right. Top right, Music Bingo: a bingo sheet like reference 3 with a few coral dabber marks. Bottom left, Music Quiz: a small brass desk bell and a pencil on a scorepad with tally marks. Bottom right, Music Match: a small hand of cards next to a discard pile, the top card of the pile and the card being played on it sharing the same decade. Knolling-style order, crisp soft shadows, the brand palette in the props.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/music-bingo-card.png",
+          "note": "a real music bingo sheet: a 5x5 grid of song titles with a FREE centre square"
+        }
+      ]
     },
     {
       "id": 12,
@@ -313,7 +409,8 @@
         "cn": "Spotify、Apple Music、Tidal、Deezer 和 YouTube Music 并不一样。这里比较隐藏播放和年份来源，帮你判断游戏能不能顺畅玩起来。",
         "sv": "Spotify, Apple Music, Tidal, Deezer och YouTube Music funkar olika. Här får du jämförelsen som avgör om ditt musikquiz fungerar på riktigt.",
         "no": "Spotify, Apple Music, Tidal, Deezer og YouTube Music er ulike. Se hvilken tjeneste som fungerer best for musikkquiz med lyd før du velger konto."
-      }
+      },
+      "imagePrompt": "Five smartphones standing upright in a neat row on a polished deep teal surface, like contestants lined up on a stage, each screen glowing one solid colour (green, pink-red, cyan, violet, red) with no interface, text or logos, their coloured light pooling and reflecting on the surface. In front of the middle phone lies one QR music card, front side up, picked out by a narrow warm spotlight. Dark, cinematic product lighting."
     },
     {
       "id": 11,
@@ -364,7 +461,13 @@
         "sv": "Apple Music fungerar nu direkt i gratisappen QRSong!, med dold låttitel och hela spåret. Så står det sig mot Spotify, Tidal, Deezer och YouTube Music.",
         "no": "Apple Music fungerer nå direkte i den gratis QRSong!-appen, med skjult tittel og hele låten. Se forskjellen mot Spotify, Tidal, Deezer og YouTube Music."
       },
-      "imagePrompt": "A phone playing music next to a fanned stack of music cards, headphones and a coffee cup, morning light on a desk"
+      "imagePrompt": "Evening listening at home: a hand holds a phone over a fanned spread of QR music cards on a soft wool throw, scanning one of them, and the phone screen shows the QRSong app exactly as in reference 3. A pair of premium over-ear headphones lies beside the cards, and a warm pink-to-red glow from a lamp spills across the scene while the rest of the room falls into soft teal shadow.",
+      "referenceImages": [
+        {
+          "path": "src/assets/images/screenshot1.png",
+          "note": "the real QRSong app screen, to be shown on the phone"
+        }
+      ]
     },
     {
       "id": 10,
@@ -464,7 +567,14 @@
         "cn": "了解公开歌单赚取下单折扣的方式，也看看什么样的歌单更容易被别人选中。关键不是品味多好，而是概念清不清楚，标题说不说得明白。",
         "sv": "Så fungerar rabatten och vad som gör att andra faktiskt väljer din spellista: en tydlig idé slår smak, och titeln säljer hela upplägget.",
         "no": "Slik fungerer rabatten når du deler en spilleliste, og hva som gjør at andre faktisk velger den til sin egen musikkquiz. Tittel og konsept teller mest."
-      }
+      },
+      "imagePrompt": "A featured deck in the spotlight, styled like a tiny gallery display on a desk, close-up: three small decks of QR music cards lie flat on a pale oak surface against a deep teal wall, each deck a palm-sized stack only 6 cm wide and about 2 cm high, lower than the coffee mug and the paperback book beside them, each with a different personalised front design like reference 3. The middle deck sits on a small coral plinth, lit by a single warm spotlight, with a small coral ribbon rosette without text next to it, while the two other decks stay in soft shadow.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/qrsong-box-open-with-cards.jpg",
+          "note": "real QRSong cards with personalised designs in an open box: fronts with custom artwork and a white QR panel, backs in a custom colour and font"
+        }
+      ]
     },
     {
       "id": 7,
@@ -515,7 +625,7 @@
         "sv": "Du får tips om ljud, första rundan och tempot när energin dippar runt kort fyrtio. Om högtalare, klipplängd och den som kan alla låtar.",
         "no": "Oppsett, de første ti minuttene og hva du gjør når energien faller rundt kort førti. Tips om høyttaler, klipplengde og eksperten ved bordet."
       },
-      "imagePrompt": "A living room mid game night: a bluetooth speaker, a spread of music cards face down, drinks and bowls pushed to the edge, people leaning over the table arguing about a song"
+      "imagePrompt": "A music night in full swing, seen from the doorway of a warm living room in the evening: in the sharp foreground a small fabric bluetooth speaker on a sideboard next to a stack of QR music cards, and a hand entering the frame holding one card up between two fingers. Beyond, softly out of focus with a little motion blur, a few friends dance and laugh under string lights and a coral paper lantern, glasses raised."
     },
     {
       "id": 6,
@@ -566,7 +676,7 @@
         "sv": "Så väljer du låtar till ett gissa låten-spel: rätt antal, breda årtal och igenkänning före smak, så att musikquizet funkar på riktigt.",
         "no": "Tre ting ødelegger en musikk quiz med lyd: egne favoritter, én epoke og feil antall låter. Her får du tallene som funker, og hvorfor årstall ofte ryker."
       },
-      "imagePrompt": "A laptop screen angled away showing a long playlist, someone writing song titles on a notepad beside it"
+      "imagePrompt": "Seen from directly above on a warm wooden floor: a diagonal row of eight QR music cards lying back side up, their big release years running in order from the 1960s to the 2020s like a timeline across the frame. Around the row lie a few unsleeved black vinyl records with plain coral and teal labels, a cassette tape and a pencil, and a hand is sliding one more card into a gap in the row. Late afternoon sun rakes across the floorboards."
     },
     {
       "id": 4,
@@ -617,7 +727,7 @@
         "sv": "Mobilkameran visar låttiteln och förstör rundan i ett gissa låten-spel. Här ser du hur dold uppspelning funkar och vilka tjänster som stöder det.",
         "no": "I en musikkquiz med lyd må svaret holdes skjult. Se hvordan skjult avspilling fungerer i praksis, og hvilke strømmetjenester som faktisk støtter det."
       },
-      "imagePrompt": "A phone lying screen-up on a table showing no song title at all, just a blank playback screen, while three people lean in listening and one gestures mid-argument, a bluetooth speaker beside it"
+      "imagePrompt": "Suspense, shot low at table height in a dim room: a phone lies face down on a dark wooden table while a small bluetooth speaker beside it glows with the song that is playing. Next to them a single QR music card lies QR side up, its answer still hidden underneath, and a hand with its fingertips on the card's corner is about to flip it. A narrow warm beam of light picks out the phone, the card and the speaker; everything else falls into deep teal shadow, as if something is being kept secret on purpose."
     },
     {
       "id": 3,
@@ -668,7 +778,13 @@
         "sv": "Vad som faktiskt spelar roll på ett musikkort: QR-kodens fria yta, kontrast, läsbara årtal och när personlig text gör kortleken bättre.",
         "no": "Slik designer du musikkort som fungerer: QR-kode som skanner, god kontrast, tydelige årstall og personlig preg der det faktisk teller."
       },
-      "imagePrompt": "Hands holding two printed cards side by side comparing different background designs, more design variants fanned on the table"
+      "imagePrompt": "A designer's desk seen from directly above, arranged like a mood board: a neat three-by-three grid of QR music cards, each front with a different personalised design in the manner of reference 3 (a holiday photo of a mountain lake, a teal guitar pattern, gold sparkles, a hand-drawn coral doodle pattern, a city skyline at dusk, a retro sunburst), plus two card backs set apart in different colours and fonts. Around the grid lie a fan of paint colour swatches in teal, coral and cream, a pencil, a craft knife and the edge of a green cutting mat. Soft daylight from one side with gentle shadows.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/qrsong-box-open-with-cards.jpg",
+          "note": "real QRSong cards with personalised designs in an open box: fronts with custom artwork and a white QR panel, backs in a custom colour and font"
+        }
+      ]
     },
     {
       "id": 2,
@@ -719,7 +835,7 @@
         "sv": "Läs den ärliga skillnaden mellan att skriva ut hemma och beställa tryckta musikkort, vad 350 g/m² löser och när varje val passar bäst för ditt musikquiz.",
         "no": "Forskjellen er papirtykkelsen. Se hva som går galt når du printer musikkort hjemme, hva 350 g/m² løser, og hva du bør velge til musikkquizen."
       },
-      "imagePrompt": "Two versions of the same music card side by side on a desk: one printed at home on thin paper with slightly misaligned edges, one thick glossy professionally printed card, a home printer out of focus behind them"
+      "imagePrompt": "A macro product comparison on a pale wooden desk, shot at a low angle so the card edges are the story: on the left a QR music card cut by hand from thin home-printer paper, slightly curling, its edge a little ragged and the print faintly banded; on the right the same card professionally printed on thick 350 gsm stock, lying perfectly flat with a crisp, visibly thick edge catching the light. A home inkjet printer sits out of focus behind them, with scissors and paper offcuts beside the thin card."
     },
     {
       "id": 1,
@@ -770,7 +886,13 @@
         "sv": "Här får du historien bakom QRSong!: ett musikquizspel med egna låtar, vad som gick fel hemma och varför rätt utgivningsår blev svårast för en egen kortlek.",
         "no": "Les hvordan QRSong! ble til: en hjemmelaget musikkquiz med lyd, tre ting som gikk galt, og hvorfor utgivelsesår ble vanskeligst."
       },
-      "imagePrompt": "A home printer mid-job, pushing out a sheet of small square music cards, cut cards and a craft knife on the desk beside it"
+      "imagePrompt": "Where it started: a maker's desk late at night, seen from above in the warm pool of a single desk lamp. A freshly printed home-printer sheet of QR music cards like reference 3 lies half cut out, with a pair of scissors across it, a rough stack of hand-cut cards, a pencil, a mug of tea gone cold and an unsleeved vinyl record at the edge of the frame. The feeling of a homemade first version that worked.",
+      "referenceImages": [
+        {
+          "path": "src/assets/images/cardnew_pdf.png",
+          "note": "a real print-at-home sheet of QRSong cards: rows of pieces, each with the card front above its answer side, cut out with scissors and folded into a square card"
+        }
+      ]
     }
   ]
 }
