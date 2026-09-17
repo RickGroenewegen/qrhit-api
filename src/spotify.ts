@@ -122,8 +122,9 @@ class Spotify {
   private countryCardMaps: { [countryCode: string]: { [cardNumber: string]: string } } = {};
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
-  // Domain blacklist: URLs from these domains will not be resolved
-  private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org', 'qr.codes', 'qr.link'];
+  // Hosts with "qr" in their name (q.me-qr.com, qrto.org, qr.codes, ...) are
+  // QR generators and shorteners and are not resolved, except our own domain.
+  private ownDomain = 'qrsong.io';
 
   // Track enrichment service (singleton - manages its own maps and refresh)
   private trackEnrichment: TrackEnrichment;
@@ -1928,18 +1929,11 @@ class Spotify {
       .digest('hex')}`;
 
     try {
-      // Check if the URL's domain is in the blacklist
+      // Check if the URL's domain is blacklisted
       try {
         const urlObj = new URL(normalizedUrl);
-        const hostname = urlObj.hostname.toLowerCase();
 
-        if (
-          this.domainBlacklist.some(
-            (domain) =>
-              hostname === domain.toLowerCase() ||
-              hostname.endsWith('.' + domain.toLowerCase())
-          )
-        ) {
+        if (this.isBlacklistedHost(urlObj.hostname)) {
           return {
             success: false,
             error: 'Domain is blacklisted and cannot be resolved',
@@ -2281,6 +2275,19 @@ class Spotify {
         error: e.message || 'Internal error',
       };
     }
+  }
+
+  /**
+   * Any host with "qr" in its name is blacklisted, except qrsong.io and its
+   * subdomains (api.qrsong.io). Matched on the host only, so "qr" in a path or
+   * query string does not count.
+   */
+  private isBlacklistedHost(hostname: string): boolean {
+    const host = hostname.toLowerCase().replace(/\.$/, '');
+    if (host === this.ownDomain || host.endsWith('.' + this.ownDomain)) {
+      return false;
+    }
+    return host.includes('qr');
   }
 
   /**

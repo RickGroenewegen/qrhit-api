@@ -1023,6 +1023,35 @@ describe('Spotify.resolveSpotifyUrl', () => {
     expect(axiosGet).not.toHaveBeenCalled();
   });
 
+  it('refuses any host with "qr" in its name', async () => {
+    for (const url of [
+      'https://qrco.de/bfXyz',
+      'https://www.qr-code-generator.com/a',
+      'HTTPS://Scan.MyQR.Example/x',
+      'https://evilqrsong.io/x',
+      'https://qrsong.io.evil.com/x',
+      'https://api.qrsong.io/qr_url2?link=https%3A%2F%2Fqrto.org%2Fabc',
+    ]) {
+      const res = await spotify.resolveSpotifyUrl(url);
+      expect(res, url).toMatchObject({ success: false, blacklisted: true });
+    }
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it('does not blacklist our own domain or "qr" outside the host', async () => {
+    axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
+    for (const url of [
+      'https://api.qrsong.io/qr2/123/abc',
+      'https://qrsong.io/x',
+      'https://api.qrsong.io./qr2/123/abc',
+      'https://example.com/qr/abc?ref=qr',
+    ]) {
+      const res = await spotify.resolveSpotifyUrl(url);
+      expect(res.blacklisted, url).toBeUndefined();
+    }
+    expect(axiosGet).toHaveBeenCalled();
+  });
+
   it('extracts the URI from a direct Spotify track URL (protocol added when missing)', async () => {
     axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
     const res = await spotify.resolveSpotifyUrl(
