@@ -1394,10 +1394,7 @@ class Mollie {
         { canBeSentToPrinterAt: { lte: new Date() } },
         // The printer refused the order: marked as sent, yet no printer order
         // id. The hourly pass never retries these.
-        {
-          sentToPrinter: true,
-          OR: [{ printApiOrderId: null }, { printApiOrderId: '' }],
-        },
+        { sentToPrinter: true, printApiOrderId: '' },
       ],
     };
     const needsAttentionClause =
