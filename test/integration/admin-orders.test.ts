@@ -453,15 +453,31 @@ describe('admin order routes', () => {
           );
         };
 
+        const notSent = {
+          reason: 'not-sent',
+          openCorrections: 0,
+          printerError: null,
+        };
         expect(await reasons()).toEqual({
-          tr_attention_approved: { reason: 'not-sent', openCorrections: 0 },
-          tr_attention_expired: { reason: 'not-sent', openCorrections: 0 },
+          tr_attention_approved: notSent,
+          tr_attention_expired: notSent,
         });
 
-        // A refused printer order keeps sentToPrinter set without an order id
+        // A refused printer order keeps sentToPrinter set without an order id.
+        // That alone qualifies: this order is neither approved nor timed out.
         await prisma().payment.update({
-          where: { paymentId: 'tr_attention_approved' },
-          data: { sentToPrinter: true },
+          where: { paymentId: 'tr_attention_waiting' },
+          data: {
+            sentToPrinter: true,
+            printApiOrderResponse: JSON.stringify({
+              apiCalls: [
+                {
+                  statusCode: 200,
+                  responseBody: { error: 'Pay on account is off', result: false },
+                },
+              ],
+            }),
+          },
         });
         await prisma().paymentHasPlaylist.updateMany({
           where: { payment: { paymentId: 'tr_attention_expired' } },
@@ -469,13 +485,23 @@ describe('admin order routes', () => {
         });
 
         expect(await reasons()).toEqual({
-          tr_attention_approved: { reason: 'printer-error', openCorrections: 0 },
-          tr_attention_expired: { reason: 'open-corrections', openCorrections: 0 },
+          tr_attention_approved: notSent,
+          tr_attention_expired: {
+            reason: 'open-corrections',
+            openCorrections: 0,
+            printerError: null,
+          },
+          tr_attention_waiting: {
+            reason: 'printer-error',
+            openCorrections: 0,
+            printerError: 'Pay on account is off',
+          },
         });
+        expect((await search({})).needsAttentionCount).toBe(3);
 
         await prisma().payment.update({
-          where: { paymentId: 'tr_attention_approved' },
-          data: { sentToPrinter: false },
+          where: { paymentId: 'tr_attention_waiting' },
+          data: { sentToPrinter: false, printApiOrderResponse: null },
         });
         await prisma().paymentHasPlaylist.updateMany({
           where: { payment: { paymentId: 'tr_attention_expired' } },
@@ -499,10 +525,12 @@ describe('admin order routes', () => {
           tr_attention_approved: {
             reason: 'open-corrections',
             openCorrections: 1,
+            printerError: null,
           },
           tr_attention_expired: {
             reason: 'open-corrections',
             openCorrections: 1,
+            printerError: null,
           },
         });
 
