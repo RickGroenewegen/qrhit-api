@@ -1433,8 +1433,10 @@ class Mollie {
     // Every playlist-scoped filter keys on PaymentHasPlaylist, so they have to
     // be combined with AND: spreading them into one object would let the last
     // one silently drop the others
-    const buildWhereFilter = (attentionClause: object) => {
-      const playlistClauses = [
+    const buildWhereFilter = (
+      attentionClause: Prisma.PaymentWhereInput
+    ): Prisma.PaymentWhereInput => {
+      const playlistClauses: Prisma.PaymentWhereInput[] = [
         printerHoldClause,
         attentionClause,
         printerTypeClause,
