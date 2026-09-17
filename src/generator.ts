@@ -36,6 +36,7 @@ import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
+import { finalCheckHoldReason } from './finalCheckHoldReason';
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 import { computePrintFingerprint } from './printFingerprint';
 
@@ -435,7 +436,10 @@ class Generator {
   ): Promise<void> {
     await this.prisma.payment.update({
       where: { id: payment.id },
-      data: { printerHold: true },
+      data: {
+        printerHold: true,
+        printerHoldReason: finalCheckHoldReason(check),
+      },
     });
 
     this.pushover.sendMessage(

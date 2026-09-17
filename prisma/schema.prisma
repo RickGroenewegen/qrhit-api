@@ -203,7 +203,10 @@ model Payment {
   sentToPrinterAt          DateTime?
   fast                     Boolean              @default(false)
   printerHold              Boolean              @default(false)
-  suggestionWarningSent    Boolean              @default(false)
+  // Why finalCheck put the order on hold (see finalCheckHoldReason); null for
+  // a hold an admin placed by hand
+  printerHoldReason        String?              @db.VarChar(32)
+  suggestionWarningSent   Boolean              @default(false)
   suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?

@@ -330,7 +330,7 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true },
+      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
     });
     const push = outbound.calls('PushoverClient', 'sendMessage');
     expect(push[0].args[0]).toMatchObject({
@@ -419,7 +419,7 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true },
+      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
     });
   });
 

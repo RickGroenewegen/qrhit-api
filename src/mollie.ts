@@ -1493,6 +1493,7 @@ class Mollie {
         canBeSentToPrinterAt: true,
         fast: true,
         printerHold: true,
+        printerHoldReason: true,
         email: true,
         fullname: true,
         locale: true,

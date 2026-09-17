@@ -862,7 +862,7 @@ describe('processCorrections', () => {
       // order can re-enter the pipeline.
       expect(h.prisma.payment.update).toHaveBeenCalledWith({
         where: { id: 10 },
-        data: { printerHold: false },
+        data: { printerHold: false, printerHoldReason: null },
       });
       expect(h.queueGenerate).toHaveBeenCalledWith(
         'pay_1',
