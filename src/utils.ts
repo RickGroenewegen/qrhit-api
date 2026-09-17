@@ -11,6 +11,7 @@ import path from 'path';
 class Utils {
   private translation: Translation = new Translation();
   private static maxmindReader: Reader<CityResponse> | null = null;
+  private static mainServerLookup: Promise<boolean> | null = null;
 
   /**
    * Get a random sample of elements from an array
@@ -41,9 +42,27 @@ class Utils {
       process.env['AWS_EC2_DESCRIBE_KEY_ID'] &&
       process.env['AWS_EC2_DESCRIBE_SECRET_ID'];
     if (isAWS) {
-      return (await this.getInstanceName()) == 'WS1';
+      // An instance's Name tag does not change while the process lives, and
+      // some twenty singletons ask at boot: one lookup (two IMDS round trips
+      // plus an EC2 DescribeInstances) serves them all. A failed lookup is
+      // not kept, so the next caller retries.
+      if (!Utils.mainServerLookup) {
+        const lookup = this.getInstanceName().then((name) => name == 'WS1');
+        Utils.mainServerLookup = lookup;
+        lookup.catch(() => {
+          if (Utils.mainServerLookup === lookup) {
+            Utils.mainServerLookup = null;
+          }
+        });
+      }
+      return Utils.mainServerLookup;
     }
     return false;
+  }
+
+  // Test-only: forget the memoised isMainServer() lookup.
+  public static resetMainServerLookup(): void {
+    Utils.mainServerLookup = null;
   }
 
   /**

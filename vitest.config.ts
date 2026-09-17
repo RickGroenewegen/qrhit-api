@@ -20,6 +20,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/app.ts',
+        'src/bootstrap.ts',
         'src/worker.ts',
         'src/locales/**',
         'src/templates/**',

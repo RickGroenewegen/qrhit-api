@@ -431,9 +431,11 @@ describe('EC2 metadata helpers', () => {
       saved[k] = process.env[k];
       delete process.env[k];
     }
+    Utils.resetMainServerLookup();
   });
 
   afterEach(() => {
+    Utils.resetMainServerLookup();
     for (const k of ENV_KEYS) {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
@@ -557,9 +559,42 @@ describe('EC2 metadata helpers', () => {
     });
     expect(await utils.isMainServer()).toBe(true);
 
+    Utils.resetMainServerLookup();
     ec2Send.mockResolvedValue({
       Reservations: [{ Instances: [{ Tags: [{ Key: 'Name', Value: 'WS2' }] }] }],
     });
     expect(await utils.isMainServer()).toBe(false);
+  });
+
+  it('isMainServer looks the instance up once for every caller', async () => {
+    process.env['AWS_EC2_DESCRIBE_KEY_ID'] = 'key';
+    process.env['AWS_EC2_DESCRIBE_SECRET_ID'] = 'secret';
+    mockImds();
+    ec2Send.mockResolvedValue({
+      Reservations: [{ Instances: [{ Tags: [{ Key: 'Name', Value: 'WS1' }] }] }],
+    });
+    ec2Send.mockClear();
+
+    const answers = await Promise.all([
+      utils.isMainServer(),
+      new Utils().isMainServer(),
+      new Utils().isMainServer(),
+    ]);
+    expect(answers).toEqual([true, true, true]);
+    expect(await utils.isMainServer()).toBe(true);
+    expect(ec2Send).toHaveBeenCalledTimes(1);
+  });
+
+  it('isMainServer does not keep a failed lookup', async () => {
+    process.env['AWS_EC2_DESCRIBE_KEY_ID'] = 'key';
+    process.env['AWS_EC2_DESCRIBE_SECRET_ID'] = 'secret';
+    axiosPut.mockRejectedValue(new Error('imds unreachable'));
+    await expect(utils.isMainServer()).rejects.toThrow('imds unreachable');
+
+    mockImds();
+    ec2Send.mockResolvedValue({
+      Reservations: [{ Instances: [{ Tags: [{ Key: 'Name', Value: 'WS1' }] }] }],
+    });
+    expect(await utils.isMainServer()).toBe(true);
   });
 });

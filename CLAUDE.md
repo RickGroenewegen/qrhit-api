@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run start:dev` - Start development server with TypeScript watch mode and nodemon
 - `npm run start:dev2` - Alternative development server using tsx watch
 - `npm run build` - Build TypeScript to JavaScript (outputs to ./build)
-- `npm run start` - Build and start production server
+- `npm run start` - Start the production server; builds first only when `./build` is stale (see "Startup and deploys")
 - `npm run test` - Run tests (builds first, then runs test.js)
 
 ### Production Commands
@@ -291,6 +291,41 @@ reasoning off, which the API accepts.
 - **Database migrations** handled by Prisma
 - **Multi-worker clustering** for scalability
 - **Static file serving** for public assets
+
+## Startup and deploys
+
+Three things keep the API's downtime per deploy down to its own boot. None of
+them is obvious from the code alone.
+
+**The build runs before the restart, not during it.** pm2 runs
+`npm run start`, and `pm2 restart` stops the old process first. `start` used to
+build unconditionally, so every deploy and every crash restart was offline for
+a full `prisma generate` + `tsc`. Now `deploy` / `deploy_api` run
+`npm run build` while the old process still serves and only then restart; a
+failed build aborts and leaves the old process running.
+`_scripts/build.sh` compiles into `./.build-temp` and swaps it in with two
+renames, so building under a running API is safe, and writes the commit it
+built to `build/.build-commit`. `_scripts/start.sh` skips the build when that
+stamp equals `HEAD` and `src`, `routes` and `prisma` have no uncommitted
+changes (`_scripts/build-stamp.sh check`); in every other case, including "not
+sure", it builds first as before. So a manual `git pull` + `pm2 restart` still
+works, it is just slow. **Never put `pm2 restart qrsong` above the pull or the
+build in a deploy script**: `start` would find the old build current and
+relaunch the old code.
+
+**The primary forks before it loads the application.** Loading the module
+graph takes a second or more per process. `src/app.ts` is a deliberately tiny
+entry point: it calls `startClusterWorkers()` (`src/clusterPrimary.ts`) and
+only then does a dynamic `import('./bootstrap')`, which holds what `app.ts`
+used to (Sentry, `Server.init()`). Workers therefore load in parallel with the
+primary instead of after it. Keep static imports out of `app.ts` and keep
+`clusterPrimary.ts` light, or the fork is delayed again. The one-time legacy
+background backfill stays ahead of the fork on purpose, see the next section.
+
+**`Utils.isMainServer()` is memoised per process.** Some twenty singletons ask
+at boot and each call was two IMDS round trips plus an EC2 `DescribeInstances`.
+A failed lookup is not cached. Tests reset it with
+`Utils.resetMainServerLookup()`.
 
 ## Default card artwork and the 2026 cutover
 
