@@ -669,5 +669,15 @@
   "design_alter.imageBoxFront": "Inserto caja (frente)",
   "design_alter.imageBoxBack": "Inserto caja (detrás)",
   "invoice.discountPercentLine": "Descuento {{code}} ({{percent}}%)",
-  "invoice.discountCodeLine": "Código descuento {{code}}"
+  "invoice.discountCodeLine": "Código descuento {{code}}",
+  "open_corrections.subject": "Acción necesaria: aprueba los cambios del pedido {{ orderId }}",
+  "open_corrections.title": "Tu pedido está esperando tu aprobación",
+  "open_corrections.hello": "Hola",
+  "open_corrections.intro": "El periodo de revisión de tu pedido ha terminado y normalmente enviaríamos tus tarjetas a imprimir. Hiciste cambios que aún no has aprobado, así que hemos pausado tu pedido.",
+  "open_corrections.whatToDo": "Nunca imprimimos cambios que no hayas confirmado. Abre el formulario de corrección con el botón de abajo, revisa tus cambios y apruébalos. Tu pedido pasará a impresión justo después.",
+  "open_corrections.buttonText": "Abrir el formulario de corrección",
+  "open_corrections.buttonFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+  "open_corrections.questions": "Si tienes alguna pregunta, responde a este correo y te ayudaremos.",
+  "open_corrections.thanks": "Gracias",
+  "open_corrections.team": "El equipo de QRSong!"
 }

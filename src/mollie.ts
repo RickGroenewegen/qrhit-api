@@ -1371,9 +1371,11 @@ class Mollie {
     // printer but are still on printApiStatus = 'Created': either the customer
     // approved printing (userConfirmedPrinting, shown as Judged) or the approval
     // timer (canBeSentToPrinterAt) ran out. `notSubmitted` is the old name of
-    // this flag, still sent by dashboards loaded before the rename.
+    // this flag, still sent by dashboards loaded before the rename. Orders on
+    // printer hold are parked on purpose and have their own filter.
     const needsAttentionFilter = {
       printApiStatus: 'Created',
+      printerHold: false,
       PaymentHasPlaylist: {
         some: {
           type: 'physical',
@@ -1481,6 +1483,7 @@ class Mollie {
         printApiOrderId: true,
         sentToPrinterAt: true,
         sentToPrinter: true,
+        canBeSentToPrinterAt: true,
         fast: true,
         printerHold: true,
         email: true,
@@ -1519,6 +1522,8 @@ class Mollie {
             blocked: true,
             allowDuplicates: true,
             userConfirmedPrinting: true,
+            suggestionsPending: true,
+            playlistId: true,
             orderType: {
               select: {
                 name: true,
@@ -1623,7 +1628,72 @@ class Mollie {
       },
     });
 
-    return { payments, totalItems, needsAttentionCount };
+    // Tell the dashboard why an order needs attention. The hourly printer
+    // pass skips an order as long as its playlists hold unprocessed
+    // corrections (a pending flag or UserSuggestion rows), and the approval
+    // timer never submits those on the customer's behalf.
+    const now = new Date();
+    const attentionPayments = payments.filter(
+      (payment) =>
+        payment.printApiStatus === 'Created' &&
+        !payment.printerHold &&
+        payment.PaymentHasPlaylist.some((php) => php.type === 'physical') &&
+        (payment.PaymentHasPlaylist.some(
+          (php) => php.type === 'physical' && php.userConfirmedPrinting
+        ) ||
+          (payment.canBeSentToPrinterAt !== null &&
+            payment.canBeSentToPrinterAt <= now))
+    );
+
+    const suggestionCounts =
+      attentionPayments.length > 0
+        ? await this.prisma.userSuggestion.groupBy({
+            by: ['playlistId'],
+            where: {
+              playlistId: {
+                in: attentionPayments.flatMap((payment) =>
+                  payment.PaymentHasPlaylist.map((php) => php.playlistId)
+                ),
+              },
+            },
+            _count: { _all: true },
+          })
+        : [];
+    const suggestionsByPlaylist = new Map(
+      suggestionCounts.map((row) => [row.playlistId, row._count._all])
+    );
+
+    const attentionIds = new Set(attentionPayments.map((payment) => payment.id));
+    const paymentsWithAttention = payments.map((payment) => {
+      if (!attentionIds.has(payment.id)) {
+        return { ...payment, attention: null };
+      }
+
+      const openCorrections = payment.PaymentHasPlaylist.reduce(
+        (total, php) => total + (suggestionsByPlaylist.get(php.playlistId) ?? 0),
+        0
+      );
+      const correctionsPending = payment.PaymentHasPlaylist.some(
+        (php) => php.suggestionsPending
+      );
+
+      let reason: 'printer-error' | 'open-corrections' | 'not-sent' = 'not-sent';
+      if (payment.sentToPrinter && !payment.printApiOrderId) {
+        // The send was attempted and the printer refused it; sentToPrinter
+        // stays set so the hourly pass does not retry
+        reason = 'printer-error';
+      } else if (openCorrections > 0 || correctionsPending) {
+        reason = 'open-corrections';
+      }
+
+      return { ...payment, attention: { reason, openCorrections } };
+    });
+
+    return {
+      payments: paymentsWithAttention,
+      totalItems,
+      needsAttentionCount,
+    };
   }
 
   public async deletePayment(

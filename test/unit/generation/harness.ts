@@ -21,9 +21,11 @@ export const h = {
     },
     userSuggestion: {
       count: vi.fn(),
+      groupBy: vi.fn(),
     },
     paymentHasPlaylist: {
       update: vi.fn(),
+      findMany: vi.fn(),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
     },
@@ -131,6 +133,8 @@ export function resetGeneratorMocks(): void {
   h.prisma.payment.findFirst.mockResolvedValue(null);
   h.prisma.payment.update.mockResolvedValue({});
   h.prisma.userSuggestion.count.mockResolvedValue(0);
+  h.prisma.userSuggestion.groupBy.mockResolvedValue([]);
+  h.prisma.paymentHasPlaylist.findMany.mockResolvedValue([]);
   h.prisma.paymentHasPlaylist.update.mockResolvedValue({});
   h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
   h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue(null);

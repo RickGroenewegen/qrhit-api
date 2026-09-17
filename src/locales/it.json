@@ -665,5 +665,15 @@
   "design_alter.imageBoxFront": "Inlay scatola (fronte)",
   "design_alter.imageBoxBack": "Inlay scatola (retro)",
   "invoice.discountPercentLine": "Sconto {{code}} ({{percent}}%)",
-  "invoice.discountCodeLine": "Codice sconto {{code}}"
+  "invoice.discountCodeLine": "Codice sconto {{code}}",
+  "open_corrections.subject": "Azione richiesta: approva le modifiche all'ordine {{ orderId }}",
+  "open_corrections.title": "Il tuo ordine attende la tua approvazione",
+  "open_corrections.hello": "Ciao",
+  "open_corrections.intro": "Il periodo di revisione del tuo ordine è terminato e normalmente manderemmo le tue carte in stampa. Hai fatto modifiche che non hai ancora approvato, quindi abbiamo messo in pausa l'ordine.",
+  "open_corrections.whatToDo": "Non stampiamo mai modifiche che non hai confermato. Apri il modulo di correzione con il pulsante qui sotto, controlla le modifiche e approvale. Subito dopo, l'ordine andrà in stampa.",
+  "open_corrections.buttonText": "Apri il modulo di correzione",
+  "open_corrections.buttonFallback": "Se il pulsante non funziona, copia e incolla questo link nel browser:",
+  "open_corrections.questions": "Se hai domande, rispondi a questa email e ti aiuteremo.",
+  "open_corrections.thanks": "Grazie",
+  "open_corrections.team": "Il team di QRSong!"
 }

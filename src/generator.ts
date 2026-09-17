@@ -224,7 +224,16 @@ class Generator {
           paymentId: { in: stuckPaymentIds },
           suggestionWarningSent: false,
         },
-        select: { id: true, paymentId: true, fullname: true, email: true },
+        select: {
+          id: true,
+          paymentId: true,
+          orderId: true,
+          fullname: true,
+          email: true,
+          locale: true,
+          userId: true,
+          user: { select: { hash: true } },
+        },
       });
 
       for (const p of needWarning) {
@@ -244,6 +253,17 @@ class Generator {
           },
           ''
         );
+        try {
+          await this.mailOpenCorrections(p);
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Could not mail open corrections for ${white.bold(
+                p.paymentId
+              )}: ${error}`
+            )
+          );
+        }
         await this.prisma.payment.update({
           where: { id: p.id },
           data: {
@@ -329,6 +349,77 @@ class Generator {
     }
 
     return summary;
+  }
+
+  /**
+   * Mail the customer of an order the printer pass just skipped, with a link
+   * to the correction form of every playlist that holds corrections they typed
+   * but never approved. Corrections that are already submitted and wait for us
+   * (suggestionsPending), or that belong to somebody else, are not the
+   * customer's to fix, so those send nothing.
+   */
+  private async mailOpenCorrections(payment: {
+    id: number;
+    paymentId: string;
+    orderId: string;
+    fullname: string | null;
+    email: string;
+    locale: string | null;
+    userId: number;
+    user: { hash: string } | null;
+  }): Promise<void> {
+    if (!payment.user || !payment.email) return;
+
+    const lines = await this.prisma.paymentHasPlaylist.findMany({
+      where: { paymentId: payment.id, suggestionsPending: false },
+      select: {
+        type: true,
+        playlist: { select: { id: true, playlistId: true, name: true } },
+      },
+    });
+    if (lines.length === 0) return;
+
+    const counts = await this.prisma.userSuggestion.groupBy({
+      by: ['playlistId'],
+      where: {
+        userId: payment.userId,
+        playlistId: { in: lines.map((line) => line.playlist.id) },
+      },
+      _count: { _all: true },
+    });
+    const countByPlaylist = new Map(
+      counts.map((row) => [row.playlistId, row._count._all])
+    );
+
+    const locale = payment.locale || 'en';
+    const seen = new Set<number>();
+    const playlists: Array<{ name: string; link: string }> = [];
+    for (const line of lines) {
+      const count = countByPlaylist.get(line.playlist.id) ?? 0;
+      if (count === 0 || seen.has(line.playlist.id)) continue;
+      seen.add(line.playlist.id);
+      playlists.push({
+        name: line.playlist.name,
+        // The last segment is the correction form's digital flag
+        link: `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${
+          payment.paymentId
+        }/${payment.user.hash}/${line.playlist.playlistId}/${
+          line.type === 'digital' ? 1 : 0
+        }`,
+      });
+    }
+
+    if (playlists.length === 0) return;
+
+    await this.mail.sendOpenCorrectionsMail(
+      {
+        email: payment.email,
+        fullname: payment.fullname,
+        locale,
+        orderId: payment.orderId,
+      },
+      playlists
+    );
   }
 
   /**

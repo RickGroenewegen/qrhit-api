@@ -670,5 +670,15 @@
   "design_alter.imageBoxFront": "Intérieur boîte (avant)",
   "design_alter.imageBoxBack": "Intérieur boîte (arrière)",
   "invoice.discountPercentLine": "Réduc {{code}} ({{percent}}%)",
-  "invoice.discountCodeLine": "Code réduc {{code}}"
+  "invoice.discountCodeLine": "Code réduc {{code}}",
+  "open_corrections.subject": "Action requise : approuve tes modifications pour la commande {{ orderId }}",
+  "open_corrections.title": "Ta commande attend ton approbation",
+  "open_corrections.hello": "Bonjour",
+  "open_corrections.intro": "La période de vérification de ta commande est terminée et nous devrions normalement envoyer tes cartes à l'impression. Tu as fait des modifications que tu n'as pas encore approuvées, alors nous avons mis ta commande en pause.",
+  "open_corrections.whatToDo": "Nous n'imprimons jamais de modifications que tu n'as pas confirmées. Ouvre le formulaire de correction avec le bouton ci-dessous, vérifie tes modifications et approuve-les. Ta commande partira ensuite directement à l'impression.",
+  "open_corrections.buttonText": "Ouvrir le formulaire de correction",
+  "open_corrections.buttonFallback": "Si le bouton ne fonctionne pas, copie-colle ce lien dans ton navigateur :",
+  "open_corrections.questions": "Si tu as des questions, réponds simplement à cet e-mail et nous t'aiderons.",
+  "open_corrections.thanks": "Merci",
+  "open_corrections.team": "L'équipe QRSong!"
 }

@@ -314,6 +314,14 @@ describe('admin order routes', () => {
           timerOffset: -HOUR,
           printApiStatus: 'Submitted',
         },
+        // Parked on purpose, the printer hold filter lists these
+        {
+          paymentId: 'tr_attention_on_hold',
+          approved: true,
+          timerOffset: -HOUR,
+          printApiStatus: 'Created',
+          printerHold: true,
+        },
       ];
 
       beforeAll(async () => {
@@ -356,6 +364,7 @@ describe('admin order routes', () => {
               zipcode: '3511AB',
               housenumber: '3',
               printApiStatus: orderCase.printApiStatus,
+              printerHold: orderCase.printerHold ?? false,
               canBeSentToPrinter: true,
               canBeSentToPrinterAt: new Date(Date.now() + orderCase.timerOffset),
             },
@@ -418,8 +427,92 @@ describe('admin order routes', () => {
 
       it('reports the count while the filter is off', async () => {
         const body = await search({});
-        expect(body.totalItems).toBe(5);
+        expect(body.totalItems).toBe(6);
         expect(body.needsAttentionCount).toBe(2);
+      });
+
+      it('says why an order needs attention', async () => {
+        const track = await prisma().track.create({
+          data: {
+            trackId: 'attention-track-1',
+            name: 'Attention Track',
+            artist: 'Attention Artist',
+            year: 2001,
+          },
+        });
+        const user = await prisma().user.findFirstOrThrow({
+          where: { userId: 'order-user' },
+        });
+        const reasons = async () => {
+          const body = await search({ needsAttention: true });
+          return Object.fromEntries(
+            body.data.map((payment: any) => [
+              payment.paymentId,
+              payment.attention,
+            ])
+          );
+        };
+
+        expect(await reasons()).toEqual({
+          tr_attention_approved: { reason: 'not-sent', openCorrections: 0 },
+          tr_attention_expired: { reason: 'not-sent', openCorrections: 0 },
+        });
+
+        // A refused printer order keeps sentToPrinter set without an order id
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_approved' },
+          data: { sentToPrinter: true },
+        });
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_expired' } },
+          data: { suggestionsPending: true },
+        });
+
+        expect(await reasons()).toEqual({
+          tr_attention_approved: { reason: 'printer-error', openCorrections: 0 },
+          tr_attention_expired: { reason: 'open-corrections', openCorrections: 0 },
+        });
+
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_approved' },
+          data: { sentToPrinter: false },
+        });
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_expired' } },
+          data: { suggestionsPending: false },
+        });
+
+        // Draft corrections the customer never submitted; they sit on the
+        // playlist, so both orders of that playlist are blocked by them
+        await prisma().userSuggestion.create({
+          data: {
+            name: 'Corrected title',
+            artist: 'Corrected artist',
+            year: 1999,
+            trackId: track.id,
+            playlistId: playlistDbId,
+            userId: user.id,
+          },
+        });
+
+        expect(await reasons()).toEqual({
+          tr_attention_approved: {
+            reason: 'open-corrections',
+            openCorrections: 1,
+          },
+          tr_attention_expired: {
+            reason: 'open-corrections',
+            openCorrections: 1,
+          },
+        });
+
+        // Deleting the track cascades to the correction
+        await prisma().track.delete({ where: { id: track.id } });
+      });
+
+      it('leaves attention empty on orders that do not need any', async () => {
+        const body = await search({ textSearch: 'Order Mix' });
+        expect(body.data[0].attention).toBeNull();
       });
 
       it('counts within the other active filters', async () => {

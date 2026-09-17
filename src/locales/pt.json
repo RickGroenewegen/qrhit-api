@@ -665,5 +665,15 @@
   "design_alter.imageBoxFront": "Inlay da caixa (frente)",
   "design_alter.imageBoxBack": "Inlay da caixa (verso)",
   "invoice.discountPercentLine": "Desconto {{code}} ({{percent}}%)",
-  "invoice.discountCodeLine": "Código de desconto {{code}}"
+  "invoice.discountCodeLine": "Código de desconto {{code}}",
+  "open_corrections.subject": "Ação necessária: aprova as alterações da encomenda {{ orderId }}",
+  "open_corrections.title": "A tua encomenda aguarda a tua aprovação",
+  "open_corrections.hello": "Olá",
+  "open_corrections.intro": "O período de revisão da tua encomenda terminou e normalmente enviaríamos agora os cartões para impressão. Fizeste alterações que ainda não aprovaste, por isso pausámos a encomenda.",
+  "open_corrections.whatToDo": "Nunca imprimimos alterações que não confirmaste. Abre o formulário de correção no botão abaixo, verifica as alterações e aprova-as. A encomenda seguirá logo depois para impressão.",
+  "open_corrections.buttonText": "Abrir o formulário de correção",
+  "open_corrections.buttonFallback": "Se o botão não funcionar, copia e cola este link no navegador:",
+  "open_corrections.questions": "Se tiveres alguma dúvida, responde a este email e nós ajudamos.",
+  "open_corrections.thanks": "Obrigado",
+  "open_corrections.team": "A equipa QRSong!"
 }
