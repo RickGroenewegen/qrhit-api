@@ -4849,19 +4849,21 @@ export default async function adminRoutes(
     }
   });
 
+  const loadEmailTemplates = (): any[] => {
+    const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
+    const mailJsonPath = path.join(appRoot, '_data', 'mail.json');
+    return JSON.parse(fs.readFileSync(mailJsonPath, 'utf-8')).templates || [];
+  };
+
   // Get email templates from mail.json
   fastify.get(
     '/admin/email-templates',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
-        const mailJsonPath = path.join(appRoot, '_data', 'mail.json');
-        const data = JSON.parse(fs.readFileSync(mailJsonPath, 'utf-8'));
-
         return reply.send({
           success: true,
-          templates: data.templates || []
+          templates: loadEmailTemplates()
         });
       } catch (error: any) {
         console.error('Error loading email templates:', error);
@@ -4879,7 +4881,14 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { paymentId, subject, message, targetLocale } = request.body;
+        const {
+          paymentId,
+          subject,
+          message,
+          targetLocale,
+          templateId,
+          resetJudgedPlaylistIds
+        } = request.body;
 
         // Validate required fields
         if (!paymentId || !subject || !message) {
@@ -4893,6 +4902,7 @@ export default async function adminRoutes(
         const payment = await prisma.payment.findUnique({
           where: { paymentId },
           select: {
+            id: true,
             email: true,
             fullname: true,
             locale: true
@@ -4919,6 +4929,55 @@ export default async function adminRoutes(
           translatedMessage = translated.message;
         }
 
+        // A preset flagged `resetsJudged` in mail.json asks the customer to
+        // change their design, which user-suggestions only allows while that
+        // playlist is not judged. Judged lives per playlist, so the admin
+        // picks which ones to re-open. Reset ahead of the send, so the mail
+        // never points at a locked page; a failed reset sends nothing.
+        const resetsJudged =
+          !!templateId &&
+          loadEmailTemplates().some(
+            (template: any) =>
+              template.id === templateId && template.resetsJudged === true
+          );
+
+        const judgedResetPlaylistIds: number[] =
+          resetsJudged && Array.isArray(resetJudgedPlaylistIds)
+            ? [
+                ...new Set<number>(
+                  resetJudgedPlaylistIds
+                    .map((id: any) => parseInt(id, 10))
+                    .filter((id: number) => Number.isInteger(id))
+                ),
+              ]
+            : [];
+
+        if (judgedResetPlaylistIds.length > 0) {
+          const owned = await prisma.paymentHasPlaylist.count({
+            where: {
+              id: { in: judgedResetPlaylistIds },
+              paymentId: payment.id
+            }
+          });
+
+          if (owned !== judgedResetPlaylistIds.length) {
+            return reply.status(400).send({
+              success: false,
+              error: 'resetJudgedPlaylistIds must all belong to this payment'
+            });
+          }
+
+          for (const paymentHasPlaylistId of judgedResetPlaylistIds) {
+            const reset = await data.resetJudgedStatus(paymentHasPlaylistId);
+            if (!reset.success) {
+              return reply.status(500).send({
+                success: false,
+                error: reset.error || 'Failed to reset judged status'
+              });
+            }
+          }
+        }
+
         // Send email
         await mail.sendCustomMail(
           payment.email,
@@ -4930,7 +4989,8 @@ export default async function adminRoutes(
 
         return reply.send({
           success: true,
-          message: 'Email sent successfully'
+          message: 'Email sent successfully',
+          judgedResetPlaylistIds
         });
       } catch (error: any) {
         console.error('Error sending custom email:', error);

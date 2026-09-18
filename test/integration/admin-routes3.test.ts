@@ -11,6 +11,7 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
+import { outbound } from '../helpers/recording-mock';
 import Generator from '../../src/generator';
 
 /**
@@ -1797,6 +1798,132 @@ describe('admin routes — wave 3 coverage', () => {
         },
       });
       expect(res.statusCode).toBe(404);
+    });
+
+    // Presets flagged `resetsJudged` in mail.json (the Hitster warning) re-open
+    // the playlists the admin ticked, so the customer can edit the design again.
+    describe('resetsJudged presets', () => {
+      let secondPhpId: number;
+
+      const judgeEverything = async () => {
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { id: { in: [phpId, secondPhpId] } },
+          data: { userConfirmedPrinting: true },
+        });
+        await prisma().payment.update({
+          where: { paymentId: PAYMENT_ID },
+          data: { userAgreedToPrinting: true },
+        });
+      };
+
+      const send = (payload: Record<string, unknown>) =>
+        app.inject({
+          method: 'POST',
+          url: '/admin/send-custom-email',
+          headers,
+          // nl skips the ChatGPT translation step
+          payload: {
+            paymentId: PAYMENT_ID,
+            subject: 'Onderwerp',
+            message: 'Bericht',
+            targetLocale: 'nl',
+            ...payload,
+          },
+        });
+
+      const judgedOf = async (id: number) =>
+        (await prisma().paymentHasPlaylist.findUnique({ where: { id } }))!
+          .userConfirmedPrinting;
+
+      beforeAll(async () => {
+        const secondPlaylist = await prisma().playlist.create({
+          data: {
+            playlistId: 'wave3-playlist-judged-2',
+            name: 'Wave3 Second Mix',
+            slug: 'wave3-second-mix',
+            image: 'img.png',
+          },
+        });
+        const first = await prisma().paymentHasPlaylist.findUnique({
+          where: { id: phpId },
+        });
+        const second = await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: first!.paymentId,
+            playlistId: secondPlaylist.id,
+            amount: 1,
+            numberOfTracks: 30,
+            orderTypeId: first!.orderTypeId,
+            type: 'cards',
+            price: 60,
+            priceWithoutVAT: 50,
+            priceVAT: 10,
+          },
+        });
+        secondPhpId = second.id;
+      });
+
+      it('resets only the ticked playlist, then sends the mail', async () => {
+        await judgeEverything();
+        const before = outbound.calls('Mail', 'sendCustomMail').length;
+
+        const res = await send({
+          templateId: 'copyright-hitster',
+          resetJudgedPlaylistIds: [phpId],
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json().judgedResetPlaylistIds).toEqual([phpId]);
+        expect(await judgedOf(phpId)).toBe(false);
+        expect(await judgedOf(secondPhpId)).toBe(true);
+        const payment = await prisma().payment.findUnique({
+          where: { paymentId: PAYMENT_ID },
+        });
+        expect(payment!.userAgreedToPrinting).toBe(false);
+        expect(outbound.calls('Mail', 'sendCustomMail').length).toBe(before + 1);
+      });
+
+      it('leaves judged alone for a preset without the flag, and without a preset', async () => {
+        await judgeEverything();
+
+        const unflagged = await send({
+          templateId: 'card-readablity-issue',
+          resetJudgedPlaylistIds: [phpId],
+        });
+        const noTemplate = await send({ resetJudgedPlaylistIds: [phpId] });
+
+        expect(unflagged.statusCode).toBe(200);
+        expect(unflagged.json().judgedResetPlaylistIds).toEqual([]);
+        expect(noTemplate.json().judgedResetPlaylistIds).toEqual([]);
+        expect(await judgedOf(phpId)).toBe(true);
+      });
+
+      it('sends the flagged preset without a reset when nothing is ticked', async () => {
+        await judgeEverything();
+
+        const res = await send({
+          templateId: 'copyright-hitster',
+          resetJudgedPlaylistIds: [],
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json().judgedResetPlaylistIds).toEqual([]);
+        expect(await judgedOf(phpId)).toBe(true);
+      });
+
+      it('400s, resets nothing and sends nothing for a playlist of another order', async () => {
+        await judgeEverything();
+        const before = outbound.calls('Mail', 'sendCustomMail').length;
+
+        const res = await send({
+          templateId: 'copyright-hitster',
+          resetJudgedPlaylistIds: [phpId, 99999999],
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(await judgedOf(phpId)).toBe(true);
+        expect(outbound.calls('Mail', 'sendCustomMail').length).toBe(before);
+      });
     });
   });
 
