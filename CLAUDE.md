@@ -324,7 +324,7 @@ relaunch the old code.
 graph takes a second or more per process. `src/app.ts` is a deliberately tiny
 entry point: it calls `startClusterWorkers()` (`src/clusterPrimary.ts`) and
 only then does a dynamic `import('./bootstrap')`, which holds what `app.ts`
-used to (Sentry, `Server.init()`). Workers therefore load in parallel with the
+used to (`Server.init()`). Workers therefore load in parallel with the
 primary instead of after it. Keep static imports out of `app.ts` and keep
 `clusterPrimary.ts` light, or the fork is delayed again. The one-time legacy
 background backfill stays ahead of the fork on purpose, see the next section.

@@ -697,7 +697,6 @@
 
 ### 22.5 Data & Analytics
 - MaxMind (GeoIP lookup)
-- Sentry (error tracking)
 - Custom analytics counter
 
 ---
@@ -857,10 +856,7 @@
 - IP logging
 
 ### 29.2 Error Tracking
-- Sentry integration for production errors
-- Error context preservation
-- User identification in errors
-- Stack trace collection
+- Errors are written to the application log (pm2); there is no external error tracking service
 
 ---
 

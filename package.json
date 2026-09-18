@@ -46,8 +46,6 @@
     "@hyzyla/pdfium": "^2.1.13",
     "@prisma/adapter-mariadb": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@sentry/node": "^10.72.0",
-    "@sentry/profiling-node": "^10.72.0",
     "@tidal-music/api": "^0.44.0",
     "@tidal-music/auth": "^1.6.2",
     "@types/sharp": "^0.31.1",
