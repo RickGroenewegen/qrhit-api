@@ -579,6 +579,7 @@ class Spotify {
             if (featured) {
               // Build select object dynamically based on available locales
               const selectFields: any = {
+                id: true, slug: true, image: true,
                 name: true, design: true, customImage: true,
                 decadePercentage0: true, decadePercentage1900: true,
                 decadePercentage1950: true, decadePercentage1960: true,
@@ -600,6 +601,18 @@ class Spotify {
                 playlistName = dbPlaylistAny.name || playlistName;
                 playlistDesign = dbPlaylistAny.design || null;
                 customImage = dbPlaylistAny.customImage || null;
+
+                // The playlist list reads the stored cover, this lookup is the
+                // only place that sees the live one. See data/playlistCovers.ts.
+                try {
+                  await this.data.syncFeaturedPlaylistCover(dbPlaylistAny, image);
+                } catch (error: any) {
+                  this.logger.log(
+                    color.red.bold(
+                      `Error storing cover of ${color.white.bold(playlistId)}: ${error.message}`
+                    )
+                  );
+                }
 
                 // Collect decade percentages
                 decadePercentages = {

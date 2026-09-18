@@ -1297,6 +1297,7 @@ class Mollie {
     payments: any[];
     totalItems: number;
     needsAttentionCount: number;
+    printerHoldCount: number;
   }> {
     const whereClause =
       Array.isArray(search.status) && search.status.length > 0
@@ -1356,16 +1357,17 @@ class Mollie {
         : {};
 
     // Printer hold filter - if true, only include payments with printerHold = true AND at least one physical playlist
+    const printerHoldFilter: Prisma.PaymentWhereInput = {
+      printerHold: true,
+      PaymentHasPlaylist: {
+        some: {
+          type: 'physical',
+        },
+      },
+    };
     const printerHoldClause =
       typeof search.printerHold === 'boolean' && search.printerHold
-        ? {
-            printerHold: true,
-            PaymentHasPlaylist: {
-              some: {
-                type: 'physical',
-              },
-            },
-          }
+        ? printerHoldFilter
         : {};
 
     // Needs attention filter - physical orders that should have gone to the
@@ -1434,10 +1436,11 @@ class Mollie {
     // be combined with AND: spreading them into one object would let the last
     // one silently drop the others
     const buildWhereFilter = (
+      holdClause: Prisma.PaymentWhereInput,
       attentionClause: Prisma.PaymentWhereInput
     ): Prisma.PaymentWhereInput => {
       const playlistClauses: Prisma.PaymentWhereInput[] = [
-        printerHoldClause,
+        holdClause,
         attentionClause,
         printerTypeClause,
         serviceTypeClause,
@@ -1452,17 +1455,26 @@ class Mollie {
       };
     };
 
-    const whereFilter = buildWhereFilter(needsAttentionClause);
+    const whereFilter = buildWhereFilter(
+      printerHoldClause,
+      needsAttentionClause
+    );
 
-    // What the list would hold with the needs attention filter switched on and
-    // every other filter left as it is; the dashboard shows it next to the
-    // checkbox
-    const [totalItems, needsAttentionCount] = await Promise.all([
-      this.prisma.payment.count({ where: whereFilter }),
-      this.prisma.payment.count({
-        where: buildWhereFilter(needsAttentionFilter),
-      }),
-    ]);
+    // What the list would hold with the needs attention or the printer hold
+    // filter switched on and every other filter left as it is; the dashboard
+    // shows them next to the checkboxes. The two exclude each other (an order
+    // on hold never needs attention), so each count leaves the other filter
+    // out instead of dropping to zero as soon as it is ticked.
+    const [totalItems, needsAttentionCount, printerHoldCount] =
+      await Promise.all([
+        this.prisma.payment.count({ where: whereFilter }),
+        this.prisma.payment.count({
+          where: buildWhereFilter({}, needsAttentionFilter),
+        }),
+        this.prisma.payment.count({
+          where: buildWhereFilter(printerHoldFilter, {}),
+        }),
+      ]);
 
     const payments = await this.prisma.payment.findMany({
       where: whereFilter,
@@ -1706,6 +1718,7 @@ class Mollie {
       payments: paymentsWithAttention,
       totalItems,
       needsAttentionCount,
+      printerHoldCount,
     };
   }
 

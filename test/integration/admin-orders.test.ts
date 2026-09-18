@@ -431,6 +431,29 @@ describe('admin order routes', () => {
         expect(body.needsAttentionCount).toBe(2);
       });
 
+      it('reports the printer hold count the same way', async () => {
+        expect((await search({})).printerHoldCount).toBe(1);
+        expect(
+          (await search({ textSearch: 'tr_attention_approved' }))
+            .printerHoldCount
+        ).toBe(0);
+
+        const held = await search({ printerHold: true });
+        expect(paymentIds(held)).toEqual(['tr_attention_on_hold']);
+        expect(held.printerHoldCount).toBe(1);
+      });
+
+      it('keeps each count while the other filter is ticked', async () => {
+        // The two filters exclude each other, so neither count may be taken
+        // inside the other filter or it would always read zero
+        expect(
+          (await search({ printerHold: true })).needsAttentionCount
+        ).toBe(2);
+        expect(
+          (await search({ needsAttention: true })).printerHoldCount
+        ).toBe(1);
+      });
+
       it('says why an order needs attention', async () => {
         const track = await prisma().track.create({
           data: {

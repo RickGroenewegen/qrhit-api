@@ -506,13 +506,14 @@ export default async function adminRoutes(
         itemsPerPage: request.body.itemsPerPage || 10,
       };
 
-      const { payments, totalItems, needsAttentionCount } =
+      const { payments, totalItems, needsAttentionCount, printerHoldCount } =
         await mollie.getPaymentList(search);
 
       reply.send({
         data: payments,
         totalItems,
         needsAttentionCount,
+        printerHoldCount,
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });
@@ -4993,6 +4994,24 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to update playlist stats'
+        });
+      }
+    }
+  );
+
+  // Find featured playlist covers that no longer load and fetch the current one
+  fastify.post(
+    '/admin/repair-playlist-covers',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await data.repairFeaturedPlaylistCovers();
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error repairing playlist covers:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to repair playlist covers'
         });
       }
     }

@@ -355,6 +355,28 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Featured playlist covers
+
+`playlists.image` is a URL on the music service's CDN, stored once when the
+row is created. When a playlist's owner replaces the cover, Spotify deletes the
+old file and the stored URL answers 404. `/featured` (the playlist list) reads
+that column, while the product page shows the cover from a live lookup, so the
+symptom is a broken image in the list for a playlist whose product page looks
+fine. `src/data/playlistCovers.ts` keeps the column honest in two ways:
+
+- Every uncached lookup of a featured playlist in `spotify.getPlaylist` writes
+  the live cover back when it differs and drops the featured list cache.
+- A 03:30 cron on the main server (`repairFeaturedPlaylistCovers`, also the
+  "Repair Playlist Covers" bulk action, `POST /admin/repair-playlist-covers`)
+  sends a HEAD to every stored cover and re-fetches only the dead ones with
+  `cache=false`. That flag matters: the cached lookup of a featured playlist
+  never expires, so it can hold the same dead URL. A 5xx or a timeout counts
+  as alive, so a CDN hiccup cannot trigger hundreds of Spotify calls.
+
+Rows with a `customImage` are skipped, it wins everywhere. Only Spotify is
+re-fetched; a dead cover on another service (Apple Music's signed artwork URLs
+expire) is reported as unresolved and needs a custom image uploaded.
+
 ## Customer reviews: a committed JSON file
 
 `src/reviews.ts` serves `/reviews/:locale/:amount/:landingPage` and

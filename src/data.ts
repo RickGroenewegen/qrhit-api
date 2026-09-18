@@ -17,8 +17,10 @@ import { ChatGPT } from './chatgpt';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
 import { DataDeps } from './data/types';
+import Spotify from './spotify';
 
 // Sub-module imports
+import * as playlistCoversModule from './data/playlistCovers';
 import * as miscModule from './data/misc';
 import * as usersModule from './data/users';
 import * as scoringModule from './data/scoring';
@@ -78,9 +80,14 @@ class Data {
           const playlistStatsJob = new CronJob('0 3 * * *', async () => {
             await this.updateFeaturedPlaylistStats();
           });
+          // Covers the owner replaced on Spotify: the stored URL goes 404
+          const playlistCoversJob = new CronJob('30 3 * * *', async () => {
+            await this.repairFeaturedPlaylistCovers();
+          });
           job.start();
           genreJob.start();
           playlistStatsJob.start();
+          playlistCoversJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -589,6 +596,34 @@ class Data {
 
   public async updateFeaturedPlaylistStats() {
     return scoringModule.updateFeaturedPlaylistStats(this.deps);
+  }
+
+  public async syncFeaturedPlaylistCover(
+    playlist: { id: number; slug?: string | null; image?: string | null },
+    freshImage: string | null | undefined
+  ) {
+    return playlistCoversModule.syncFeaturedPlaylistCover(this.deps, playlist, freshImage);
+  }
+
+  public async repairFeaturedPlaylistCovers() {
+    return playlistCoversModule.repairFeaturedPlaylistCovers(this.deps, async (playlist) => {
+      // Only Spotify deletes a cover when the owner replaces it; the other
+      // services are reported as unresolved and need a custom image.
+      if (playlist.serviceType !== 'spotify') {
+        return null;
+      }
+      // cache=false: the cached lookup of a featured playlist never expires,
+      // so it can hold the same dead URL as the column.
+      const result = await Spotify.getInstance().getPlaylist(
+        playlist.slug,
+        false,
+        '',
+        false,
+        true,
+        true
+      );
+      return result.success ? result.data?.image || null : null;
+    });
   }
 
   // ── Misc ─────────────────────────────────────────────────────
