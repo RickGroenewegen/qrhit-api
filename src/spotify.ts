@@ -576,17 +576,15 @@ class Spotify {
 
             let customImage: string | null = null;
             let decadePercentages: Record<string, number> = {};
-            // Catalogue facts the product page states in its structured data
-            // (dateCreated) and uses to keep a locale-specific list on its
-            // own locale (featuredLocale).
+            // When the catalogue row was created; the product page states it
+            // as dateCreated in its structured data.
             let createdAt: string | null = null;
-            let featuredLocale: string | null = null;
             if (featured) {
               // Build select object dynamically based on available locales
               const selectFields: any = {
                 id: true, slug: true, image: true,
                 name: true, design: true, customImage: true,
-                createdAt: true, featuredLocale: true,
+                createdAt: true, promotionalShareDesign: true,
                 decadePercentage0: true, decadePercentage1900: true,
                 decadePercentage1950: true, decadePercentage1960: true,
                 decadePercentage1970: true, decadePercentage1980: true,
@@ -605,12 +603,18 @@ class Spotify {
               if (dbPlaylist) {
                 const dbPlaylistAny = dbPlaylist as any;
                 playlistName = dbPlaylistAny.name || playlistName;
-                playlistDesign = dbPlaylistAny.design || null;
+                // The stored design is the one the customer ordered with and
+                // can carry personal photos or messages. They (or an admin)
+                // can keep it off the product page; visitors then get the
+                // default design.
+                playlistDesign =
+                  dbPlaylistAny.promotionalShareDesign === false
+                    ? null
+                    : dbPlaylistAny.design || null;
                 customImage = dbPlaylistAny.customImage || null;
                 createdAt = dbPlaylistAny.createdAt
                   ? new Date(dbPlaylistAny.createdAt).toISOString()
                   : null;
-                featuredLocale = dbPlaylistAny.featuredLocale || null;
 
                 // The playlist list reads the stored cover, this lookup is the
                 // only place that sees the live one. See data/playlistCovers.ts.
@@ -661,7 +665,6 @@ class Spotify {
               customImage,
               design: playlistDesign,
               createdAt,
-              featuredLocale,
               ...decadePercentages,
             };
 
@@ -693,7 +696,6 @@ class Spotify {
               customImage,
               design: playlistDesign,
               createdAt,
-              featuredLocale,
               ...decadePercentages,
             };
           } catch (error) {
@@ -727,7 +729,6 @@ class Spotify {
           customImage: cachedData.customImage || null,
           design: cachedData.design || null,
           createdAt: cachedData.createdAt || null,
-          featuredLocale: cachedData.featuredLocale || null,
           decadePercentage0: cachedData.decadePercentage0 || 0,
           decadePercentage1900: cachedData.decadePercentage1900 || 0,
           decadePercentage1950: cachedData.decadePercentage1950 || 0,

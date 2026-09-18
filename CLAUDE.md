@@ -427,15 +427,35 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   `POST /admin/playlist/:playlistId/seo-description` rewrites one playlist
   regardless of the flag.
 
-## Product page locale and cover
+## Product page locale, cover and design
 
-- A playlist with `featuredLocale` set has its product page in that locale
-  only. `GET /product-page/:slug` tells the SSR server which locale that is;
-  the server 301s the other locales there and emits a single canonical with
-  no hreflang. The sitemap lists such a playlist in that locale's file only,
-  and leaves out promotional submissions that are not approved yet. Changing
-  the locale (`updateFeaturedLocale`, `updatePromotionalPlaylist`) drops the
-  gate cache and rebuilds the sitemap.
+- `featuredLocale` (null, `"de"` or a list like `"de,nl"`) decides where a
+  product page is **indexable**, never where it renders.
+  `data/productPageLocales.ts` is the one rule: an international list is
+  indexable everywhere, a market-specific one in its own locales plus always
+  `en`. The sitemap lists it in those locales only (and leaves out
+  promotional submissions that are not approved yet), and
+  `GET /product-page/:slug` gives the SSR server the same list, which narrows
+  the hreflang cluster to it and sends `X-Robots-Tag: noindex, follow` on the
+  other locales. **Do not redirect those locales.** That was tried: a German
+  visitor browsing the English site opens German lists from `/en/playlists`
+  (that page filters by country, not by UI language), and a 301 to `/de/`
+  switched the whole site's language under them. Changing the locale
+  (`updateFeaturedLocale`, `updatePromotionalPlaylist`) drops the gate cache
+  and rebuilds the sitemap.
+- `playlists.design` is the card design of whoever first ordered the
+  playlist (checkout sends it along, `data/playlists.ts` stores it on
+  creation). Once that playlist is featured, its product page shows every
+  visitor that design, which can carry personal photos or messages.
+  `promotionalShareDesign` gates it: `spotify.getPlaylist` returns
+  `design: null` when it is false. The customer chooses on the featured
+  playlist form (own design is preselected; the API only shares on an
+  explicit `true`), the form previews both options from the design and a
+  sample track that `getPromotionalSetup` returns to the verified owner, and
+  an admin can flip it per row on the Featured page
+  (`POST /admin/playlist/:playlistId/share-design`). The design is never
+  deleted. The column defaults to true so curated lists and older
+  submissions keep what they show today.
 - `GET /product-cover/:slug.jpg` (`src/playlistArtwork.ts`) serves a 640x640
   JPEG of the cover from our own domain, built from the admin upload or the
   live Spotify file and cached under `public/product_covers/` keyed on the

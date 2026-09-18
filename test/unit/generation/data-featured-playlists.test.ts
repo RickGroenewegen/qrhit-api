@@ -35,6 +35,7 @@ import {
   updatePlaylistFeatured,
   updateFeaturedHidden,
   updateFeaturedLocale,
+  updateShareDesign,
   unfeaturePlaylist,
   refeaturePlaylist,
   updatePromotionalPlaylist,
@@ -473,6 +474,9 @@ describe('searchFeaturedPlaylists', () => {
           promotionalDescription: 'Pending desc',
           promotionalLocale: 'nl',
           promotionalUserId: 12,
+          // The customer's own card design, which they chose not to show.
+          design: { backgroundImage: 'wedding.png' },
+          promotionalShareDesign: false,
         },
       ])
       .mockResolvedValueOnce([]);
@@ -493,6 +497,10 @@ describe('searchFeaturedPlaylists', () => {
         locale: 'nl',
         userEmail: 'u@x',
         userDisplayName: 'U',
+        // The admin sees that there is a design and what was chosen, never
+        // the design itself.
+        hasDesign: true,
+        shareDesign: false,
       },
     ]);
   });
@@ -754,8 +762,22 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     // The locale decides which locales serve the product page and which
     // sitemaps list it, so all three follow the change.
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
-    expect(cache.del).toHaveBeenCalledWith('productPageLocale_my-list');
+    expect(cache.del).toHaveBeenCalledWith('productPageLocales_my-list');
     expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('updateShareDesign stores the admin override and drops the cached product page', async () => {
+    const { deps, prisma } = makeDeps();
+
+    const res = await updateShareDesign(deps, 'pl1', false);
+
+    expect(res).toEqual({ success: true });
+    // The design itself is left in place, so it can be switched back on.
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: { promotionalShareDesign: false },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
   });
 
   it('both report errors instead of throwing', async () => {
@@ -827,7 +849,7 @@ describe('updatePromotionalPlaylist', () => {
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'old-slug');
     // Both the old and the current slug drop out of the locale gate.
-    expect(deps.cache.del).toHaveBeenCalledWith('productPageLocale_old-slug');
+    expect(deps.cache.del).toHaveBeenCalledWith('productPageLocales_old-slug');
   });
 
   it('a whitespace-only slug is ignored (no duplicate check, no slug update)', async () => {

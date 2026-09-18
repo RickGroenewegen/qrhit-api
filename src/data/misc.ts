@@ -13,6 +13,7 @@ import {
 } from '../spotify';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
 import { LOCALE_PRIMARY_COUNTRY, occasionSlug } from './giftOccasions';
+import { isProductPageIndexable } from './productPageLocales';
 import { DataDeps } from './types';
 
 export async function getPDFFilepath(
@@ -481,14 +482,14 @@ export async function createSiteMap(
       // without buying anything. (Google ignores both hints, but Bing and
       // others still read them.)
       //
-      // A playlist featured for one locale has its product page in that
-      // locale only (the other locales redirect there, see
-      // getProductPageLocale), so it is listed in that locale's sitemap alone.
+      // A playlist aimed at specific markets ("de", or "de,nl") is listed
+      // in those locales' sitemaps and always in the English one; its page
+      // renders in the other locales too but goes out noindex there. See
+      // productPageLocales.ts.
       ...featuredPlaylists
         .filter((playlist) => !isDegenerateProductSlug(playlist.slug || ''))
-        .filter(
-          (playlist) =>
-            !playlist.featuredLocale || playlist.featuredLocale === locale
+        .filter((playlist) =>
+          isProductPageIndexable(playlist.featuredLocale, locale, locales)
         )
         .map((playlist) => ({
           loc: `/${locale}/product/${playlist.slug}`,

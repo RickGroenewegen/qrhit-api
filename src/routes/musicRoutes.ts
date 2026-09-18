@@ -335,9 +335,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Which locale(s) serve a product page. The SSR server asks before it
-  // renders /{lang}/product/{slug} so a playlist featured for one locale
-  // can send the other locales there with a 301 instead of a copy.
+  // Which locales a product page is indexable in (null = all). The SSR
+  // server asks before it renders /{lang}/product/{slug}: a list aimed at
+  // one market renders everywhere, but only its own locales and `en` get
+  // the hreflang cluster; the rest go out noindex. See productPageLocales.ts.
   fastify.get('/product-page/:slug', async (request: any, reply: any) => {
     const slug = String(request.params.slug || '');
     if (!slug || slug.length > 200) {
@@ -348,7 +349,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ success: false, error: 'Not found' });
     }
     reply.header('Cache-Control', 'public, max-age=600');
-    return { success: true, featuredLocale: info.featuredLocale };
+    return { success: true, indexableLocales: info.indexableLocales };
   });
 
   // Playlists similar to a given one, for the "you might also like" row on a

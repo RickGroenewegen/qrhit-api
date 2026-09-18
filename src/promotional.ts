@@ -103,6 +103,17 @@ class Promotional {
       playlistName: string;
       accepted: boolean;
       declined: boolean;
+      /** True when the playlist row carries a card design at all. */
+      hasDesign: boolean;
+      /** The customer's choice; null until they have submitted the form. */
+      shareDesign: boolean | null;
+      /**
+       * Their own design, so the form can preview both options. This route
+       * is only reachable with the owner's payment id and hash.
+       */
+      design: unknown | null;
+      /** One track of the playlist to print on the preview cards. */
+      sampleTrack: { artist: string; name: string; year: number | null } | null;
     };
     error?: string;
   }> {
@@ -122,11 +133,13 @@ class Promotional {
           slug: true,
           image: true,
           customImage: true,
+          design: true,
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalActive: true,
           promotionalAccepted: true,
           promotionalDeclined: true,
+          promotionalShareDesign: true,
         },
       });
 
@@ -160,6 +173,16 @@ class Promotional {
       // Check if this is a first-time setup (user hasn't submitted the form yet)
       const hasSubmitted = !!playlist.promotionalTitle;
 
+      // The first track, to draw on the design previews. Only needed when
+      // there is a design to preview.
+      const firstTrack = playlist.design
+        ? await this.prisma.playlistHasTrack.findFirst({
+            where: { playlistId: playlist.id },
+            orderBy: { order: 'asc' },
+            select: { track: { select: { artist: true, name: true, year: true } } },
+          })
+        : null;
+
       return {
         success: true,
         data: {
@@ -176,6 +199,19 @@ class Promotional {
           playlistName: playlist.name,
           accepted: !!playlist.promotionalAccepted,
           declined: !!playlist.promotionalDeclined,
+          hasDesign: !!playlist.design,
+          // The column defaults to true, which is not an answer the customer
+          // gave: null tells the form this is the first time, and it starts
+          // on its own default.
+          shareDesign: hasSubmitted ? !!playlist.promotionalShareDesign : null,
+          design: playlist.design ?? null,
+          sampleTrack: firstTrack?.track
+            ? {
+                artist: firstTrack.track.artist,
+                name: firstTrack.track.name,
+                year: firstTrack.track.year ?? null,
+              }
+            : null,
         },
       };
     } catch (error) {
@@ -197,6 +233,12 @@ class Promotional {
       image?: string;
       active: boolean;
       locale?: string;
+      /**
+       * Whether the product page may show the customer's own card design.
+       * Only an explicit true shares it: the design can carry personal photos
+       * or messages, so a request that does not say reads as "no".
+       */
+      shareDesign?: boolean;
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -223,6 +265,7 @@ class Promotional {
         promotionalActive: data.active,
         promotionalLocale: data.locale || 'en',
         promotionalUserId: ownership.userId,
+        promotionalShareDesign: data.shareDesign === true,
         featured: data.active,
         name: sanitizedName,
         slug,
@@ -247,10 +290,13 @@ class Promotional {
         data: updateData,
       });
 
-      // Clear cache for old slug if it changed
-      if (oldSlug && oldSlug !== slug) {
-        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug);
-      }
+      // The product page lookup of a featured playlist is cached forever and
+      // holds the design, so the cache goes on every save (a changed design
+      // choice has to take effect), including the old slug when it changed.
+      await Data.getInstance().clearPlaylistCache(
+        playlistId,
+        oldSlug && oldSlug !== slug ? oldSlug : undefined
+      );
 
       return { success: true };
     } catch (error) {

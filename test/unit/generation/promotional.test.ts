@@ -37,6 +37,7 @@ const h = vi.hoisted(() => {
         update: vi.fn(),
         updateMany: vi.fn(),
       },
+      playlistHasTrack: { findFirst: vi.fn() },
       user: { findUnique: vi.fn() },
     },
     getLiveUsage: vi.fn(async () => ({ amountUsed: 4, useCount: 1 })),
@@ -129,6 +130,7 @@ function resetPrisma() {
     h.prisma.discountCode,
     h.prisma.discountCodedUses,
     h.prisma.paymentHasPlaylist,
+    h.prisma.playlistHasTrack,
     h.prisma.user,
   ]) {
     for (const fn of Object.values(model)) {
@@ -211,8 +213,72 @@ describe('Promotional.getPromotionalSetup', () => {
         playlistName: 'PName',
         accepted: true,
         declined: false,
+        // No card design on this row: nothing to choose, nothing to preview.
+        hasDesign: false,
+        shareDesign: false,
+        design: null,
+        sampleTrack: null,
       },
     });
+    expect(h.prisma.playlistHasTrack.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('hands the owner their design and a sample track, and asks (null) when they never chose', async () => {
+    const design = { backgroundImage: 'wedding.png', fontColor: '#fff' };
+    h.prisma.playlist.findFirst.mockResolvedValue({
+      id: 2,
+      name: 'PName',
+      slug: 'pslug',
+      image: 'img.png',
+      customImage: null,
+      design,
+      promotionalTitle: null, // never submitted
+      promotionalDescription: null,
+      promotionalActive: 0,
+      promotionalAccepted: 0,
+      promotionalDeclined: 0,
+      promotionalShareDesign: true, // the column default, not an answer
+    });
+    h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.prisma.playlistHasTrack.findFirst.mockResolvedValue({
+      track: { artist: 'Queen', name: 'Killer Queen', year: 1974 },
+    });
+
+    const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+
+    expect(res.data?.hasDesign).toBe(true);
+    expect(res.data?.shareDesign).toBeNull();
+    expect(res.data?.design).toEqual(design);
+    expect(res.data?.sampleTrack).toEqual({ artist: 'Queen', name: 'Killer Queen', year: 1974 });
+    expect(h.prisma.playlistHasTrack.findFirst).toHaveBeenCalledWith({
+      where: { playlistId: 2 },
+      orderBy: { order: 'asc' },
+      select: { track: { select: { artist: true, name: true, year: true } } },
+    });
+  });
+
+  it('reports the stored choice once the form has been submitted', async () => {
+    h.prisma.playlist.findFirst.mockResolvedValue({
+      id: 2,
+      name: 'PName',
+      slug: 'pslug',
+      image: 'img.png',
+      customImage: null,
+      design: { backgroundImage: 'wedding.png' },
+      promotionalTitle: 'T',
+      promotionalDescription: 'D',
+      promotionalActive: 1,
+      promotionalAccepted: 0,
+      promotionalDeclined: 0,
+      promotionalShareDesign: false,
+    });
+    h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.prisma.playlistHasTrack.findFirst.mockResolvedValue(null);
+
+    const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+
+    expect(res.data?.shareDesign).toBe(false);
+    expect(res.data?.sampleTrack).toBeNull();
   });
 
   it('defaults active=true on first-time setup and falls back to the playlistId share link', async () => {
@@ -291,6 +357,8 @@ describe('Promotional.savePromotionalSetup', () => {
         promotionalActive: true,
         promotionalLocale: 'de',
         promotionalUserId: 7,
+        // Not stated in the request: the customer's design stays private.
+        promotionalShareDesign: false,
         featured: true,
         name: 'Best QRSong! Mix', // hitster -> QRSong!
         slug: 'best-qrsong-mix',
@@ -298,6 +366,25 @@ describe('Promotional.savePromotionalSetup', () => {
     });
     // Old slug differs -> cache for it is cleared.
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'old-slug');
+  });
+
+  it('shares the design only on an explicit true, and always drops the cached product page', async () => {
+    // Same slug as before: the cache used to be left alone in that case, and
+    // a changed design choice then never reached the product page.
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'best-qrsong-mix',
+      customImage: null,
+    });
+
+    await promotional.savePromotionalSetup('pay_1', 'uhash', 'pl_1', {
+      ...saveData,
+      shareDesign: true,
+    });
+
+    expect(
+      h.prisma.playlist.update.mock.calls[0][0].data.promotionalShareDesign
+    ).toBe(true);
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', undefined);
   });
 
   it('appends -2 when the base slug is taken by another playlist', async () => {

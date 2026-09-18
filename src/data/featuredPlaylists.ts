@@ -6,24 +6,29 @@ import {
   CACHE_KEY_TRACK_COUNT,
 } from '../spotify';
 import { clearPlaylistCache, createSiteMap } from './misc';
+import { productPageLocales } from './productPageLocales';
 import { DataDeps } from './types';
 
 export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
-const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocale_';
+const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocales_';
 const PRODUCT_PAGE_LOCALE_TTL = 600;
 
 export interface ProductPageLocale {
   /** False when no featured playlist carries this slug. */
   exists: boolean;
-  /** The only locale that serves the product page, or null for all of them. */
-  featuredLocale: string | null;
+  /**
+   * The locales the product page is indexable in (its own plus `en`), or
+   * null for an international list, which is indexable everywhere. See
+   * productPageLocales.ts.
+   */
+  indexableLocales: string[] | null;
 }
 
 /**
- * What the SSR server asks before rendering /{lang}/product/{slug}: a
- * playlist featured for one locale has its product page in that locale only,
- * and the other eleven URLs redirect there instead of serving a copy. Short
- * cache because the server asks on every uncached page render.
+ * What the SSR server asks before rendering /{lang}/product/{slug}. The page
+ * renders in every locale; for a locale-specific list the answer decides
+ * which of those carry the hreflang cluster and which go out `noindex`.
+ * Short cache because the server asks on every uncached page render.
  */
 export async function getProductPageLocale(
   deps: DataDeps,
@@ -41,7 +46,10 @@ export async function getProductPageLocale(
   });
   const result: ProductPageLocale = {
     exists: !!playlist,
-    featuredLocale: playlist?.featuredLocale || null,
+    indexableLocales: productPageLocales(
+      playlist?.featuredLocale,
+      deps.translate.allLocales
+    ),
   };
   await deps.cache.set(cacheKey, JSON.stringify(result), PRODUCT_PAGE_LOCALE_TTL);
   return result;
@@ -579,10 +587,12 @@ export async function searchFeaturedPlaylists(
         slug: true,
         image: true,
         customImage: true,
+        design: true,
         promotionalTitle: true,
         promotionalDescription: true,
         promotionalLocale: true,
         promotionalUserId: true,
+        promotionalShareDesign: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -607,6 +617,10 @@ export async function searchFeaturedPlaylists(
           locale: p.promotionalLocale,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
+          // Whether there is a card design on the row at all, and whether
+          // the product page may show it. The design itself stays here.
+          hasDesign: !!p.design,
+          shareDesign: p.promotionalShareDesign,
         };
       })
     );
@@ -652,6 +666,8 @@ export async function searchFeaturedPlaylists(
           slug: true,
           image: true,
           customImage: true,
+          design: true,
+          promotionalShareDesign: true,
           featuredHidden: true,
           featuredLocale: true,
           unfeaturedAt: true,
@@ -738,6 +754,8 @@ export async function searchFeaturedPlaylists(
           purchaseCount,
           baseEvents: baseEventsMap.get(p.id) || [],
           baseEventsTagged: p.baseEventsTagged,
+          hasDesign: !!p.design,
+          shareDesign: p.promotionalShareDesign,
         };
       })
     );
@@ -957,6 +975,40 @@ export async function updateFeaturedHidden(
   }
 }
 
+/**
+ * Admin override of the customer's choice on the featured playlist form:
+ * whether the product page may show the card design stored on the row. The
+ * design is never deleted, so switching it back on restores it. The product
+ * page lookup is cached forever, hence the cache clear.
+ */
+export async function updateShareDesign(
+  deps: DataDeps,
+  playlistId: string,
+  shareDesign: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await deps.prisma.playlist.update({
+      where: { playlistId },
+      data: { promotionalShareDesign: shareDesign },
+    });
+
+    await clearPlaylistCache(deps, playlistId);
+
+    deps.logger.log(
+      color.blue.bold(
+        `Card design of ${color.white.bold(playlistId)} is now ${color.white.bold(shareDesign ? 'shown' : 'hidden')} on its product page`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(`Error updating design sharing: ${error.message}`)
+    );
+    return { success: false, error: error.message };
+  }
+}
+
 async function setPlaylistFeatured(
   deps: DataDeps,
   playlistId: string,
@@ -1030,9 +1082,9 @@ export async function updateFeaturedLocale(
     });
 
     // The locale decides which sitemaps list the product page and which
-    // locales serve it (the others redirect), so the page cache, the locale
-    // gate and the sitemap all have to follow. clearPlaylistCache also
-    // drops the featured list cache.
+    // locales are indexable (the others go out noindex), so the page cache,
+    // the locale gate and the sitemap all have to follow. clearPlaylistCache
+    // also drops the featured list cache.
     await clearPlaylistCache(deps, playlistId);
     await clearProductPageLocale(deps, playlistId);
     await createSiteMap(deps);

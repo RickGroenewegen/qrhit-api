@@ -1232,6 +1232,37 @@ export default async function adminRoutes(
     }
   );
 
+  // Show or hide the customer's own card design on the product page. The
+  // customer chooses on the featured playlist form; this is the admin
+  // override for a design that turns out to carry personal photos or text.
+  fastify.post(
+    '/admin/playlist/:playlistId/share-design',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { shareDesign } = request.body;
+
+      if (!playlistId || typeof shareDesign !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID and shareDesign (boolean) are required',
+        });
+        return;
+      }
+
+      const result = await data.updateShareDesign(playlistId, shareDesign);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Remove a playlist from the catalogue (list, product page, sitemap, Merchant
   // Center) or bring a removed one back. The row keeps `unfeaturedAt` so the
   // Featured page can still show it.

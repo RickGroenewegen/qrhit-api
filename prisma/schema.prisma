@@ -432,6 +432,13 @@ model Playlist {
   promotionalHide        Boolean              @default(false)
   promotionalLocale      String?              @db.VarChar(10)
   promotionalUserId      Int?
+  // Whether the product page may show the card design stored in `design`,
+  // which for a customer's playlist is the design they ordered with and can
+  // carry personal photos or messages. The customer chooses on the featured
+  // playlist form; false means visitors get the default design. Defaults to
+  // true so curated lists and submissions from before the question existed
+  // keep what they show today.
+  promotionalShareDesign Boolean              @default(true)
   tracks                 PlaylistHasTrack[]
   Payment                PaymentHasPlaylist[]
   UserSuggestion         UserSuggestion[]
