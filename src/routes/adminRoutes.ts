@@ -43,6 +43,7 @@ import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import CalendarService from '../calendarService';
 import Settings from '../settings';
+import SeoDescriptions from '../seoDescriptions';
 import {
   PRINTER_TYPES,
   SPOTIFY_REFRESH_TOKEN_TTL_DAYS,
@@ -5047,6 +5048,67 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to repair playlist covers'
+        });
+      }
+    }
+  );
+
+  // SEO descriptions for featured playlists (see seoDescriptions.ts). The run
+  // is started here and polled through the status route: hundreds of
+  // playlists times two model calls does not fit in one request.
+  fastify.get(
+    '/admin/seo-descriptions/status',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const seo = SeoDescriptions.getInstance();
+        const [status, pending] = await Promise.all([
+          seo.getBulkStatus(),
+          seo.countPending(),
+        ]);
+        return reply.send({ success: true, status, pending });
+      } catch (error: any) {
+        console.error('Error reading SEO description status:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to read status'
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/seo-descriptions/run',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const result = await SeoDescriptions.getInstance().startBulkRun();
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error starting SEO description run:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start the run'
+        });
+      }
+    }
+  );
+
+  // Rewrite one playlist's description, whether or not it has one already
+  fastify.post(
+    '/admin/playlist/:playlistId/seo-description',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await SeoDescriptions.getInstance().generateForPlaylist(
+          request.params.playlistId
+        );
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error writing SEO description:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to write the description'
         });
       }
     }

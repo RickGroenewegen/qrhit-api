@@ -9,6 +9,53 @@ import { clearPlaylistCache, createSiteMap } from './misc';
 import { DataDeps } from './types';
 
 export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
+const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocale_';
+const PRODUCT_PAGE_LOCALE_TTL = 600;
+
+export interface ProductPageLocale {
+  /** False when no featured playlist carries this slug. */
+  exists: boolean;
+  /** The only locale that serves the product page, or null for all of them. */
+  featuredLocale: string | null;
+}
+
+/**
+ * What the SSR server asks before rendering /{lang}/product/{slug}: a
+ * playlist featured for one locale has its product page in that locale only,
+ * and the other eleven URLs redirect there instead of serving a copy. Short
+ * cache because the server asks on every uncached page render.
+ */
+export async function getProductPageLocale(
+  deps: DataDeps,
+  slug: string
+): Promise<ProductPageLocale> {
+  const cacheKey = `${CACHE_KEY_PRODUCT_PAGE_LOCALE}${slug}`;
+  const cached = await deps.cache.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached) as ProductPageLocale;
+  }
+
+  const playlist = await deps.prisma.playlist.findFirst({
+    where: { slug, featured: true },
+    select: { featuredLocale: true },
+  });
+  const result: ProductPageLocale = {
+    exists: !!playlist,
+    featuredLocale: playlist?.featuredLocale || null,
+  };
+  await deps.cache.set(cacheKey, JSON.stringify(result), PRODUCT_PAGE_LOCALE_TTL);
+  return result;
+}
+
+async function clearProductPageLocale(deps: DataDeps, playlistId: string): Promise<void> {
+  const playlist = await deps.prisma.playlist.findUnique({
+    where: { playlistId },
+    select: { slug: true },
+  });
+  if (playlist?.slug) {
+    await deps.cache.del(`${CACHE_KEY_PRODUCT_PAGE_LOCALE}${playlist.slug}`);
+  }
+}
 
 export async function getFeaturedPlaylists(
   deps: DataDeps,
@@ -982,8 +1029,13 @@ export async function updateFeaturedLocale(
       data: { featuredLocale, markedForMerchantCenter: true },
     });
 
-    // Clear featured playlists cache
-    await deps.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+    // The locale decides which sitemaps list the product page and which
+    // locales serve it (the others redirect), so the page cache, the locale
+    // gate and the sitemap all have to follow. clearPlaylistCache also
+    // drops the featured list cache.
+    await clearPlaylistCache(deps, playlistId);
+    await clearProductPageLocale(deps, playlistId);
+    await createSiteMap(deps);
 
     return { success: true };
   } catch (error: any) {
@@ -1051,6 +1103,10 @@ export async function updatePromotionalPlaylist(
 
     // Clear all relevant caches using central function
     await clearPlaylistCache(deps, playlistId, oldPlaylist?.slug || undefined);
+    if (oldPlaylist?.slug) {
+      await deps.cache.del(`${CACHE_KEY_PRODUCT_PAGE_LOCALE}${oldPlaylist.slug}`);
+    }
+    await clearProductPageLocale(deps, playlistId);
 
     return { success: true };
   } catch (error: any) {

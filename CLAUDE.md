@@ -399,6 +399,52 @@ in the admin overview (badge "Removed", restore button →
 `/admin/featured/search` query is `featured = true OR unfeaturedAt IS NOT NULL`
 for that reason.
 
+## Product page descriptions (SEO)
+
+`description_<locale>` on a featured playlist is the product page's intro,
+meta description, share text and Product/MusicPlaylist description, and the
+Merchant Center/Channable description. It used to hold the customer's own
+submission text translated as-is, or nothing (the frontend then fell back to
+the raw Spotify description). `src/seoDescriptions.ts` replaces both:
+
+- `generateForPlaylist` builds a brief from the stored tracks (count, year
+  span, decade split, most frequent artists, an evenly spread sample of at
+  most 120 "artist - title (year)" lines) plus the customer's text and the
+  Spotify description as intent, has `ChatGPT.writeSeoPlaylistDescription`
+  write English copy whose first sentence is a standalone meta description,
+  then `translateSeoDescription` localises it (playlist name and "QRSong!"
+  untouched, "QR music cards" rendered as the market's search term). A
+  locale the translator skips gets the English text, never nothing.
+- `seoDescriptionGenerated` records that this has happened. Promotional
+  approval (`promotional.acceptPromotionalPlaylist`) calls it after the
+  name/slug update; if the writer fails the old translate-as-is path runs as
+  a fallback and the flag stays false.
+- The "SEO Descriptions" bulk action (`POST /admin/seo-descriptions/run`,
+  polled through `GET /admin/seo-descriptions/status`) visits every featured
+  row with the flag still false. It runs in the worker that took the request
+  and keeps its status and a refreshed lock in Redis, so any worker can answer
+  the poll and a dead worker frees the run within 15 minutes.
+  `POST /admin/playlist/:playlistId/seo-description` rewrites one playlist
+  regardless of the flag.
+
+## Product page locale and cover
+
+- A playlist with `featuredLocale` set has its product page in that locale
+  only. `GET /product-page/:slug` tells the SSR server which locale that is;
+  the server 301s the other locales there and emits a single canonical with
+  no hreflang. The sitemap lists such a playlist in that locale's file only,
+  and leaves out promotional submissions that are not approved yet. Changing
+  the locale (`updateFeaturedLocale`, `updatePromotionalPlaylist`) drops the
+  gate cache and rebuilds the sitemap.
+- `GET /product-cover/:slug.jpg` (`src/playlistArtwork.ts`) serves a 640x640
+  JPEG of the cover from our own domain, built from the admin upload or the
+  live Spotify file and cached under `public/product_covers/` keyed on the
+  source URL. The frontend uses it for the deck, og:image, twitter:image and
+  Product.image, because Spotify deletes the old file when an owner changes
+  the cover and that used to break the cached rich result and every earlier
+  share. The brochure thumbnails in `playlistSuggestions.ts` share the
+  loader and its SSRF guards.
+
 ## Customer reviews: a committed JSON file
 
 `src/reviews.ts` serves `/reviews/:locale/:amount/:landingPage` and

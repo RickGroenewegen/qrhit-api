@@ -95,9 +95,11 @@ describe('createShipmentLabels', () => {
 
     expect(result).toEqual({
       success: false,
+      // `contact` rides along as stored (blank included) so the admin can pick
+      // the recipient to fix; only the missing-field list is normalised.
       errors: [
-        { companyId: 10, companyName: 'Bad Co', missingFields: ['address', 'contact name'] },
-        { companyId: 12, companyName: 'Worse Co', missingFields: ['zipcode', 'country code'] },
+        { companyId: 10, companyName: 'Bad Co', contact: '   ', missingFields: ['address', 'contact name'] },
+        { companyId: 12, companyName: 'Worse Co', contact: 'Jane Doe', missingFields: ['zipcode', 'country code'] },
       ],
     });
     expect(fetchMock).not.toHaveBeenCalled();

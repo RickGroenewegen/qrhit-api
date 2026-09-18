@@ -1,13 +1,10 @@
-import * as crypto from 'crypto';
-import * as dns from 'dns/promises';
 import * as fs from 'fs/promises';
-import * as net from 'net';
 import * as path from 'path';
-import axios from 'axios';
 import sharp from 'sharp';
 import Translation from './translation';
 import PrismaInstance from './prisma';
 import { PlaylistSuggestionOptions } from './data/featuredPlaylists';
+import { artworkCacheFile, loadArtworkSource } from './playlistArtwork';
 
 /** Box sizes the admin can pick a suggestion list for. */
 export const SUGGESTION_CARD_COUNTS = [48, 96, 192, 200] as const;
@@ -28,69 +25,12 @@ export function suggestionArtPath(playlistId: string): string {
   return `/vibe/playlist-suggestions/art/${encodeURIComponent(playlistId)}`;
 }
 
-/** True for loopback, private, link-local and other non-public addresses. */
-function isPrivateAddress(address: string): boolean {
-  if (net.isIPv4(address)) {
-    const [a, b] = address.split('.').map(Number);
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      a >= 224
-    );
-  }
-  const v6 = address.toLowerCase();
-  if (v6.startsWith('::ffff:')) return isPrivateAddress(v6.slice(7));
-  return (
-    v6 === '::' ||
-    v6 === '::1' ||
-    v6.startsWith('fc') ||
-    v6.startsWith('fd') ||
-    v6.startsWith('fe80')
-  );
-}
-
-/**
- * `Playlist.image` is filled from client-supplied cart items, so treat the
- * URL as untrusted: https only, a real hostname (no IP literals), and every
- * resolved address must be public. Redirects are not followed so a public
- * host cannot bounce us to an internal one.
- */
-async function isSafeImageUrl(source: string): Promise<boolean> {
-  let url: URL;
-  try {
-    url = new URL(source);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== 'https:' || url.username || url.password) return false;
-  if (net.isIP(url.hostname)) return false;
-  try {
-    const records = await dns.lookup(url.hostname, { all: true });
-    return records.length > 0 && records.every((r) => !isPrivateAddress(r.address));
-  } catch {
-    return false;
-  }
-}
-
-/** Resolve a stored "/public/<file>" path and refuse anything outside PUBLIC_DIR. */
-function resolveCustomImage(publicDir: string, customImage: string): string | null {
-  if (customImage.includes('..') || customImage.includes('\0')) return null;
-  const relative = customImage.replace(/^\/?public\//, '');
-  const base = path.resolve(publicDir);
-  const target = path.resolve(base, relative);
-  return target.startsWith(base + path.sep) ? target : null;
-}
-
 /**
  * Returns a small JPEG for a playlist's artwork, generating and caching it
  * on first use. The cache file is keyed on the source URL, so a new custom
  * image yields a new file and stale thumbnails are simply never requested
  * again. Returns null when the playlist or its image cannot be resolved.
+ * Source loading and its URL guards live in playlistArtwork.ts.
  */
 export async function getSuggestionArtwork(
   playlistId: string
@@ -106,12 +46,7 @@ export async function getSuggestionArtwork(
   if (!source) return null;
 
   const publicDir = process.env['PUBLIC_DIR'] as string;
-  const cacheDir = path.join(publicDir, ART_DIR);
-  const hash = crypto.createHash('md5').update(source).digest('hex').slice(0, 12);
-  const cacheFile = path.join(
-    cacheDir,
-    `${playlistId.replace(/[^a-zA-Z0-9_-]/g, '_')}_${hash}.jpg`
-  );
+  const cacheFile = artworkCacheFile(publicDir, ART_DIR, playlistId, source);
 
   try {
     return await fs.readFile(cacheFile);
@@ -119,27 +54,8 @@ export async function getSuggestionArtwork(
     // not cached yet
   }
 
-  let original: Buffer;
-  try {
-    if (playlist.customImage) {
-      // Stored as "/public/playlist_images/<file>", served from PUBLIC_DIR.
-      const file = resolveCustomImage(publicDir, playlist.customImage);
-      if (!file) return null;
-      original = await fs.readFile(file);
-    } else {
-      if (!(await isSafeImageUrl(source))) return null;
-      const response = await axios.get<ArrayBuffer>(source, {
-        responseType: 'arraybuffer',
-        timeout: 15000,
-        maxRedirects: 0,
-        maxContentLength: 10 * 1024 * 1024,
-      });
-      original = Buffer.from(response.data);
-    }
-  } catch (error) {
-    console.warn(`Could not load artwork for playlist ${playlistId}:`, (error as Error).message);
-    return null;
-  }
+  const original = await loadArtworkSource(playlist, publicDir);
+  if (!original) return null;
 
   const thumbnail = await sharp(original)
     .resize(ART_SIZE, ART_SIZE, { fit: 'cover' })
@@ -148,7 +64,7 @@ export async function getSuggestionArtwork(
     .toBuffer();
 
   try {
-    await fs.mkdir(cacheDir, { recursive: true });
+    await fs.mkdir(path.dirname(cacheFile), { recursive: true });
     await fs.writeFile(cacheFile, thumbnail);
   } catch (error) {
     console.warn('Could not cache suggestion artwork:', (error as Error).message);

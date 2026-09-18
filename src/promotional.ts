@@ -10,6 +10,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import Utils from './utils';
 import Discount from './discount';
+import SeoDescriptions from './seoDescriptions';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -895,68 +896,16 @@ class Promotional {
         };
       };
 
-      if (!description.trim()) {
-        // No description to translate, just accept and update name/slug if promotionalTitle exists
-        const updateData: Record<string, any> = {
-          promotionalAccepted: true,
-          markedForMerchantCenter: true,
-        };
-        if (playlist.promotionalTitle) {
-          const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
-          updateData.name = sanitizedName;
-          updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
-        }
-        const oldSlug = playlist.slug;
-        await this.prisma.playlist.update({
-          where: { playlistId },
-          data: updateData,
-        });
-
-        // Clear all relevant caches (pass old slug in case it changed)
-        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug || undefined);
-
-        // Calculate decade percentages for the newly accepted playlist
-        await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
-
-        // Pass the new slug to fetchEmailData so the email contains the correct URL
-        const emailData = await fetchEmailData(updateData.slug);
-        if (emailData) {
-          await this.mail.sendPromotionalApprovedEmail(
-            emailData.email,
-            emailData.displayName,
-            emailData.playlistName,
-            emailData.discountCode,
-            emailData.shareLink,
-            emailData.setupLink,
-            emailData.locale
-          );
-        } else {
-          this.logger.log(
-            color.yellow.bold(
-              `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user or payment data`
-            )
-          );
-        }
-        return { success: true };
-      }
-
-      // Translate description to all locales using shared helper
-      const translationData = await this.translateToAllLocales(playlistId, description);
-
-      // Build update object with translations and additional fields
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
         markedForMerchantCenter: true,
-        ...translationData,
       };
-
       if (playlist.promotionalTitle) {
         const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
         updateData.name = sanitizedName;
         updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
       }
 
-      // Update playlist with translations and accepted status
       const oldSlug = playlist.slug;
       await this.prisma.playlist.update({
         where: { playlistId },
@@ -968,6 +917,41 @@ class Promotional {
 
       // Calculate decade percentages for the newly accepted playlist
       await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
+
+      // The product page copy is written from the tracklist with the
+      // customer's text as intent (see seoDescriptions.ts), after the name
+      // and slug above so the writer sees the final name. The customer's text
+      // used to be translated as-is into every locale; that is now only the
+      // fallback when the writer fails, so the page is never left without a
+      // description, and the row keeps seoDescriptionGenerated = false so the
+      // bulk action picks it up later.
+      try {
+        await SeoDescriptions.getInstance().generateForPlaylist(playlistId);
+      } catch (error: any) {
+        this.logger.log(
+          color.yellow.bold(
+            `SEO description for ${color.white.bold(playlistId)} failed (${error.message}), storing the customer's text instead`
+          )
+        );
+        if (description.trim()) {
+          try {
+            const translationData = await this.translateToAllLocales(playlistId, description);
+            await this.prisma.playlist.update({
+              where: { playlistId },
+              data: translationData,
+            });
+            await Data.getInstance().clearPlaylistCache(playlistId);
+          } catch (fallbackError: any) {
+            // The approval itself has gone through; a description can be
+            // written later by the bulk action, so this is not a failure.
+            this.logger.log(
+              color.red.bold(
+                `Fallback translation for ${color.white.bold(playlistId)} failed too: ${fallbackError.message}`
+              )
+            );
+          }
+        }
+      }
 
       this.logger.log(
         color.green.bold(

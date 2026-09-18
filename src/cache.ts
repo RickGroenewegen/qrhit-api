@@ -276,6 +276,16 @@ class Cache {
   }
 
   /**
+   * Push a held lock's expiry out again. For long runs that hold a lock per
+   * step rather than for a fixed duration, so a dead holder frees it soon
+   * while a live one keeps it.
+   */
+  async refreshLock(key: string, ttlSeconds: number): Promise<void> {
+    const lockKey = `lock:${key}`;
+    await this.executeCommand('set', lockKey, '1', 'EX', ttlSeconds);
+  }
+
+  /**
    * Distributed rate limiter that ensures minimum delay between requests across all workers/nodes
    * Uses Redis to track the last request time globally
    * @param key Unique key for the rate limit (e.g., 'tidal_api')

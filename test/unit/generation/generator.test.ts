@@ -589,11 +589,15 @@ describe('finalizeOrder()', () => {
         filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf',
       },
     });
+    // The parent row also records what the PDFs were built from (a sha256 of
+    // the live design, see printFingerprint.ts) so sendToPrinter can tell a
+    // stale file from a current one.
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 31 },
       data: {
         filename: '',
         filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf',
+        pdfFingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
       },
     });
 

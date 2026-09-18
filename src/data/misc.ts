@@ -338,17 +338,21 @@ export async function createSiteMap(
   // Get all available locales from Translation class
   const locales = deps.translate.allLocales;
 
-  // Get featured playlists with non-empty slugs
+  // Get featured playlists with non-empty slugs. A promotional submission
+  // that has not been approved yet is not a product page anyone should be
+  // sent to, so it waits for the approval (which rebuilds the sitemap).
   const featuredPlaylists = await deps.prisma.playlist.findMany({
     where: {
       featured: true,
       slug: {
         not: '',
       },
+      OR: [{ promotionalActive: false }, { promotionalAccepted: true }],
     },
     select: {
       slug: true,
       updatedAt: true,
+      featuredLocale: true,
     },
   });
 
@@ -476,8 +480,16 @@ export async function createSiteMap(
       // content does not change daily, and claiming it does costs credibility
       // without buying anything. (Google ignores both hints, but Bing and
       // others still read them.)
+      //
+      // A playlist featured for one locale has its product page in that
+      // locale only (the other locales redirect there, see
+      // getProductPageLocale), so it is listed in that locale's sitemap alone.
       ...featuredPlaylists
         .filter((playlist) => !isDegenerateProductSlug(playlist.slug || ''))
+        .filter(
+          (playlist) =>
+            !playlist.featuredLocale || playlist.featuredLocale === locale
+        )
         .map((playlist) => ({
           loc: `/${locale}/product/${playlist.slug}`,
           lastmod: playlist.updatedAt.toISOString().split('T')[0],

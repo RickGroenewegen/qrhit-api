@@ -455,6 +455,12 @@ model Playlist {
   // re-processed.
   baseEventsTagged Boolean @default(false)
 
+  // True once the description_<locale> columns hold the LLM-written SEO copy
+  // (see seoDescriptions.ts) rather than the customer's own text or nothing.
+  // Set on promotional approval and by the "SEO descriptions" bulk action,
+  // which only visits featured rows where this is still false.
+  seoDescriptionGenerated Boolean @default(false)
+
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
 

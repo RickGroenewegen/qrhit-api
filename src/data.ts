@@ -573,6 +573,10 @@ class Data {
     return featuredPlaylistsModule.updateFeaturedLocale(this.deps, playlistId, featuredLocale);
   }
 
+  public async getProductPageLocale(slug: string) {
+    return featuredPlaylistsModule.getProductPageLocale(this.deps, slug);
+  }
+
   public async updatePromotionalPlaylist(
     playlistId: string,
     data: { name: string; description: string; featuredLocale: string | null; slug?: string }

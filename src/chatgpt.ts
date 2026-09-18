@@ -47,6 +47,26 @@ export function thumbnailNameFor(filename: string): string {
   return filename.replace(/\.[a-z0-9]+$/i, '') + '_thumb.webp';
 }
 
+/**
+ * Everything the description writer gets to see about a playlist. Built by
+ * seoDescriptions.ts from the catalogue row and its stored tracks.
+ */
+export interface SeoDescriptionBrief {
+  playlistName: string;
+  /** What the customer typed when submitting the playlist, if anything. */
+  customerDescription: string | null;
+  /** The description on the streaming service, if any. */
+  serviceDescription: string | null;
+  trackCount: number;
+  yearRange: { from: number; to: number } | null;
+  /** Decades with at least a few percent of the tracks, largest first. */
+  decadeSplit: Array<{ label: string; percent: number }>;
+  topArtists: Array<{ name: string; count: number }>;
+  /** "Artist - Title (Year)" lines, evenly spread over the tracklist. */
+  sampleTracks: string[];
+  sampleIsPartial: boolean;
+}
+
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -374,6 +394,218 @@ export class ChatGPT {
 
     // Return empty object if something went wrong
     return {};
+  }
+
+  /**
+   * Write the English product-page description for a featured playlist.
+   *
+   * The customer's own text is input, not output: it carries the intent (who
+   * the list is for, the occasion) but is typically written for friends, in
+   * the wrong language, or with things a shop page cannot say. The tracklist
+   * facts are what keep the model honest about genre, era and artists.
+   *
+   * Returns null when the model produced nothing usable. Callers decide what
+   * that means; the bulk run records it and moves on.
+   */
+  public async writeSeoPlaylistDescription(
+    brief: SeoDescriptionBrief
+  ): Promise<string | null> {
+    const facts: string[] = [`Playlist name: "${brief.playlistName}"`];
+    facts.push(`Number of tracks: ${brief.trackCount}`);
+    if (brief.yearRange) {
+      facts.push(
+        `Release years: ${brief.yearRange.from} to ${brief.yearRange.to}`
+      );
+    }
+    if (brief.decadeSplit.length > 0) {
+      facts.push(
+        `Share per decade: ${brief.decadeSplit
+          .map((d) => `${d.label} ${d.percent}%`)
+          .join(', ')}`
+      );
+    }
+    if (brief.topArtists.length > 0) {
+      facts.push(
+        `Most frequent artists: ${brief.topArtists
+          .map((a) => (a.count > 1 ? `${a.name} (${a.count} tracks)` : a.name))
+          .join(', ')}`
+      );
+    }
+
+    const customerText = brief.customerDescription?.trim();
+    const serviceText = brief.serviceDescription?.trim();
+
+    const sections: string[] = [facts.join('\n')];
+    if (customerText) {
+      sections.push(
+        `Description the customer wrote when submitting the playlist (any language, treat as intent only, never quote it):\n"""${customerText}"""`
+      );
+    }
+    if (serviceText && serviceText !== customerText) {
+      sections.push(
+        `Description shown on the streaming service (often noise, use only if it says something useful):\n"""${serviceText}"""`
+      );
+    }
+    sections.push(
+      `${
+        brief.sampleIsPartial
+          ? `Evenly spread sample of ${brief.sampleTracks.length} of the ${brief.trackCount} tracks`
+          : 'Complete tracklist'
+      } (artist - title (year)):\n${brief.sampleTracks.join('\n')}`
+    );
+
+    const result = await this.openai.chat.completions.create({
+      model: LLM_MODEL_STANDARD,
+      messages: [
+        {
+          role: 'system',
+          content: `You write product descriptions for QRSong!, a shop that turns a music playlist into QR music cards: each card has a QR code on one side and the artist, title and year on the other, and players scan a card, hear the song and guess what it is. You write in natural English for a product page that search engines also read. You sound like a knowledgeable music fan, not a marketer.`,
+        },
+        {
+          role: 'user',
+          content: `Write the description for the product page of this playlist.
+
+Purpose and where it is used:
+- This is SEO copy. It has to earn the page a place in search results for people looking for music cards, a music quiz or a guess-the-song game around this kind of music, and then convince them once they land.
+- The whole text is the introduction under the page title on the product page (www.qrsong.io/<language>/product/<slug>), the description in the page's Product and MusicPlaylist structured data, the description in the Google Shopping product feed, and the text shown when the page is shared on social media.
+- The first sentence alone is the meta description search engines print under the page title in their results, so it has to make sense with nothing around it.
+
+Structure and length:
+- Three or four sentences, 320 to 520 characters in total.
+- The first sentence stands on its own as the page's meta description: at most 150 characters, contains the playlist name exactly as given and the words "QR music cards", and says what kind of music this is (genre, era or mood).
+- The following sentences cover: how many tracks and which years or decades it spans; two to four artists that stand out (only artists present in the data); who or which occasion it suits (a party, a birthday, a family evening, a road trip, a themed night...), inferred from the music and the customer's intent.
+
+Sources:
+- Use the customer's description for intent only: the mood, the occasion, who it is for. Rewrite from scratch. Drop anything personal, dated, first person, addressed to specific people, promotional, off topic, or unsuitable for a shop page. If it is in another language, use it for meaning only and write English.
+- Never invent facts. No artists, years, genres or counts that are not in the data. Do not list song titles. If the genre is unclear, describe the era and the mood instead.
+
+Style:
+- Plain, concrete sentences. No hype words (ultimate, amazing, best ever, epic), no rhetorical questions, no "are you ready", no exclamation marks, no emojis, no hashtags, no URLs, no ALL CAPS, no em dashes, no bullet points and no labelled lists of numbers.
+- Say "QR music cards" once, and optionally "guess the song" or "music quiz" once. Do not repeat the playlist name more than twice.
+- Call the songs "tracks". Do not mention prices, shipping, apps, Spotify or any other brand, game or competitor.
+- Do not explain what you did; return only the description.
+
+${sections.join('\n\n')}`,
+        },
+      ],
+      reasoning_effort: 'low',
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'seoPlaylistDescription',
+          schema: {
+            type: 'object',
+            properties: {
+              description: {
+                type: 'string',
+                description:
+                  'The English product description, three or four sentences.',
+              },
+            },
+            required: ['description'],
+          },
+        },
+      },
+    });
+
+    const content = result?.choices[0]?.message?.content;
+    if (!content) return null;
+    try {
+      const parsed = JSON.parse(content) as { description?: unknown };
+      if (typeof parsed.description !== 'string') return null;
+      const text = stripNumberScaffolding(parsed.description).trim();
+      return text.length > 0 ? text : null;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error parsing SEO description response: ${error}`)
+      );
+      this.logger.log(color.red.bold(`Raw response: ${content}`));
+      return null;
+    }
+  }
+
+  /**
+   * Translate a product description written by writeSeoPlaylistDescription.
+   *
+   * Different from translateText on purpose: the playlist name and the brand
+   * stay untouched, "QR music cards" becomes the term that market searches
+   * for rather than a literal rendering, and the first sentence keeps its
+   * role as a standalone meta description within 150 characters.
+   */
+  public async translateSeoDescription(
+    text: string,
+    playlistName: string,
+    targetLocales: string[]
+  ): Promise<Record<string, string>> {
+    if (!text || targetLocales.length === 0) return {};
+
+    const result = await this.openai.chat.completions.create({
+      model: LLM_MODEL_STANDARD,
+      messages: [
+        {
+          role: 'system',
+          content: `You localise product descriptions for QRSong!, a shop that turns a music playlist into QR music cards for a guess-the-song game. You write the way a native copywriter in each market would, not word for word.`,
+        },
+        {
+          role: 'user',
+          content: `Translate the product description below into: ${targetLocales
+            .map((l) => `${this.translation.getLanguageName(l)} (key "${l}")`)
+            .join(', ')}.
+
+This is SEO copy. Each translation is the introduction on that language's product page, the description in its structured data and shopping feed, and its first sentence is the meta description shown in search results, so it has to read like something a native speaker would search for and click.
+
+Rules for every language:
+- Keep the playlist name "${playlistName}" exactly as written. Keep "QRSong!" exactly as written.
+- Render "QR music cards" as the phrase people in that market would type into a search engine for printable music cards with QR codes (for example Dutch "QR muziekkaarten", German "QR-Musikkarten"), and use that phrase once.
+- Keep the same number of sentences and the same facts. Do not add or remove artists, years or counts.
+- The first sentence must still work on its own as a meta description of at most 150 characters in that language.
+- Plain and natural, no exclamation marks, no emojis, no em dashes. Artist names and song titles are never translated.
+
+Text:
+${text}`,
+        },
+      ],
+      reasoning_effort: 'none',
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'translateSeoDescription',
+          schema: {
+            type: 'object',
+            properties: Object.fromEntries(
+              targetLocales.map((locale) => [
+                locale,
+                {
+                  type: 'string',
+                  description: `The description in ${this.translation.getLanguageName(locale)}`,
+                },
+              ])
+            ),
+            required: targetLocales,
+          },
+        },
+      },
+    });
+
+    const content = result?.choices[0]?.message?.content;
+    if (!content) return {};
+    try {
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      const translations: Record<string, string> = {};
+      for (const locale of targetLocales) {
+        const value = parsed[locale];
+        if (typeof value === 'string' && value.trim()) {
+          translations[locale] = value.trim();
+        }
+      }
+      return translations;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error parsing SEO description translations: ${error}`)
+      );
+      this.logger.log(color.red.bold(`Raw response: ${content}`));
+      return {};
+    }
   }
 
   public async determineGenre(

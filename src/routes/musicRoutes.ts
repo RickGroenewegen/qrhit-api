@@ -23,6 +23,7 @@ import youtubeMusicRoutes from './youtubeMusicRoutes';
 import tidalRoutes from './tidalRoutes';
 import deezerRoutes from './deezerRoutes';
 import appleMusicRoutes from './appleMusicRoutes';
+import { getProductCover } from '../playlistArtwork';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -309,6 +310,45 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const skipLocaleFilter = request.query.all === 'true';
     const playlists = await data.getFeaturedPlaylists(request.params.locale, skipLocaleFilter);
     return { success: true, data: playlists };
+  });
+
+  // Square cover of a featured playlist from our own domain, for the product
+  // page, its share tags and its structured data (see playlistArtwork.ts).
+  // The ".jpg" is in the route so scrapers that guess the type from the URL
+  // get it right.
+  fastify.get('/product-cover/:slug.jpg', async (request: any, reply: any) => {
+    try {
+      const slug = String(request.params.slug || '');
+      if (!slug || slug.length > 200) {
+        return reply.status(404).send({ error: 'Not found' });
+      }
+      const jpeg = await getProductCover(slug);
+      if (!jpeg) {
+        return reply.status(404).send({ error: 'Not found' });
+      }
+      reply.header('Content-Type', 'image/jpeg');
+      reply.header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return reply.send(jpeg);
+    } catch (error) {
+      console.error('Error serving product cover:', error);
+      return reply.status(500).send({ error: 'Failed to load cover' });
+    }
+  });
+
+  // Which locale(s) serve a product page. The SSR server asks before it
+  // renders /{lang}/product/{slug} so a playlist featured for one locale
+  // can send the other locales there with a 301 instead of a copy.
+  fastify.get('/product-page/:slug', async (request: any, reply: any) => {
+    const slug = String(request.params.slug || '');
+    if (!slug || slug.length > 200) {
+      return reply.status(404).send({ success: false, error: 'Not found' });
+    }
+    const info = await data.getProductPageLocale(slug);
+    if (!info.exists) {
+      return reply.status(404).send({ success: false, error: 'Not found' });
+    }
+    reply.header('Cache-Control', 'public, max-age=600');
+    return { success: true, featuredLocale: info.featuredLocale };
   });
 
   // Playlists similar to a given one, for the "you might also like" row on a

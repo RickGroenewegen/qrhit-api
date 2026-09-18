@@ -41,6 +41,7 @@ const h = vi.hoisted(() => {
     },
     getLiveUsage: vi.fn(async () => ({ amountUsed: 4, useCount: 1 })),
     translateText: vi.fn(),
+    seoGenerate: vi.fn(async () => ({ description: 'SEO copy' })),
     clearPlaylistCache: vi.fn(async () => undefined),
     calcDecades: vi.fn(async () => undefined),
     fsMkdir: vi.fn(async () => undefined),
@@ -79,6 +80,13 @@ vi.mock('../../../src/data', () => ({
     getInstance: () => ({
       clearPlaylistCache: h.clearPlaylistCache,
       calculateSinglePlaylistDecadePercentages: h.calcDecades,
+    }),
+  },
+}));
+vi.mock('../../../src/seoDescriptions', () => ({
+  default: {
+    getInstance: () => ({
+      generateForPlaylist: h.seoGenerate,
     }),
   },
 }));
@@ -133,6 +141,8 @@ beforeEach(() => {
   outbound.reset();
   resetPrisma();
   h.translateText.mockReset();
+  h.seoGenerate.mockReset();
+  h.seoGenerate.mockResolvedValue({ description: 'SEO copy' });
   h.clearPlaylistCache.mockClear();
   h.calcDecades.mockClear();
   h.fsMkdir.mockClear();
@@ -732,27 +742,28 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     });
   });
 
-  it('translates, sanitizes every locale, updates name/slug and mails approval', async () => {
+  it('accepts, updates name/slug, has the SEO description written and mails approval', async () => {
     const res = await promotional.acceptPromotionalPlaylist('pl_1');
 
     expect(res).toEqual({ success: true });
-    // Source description is brand-sanitized before translation.
-    expect(h.translateText).toHaveBeenCalledWith('Great QRSong! mix', [
-      'en',
-      'nl',
-    ]);
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
     expect(h.prisma.playlist.update).toHaveBeenCalledWith({
       where: { playlistId: 'pl_1' },
       data: {
         promotionalAccepted: true,
         markedForMerchantCenter: true,
-        // Translations are sanitized again post-translation.
-        description_en: 'Great QRSong! mix EN',
-        description_nl: 'Geweldige mix NL',
         name: 'QRSong! Hits',
         slug: 'qrsong-hits',
       },
     });
+    // The description is written from the tracklist (with the customer's
+    // text as intent) after the name/slug update, so the writer sees the
+    // final name; the customer's text is no longer translated as-is.
+    expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
+    expect(h.prisma.playlist.update.mock.invocationCallOrder[0]).toBeLessThan(
+      h.seoGenerate.mock.invocationCallOrder[0]
+    );
+    expect(h.translateText).not.toHaveBeenCalled();
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'oldslug');
     expect(h.calcDecades).toHaveBeenCalledWith(2);
 
@@ -769,7 +780,7 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     ]);
   });
 
-  it('accepts without translation when the description is empty, skipping the mail if no user is linked', async () => {
+  it('still has a description written when the customer left it empty, skipping the mail if no user is linked', async () => {
     h.prisma.playlist.findUnique.mockResolvedValue({
       ...PLAYLIST,
       promotionalTitle: null,
@@ -785,11 +796,51 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
       where: { playlistId: 'pl_1' },
       data: { promotionalAccepted: true, markedForMerchantCenter: true },
     });
+    // The tracklist alone is enough to write from.
+    expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'oldslug');
     expect(h.calcDecades).toHaveBeenCalledWith(2);
     expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(
       0
     );
+  });
+
+  it('falls back to translating the customer text as-is when the writer fails', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    // Source description is brand-sanitized before translation.
+    expect(h.translateText).toHaveBeenCalledWith('Great QRSong! mix', [
+      'en',
+      'nl',
+    ]);
+    // Second update carries the translations, sanitized again post-translation,
+    // and leaves seoDescriptionGenerated alone so the bulk action retries later.
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(2);
+    expect(h.prisma.playlist.update.mock.calls[1][0]).toEqual({
+      where: { playlistId: 'pl_1' },
+      data: {
+        description_en: 'Great QRSong! mix EN',
+        description_nl: 'Geweldige mix NL',
+      },
+    });
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
+  });
+
+  it('does not fall back when the writer fails and there is no customer text', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      ...PLAYLIST,
+      promotionalDescription: '',
+    });
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.translateText).not.toHaveBeenCalled();
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
   });
 
   it('still succeeds but skips the mail when no paid payment exists', async () => {
@@ -801,11 +852,17 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     );
   });
 
-  it('propagates translation failures as an error result', async () => {
+  it('keeps the approval when both the writer and the fallback translation fail', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
     h.translateText.mockRejectedValue(new Error('openai down'));
+
     const res = await promotional.acceptPromotionalPlaylist('pl_1');
-    expect(res).toEqual({ success: false, error: 'openai down' });
-    expect(h.prisma.playlist.update).not.toHaveBeenCalled();
+
+    // The playlist is approved and live; the description is written later by
+    // the bulk action, which visits every row still flagged as not generated.
+    expect(res).toEqual({ success: true });
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
   });
 });
 

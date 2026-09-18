@@ -66,6 +66,9 @@ function makeDeps() {
     set: vi.fn(async (k: string, v: string) => {
       cacheStore.set(k, v);
     }),
+    del: vi.fn(async (k: string) => {
+      cacheStore.delete(k);
+    }),
     delPattern: vi.fn(async () => 0),
   };
   return {
@@ -737,8 +740,9 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     );
   });
 
-  it('updateFeaturedLocale updates (null allowed) and busts the featured cache', async () => {
+  it('updateFeaturedLocale updates (null allowed), busts the page and locale-gate caches and rebuilds the sitemap', async () => {
     const { deps, prisma, cache } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ slug: 'my-list' });
 
     const res = await updateFeaturedLocale(deps, 'pl1', null);
 
@@ -747,9 +751,11 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
       where: { playlistId: 'pl1' },
       data: { featuredLocale: null, markedForMerchantCenter: true },
     });
-    expect(cache.delPattern).toHaveBeenCalledWith(
-      `${CACHE_KEY_FEATURED_PLAYLISTS}*`
-    );
+    // The locale decides which locales serve the product page and which
+    // sitemaps list it, so all three follow the change.
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
+    expect(cache.del).toHaveBeenCalledWith('productPageLocale_my-list');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
   });
 
   it('both report errors instead of throwing', async () => {
@@ -820,6 +826,8 @@ describe('updatePromotionalPlaylist', () => {
       },
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'old-slug');
+    // Both the old and the current slug drop out of the locale gate.
+    expect(deps.cache.del).toHaveBeenCalledWith('productPageLocale_old-slug');
   });
 
   it('a whitespace-only slug is ignored (no duplicate check, no slug update)', async () => {
