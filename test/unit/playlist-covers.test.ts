@@ -1,10 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// featuredPlaylists pulls in spotify (cron/cluster side effects) and misc
+// (exceljs, ...); the covers module only needs a constant and one function.
+const h = vi.hoisted(() => ({
+  unfeaturePlaylist: vi.fn(async () => ({ success: true })),
+}));
+vi.mock('../../src/data/featuredPlaylists', () => ({
+  CACHE_KEY_FEATURED_PLAYLISTS: 'featuredPlaylists_v4_',
+  unfeaturePlaylist: h.unfeaturePlaylist,
+}));
+
 import {
   coverIsAlive,
   repairFeaturedPlaylistCovers,
   syncFeaturedPlaylistCover,
   CoverPlaylist,
 } from '../../src/data/playlistCovers';
+
+beforeEach(() => {
+  h.unfeaturePlaylist.mockClear();
+  h.unfeaturePlaylist.mockResolvedValue({ success: true });
+});
 
 const DEAD = 'https://image-cdn-fa.spotifycdn.com/image/dead';
 const FRESH = 'https://image-cdn-ak.spotifycdn.com/image/fresh';
@@ -88,7 +104,7 @@ describe('repairFeaturedPlaylistCovers', () => {
       row({ id: 1, slug: 'dead-one' }),
       row({ id: 2, slug: 'fine-one', image: FINE }),
     ]);
-    const fetchCover = vi.fn().mockResolvedValue(FRESH);
+    const fetchCover = vi.fn().mockResolvedValue({ image: FRESH, gone: false });
 
     const result = await repairFeaturedPlaylistCovers(deps, fetchCover, isAlive);
 
@@ -98,7 +114,40 @@ describe('repairFeaturedPlaylistCovers', () => {
       where: { id: 1 },
       data: { image: FRESH },
     });
-    expect(result).toEqual({ checked: 2, dead: 1, repaired: 1, unresolved: [] });
+    expect(result).toEqual({ checked: 2, dead: 1, repaired: 1, unfeatured: [], unresolved: [] });
+  });
+
+  it('unfeatures a playlist whose cover is dead because the playlist itself is gone', async () => {
+    const deps = makeDeps([row({ id: 1, slug: 'deleted-on-spotify', playlistId: 'sp1' })]);
+    const fetchCover = vi.fn().mockResolvedValue({ image: null, gone: true });
+
+    const result = await repairFeaturedPlaylistCovers(deps, fetchCover, isAlive);
+
+    expect(h.unfeaturePlaylist).toHaveBeenCalledWith(deps, 'sp1');
+    expect(deps.prisma.playlist.update).not.toHaveBeenCalled();
+    expect(result.unfeatured).toEqual(['deleted-on-spotify']);
+    expect(result.unresolved).toEqual([]);
+  });
+
+  it('keeps a gone playlist as unresolved when unfeaturing it fails', async () => {
+    h.unfeaturePlaylist.mockResolvedValue({ success: false, error: 'db' });
+    const deps = makeDeps([row({ id: 1, slug: 'stuck' })]);
+    const fetchCover = vi.fn().mockResolvedValue({ image: null, gone: true });
+
+    const result = await repairFeaturedPlaylistCovers(deps, fetchCover, isAlive);
+
+    expect(result.unfeatured).toEqual([]);
+    expect(result.unresolved).toEqual(['stuck']);
+  });
+
+  it('does not unfeature a gone playlist when a live cover was still found', async () => {
+    const deps = makeDeps([row({ id: 1, slug: 'odd' })]);
+    const fetchCover = vi.fn().mockResolvedValue({ image: FRESH, gone: true });
+
+    const result = await repairFeaturedPlaylistCovers(deps, fetchCover, isAlive);
+
+    expect(h.unfeaturePlaylist).not.toHaveBeenCalled();
+    expect(result.repaired).toBe(1);
   });
 
   it('skips rows with a custom image at the query and rows without a URL', async () => {
@@ -124,13 +173,14 @@ describe('repairFeaturedPlaylistCovers', () => {
     ]);
     const fetchCover = vi.fn().mockImplementation(async (p: CoverPlaylist) => {
       if (p.slug === 'throws') throw new Error('rate limited');
-      if (p.slug === 'same-url') return DEAD;
-      return null;
+      if (p.slug === 'same-url') return { image: DEAD, gone: false };
+      return { image: null, gone: false };
     });
 
     const result = await repairFeaturedPlaylistCovers(deps, fetchCover, isAlive);
 
     expect(deps.prisma.playlist.update).not.toHaveBeenCalled();
+    expect(h.unfeaturePlaylist).not.toHaveBeenCalled();
     expect(result.repaired).toBe(0);
     expect(result.unresolved.sort()).toEqual(['no-answer', 'same-url', 'throws']);
   });

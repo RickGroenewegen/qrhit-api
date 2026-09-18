@@ -443,6 +443,12 @@ model Playlist {
   // Curation fields for featured playlists
   featuredHidden Boolean @default(false)
 
+  // Set when a featured playlist is taken out of the catalogue (by hand or by
+  // the cover repair when Spotify reports it gone). Keeps it apart from the
+  // ordinary never-featured rows so the Featured page can list it as removed
+  // and offer to bring it back. Cleared when it is featured again.
+  unfeaturedAt DateTime?
+
   // True once the playlist has been reviewed for base-event links (by the AI
   // backfill or manual curation on the Featured page). Drives the backfill's
   // "untagged" query so a playlist reviewed as fitting zero occasions is not

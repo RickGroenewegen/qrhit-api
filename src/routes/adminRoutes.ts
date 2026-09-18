@@ -1231,6 +1231,41 @@ export default async function adminRoutes(
     }
   );
 
+  // Remove a playlist from the catalogue (list, product page, sitemap, Merchant
+  // Center) or bring a removed one back. The row keeps `unfeaturedAt` so the
+  // Featured page can still show it.
+  for (const action of ['unfeature', 'refeature'] as const) {
+    fastify.post(
+      `/admin/playlist/:playlistId/${action}`,
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const { playlistId } = request.params;
+
+        if (!playlistId) {
+          reply.status(400).send({
+            success: false,
+            error: 'Playlist ID is required',
+          });
+          return;
+        }
+
+        const result =
+          action === 'unfeature'
+            ? await data.unfeaturePlaylist(playlistId)
+            : await data.refeaturePlaylist(playlistId);
+
+        if (result.success) {
+          reply.send({ success: true });
+        } else {
+          reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+            success: false,
+            error: result.error,
+          });
+        }
+      }
+    );
+  }
+
   // Clear cache for all non-featured playlists (to free Redis memory)
   fastify.post(
     '/admin/playlists/clear-non-featured-cache',

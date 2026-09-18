@@ -5,7 +5,7 @@ import {
   CACHE_KEY_TRACKS,
   CACHE_KEY_TRACK_COUNT,
 } from '../spotify';
-import { clearPlaylistCache } from './misc';
+import { clearPlaylistCache, createSiteMap } from './misc';
 import { DataDeps } from './types';
 
 export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
@@ -565,18 +565,21 @@ export async function searchFeaturedPlaylists(
     );
 
     // --- Approved playlists (paginated) ---
+    // Removed playlists stay in the overview so they can be brought back.
     const approvedWhere: any = {
-      featured: true,
+      AND: [{ OR: [{ featured: true }, { unfeaturedAt: { not: null } }] }],
       NOT: {
         promotionalActive: true,
         promotionalAccepted: false,
       },
     };
     if (hasSearch) {
-      approvedWhere.OR = [
-        { name: { contains: searchTerm } },
-        { promotionalTitle: { contains: searchTerm } },
-      ];
+      approvedWhere.AND.push({
+        OR: [
+          { name: { contains: searchTerm } },
+          { promotionalTitle: { contains: searchTerm } },
+        ],
+      });
     }
     if (locale) {
       approvedWhere.featuredLocale = locale;
@@ -604,6 +607,7 @@ export async function searchFeaturedPlaylists(
           customImage: true,
           featuredHidden: true,
           featuredLocale: true,
+          unfeaturedAt: true,
           promotionalActive: true,
           promotionalAccepted: true,
           promotionalTitle: true,
@@ -680,6 +684,7 @@ export async function searchFeaturedPlaylists(
           description: p.promotionalDescription || '',
           featuredHidden: p.featuredHidden,
           featuredLocale: p.featuredLocale,
+          unfeaturedAt: p.unfeaturedAt,
           isPromotional: p.promotionalActive && p.promotionalAccepted,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
@@ -903,6 +908,67 @@ export async function updateFeaturedHidden(
     );
     return { success: false, error: error.message };
   }
+}
+
+async function setPlaylistFeatured(
+  deps: DataDeps,
+  playlistId: string,
+  featured: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const verb = featured ? 'Restored' : 'Removed';
+  try {
+    const playlist = await deps.prisma.playlist.findUnique({
+      where: { playlistId },
+      select: { id: true, slug: true },
+    });
+
+    if (!playlist) {
+      return { success: false, error: 'Playlist not found' };
+    }
+
+    await deps.prisma.playlist.update({
+      where: { playlistId },
+      data: {
+        featured,
+        unfeaturedAt: featured ? null : new Date(),
+        markedForMerchantCenter: true,
+      },
+    });
+
+    // The product page lookup of a featured playlist is cached forever, and
+    // a miss is cached too, so the page would keep its old answer without this.
+    await clearPlaylistCache(deps, playlistId, playlist.slug || undefined);
+    // The sitemap is otherwise only rebuilt at boot.
+    await createSiteMap(deps);
+
+    deps.logger.log(
+      color.blue.bold(`${verb} featured playlist ${color.white.bold(playlistId)}`)
+    );
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error ${verb.toLowerCase()} featured playlist ${playlistId}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Takes a playlist out of the catalogue: off the list, the product page, the
+ * sitemap and Merchant Center. "Hidden" only drops it from the list and keeps
+ * the product page, which is the wrong tool for a playlist that no longer
+ * exists on Spotify. The row itself stays, because orders and tracks
+ * reference it, and `unfeaturedAt` keeps it in the admin overview so it can
+ * be brought back with `refeaturePlaylist`.
+ */
+export function unfeaturePlaylist(deps: DataDeps, playlistId: string) {
+  return setPlaylistFeatured(deps, playlistId, false);
+}
+
+export function refeaturePlaylist(deps: DataDeps, playlistId: string) {
+  return setPlaylistFeatured(deps, playlistId, true);
 }
 
 export async function updateFeaturedLocale(

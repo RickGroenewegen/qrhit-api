@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const h = vi.hoisted(() => ({
   clearPlaylistCache: vi.fn(async () => undefined),
+  createSiteMap: vi.fn(async () => ({ locales: 0, urls: 0 })),
 }));
 
 vi.mock('../../../src/spotify', () => ({
@@ -22,6 +23,7 @@ vi.mock('../../../src/spotify', () => ({
 
 vi.mock('../../../src/data/misc', () => ({
   clearPlaylistCache: h.clearPlaylistCache,
+  createSiteMap: h.createSiteMap,
 }));
 
 import {
@@ -33,6 +35,8 @@ import {
   updatePlaylistFeatured,
   updateFeaturedHidden,
   updateFeaturedLocale,
+  unfeaturePlaylist,
+  refeaturePlaylist,
   updatePromotionalPlaylist,
   acceptPromotionalPlaylist,
   declinePromotionalPlaylist,
@@ -82,6 +86,7 @@ function makeDeps() {
 
 beforeEach(() => {
   h.clearPlaylistCache.mockClear();
+  h.createSiteMap.mockClear();
 });
 
 describe('getFeaturedPlaylists', () => {
@@ -353,13 +358,19 @@ describe('searchFeaturedPlaylists', () => {
     });
 
     const approvedArgs = prisma.playlist.findMany.mock.calls[1][0];
+    // Removed playlists (unfeaturedAt set) stay listed so they can come back;
+    // the search must AND with that, not replace it.
     expect(approvedArgs.where).toEqual({
-      featured: true,
-      NOT: { promotionalActive: true, promotionalAccepted: false },
-      OR: [
-        { name: { contains: 'abc' } },
-        { promotionalTitle: { contains: 'abc' } },
+      AND: [
+        { OR: [{ featured: true }, { unfeaturedAt: { not: null } }] },
+        {
+          OR: [
+            { name: { contains: 'abc' } },
+            { promotionalTitle: { contains: 'abc' } },
+          ],
+        },
       ],
+      NOT: { promotionalActive: true, promotionalAccepted: false },
       featuredLocale: 'de',
     });
     expect(approvedArgs.orderBy).toEqual({ name: 'asc' });
@@ -653,6 +664,60 @@ describe('updatePlaylistFeatured', () => {
 
     const res = await updatePlaylistFeatured(deps, 'pl1', false);
     expect(res).toEqual({ success: false, error: 'db' });
+  });
+});
+
+describe('unfeaturePlaylist / refeaturePlaylist', () => {
+  it('unfeature clears featured, stamps unfeaturedAt, flushes the playlist caches by id and slug and rebuilds the sitemap', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'gone-list' });
+
+    const res = await unfeaturePlaylist(deps, 'pl1');
+
+    expect(res).toEqual({ success: true });
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: {
+        featured: false,
+        unfeaturedAt: expect.any(Date),
+        markedForMerchantCenter: true,
+      },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'gone-list');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('refeature restores featured and clears unfeaturedAt', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'back-again' });
+
+    expect(await refeaturePlaylist(deps, 'pl1')).toEqual({ success: true });
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: { featured: true, unfeaturedAt: null, markedForMerchantCenter: true },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'back-again');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('reports an unknown playlist without touching anything', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue(null);
+
+    expect(await unfeaturePlaylist(deps, 'nope')).toEqual({
+      success: false,
+      error: 'Playlist not found',
+    });
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
+    expect(h.createSiteMap).not.toHaveBeenCalled();
+  });
+
+  it('reports errors instead of throwing', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'x' });
+    prisma.playlist.update.mockRejectedValue(new Error('db'));
+
+    expect(await unfeaturePlaylist(deps, 'pl1')).toEqual({ success: false, error: 'db' });
   });
 });
 

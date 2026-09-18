@@ -1,5 +1,5 @@
 import { color } from 'console-log-colors';
-import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
+import { CACHE_KEY_FEATURED_PLAYLISTS, unfeaturePlaylist } from './featuredPlaylists';
 import { DataDeps } from './types';
 
 /**
@@ -31,8 +31,24 @@ export interface CoverPlaylist {
 }
 
 export type CoverCheck = (url: string) => Promise<boolean>;
-/** Returns the cover the music service serves today, or null when unknown. */
-export type CoverFetch = (playlist: CoverPlaylist) => Promise<string | null>;
+
+export interface CoverLookup {
+  /** The cover the music service serves today, null when unknown. */
+  image: string | null;
+  /** The service says the playlist itself no longer exists. */
+  gone: boolean;
+}
+export type CoverFetch = (playlist: CoverPlaylist) => Promise<CoverLookup>;
+
+export interface CoverRepairResult {
+  checked: number;
+  dead: number;
+  repaired: number;
+  /** Slugs taken out of the catalogue because the playlist is gone. */
+  unfeatured: string[];
+  /** Slugs still showing a dead cover; these need a custom image. */
+  unresolved: string[];
+}
 
 /**
  * False only when the CDN says the file is gone. A timeout or a 5xx says
@@ -82,7 +98,7 @@ export async function repairFeaturedPlaylistCovers(
   deps: DataDeps,
   fetchCover: CoverFetch,
   isAlive: CoverCheck = (url) => coverIsAlive(deps, url)
-): Promise<{ checked: number; dead: number; repaired: number; unresolved: string[] }> {
+): Promise<CoverRepairResult> {
   // A custom image is served by us and wins over `image` everywhere, so those
   // rows cannot show a dead cover.
   const playlists = (await deps.prisma.playlist.findMany({
@@ -105,13 +121,14 @@ export async function repairFeaturedPlaylistCovers(
   await Promise.all(Array.from({ length: CHECK_CONCURRENCY }, worker));
 
   let repaired = 0;
+  const unfeatured: string[] = [];
   const unresolved: string[] = [];
 
   // One at a time: each of these is a real call to the music service.
   for (const playlist of dead) {
-    let fresh: string | null = null;
+    let lookup: CoverLookup = { image: null, gone: false };
     try {
-      fresh = await fetchCover(playlist);
+      lookup = await fetchCover(playlist);
     } catch (error: any) {
       deps.logger.log(
         color.red.bold(
@@ -120,10 +137,16 @@ export async function repairFeaturedPlaylistCovers(
       );
     }
 
+    const fresh = lookup.image;
     // The same dead URL back means the lookup was served from somewhere stale.
     if (fresh && fresh !== playlist.image && (await isAlive(fresh))) {
       await syncFeaturedPlaylistCover(deps, playlist, fresh);
       repaired++;
+    } else if (lookup.gone) {
+      // A dead cover on a playlist the service no longer knows: the owner
+      // deleted it, and a product page for it sells cards nobody can play.
+      const removed = await unfeaturePlaylist(deps, playlist.playlistId);
+      (removed.success ? unfeatured : unresolved).push(playlist.slug);
     } else {
       unresolved.push(playlist.slug);
     }
@@ -144,6 +167,13 @@ export async function repairFeaturedPlaylistCovers(
       )
     );
   }
+  if (unfeatured.length > 0) {
+    deps.logger.log(
+      color.yellow.bold(
+        `Removed from featured, playlist gone on Spotify: ${color.white.bold(unfeatured.join(', '))}`
+      )
+    );
+  }
   if (unresolved.length > 0) {
     deps.logger.log(
       color.red.bold(
@@ -154,5 +184,5 @@ export async function repairFeaturedPlaylistCovers(
     );
   }
 
-  return { checked: candidates.length, dead: dead.length, repaired, unresolved };
+  return { checked: candidates.length, dead: dead.length, repaired, unfeatured, unresolved };
 }

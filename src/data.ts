@@ -557,6 +557,14 @@ class Data {
     return featuredPlaylistsModule.updatePlaylistFeatured(this.deps, playlistId, featured);
   }
 
+  public async unfeaturePlaylist(playlistId: string) {
+    return featuredPlaylistsModule.unfeaturePlaylist(this.deps, playlistId);
+  }
+
+  public async refeaturePlaylist(playlistId: string) {
+    return featuredPlaylistsModule.refeaturePlaylist(this.deps, playlistId);
+  }
+
   public async updateFeaturedHidden(playlistId: string, featuredHidden: boolean) {
     return featuredPlaylistsModule.updateFeaturedHidden(this.deps, playlistId, featuredHidden);
   }
@@ -610,7 +618,7 @@ class Data {
       // Only Spotify deletes a cover when the owner replaces it; the other
       // services are reported as unresolved and need a custom image.
       if (playlist.serviceType !== 'spotify') {
-        return null;
+        return { image: null, gone: false };
       }
       // cache=false: the cached lookup of a featured playlist never expires,
       // so it can hold the same dead URL as the column.
@@ -622,7 +630,10 @@ class Data {
         true,
         true
       );
-      return result.success ? result.data?.image || null : null;
+      return {
+        image: result.success ? result.data?.image || null : null,
+        gone: !result.success && result.error === 'playlistNotFound',
+      };
     });
   }
 

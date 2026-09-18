@@ -377,6 +377,28 @@ Rows with a `customImage` are skipped, it wins everywhere. Only Spotify is
 re-fetched; a dead cover on another service (Apple Music's signed artwork URLs
 expire) is reported as unresolved and needs a custom image uploaded.
 
+When the re-fetch says the playlist itself is gone (`playlistNotFound`), the
+sweep unfeatures it, see the next section.
+
+## Removing a featured playlist ("unfeature")
+
+`featuredHidden` only drops a playlist from the list; its product page stays
+up. For a playlist that no longer exists on Spotify that is the wrong tool, so
+`unfeaturePlaylist` (`POST /admin/playlist/:playlistId/unfeature`, the trash
+button on the Featured page, and the cover sweep above) sets `featured = false`,
+which takes the list entry, the product page, the sitemap entry and, through
+the Merchant Center cleanup pass, the Google product with it. It flushes the
+playlist caches by id and slug (the product page lookup of a featured playlist
+is cached forever) and rebuilds the sitemap, which otherwise only happens at
+boot.
+
+The row is never deleted: orders and tracks reference it. `unfeaturedAt` marks
+it as deliberately removed rather than never featured, which is what keeps it
+in the admin overview (badge "Removed", restore button →
+`POST /admin/playlist/:playlistId/refeature`, which clears the stamp). The
+`/admin/featured/search` query is `featured = true OR unfeaturedAt IS NOT NULL`
+for that reason.
+
 ## Customer reviews: a committed JSON file
 
 `src/reviews.ts` serves `/reviews/:locale/:amount/:landingPage` and
