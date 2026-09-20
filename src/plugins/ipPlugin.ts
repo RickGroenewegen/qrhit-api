@@ -12,10 +12,11 @@ declare module 'fastify' {
 /**
  * Checkout endpoints stay reachable even for banned IPs.
  *
- * Bans come from the QR-link rate limiter (30 scans/minute → 24h ban), which a
- * customer can trip legitimately by scanning through a new deck of their own
- * cards. Locking that person out of paying for a day is far worse than the
- * abuse it would prevent — these routes are not the ones being abused.
+ * Bans come from the QR-link guard (30 scans/minute, or a run of sequential
+ * track ids, → 7 day ban), which a customer can trip legitimately by scanning
+ * through a new deck of their own cards. Locking that person out of paying for
+ * a week is far worse than the abuse it would prevent, and these routes are
+ * not the ones being abused.
  */
 const BAN_EXEMPT_PATHS = [
   '/order/calculate',
@@ -43,7 +44,9 @@ const ipPlugin: FastifyPluginAsync = async (fastify, options) => {
     const path = request.url.split('?')[0];
     const exempt = BAN_EXEMPT_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 
-    if (!exempt && abuseGuard.isBanned(request.clientIp)) {
+    const userAgent = (request.headers['user-agent'] as string) || '';
+
+    if (!exempt && abuseGuard.isBanned(request.clientIp, userAgent)) {
       reply.status(403).send({ error: 'Forbidden' });
       return;
     }

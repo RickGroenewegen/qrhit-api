@@ -114,6 +114,14 @@ class Cache {
   }
 
   /**
+   * Removes one member from a sorted set, whatever its score.
+   */
+  async removeFromSortedSet(key: string, member: string): Promise<void> {
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('zrem', cacheKey, member);
+  }
+
+  /**
    * Removes all members of a sorted set whose score is <= maxScore.
    */
   async pruneSortedSet(key: string, maxScore: number): Promise<void> {

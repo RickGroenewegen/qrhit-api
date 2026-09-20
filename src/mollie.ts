@@ -1370,13 +1370,12 @@ class Mollie {
         ? printerHoldFilter
         : {};
 
-    // Needs attention filter - physical orders that should have gone to the
-    // printer but are still on printApiStatus = 'Created': either the customer
-    // approved printing (userConfirmedPrinting, shown as Judged) or the approval
-    // timer (canBeSentToPrinterAt) ran out. `notSubmitted` is the old name of
-    // this flag, still sent by dashboards loaded before the rename. Orders on
-    // printer hold are parked on purpose and have their own filter.
-    const needsAttentionFilter: Prisma.PaymentWhereInput = {
+    // Needs attention filter, part one - physical orders that should have gone
+    // to the printer but are still on printApiStatus = 'Created': either the
+    // customer approved printing (userConfirmedPrinting, shown as Judged) or
+    // the approval timer (canBeSentToPrinterAt) ran out. Orders on printer hold
+    // are parked on purpose and have their own filter.
+    const notSentToPrinterFilter: Prisma.PaymentWhereInput = {
       printApiStatus: 'Created',
       printerHold: false,
       PaymentHasPlaylist: {
@@ -1398,6 +1397,20 @@ class Mollie {
         // id. The hourly pass never retries these.
         { sentToPrinter: true, printApiOrderId: '' },
       ],
+    };
+
+    // Part two - paid orders that were never finalized. Generation only
+    // finalizes once every track is checked, so an order that stays here has
+    // nothing delivered at all, digital or physical.
+    const notFinalizedFilter: Prisma.PaymentWhereInput = {
+      status: 'paid',
+      finalized: false,
+    };
+
+    // `notSubmitted` is the old name of this flag, still sent by dashboards
+    // loaded before the rename.
+    const needsAttentionFilter: Prisma.PaymentWhereInput = {
+      OR: [notSentToPrinterFilter, notFinalizedFilter],
     };
     const needsAttentionClause =
       search.needsAttention === true || search.notSubmitted === true
@@ -1494,6 +1507,7 @@ class Mollie {
         updatedAt: true,
         orderId: true,
         profit: true,
+        finalized: true,
         printApiStatus: true,
         printApiTrackingLink: true,
         printApiOrderRequest: true,
@@ -1651,18 +1665,23 @@ class Mollie {
     // pass skips an order as long as its playlists hold unprocessed
     // corrections (a pending flag or UserSuggestion rows), and the approval
     // timer never submits those on the customer's behalf.
+    // Mirrors needsAttentionFilter above; keep the two in step.
     const now = new Date();
+    const isNotSentToPrinter = (payment: (typeof payments)[number]) =>
+      payment.printApiStatus === 'Created' &&
+      !payment.printerHold &&
+      payment.PaymentHasPlaylist.some((php) => php.type === 'physical') &&
+      (payment.PaymentHasPlaylist.some(
+        (php) => php.type === 'physical' && php.userConfirmedPrinting
+      ) ||
+        (payment.canBeSentToPrinterAt !== null &&
+          payment.canBeSentToPrinterAt <= now) ||
+        (payment.sentToPrinter && !payment.printApiOrderId));
+    const isNotFinalized = (payment: (typeof payments)[number]) =>
+      payment.status === 'paid' && !payment.finalized;
+
     const attentionPayments = payments.filter(
-      (payment) =>
-        payment.printApiStatus === 'Created' &&
-        !payment.printerHold &&
-        payment.PaymentHasPlaylist.some((php) => php.type === 'physical') &&
-        (payment.PaymentHasPlaylist.some(
-          (php) => php.type === 'physical' && php.userConfirmedPrinting
-        ) ||
-          (payment.canBeSentToPrinterAt !== null &&
-            payment.canBeSentToPrinterAt <= now) ||
-          (payment.sentToPrinter && !payment.printApiOrderId))
+      (payment) => isNotSentToPrinter(payment) || isNotFinalized(payment)
     );
 
     const suggestionCounts =
@@ -1697,7 +1716,13 @@ class Mollie {
         (php) => php.suggestionsPending
       );
 
-      let reason: 'printer-error' | 'open-corrections' | 'not-sent' = 'not-sent';
+      // Most specific cause first: a refused send and open corrections both
+      // explain an order that never finalized, so they outrank it
+      let reason:
+        | 'printer-error'
+        | 'open-corrections'
+        | 'not-finalized'
+        | 'not-sent' = 'not-sent';
       let printerError: string | null = null;
       if (payment.sentToPrinter && !payment.printApiOrderId) {
         // The send was attempted and the printer refused it; sentToPrinter
@@ -1706,6 +1731,9 @@ class Mollie {
         printerError = extractPrintErrorMessage(payment.printApiOrderResponse);
       } else if (openCorrections > 0 || correctionsPending) {
         reason = 'open-corrections';
+      } else if (isNotFinalized(payment)) {
+        // Generation never completed: no PDFs, nothing delivered
+        reason = 'not-finalized';
       }
 
       return {

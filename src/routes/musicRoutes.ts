@@ -510,7 +510,11 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
-    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    const guard = await abuseGuard.check(
+      request.clientIp,
+      userAgent,
+      request.params.trackId
+    );
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
@@ -552,7 +556,12 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
-    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    const guard = await abuseGuard.check(
+      request.clientIp,
+      userAgent,
+      request.params.trackId,
+      request.params.php
+    );
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
     }

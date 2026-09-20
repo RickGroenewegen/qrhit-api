@@ -542,6 +542,75 @@ Two things `channable.ts` deliberately does NOT do:
 - **Secure file uploads** with size limits
 - **Environment-based security** (development vs production)
 
+## Scrape protection on the qrlink endpoints
+
+`src/abuse_guard.ts` guards `/qrlink/:trackId` and `/qrlink2/:trackId/:php`,
+the only public endpoints that turn an enumerable id into the data a
+competitor wants. It exists because one competitor scraped them twice: first
+in May 2026 at ~20 req/s announcing itself as `Hitify-QRSong-Sync`, then in
+September 2026 with that user-agent layer defeated, at ~1 req/s behind a
+spoofed Chrome string, walking track ids upwards one at a time.
+
+Four layers, in order, all env-tunable:
+
+| layer | default | env |
+|---|---|---|
+| whitelist, skips everything below | the `allowed_ips` table | admin UI |
+| permanent denylist | `2a06:98c0:3600::103` | `QRLINK_DENY_IPS` |
+| scraper user-agents | `Hitify-QRSong-Sync` | `QRLINK_BLOCKED_USER_AGENTS` |
+| rate limit | 30 per 60s | `QRLINK_RATE_MAX`, `QRLINK_RATE_WINDOW_SECONDS` |
+| sequential track ids | a run of 10, steps of ≤5, within an hour | `QRLINK_SEQ_STREAK`, `QRLINK_SEQ_MAX_STEP`, `QRLINK_SEQ_WINDOW_SECONDS` |
+
+A ban lasts 7 days (`QRLINK_BAN_SECONDS`) and is enforced on **every** API
+route by `ipPlugin`, not just these two, minus the checkout paths in
+`BAN_EXEMPT_PATHS`.
+
+Things here that cost something to learn:
+
+- **The denylisted address is Cloudflare's shared Workers egress.** Every
+  Worker on the platform makes its outbound `fetch` from that one address, so
+  it is what renting Workers to proxy a scrape looks like. We are behind
+  CloudFront, not Cloudflare, so no customer scan, app request or SSR render
+  can come from it. It is fixed platform infrastructure, so unlike a VPS the
+  attacker cannot rotate off it without leaving the platform. Blocking it does
+  cut off any legitimate third-party Worker that calls us, of which there are
+  none today.
+- **Sequential-id detection is what catches a patient scraper.** A rate limit
+  alone is a speed limit: 29 requests a minute is invisible forever and still
+  drains the database. The detector is safe because `Track.trackId` is unique,
+  so a playlist reuses the existing row for any track already known and a real
+  deck holds ids scattered across the whole range. The exception is a playlist
+  of entirely unknown tracks, which gets one contiguous block; that customer
+  scanning their deck in printed order is the one false positive, and the
+  whitelist is the answer to it.
+- **A failed Redis write used to un-ban silently.** `ban()` writes the mirror
+  first and persists after; `refreshBannedIps()` rebuilds the mirror from
+  Redis wholesale every 20s. A failed `zadd` therefore vanished within 20
+  seconds with only a yellow warning. `pendingBans` now survives the refresh
+  and retries the write. The refresh also keeps bans added while it was
+  reading Redis, which needs a **copy** of the mirror's keys: holding the map
+  itself makes every new ban look pre-existing, since `ban()` mutates it.
+- **Both detectors fail open** when Redis is unreachable, deliberately, so a
+  cache outage never breaks real card scans. It also means a degraded Redis
+  turns the protection off; `AbuseGuard check failed` in the log is how you
+  find that.
+- **The block is logged once per address**, not per refused request, because a
+  blocked scraper keeps hammering. `ban()` logs when the ban is created,
+  `logBlockedOnce` when requests start being refused.
+- Blocks are recorded in `blocked_ips` for the dashboard (Data → Blocked IPs),
+  written by the worker that issued the ban, which is the only one that knows
+  why. Other workers only learn the address is banned, so leaving it to them
+  would add a vaguer duplicate row each. The stored `php` is resolved to the
+  order, playlist and customer on read.
+- **Unblocking must clear both counters**, not just the ban: an address let
+  back in on a counter that is already over the limit, or mid-run, is banned
+  again on its next request.
+- The whitelist (`allowed_ips`) beats every other layer including the
+  denylist, is mirrored into each worker within `QRLINK_BAN_REFRESH_SECONDS`,
+  and survives a restart. `QRLINK_DENY_IPS` is config and needs a deploy to
+  change, which is why the dashboard refuses to unblock a denylisted address
+  and says so instead.
+
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
   - Account/auth routes → `accountRoutes.ts`

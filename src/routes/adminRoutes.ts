@@ -36,6 +36,9 @@ import ChatWebSocketServer from '../chat-websocket';
 import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
 import Promotional from '../promotional';
+import AbuseGuard from '../abuse_guard';
+import IpAllowlist from '../ipAllowlist';
+import BlockedIp from '../blockedIp';
 import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
@@ -82,6 +85,7 @@ export default async function adminRoutes(
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+  const blockedIp = BlockedIp.getInstance();
   const postnl = PostNL.getInstance();
   const logger = new Logger();
 
@@ -5491,6 +5495,136 @@ export default async function adminRoutes(
           success: false,
           error: 'Failed to count broken links',
         });
+      }
+    }
+  );
+
+  // Blocked IPs, newest first (admin only)
+  fastify.get(
+    '/admin/blocked-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { ip, reason, limit, offset } = request.query;
+
+        const result = await blockedIp.getBlockedIps({
+          ip,
+          reason,
+          limit: limit ? parseInt(limit) : undefined,
+          offset: offset ? parseInt(offset) : undefined,
+        });
+
+        if (result.success) {
+          return reply.send({
+            success: true,
+            data: result.data,
+            total: result.total,
+          });
+        } else {
+          return reply.status(500).send({ success: false, error: result.error });
+        }
+      } catch (error: any) {
+        console.error('Error fetching blocked ips:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch blocked ips',
+        });
+      }
+    }
+  );
+
+  // Lift a ban (admin only). Clears Redis and the per-IP counters, so the
+  // address is free immediately rather than tripping the limiter again.
+  fastify.post(
+    '/admin/blocked-ips/unblock',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.body?.ip || '').trim();
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().unban(ip);
+      if (result.success) {
+        logger.log(
+          color.green.bold(`Admin unblocked ip=${color.white.bold(ip)}`)
+        );
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // The whitelist: addresses that are never banned (admin only)
+  fastify.get(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const result = await IpAllowlist.getInstance().list();
+      if (result.success) {
+        return reply.send({ success: true, data: result.data });
+      }
+      return reply.status(500).send({ success: false, error: result.error });
+    }
+  );
+
+  // Whitelist an address. Also lifts any ban it currently has, so a customer
+  // who is locked out is let back in straight away.
+  fastify.post(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.body?.ip || '').trim();
+      const note = request.body?.note || null;
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().allow(ip, note);
+      if (result.success) {
+        logger.log(
+          color.green.bold(`Admin whitelisted ip=${color.white.bold(ip)}`)
+        );
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // Take an address off the whitelist (admin only)
+  fastify.delete(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.query?.ip || request.body?.ip || '').trim();
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().disallow(ip);
+      if (result.success) {
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // Delete a blocked IP record (admin only). Bookkeeping only: the ban itself
+  // lives in Redis and expires on its own.
+  fastify.delete(
+    '/admin/blocked-ips/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: 'Invalid id' });
+      }
+
+      const result = await blockedIp.deleteBlockedIp(id);
+      if (result.success) {
+        return reply.send({ success: true });
+      } else {
+        return reply.status(500).send({ success: false, error: result.error });
       }
     }
   );

@@ -1435,6 +1435,40 @@ model UnknownLink {
   @@map("unknown_links")
 }
 
+// One row per address the AbuseGuard starts refusing, written when the block
+// first takes effect rather than per refused request (a blocked scraper keeps
+// hammering). `expiresAt` is null for a permanent denylist entry.
+model BlockedIp {
+  id        Int       @id @default(autoincrement())
+  ip        String    @db.VarChar(45)
+  reason    String    @db.VarChar(100)
+  detail    String?   @db.Text
+  userAgent String?   @db.Text
+  // The PaymentHasPlaylist the blocked request was scanning, when it carried
+  // one (/qrlink2 does, the legacy /qrlink does not). It names the order whose
+  // cards were being read.
+  php       Int?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([ip])
+  @@map("blocked_ips")
+}
+
+// Addresses the AbuseGuard must never ban, however they behave. For the
+// customer whose own deck legitimately trips a detector: a playlist made
+// entirely of tracks we had never seen gets one contiguous block of track
+// ids, so scanning it in order looks like enumeration.
+model AllowedIp {
+  id        Int      @id @default(autoincrement())
+  ip        String   @unique @db.VarChar(45)
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("allowed_ips")
+}
+
 model GameRoom {
   id        Int       @id @default(autoincrement())
   uuid      String    @unique

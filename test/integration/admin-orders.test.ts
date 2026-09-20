@@ -85,6 +85,7 @@ describe('admin order routes', () => {
         paymentId: PAYMENT_ID,
         orderId: 'QR900001',
         status: 'paid',
+        finalized: true,
         fullname: 'Order Customer',
         email: 'orders@test.qrsong.io',
         totalPrice: 60.5,
@@ -286,6 +287,9 @@ describe('admin order routes', () => {
       const HOUR = 60 * 60 * 1000;
       const paymentDbIds: number[] = [];
       let playlistDbId: number;
+      // The order that never finalized gets a playlist of its own: the
+      // corrections below sit on a playlist and would otherwise reach it too
+      let unfinalizedPlaylistDbId: number;
 
       // One physical order per case: what the customer did, where the approval
       // timer stands and how far the order got at the printer
@@ -363,6 +367,7 @@ describe('admin order routes', () => {
               city: 'Utrecht',
               zipcode: '3511AB',
               housenumber: '3',
+              finalized: true,
               printApiStatus: orderCase.printApiStatus,
               printerHold: orderCase.printerHold ?? false,
               canBeSentToPrinter: true,
@@ -386,6 +391,58 @@ describe('admin order routes', () => {
             },
           });
         }
+
+        // Paid, but generation never finalized it: nothing was delivered, so
+        // it needs attention whatever the printer says
+        const unfinalizedPlaylist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-unfinalized',
+            name: 'Unfinalized Mix',
+            slug: 'unfinalized-mix',
+            image: 'img.png',
+          },
+        });
+        unfinalizedPlaylistDbId = unfinalizedPlaylist.id;
+
+        const unfinalized = await prisma().payment.create({
+          data: {
+            userId: user.id,
+            paymentId: 'tr_attention_unfinalized',
+            orderId: 'QR900105',
+            status: 'paid',
+            finalized: false,
+            fullname: 'Attention Customer',
+            email: 'attention@test.qrsong.io',
+            totalPrice: 60.5,
+            productPriceWithoutTax: 50,
+            shippingPriceWithoutTax: 0,
+            productVATPrice: 10.5,
+            shippingVATPrice: 0,
+            totalVATPrice: 10.5,
+            taxRate: 21,
+            countrycode: 'NL',
+            address: 'Orderstraat 5',
+            city: 'Utrecht',
+            zipcode: '3511AB',
+            housenumber: '5',
+            printApiStatus: 'Submitted',
+          },
+        });
+        paymentDbIds.push(unfinalized.id);
+
+        await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: unfinalized.id,
+            playlistId: unfinalizedPlaylist.id,
+            amount: 1,
+            numberOfTracks: 100,
+            orderTypeId: orderType.id,
+            type: 'physical',
+            price: 60.5,
+            priceWithoutVAT: 50,
+            priceVAT: 10.5,
+          },
+        });
       });
 
       afterAll(async () => {
@@ -396,6 +453,9 @@ describe('admin order routes', () => {
           where: { id: { in: paymentDbIds } },
         });
         await prisma().playlist.delete({ where: { id: playlistDbId } });
+        await prisma().playlist.delete({
+          where: { id: unfinalizedPlaylistDbId },
+        });
       });
 
       const search = async (payload: Record<string, unknown>) => {
@@ -414,21 +474,37 @@ describe('admin order routes', () => {
 
       it('returns approved and timed-out orders that are still Created', async () => {
         const body = await search({ needsAttention: true });
-        expect(body.totalItems).toBe(2);
-        expect(paymentIds(body)).toEqual([
-          'tr_attention_approved',
-          'tr_attention_expired',
-        ]);
+        expect(paymentIds(body)).toEqual(
+          expect.arrayContaining([
+            'tr_attention_approved',
+            'tr_attention_expired',
+          ])
+        );
+      });
+
+      it('returns paid orders that were never finalized', async () => {
+        const body = await search({ needsAttention: true });
+        expect(body.totalItems).toBe(3);
+        expect(paymentIds(body)).toContain('tr_attention_unfinalized');
+
+        const unfinalized = body.data.find(
+          (payment: any) => payment.paymentId === 'tr_attention_unfinalized'
+        );
+        expect(unfinalized.attention).toEqual({
+          reason: 'not-finalized',
+          openCorrections: 0,
+          printerError: null,
+        });
       });
 
       it('still answers to the old notSubmitted flag', async () => {
-        expect((await search({ notSubmitted: true })).totalItems).toBe(2);
+        expect((await search({ notSubmitted: true })).totalItems).toBe(3);
       });
 
       it('reports the count while the filter is off', async () => {
         const body = await search({});
-        expect(body.totalItems).toBe(6);
-        expect(body.needsAttentionCount).toBe(2);
+        expect(body.totalItems).toBe(7);
+        expect(body.needsAttentionCount).toBe(3);
       });
 
       it('reports the printer hold count the same way', async () => {
@@ -448,7 +524,7 @@ describe('admin order routes', () => {
         // inside the other filter or it would always read zero
         expect(
           (await search({ printerHold: true })).needsAttentionCount
-        ).toBe(2);
+        ).toBe(3);
         expect(
           (await search({ needsAttention: true })).printerHoldCount
         ).toBe(1);
@@ -469,10 +545,13 @@ describe('admin order routes', () => {
         const reasons = async () => {
           const body = await search({ needsAttention: true });
           return Object.fromEntries(
-            body.data.map((payment: any) => [
-              payment.paymentId,
-              payment.attention,
-            ])
+            body.data
+              // Always listed, and for a reason of its own
+              .filter(
+                (payment: any) =>
+                  payment.paymentId !== 'tr_attention_unfinalized'
+              )
+              .map((payment: any) => [payment.paymentId, payment.attention])
           );
         };
 
@@ -520,7 +599,7 @@ describe('admin order routes', () => {
             printerError: 'Pay on account is off',
           },
         });
-        expect((await search({})).needsAttentionCount).toBe(3);
+        expect((await search({})).needsAttentionCount).toBe(4);
 
         await prisma().payment.update({
           where: { paymentId: 'tr_attention_waiting' },
