@@ -534,6 +534,38 @@ Two things `channable.ts` deliberately does NOT do:
   retired, its image-generation half has to move into `channable.ts` or a
   shared module, or the feed will slowly lose images.**
 
+## Error tracking (PostHog)
+
+API errors go to the same PostHog project as the site's
+(`src/errorTracking.ts`, `posthog-node`). Every exception carries
+`app: 'backend'` (the site sends `app: 'frontend'`) and `service: 'api'` or
+`'worker'`. **Production only** (`ENVIRONMENT=production`): development and
+tests never send anything, and no credentials are needed, the project key is
+public.
+
+Sentry was removed because 100% tracing and profiling pegged the cluster
+primary (`dded4cec`), so nothing here instruments anything. Errors are captured
+in four places:
+
+- **Crashes.** An `uncaughtException` handler reports, prints, flushes (3s) and
+  exits 1, which is what Node did without one; pm2 restarts as before.
+  Unhandled rejections arrive there too (Node's default `throw` mode). Do not
+  add an `unhandledRejection` listener: that would stop them from crashing.
+- **`console.error(…, error)`.** Most failures are caught where they happen
+  (hundreds of catch blocks that log and answer 500), so `console.error` is
+  wrapped: any call handed an Error reports it, with the text logged next to
+  it as `log_message`. String-only logs and the custom `Logger` are not
+  reported.
+- **The Fastify error handler**, except errors with a 4xx `statusCode`. It
+  sends the route pattern, never the URL: paths carry ids and download hashes.
+- **Queue jobs**: failed jobs (`worker.on('failed')`, the generator's catch
+  with its `payment_id`) and queue worker errors.
+
+Each error is sent once (`ignore()` marks one that is logged but not worth
+reporting) and at most 10 of one kind per minute, 100 in total, because
+posthog-node's own rate limiter does not cover `captureException`. Frames point
+at the compiled `build/src/*.js` (no source maps; tsc output is readable).
+
 ## Key Security Considerations
 - **Input validation** on all endpoints
 - **SQL injection protection** via Prisma ORM

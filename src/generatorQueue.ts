@@ -1,6 +1,7 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
+import ErrorTracking from './errorTracking';
 import Mollie from './mollie';
 import Redis from 'ioredis';
 import cluster from 'cluster';
@@ -368,6 +369,11 @@ class GeneratorQueue {
                 )}:\n  Message: ${errorMessage}${errorStack ? `\n  Stack: ${errorStack}` : ''}`
               )
             );
+            ErrorTracking.getInstance().capture(error, {
+              queue: 'generator',
+              job_id: job.id ?? null,
+              payment_id: paymentId,
+            });
             throw error;
           }
         },
@@ -382,6 +388,7 @@ class GeneratorQueue {
         this.logger.log(
           color.red.bold(`Worker ${i + 1} error: ${error.message}`)
         );
+        ErrorTracking.getInstance().capture(error, { queue: 'generator', worker_error: true });
       });
 
       this.workers.push(worker);

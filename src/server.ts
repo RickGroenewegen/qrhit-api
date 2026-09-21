@@ -18,6 +18,7 @@ import { getTokenFromRequest } from './cookieAuth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
 import Logger from './logger';
+import ErrorTracking from './errorTracking';
 import { color } from 'console-log-colors';
 import cluster from 'cluster';
 import { ensureLegacyDefaultBackgroundFile } from './legacyBackground';
@@ -454,6 +455,17 @@ class Server {
     });
 
     await this.fastify.setErrorHandler((error, request, reply) => {
+      // A 4xx (validation, bad body) is the caller's mistake, not ours. The
+      // route pattern, not the URL: paths carry ids and download hashes.
+      const status = (error as { statusCode?: number }).statusCode;
+      if (status && status < 500) {
+        ErrorTracking.getInstance().ignore(error);
+      } else {
+        ErrorTracking.getInstance().capture(error, {
+          method: request.method,
+          route: request.routeOptions?.url ?? null,
+        });
+      }
       console.error(error);
       reply.status(500).send({ error: 'Internal Server Error' });
     });

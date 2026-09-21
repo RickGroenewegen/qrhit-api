@@ -5,8 +5,10 @@ import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import AssetQueue from './assetQueue';
+import ErrorTracking from './errorTracking';
 
 dotenv.config({ quiet: true });
+ErrorTracking.getInstance().init('worker');
 
 // Configure BigInt serialization
 (BigInt.prototype as any).toJSON = function () {

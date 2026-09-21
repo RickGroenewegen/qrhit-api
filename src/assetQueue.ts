@@ -1,6 +1,7 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
+import ErrorTracking from './errorTracking';
 import Redis from 'ioredis';
 import cluster from 'cluster';
 import * as fs from 'fs/promises';
@@ -206,6 +207,12 @@ class AssetQueue {
             )}: ${err.message}`
           )
         );
+        ErrorTracking.getInstance().capture(err, {
+          queue: 'asset',
+          job_name: job?.name ?? null,
+          job_id: job?.id ?? null,
+          attempts_made: job?.attemptsMade ?? null,
+        });
       });
     }
 
