@@ -658,5 +658,17 @@
   "design_alter.imageCardFront": "卡片正面",
   "design_alter.imageCardBack": "卡片背面",
   "design_alter.imageBoxFront": "盒内衬（正面）",
-  "design_alter.imageBoxBack": "盒内衬（背面）"
+  "design_alter.imageBoxBack": "盒内衬（背面）",
+  "invoice.discountPercentLine": "折扣 {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "优惠码 {{code}}",
+  "open_corrections.subject": "需要操作：请确认订单 {{ orderId }} 的更改",
+  "open_corrections.title": "你的订单正在等待确认",
+  "open_corrections.hello": "你好",
+  "open_corrections.intro": "你的订单审核期已结束，通常我们现在会将卡片送去印刷。但你还有尚未确认的更改，因此我们暂停了订单。",
+  "open_corrections.whatToDo": "我们绝不会印刷你尚未确认的更改。点击下方按钮打开修改表单，检查并确认更改。之后订单会立即送去印刷。",
+  "open_corrections.buttonText": "打开修改表单",
+  "open_corrections.buttonFallback": "如果按钮无效，请将此链接复制并粘贴到浏览器中：",
+  "open_corrections.questions": "如果有任何问题，直接回复这封邮件，我们会帮助你。",
+  "open_corrections.thanks": "谢谢",
+  "open_corrections.team": "QRSong! 团队"
 }

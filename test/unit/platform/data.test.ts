@@ -65,6 +65,10 @@ const h = vi.hoisted(() => {
       'calculateDecadePercentages',
       'updateFeaturedPlaylistStats',
     ] as const),
+    playlistCovers: fns([
+      'syncFeaturedPlaylistCover',
+      'repairFeaturedPlaylistCovers',
+    ] as const),
     playlists: fns([
       'storePlaylists',
       'getPlaylist',
@@ -221,6 +225,7 @@ vi.mock('../../../src/data/users', () => ({
   euCountryCodes: h.euCountryCodes,
 }));
 vi.mock('../../../src/data/scoring', () => ({ ...h.scoring }));
+vi.mock('../../../src/data/playlistCovers', () => ({ ...h.playlistCovers }));
 vi.mock('../../../src/data/playlists', () => ({ ...h.playlists }));
 vi.mock('../../../src/data/tracks', () => ({ ...h.tracks }));
 vi.mock('../../../src/data/trackYears', () => ({ ...h.trackYears }));
@@ -251,6 +256,7 @@ beforeEach(() => {
     h.misc,
     h.users,
     h.scoring,
+    h.playlistCovers,
     h.playlists,
     h.tracks,
     h.trackYears,
@@ -279,7 +285,7 @@ describe('constructor (primary process, main server)', () => {
     h.isMainServer.mockResolvedValue(true);
   });
 
-  it('creates the sitemap, prefills the link cache, loads blocked playlists and schedules 3 cron jobs', async () => {
+  it('creates the sitemap, prefills the link cache, loads blocked playlists and schedules 4 cron jobs', async () => {
     const { data } = await makeData();
 
     expect(h.axiosCreate).toHaveBeenCalledTimes(1);
@@ -298,6 +304,7 @@ describe('constructor (primary process, main server)', () => {
       '0 * * * *', // hourly link-cache refresh
       '30 1 * * *', // nightly genre translation
       '0 3 * * *', // daily featured playlist stats
+      '30 3 * * *', // daily featured playlist cover repair
     ]);
     expect(h.cronJobs.every((j) => j.started)).toBe(true);
   });
@@ -332,6 +339,16 @@ describe('constructor (primary process, main server)', () => {
     expect(h.scoring.updateFeaturedPlaylistStats).toHaveBeenCalledWith(data);
   });
 
+  it('03:30 cron tick runs repairFeaturedPlaylistCovers', async () => {
+    const { data } = await makeData();
+
+    expect(h.playlistCovers.repairFeaturedPlaylistCovers).not.toHaveBeenCalled();
+    await h.cronJobs[3].callback();
+
+    expect(h.playlistCovers.repairFeaturedPlaylistCovers).toHaveBeenCalledTimes(1);
+    expect(h.playlistCovers.repairFeaturedPlaylistCovers.mock.calls[0][0]).toBe(data);
+  });
+
   it('treats ENVIRONMENT=development as a main server even when isMainServer() is false', async () => {
     const saved = process.env['ENVIRONMENT'];
     process.env['ENVIRONMENT'] = 'development';
@@ -346,6 +363,7 @@ describe('constructor (primary process, main server)', () => {
         '0 * * * *',
         '30 1 * * *',
         '0 3 * * *',
+        '30 3 * * *',
       ]);
     } finally {
       process.env['ENVIRONMENT'] = saved;

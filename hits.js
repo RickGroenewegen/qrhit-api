@@ -298,7 +298,8 @@ async function getSongs() {
     log(blue.bold('Prompt: ' + white.bold(prompt)));
 
     const result = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.6-luna',
+      reasoning_effort: 'none',
       temperature: 0.8,
       messages: [
         {

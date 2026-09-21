@@ -11,7 +11,6 @@ import Data from '../data';
 import Charts from '../charts';
 import { OpenPerplex } from '../openperplex';
 import Push from '../push';
-import Discount from '../discount';
 import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
@@ -21,12 +20,15 @@ import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
 import Excel from '../excel';
+import PlaylistFromExcel from '../playlistFromExcel';
 import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
 import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
 import Cache from '../cache';
+import GoogleFonts from '../googleFonts';
+import { sendCatalogue } from '../http-cache';
 import PrismaInstance from '../prisma';
 import Designer from '../designer';
 import { ChatService } from '../chat';
@@ -34,12 +36,17 @@ import ChatWebSocketServer from '../chat-websocket';
 import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
 import Promotional from '../promotional';
+import AbuseGuard from '../abuse_guard';
+import IpAllowlist from '../ipAllowlist';
+import BlockedIp from '../blockedIp';
 import BrokenLink from '../brokenLink';
 import Translation from '../translation';
+import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import CalendarService from '../calendarService';
 import Settings from '../settings';
+import SeoDescriptions from '../seoDescriptions';
 import {
   PRINTER_TYPES,
   SPOTIFY_REFRESH_TOKEN_TTL_DAYS,
@@ -58,10 +65,10 @@ export default async function adminRoutes(
   const generator = Generator.getInstance();
   const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
+  const translation = new Translation();
   const designer = Designer.getInstance();
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
-  const discount = new Discount();
   const calendar = CalendarService.getInstance();
   const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
@@ -78,6 +85,7 @@ export default async function adminRoutes(
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+  const blockedIp = BlockedIp.getInstance();
   const postnl = PostNL.getInstance();
   const logger = new Logger();
 
@@ -503,11 +511,14 @@ export default async function adminRoutes(
         itemsPerPage: request.body.itemsPerPage || 10,
       };
 
-      const { payments, totalItems } = await mollie.getPaymentList(search);
+      const { payments, totalItems, needsAttentionCount, printerHoldCount } =
+        await mollie.getPaymentList(search);
 
       reply.send({
         data: payments,
         totalItems,
+        needsAttentionCount,
+        printerHoldCount,
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });
@@ -1130,6 +1141,33 @@ export default async function adminRoutes(
     }
   );
 
+  // Genres with their visible featured playlist counts (for the playlist
+  // suggestions document filter).
+  fastify.get(
+    '/admin/genres',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const genres = await data.getGenresWithFeaturedCount();
+      reply.send({ success: true, data: genres });
+    }
+  );
+
+  // Live "N matching playlists" count for the playlist suggestions modal.
+  // Same filters as GET /vibe/playlist-suggestions.
+  fastify.get(
+    '/admin/playlist-suggestions/count',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const parsed = parsePlaylistSuggestionOptions(request.query, translation);
+      if (!parsed.ok) {
+        reply.status(400).send({ error: parsed.error });
+        return;
+      }
+      const playlists = await data.getPlaylistSuggestions(parsed.opts.locale, parsed.opts);
+      reply.send({ success: true, count: playlists.length });
+    }
+  );
+
   // Get all featured playlists (featured = 1)
   fastify.get(
     '/admin/featured/all',
@@ -1197,6 +1235,72 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Show or hide the customer's own card design on the product page. The
+  // customer chooses on the featured playlist form; this is the admin
+  // override for a design that turns out to carry personal photos or text.
+  fastify.post(
+    '/admin/playlist/:playlistId/share-design',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { shareDesign } = request.body;
+
+      if (!playlistId || typeof shareDesign !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID and shareDesign (boolean) are required',
+        });
+        return;
+      }
+
+      const result = await data.updateShareDesign(playlistId, shareDesign);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Remove a playlist from the catalogue (list, product page, sitemap, Merchant
+  // Center) or bring a removed one back. The row keeps `unfeaturedAt` so the
+  // Featured page can still show it.
+  for (const action of ['unfeature', 'refeature'] as const) {
+    fastify.post(
+      `/admin/playlist/:playlistId/${action}`,
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const { playlistId } = request.params;
+
+        if (!playlistId) {
+          reply.status(400).send({
+            success: false,
+            error: 'Playlist ID is required',
+          });
+          return;
+        }
+
+        const result =
+          action === 'unfeature'
+            ? await data.unfeaturePlaylist(playlistId)
+            : await data.refeaturePlaylist(playlistId);
+
+        if (result.success) {
+          reply.send({ success: true });
+        } else {
+          reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+            success: false,
+            error: result.error,
+          });
+        }
+      }
+    );
+  }
 
   // Clear cache for all non-featured playlists (to free Redis memory)
   fastify.post(
@@ -2836,94 +2940,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Discount code management
-  fastify.post(
-    '/admin/discount/create',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const result = await discount.createAdminDiscountCode(request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.get(
-    '/admin/discount/all',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const result = await discount.getAllDiscounts();
-      if (result.success) {
-        reply.send({ success: true, discounts: result.discounts });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.post(
-    '/admin/discount/search',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const { searchTerm = '', filter = '', balanceFilter = '', page = 1, limit = 12 } = request.body;
-      const result = await discount.searchDiscounts({
-        searchTerm,
-        filter,
-        balanceFilter,
-        page: Number(page),
-        limit: Number(limit),
-      });
-      if (result.success) {
-        reply.send({
-          success: true,
-          discounts: result.discounts,
-          total: result.total,
-          page: result.page,
-          totalPages: result.totalPages,
-        });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.delete(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.deleteDiscountCode(id);
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.put(
-    '/admin/discount/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await discount.updateDiscountCode(id, request.body);
-      if (result.success) {
-        reply.send({ success: true, code: result.code });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
+  // Discount code management lives in discountRoutes.ts.
 
   // Event calendar management
   fastify.post(
@@ -3319,6 +3336,58 @@ export default async function adminRoutes(
         reply.send({ success: true });
       } else {
         reply.status(400).send({ success: false, error: result.error });
+      }
+    }
+  );
+
+  // Print & Bind API version toggle (bulk actions): v1 = legacy JSON API,
+  // v2 = REST API. Stored as an app setting so it survives restarts.
+  fastify.get(
+    '/admin/printenbind/api-version',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const info = await PrintEnBind.getInstance().getApiInfo();
+        reply.send({ success: true, ...info });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to read the Print&Bind API version',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/printenbind/api-version',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { version } = request.body || {};
+      if (version !== 'v1' && version !== 'v2') {
+        return reply.status(400).send({
+          success: false,
+          error: "version must be 'v1' or 'v2'",
+        });
+      }
+      try {
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const printEnBind = PrintEnBind.getInstance();
+        if (!printEnBind.apiUrlFor(version)) {
+          return reply.status(400).send({
+            success: false,
+            error: `${
+              version === 'v1' ? 'PRINTENBIND_V1_API_URL' : 'PRINTENBIND_API_URL'
+            } is not set on this server`,
+          });
+        }
+        await printEnBind.setApiVersion(version);
+        reply.send({ success: true, ...(await printEnBind.getApiInfo()) });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to switch the Print&Bind API version',
+        });
       }
     }
   );
@@ -3965,6 +4034,54 @@ export default async function adminRoutes(
         });
       } catch (error: any) {
         console.error('Error getting Excel job status:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get job status',
+        });
+      }
+    }
+  );
+
+  // Create a Spotify playlist in our account from an artist/title Excel sheet.
+  // The sheet is parsed inline; the matching + playlist creation runs in the
+  // background and is polled via the status route (CloudFront 30s limit).
+  fastify.post(
+    '/admin/playlist-from-excel',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const playlistFromExcel = PlaylistFromExcel.getInstance();
+        const upload = await playlistFromExcel.parseUpload(request.parts());
+        const jobId = playlistFromExcel.startJob(upload);
+
+        reply.send({
+          success: true,
+          jobId,
+          playlistName: upload.playlistName,
+          rows: upload.rows.length,
+        });
+      } catch (error: any) {
+        reply.status(400).send({
+          success: false,
+          error: error.message || 'Failed to start playlist creation',
+        });
+      }
+    }
+  );
+
+  fastify.get(
+    '/admin/playlist-from-excel/status/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { jobId } = request.params;
+        const job = await PlaylistFromExcel.getInstance().getJob(jobId);
+        if (!job) {
+          reply.status(404).send({ success: false, error: 'Job not found' });
+          return;
+        }
+        reply.send({ success: true, job });
+      } catch (error: any) {
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to get job status',
@@ -4767,19 +4884,21 @@ export default async function adminRoutes(
     }
   });
 
+  const loadEmailTemplates = (): any[] => {
+    const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
+    const mailJsonPath = path.join(appRoot, '_data', 'mail.json');
+    return JSON.parse(fs.readFileSync(mailJsonPath, 'utf-8')).templates || [];
+  };
+
   // Get email templates from mail.json
   fastify.get(
     '/admin/email-templates',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
-        const mailJsonPath = path.join(appRoot, '_data', 'mail.json');
-        const data = JSON.parse(fs.readFileSync(mailJsonPath, 'utf-8'));
-
         return reply.send({
           success: true,
-          templates: data.templates || []
+          templates: loadEmailTemplates()
         });
       } catch (error: any) {
         console.error('Error loading email templates:', error);
@@ -4797,7 +4916,14 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { paymentId, subject, message, targetLocale } = request.body;
+        const {
+          paymentId,
+          subject,
+          message,
+          targetLocale,
+          templateId,
+          resetJudgedPlaylistIds
+        } = request.body;
 
         // Validate required fields
         if (!paymentId || !subject || !message) {
@@ -4811,6 +4937,7 @@ export default async function adminRoutes(
         const payment = await prisma.payment.findUnique({
           where: { paymentId },
           select: {
+            id: true,
             email: true,
             fullname: true,
             locale: true
@@ -4837,6 +4964,55 @@ export default async function adminRoutes(
           translatedMessage = translated.message;
         }
 
+        // A preset flagged `resetsJudged` in mail.json asks the customer to
+        // change their design, which user-suggestions only allows while that
+        // playlist is not judged. Judged lives per playlist, so the admin
+        // picks which ones to re-open. Reset ahead of the send, so the mail
+        // never points at a locked page; a failed reset sends nothing.
+        const resetsJudged =
+          !!templateId &&
+          loadEmailTemplates().some(
+            (template: any) =>
+              template.id === templateId && template.resetsJudged === true
+          );
+
+        const judgedResetPlaylistIds: number[] =
+          resetsJudged && Array.isArray(resetJudgedPlaylistIds)
+            ? [
+                ...new Set<number>(
+                  resetJudgedPlaylistIds
+                    .map((id: any) => parseInt(id, 10))
+                    .filter((id: number) => Number.isInteger(id))
+                ),
+              ]
+            : [];
+
+        if (judgedResetPlaylistIds.length > 0) {
+          const owned = await prisma.paymentHasPlaylist.count({
+            where: {
+              id: { in: judgedResetPlaylistIds },
+              paymentId: payment.id
+            }
+          });
+
+          if (owned !== judgedResetPlaylistIds.length) {
+            return reply.status(400).send({
+              success: false,
+              error: 'resetJudgedPlaylistIds must all belong to this payment'
+            });
+          }
+
+          for (const paymentHasPlaylistId of judgedResetPlaylistIds) {
+            const reset = await data.resetJudgedStatus(paymentHasPlaylistId);
+            if (!reset.success) {
+              return reply.status(500).send({
+                success: false,
+                error: reset.error || 'Failed to reset judged status'
+              });
+            }
+          }
+        }
+
         // Send email
         await mail.sendCustomMail(
           payment.email,
@@ -4848,7 +5024,8 @@ export default async function adminRoutes(
 
         return reply.send({
           success: true,
-          message: 'Email sent successfully'
+          message: 'Email sent successfully',
+          judgedResetPlaylistIds
         });
       } catch (error: any) {
         console.error('Error sending custom email:', error);
@@ -4948,6 +5125,85 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to update playlist stats'
+        });
+      }
+    }
+  );
+
+  // Find featured playlist covers that no longer load and fetch the current one
+  fastify.post(
+    '/admin/repair-playlist-covers',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await data.repairFeaturedPlaylistCovers();
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error repairing playlist covers:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to repair playlist covers'
+        });
+      }
+    }
+  );
+
+  // SEO descriptions for featured playlists (see seoDescriptions.ts). The run
+  // is started here and polled through the status route: hundreds of
+  // playlists times two model calls does not fit in one request.
+  fastify.get(
+    '/admin/seo-descriptions/status',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const seo = SeoDescriptions.getInstance();
+        const [status, pending] = await Promise.all([
+          seo.getBulkStatus(),
+          seo.countPending(),
+        ]);
+        return reply.send({ success: true, status, pending });
+      } catch (error: any) {
+        console.error('Error reading SEO description status:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to read status'
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/seo-descriptions/run',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const result = await SeoDescriptions.getInstance().startBulkRun();
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error starting SEO description run:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start the run'
+        });
+      }
+    }
+  );
+
+  // Rewrite one playlist's description, whether or not it has one already
+  fastify.post(
+    '/admin/playlist/:playlistId/seo-description',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await SeoDescriptions.getInstance().generateForPlaylist(
+          request.params.playlistId
+        );
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        console.error('Error writing SEO description:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to write the description'
         });
       }
     }
@@ -5239,6 +5495,136 @@ export default async function adminRoutes(
           success: false,
           error: 'Failed to count broken links',
         });
+      }
+    }
+  );
+
+  // Blocked IPs, newest first (admin only)
+  fastify.get(
+    '/admin/blocked-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { ip, reason, limit, offset } = request.query;
+
+        const result = await blockedIp.getBlockedIps({
+          ip,
+          reason,
+          limit: limit ? parseInt(limit) : undefined,
+          offset: offset ? parseInt(offset) : undefined,
+        });
+
+        if (result.success) {
+          return reply.send({
+            success: true,
+            data: result.data,
+            total: result.total,
+          });
+        } else {
+          return reply.status(500).send({ success: false, error: result.error });
+        }
+      } catch (error: any) {
+        console.error('Error fetching blocked ips:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch blocked ips',
+        });
+      }
+    }
+  );
+
+  // Lift a ban (admin only). Clears Redis and the per-IP counters, so the
+  // address is free immediately rather than tripping the limiter again.
+  fastify.post(
+    '/admin/blocked-ips/unblock',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.body?.ip || '').trim();
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().unban(ip);
+      if (result.success) {
+        logger.log(
+          color.green.bold(`Admin unblocked ip=${color.white.bold(ip)}`)
+        );
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // The whitelist: addresses that are never banned (admin only)
+  fastify.get(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const result = await IpAllowlist.getInstance().list();
+      if (result.success) {
+        return reply.send({ success: true, data: result.data });
+      }
+      return reply.status(500).send({ success: false, error: result.error });
+    }
+  );
+
+  // Whitelist an address. Also lifts any ban it currently has, so a customer
+  // who is locked out is let back in straight away.
+  fastify.post(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.body?.ip || '').trim();
+      const note = request.body?.note || null;
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().allow(ip, note);
+      if (result.success) {
+        logger.log(
+          color.green.bold(`Admin whitelisted ip=${color.white.bold(ip)}`)
+        );
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // Take an address off the whitelist (admin only)
+  fastify.delete(
+    '/admin/allowed-ips',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const ip = (request.query?.ip || request.body?.ip || '').trim();
+      if (!ip) {
+        return reply.status(400).send({ success: false, error: 'No IP given' });
+      }
+
+      const result = await AbuseGuard.getInstance().disallow(ip);
+      if (result.success) {
+        return reply.send({ success: true });
+      }
+      return reply.status(400).send({ success: false, error: result.error });
+    }
+  );
+
+  // Delete a blocked IP record (admin only). Bookkeeping only: the ban itself
+  // lives in Redis and expires on its own.
+  fastify.delete(
+    '/admin/blocked-ips/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: 'Invalid id' });
+      }
+
+      const result = await blockedIp.deleteBlockedIp(id);
+      if (result.success) {
+        return reply.send({ success: true });
+      } else {
+        return reply.status(500).send({ success: false, error: result.error });
       }
     }
   );
@@ -5726,6 +6112,47 @@ export default async function adminRoutes(
     }
   );
 
+  // Everyone a shipment label can go to: each company plus the users on its
+  // Contacts tab. Contacts have no address of their own, they ship to the
+  // company's.
+  fastify.get(
+    '/admin/shipment-labels/recipients',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const companies = await prisma.company.findMany({
+          orderBy: [{ test: 'asc' }, { name: 'asc' }],
+          select: {
+            id: true,
+            name: true,
+            test: true,
+            address: true,
+            housenumber: true,
+            city: true,
+            zipcode: true,
+            countrycode: true,
+            contact: true,
+            contactemail: true,
+            User: {
+              orderBy: { displayName: 'asc' },
+              select: { id: true, displayName: true, email: true },
+            },
+          },
+        });
+
+        return reply.send({
+          companies: companies.map(({ User, ...company }) => ({
+            ...company,
+            contacts: User,
+          })),
+        });
+      } catch (error: any) {
+        logger.log(color.red.bold(`Error loading shipment label recipients: ${error.message}`));
+        return reply.status(500).send({ error: 'Failed to load recipients' });
+      }
+    }
+  );
+
   // Create PostNL shipment labels for selected companies
   fastify.post(
     '/admin/shipment-labels',
@@ -5752,6 +6179,17 @@ export default async function adminRoutes(
       reply.header('Content-Type', 'application/pdf');
       reply.header('Content-Disposition', `attachment; filename="shipment_labels_${Date.now()}.pdf"`);
       return reply.send(result.pdfBuffer);
+    }
+  );
+
+  // Full Google Fonts catalogue for the admin-only font picker in the card
+  // designer. Customers keep the fixed list from GET /fonts.
+  fastify.get(
+    '/admin/google-fonts',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const fonts = await GoogleFonts.getInstance().getCatalogue();
+      return sendCatalogue(request, reply, { success: true, data: fonts });
     }
   );
 }

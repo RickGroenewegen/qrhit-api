@@ -8,6 +8,8 @@ export interface Playlist {
   customImage?: string | null;
   design?: any;
   featured?: boolean;
+  /** ISO timestamp of the catalogue row; featured lookups only. */
+  createdAt?: string | null;
   decadePercentage0?: number;
   decadePercentage1900?: number;
   decadePercentage1950?: number;

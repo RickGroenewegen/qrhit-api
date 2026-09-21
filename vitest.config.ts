@@ -14,12 +14,17 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 15000,
     hookTimeout: 60000,
+    // Vitest 5 clears every mock's call history before each test by default.
+    // Suites here assert on calls recorded at import or in beforeAll (cron
+    // registration, directory creation in constructors), so keep v4 behaviour.
+    clearMocks: false,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'html', 'json-summary'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/app.ts',
+        'src/bootstrap.ts',
         'src/worker.ts',
         'src/locales/**',
         'src/templates/**',

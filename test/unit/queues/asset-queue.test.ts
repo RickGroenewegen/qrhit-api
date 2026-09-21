@@ -279,7 +279,7 @@ describe('processor (gemini path)', () => {
 });
 
 describe('processor (openai path)', () => {
-  it('generates images via images.edit with gpt-image-2', async () => {
+  it('generates images via images.edit with gpt-image-2.5-sunburst', async () => {
     holder.imagesEdit.mockResolvedValue({
       data: [{ b64_json: FAKE_IMAGE_B64 }],
     });
@@ -294,7 +294,7 @@ describe('processor (openai path)', () => {
     expect(holder.imagesEdit).toHaveBeenCalledTimes(7);
 
     const firstCall = holder.imagesEdit.mock.calls[0][0];
-    expect(firstCall.model).toBe('gpt-image-2');
+    expect(firstCall.model).toBe('gpt-image-2.5-sunburst');
     expect(firstCall.size).toBe('1024x1024');
     // First call: 1 branding + 1 product image
     expect(firstCall.image).toHaveLength(2);

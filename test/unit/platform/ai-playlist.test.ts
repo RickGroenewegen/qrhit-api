@@ -115,11 +115,14 @@ import AIPlaylistGenerator, {
 import { CostTracker } from '../../../src/aiPricing';
 
 const gen = AIPlaylistGenerator.getInstance();
-const MODEL = 'gpt-5.4-mini';
+const MODEL = 'gpt-5.6-luna';
 
-/** Chat completion carrying a single function tool call + usage. */
+/**
+ * Chat completion carrying a structured (json_schema) output + usage. The
+ * schema name is accepted for readability only.
+ */
 function toolCallResponse(
-  name: string,
+  _name: string,
   args: unknown,
   usage: { prompt_tokens: number; completion_tokens: number },
   rawArgs?: string
@@ -128,12 +131,7 @@ function toolCallResponse(
     choices: [
       {
         message: {
-          tool_calls: [
-            {
-              type: 'function',
-              function: { name, arguments: rawArgs ?? JSON.stringify(args) },
-            },
-          ],
+          content: rawArgs ?? JSON.stringify(args),
         },
       },
     ],
@@ -142,7 +140,7 @@ function toolCallResponse(
 }
 
 const noToolCallResponse = (usage = { prompt_tokens: 5, completion_tokens: 1 }) => ({
-  choices: [{ message: { content: 'no tool call' } }],
+  choices: [{ message: { content: null } }],
   usage,
 });
 
@@ -342,10 +340,9 @@ describe('thinkKeywords (private)', () => {
 
     const payload = h.createMock.mock.calls[0][0];
     expect(payload.model).toBe(MODEL);
-    expect(payload.tool_choice).toEqual({
-      type: 'function',
-      function: { name: 'returnKeywords' },
-    });
+    expect(payload.reasoning_effort).toBe('none');
+    expect(payload.tools).toBeUndefined();
+    expect(payload.response_format.type).toBe('json_schema');
     const system = payload.messages[0];
     expect(system.role).toBe('system');
     expect(system.content).toContain('KEYWORD RULES — CRITICAL');
@@ -356,8 +353,8 @@ describe('thinkKeywords (private)', () => {
     expect(user.content).toContain('Theme:\nDutch 90s hits');
     expect(user.content).toContain('User locale: nl');
     expect(user.content).toContain('max 100');
-    expect(payload.tools[0].function.name).toBe('returnKeywords');
-    expect(payload.tools[0].function.parameters.required).toEqual([
+    expect(payload.response_format.json_schema.name).toBe('returnKeywords');
+    expect(payload.response_format.json_schema.schema.required).toEqual([
       'title',
       'keywords',
       'artistKeywords',
@@ -527,7 +524,7 @@ describe('expandKeywords (private)', () => {
     expect(out).toEqual([{ value: 'Agnetha', target: 'any' }]);
 
     const payload = h.createMock.mock.calls[0][0];
-    expect(payload.tool_choice.function.name).toBe('returnMoreKeywords');
+    expect(payload.response_format.json_schema.name).toBe('returnMoreKeywords');
     expect(payload.messages[1].content).toContain(
       'Already tried (do not repeat any of these):\nabba, nobody'
     );
@@ -681,7 +678,7 @@ describe('run (happy path)', () => {
 
     // Curation prompt: theme, year hint, quota, tab-separated candidates.
     const curatePayload = h.createMock.mock.calls[1][0];
-    expect(curatePayload.tool_choice.function.name).toBe('returnPicks');
+    expect(curatePayload.response_format.json_schema.name).toBe('returnPicks');
     expect(curatePayload.messages[0].content).toContain('SELECTIVE MODE');
     expect(curatePayload.messages[1].content).toContain(`Theme:\n${PROMPT}`);
     expect(curatePayload.messages[1].content).toContain('from 1990–1999');
@@ -714,7 +711,7 @@ describe('run (happy path)', () => {
     );
 
     // Final AISearch row: status, delivered count, keywords, year range and
-    // the real CostTracker math (3000 in + 300 out tokens of gpt-5.4-mini).
+    // the real CostTracker math (3000 in + 300 out tokens of gpt-5.6-luna).
     expect(h.prismaMock.aISearch.update).toHaveBeenCalledWith({
       where: { jobId: JOB },
       data: expect.objectContaining({
@@ -729,8 +726,8 @@ describe('run (happy path)', () => {
         spotifyPlaylistUrl: 'https://open.spotify.com/playlist/PL1',
         inputTokens: 3000,
         outputTokens: 300,
-        // 3000/1e6*0.75 + 300/1e6*4.5
-        totalCostUsd: 0.0036,
+        // 3000/1e6*0.2 + 300/1e6*1.2
+        totalCostUsd: 0.00096,
         durationMs: expect.any(Number),
       }),
     });
@@ -858,7 +855,7 @@ describe('run (keyword expansion)', () => {
           inputTokens: 390,
           outputTokens: 65,
           totalCostUsd: parseFloat(
-            ((390 / 1e6) * 0.75 + (65 / 1e6) * 4.5).toFixed(6)
+            ((390 / 1e6) * 0.2 + (65 / 1e6) * 1.2).toFixed(6)
           ),
           // NOTE: actual behavior — only the FIRST-round keywords are
           // persisted; expansion keywords (Agnetha) are not.
@@ -954,7 +951,7 @@ describe('run (error paths)', () => {
       // still counts toward cost.
       inputTokens: 5,
       outputTokens: 1,
-      totalCostUsd: parseFloat(((5 / 1e6) * 0.75 + (1 / 1e6) * 4.5).toFixed(6)),
+      totalCostUsd: parseFloat(((5 / 1e6) * 0.2 + (1 / 1e6) * 1.2).toFixed(6)),
     });
     // No keywords gathered → JsonNull sentinel.
     expect(data.keywords).toBe(Prisma.JsonNull);

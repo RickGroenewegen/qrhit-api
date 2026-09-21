@@ -39,7 +39,11 @@ vi.mock('../../../src/qr', async () => {
 });
 vi.mock('../../../src/pdf', async () => {
   const { h } = await import('./harness');
-  return { default: function () { return h.pdf; } };
+  const actual = await vi.importActual<typeof import('../../../src/pdf')>('../../../src/pdf');
+  return {
+    default: function () { return h.pdf; },
+    forcedPrinterTemplate: actual.forcedPrinterTemplate,
+  };
 });
 vi.mock('../../../src/order', async () => {
   const { h } = await import('./harness');
@@ -326,7 +330,7 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true },
+      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
     });
     const push = outbound.calls('PushoverClient', 'sendMessage');
     expect(push[0].args[0]).toMatchObject({
@@ -415,7 +419,7 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true },
+      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
     });
   });
 
@@ -518,6 +522,110 @@ describe('runSendToPrinterPass()', () => {
         suggestionWarningSent: true,
         suggestionWarningSentAt: expect.any(Date),
       },
+    });
+  });
+
+  describe('customer mail about open corrections', () => {
+    const warnedPayment = {
+      id: 12,
+      paymentId: 'pay_3',
+      orderId: '100000012',
+      fullname: 'Rick',
+      email: 'r@t.test',
+      locale: 'nl',
+      userId: 7,
+      user: { hash: 'hash7' },
+    };
+
+    function arrangeBlocked(line: { suggestionsPending: boolean }) {
+      h.prisma.payment.findMany
+        .mockResolvedValueOnce([
+          {
+            paymentId: 'pay_3',
+            PaymentHasPlaylist: [{ ...line, playlistId: 21 }],
+          },
+        ])
+        .mockResolvedValueOnce([warnedPayment]);
+      h.prisma.userSuggestion.count.mockResolvedValue(3);
+    }
+
+    it('links the correction form of each playlist with unapproved corrections', async () => {
+      arrangeBlocked({ suggestionsPending: false });
+      h.prisma.paymentHasPlaylist.findMany.mockResolvedValue([
+        {
+          type: 'physical',
+          playlist: { id: 21, playlistId: 'sp_21', name: 'Party Mix' },
+        },
+        {
+          type: 'physical',
+          playlist: { id: 22, playlistId: 'sp_22', name: 'Untouched Mix' },
+        },
+      ]);
+      h.prisma.userSuggestion.groupBy.mockResolvedValue([
+        { playlistId: 21, _count: { _all: 3 } },
+      ]);
+
+      await gen.runSendToPrinterPass();
+
+      // Only the customer's own corrections count, and only on lines that
+      // are not already waiting for us
+      expect(h.prisma.paymentHasPlaylist.findMany.mock.calls[0][0].where).toEqual({
+        paymentId: 12,
+        suggestionsPending: false,
+      });
+      expect(h.prisma.userSuggestion.groupBy.mock.calls[0][0].where).toEqual({
+        userId: 7,
+        playlistId: { in: [21, 22] },
+      });
+
+      const mails = outbound.calls('Mail', 'sendOpenCorrectionsMail');
+      expect(mails).toHaveLength(1);
+      expect(mails[0].args[0]).toEqual({
+        email: 'r@t.test',
+        fullname: 'Rick',
+        locale: 'nl',
+        orderId: '100000012',
+      });
+      expect(mails[0].args[1]).toEqual([
+        {
+          name: 'Party Mix',
+          link: `${process.env['FRONTEND_URI']}/nl/usersuggestions/pay_3/hash7/sp_21/0`,
+        },
+      ]);
+      expect(h.prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 12 },
+        data: {
+          suggestionWarningSent: true,
+          suggestionWarningSentAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('passes no playlists when the corrections are submitted and wait for us', async () => {
+      arrangeBlocked({ suggestionsPending: true });
+      // every line is filtered out by suggestionsPending: false
+      h.prisma.paymentHasPlaylist.findMany.mockResolvedValue([]);
+
+      await gen.runSendToPrinterPass();
+
+      expect(outbound.calls('Mail', 'sendOpenCorrectionsMail')).toHaveLength(0);
+      expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(1);
+    });
+
+    it('still records the warning when the mail lookup throws', async () => {
+      arrangeBlocked({ suggestionsPending: false });
+      h.prisma.paymentHasPlaylist.findMany.mockRejectedValue(new Error('db down'));
+
+      await gen.runSendToPrinterPass();
+
+      expect(outbound.calls('Mail', 'sendOpenCorrectionsMail')).toHaveLength(0);
+      expect(h.prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 12 },
+        data: {
+          suggestionWarningSent: true,
+          suggestionWarningSentAt: expect.any(Date),
+        },
+      });
     });
   });
 

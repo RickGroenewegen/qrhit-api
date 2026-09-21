@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const h = vi.hoisted(() => ({
   clearPlaylistCache: vi.fn(async () => undefined),
+  createSiteMap: vi.fn(async () => ({ locales: 0, urls: 0 })),
 }));
 
 vi.mock('../../../src/spotify', () => ({
@@ -22,6 +23,7 @@ vi.mock('../../../src/spotify', () => ({
 
 vi.mock('../../../src/data/misc', () => ({
   clearPlaylistCache: h.clearPlaylistCache,
+  createSiteMap: h.createSiteMap,
 }));
 
 import {
@@ -33,6 +35,9 @@ import {
   updatePlaylistFeatured,
   updateFeaturedHidden,
   updateFeaturedLocale,
+  updateShareDesign,
+  unfeaturePlaylist,
+  refeaturePlaylist,
   updatePromotionalPlaylist,
   acceptPromotionalPlaylist,
   declinePromotionalPlaylist,
@@ -62,6 +67,9 @@ function makeDeps() {
     set: vi.fn(async (k: string, v: string) => {
       cacheStore.set(k, v);
     }),
+    del: vi.fn(async (k: string) => {
+      cacheStore.delete(k);
+    }),
     delPattern: vi.fn(async () => 0),
   };
   return {
@@ -82,6 +90,7 @@ function makeDeps() {
 
 beforeEach(() => {
   h.clearPlaylistCache.mockClear();
+  h.createSiteMap.mockClear();
 });
 
 describe('getFeaturedPlaylists', () => {
@@ -159,7 +168,7 @@ describe('getFeaturedPlaylists', () => {
         id: 3,
         name: 'N',
         description: null,
-        description_en: 'fallback EN',
+        descriptionEnFallback: 'fallback EN',
         isPromotional: 0,
         genreId: null,
       },
@@ -167,6 +176,8 @@ describe('getFeaturedPlaylists', () => {
 
     const result = await getFeaturedPlaylists(deps, 'de');
     expect(result[0].description).toBe('B:fallback EN');
+    // The helper column never leaks into the cached/returned row.
+    expect(result[0]).not.toHaveProperty('descriptionEnFallback');
   });
 
   it('invalid locale falls back to en columns and cache key', async () => {
@@ -351,13 +362,19 @@ describe('searchFeaturedPlaylists', () => {
     });
 
     const approvedArgs = prisma.playlist.findMany.mock.calls[1][0];
+    // Removed playlists (unfeaturedAt set) stay listed so they can come back;
+    // the search must AND with that, not replace it.
     expect(approvedArgs.where).toEqual({
-      featured: true,
-      NOT: { promotionalActive: true, promotionalAccepted: false },
-      OR: [
-        { name: { contains: 'abc' } },
-        { promotionalTitle: { contains: 'abc' } },
+      AND: [
+        { OR: [{ featured: true }, { unfeaturedAt: { not: null } }] },
+        {
+          OR: [
+            { name: { contains: 'abc' } },
+            { promotionalTitle: { contains: 'abc' } },
+          ],
+        },
       ],
+      NOT: { promotionalActive: true, promotionalAccepted: false },
       featuredLocale: 'de',
     });
     expect(approvedArgs.orderBy).toEqual({ name: 'asc' });
@@ -457,6 +474,9 @@ describe('searchFeaturedPlaylists', () => {
           promotionalDescription: 'Pending desc',
           promotionalLocale: 'nl',
           promotionalUserId: 12,
+          // The customer's own card design, which they chose not to show.
+          design: { backgroundImage: 'wedding.png' },
+          promotionalShareDesign: false,
         },
       ])
       .mockResolvedValueOnce([]);
@@ -477,6 +497,10 @@ describe('searchFeaturedPlaylists', () => {
         locale: 'nl',
         userEmail: 'u@x',
         userDisplayName: 'U',
+        // The admin sees that there is a design and what was chosen, never
+        // the design itself.
+        hasDesign: true,
+        shareDesign: false,
       },
     ]);
   });
@@ -654,6 +678,60 @@ describe('updatePlaylistFeatured', () => {
   });
 });
 
+describe('unfeaturePlaylist / refeaturePlaylist', () => {
+  it('unfeature clears featured, stamps unfeaturedAt, flushes the playlist caches by id and slug and rebuilds the sitemap', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'gone-list' });
+
+    const res = await unfeaturePlaylist(deps, 'pl1');
+
+    expect(res).toEqual({ success: true });
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: {
+        featured: false,
+        unfeaturedAt: expect.any(Date),
+        markedForMerchantCenter: true,
+      },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'gone-list');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('refeature restores featured and clears unfeaturedAt', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'back-again' });
+
+    expect(await refeaturePlaylist(deps, 'pl1')).toEqual({ success: true });
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: { featured: true, unfeaturedAt: null, markedForMerchantCenter: true },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'back-again');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('reports an unknown playlist without touching anything', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue(null);
+
+    expect(await unfeaturePlaylist(deps, 'nope')).toEqual({
+      success: false,
+      error: 'Playlist not found',
+    });
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
+    expect(h.createSiteMap).not.toHaveBeenCalled();
+  });
+
+  it('reports errors instead of throwing', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ id: 7, slug: 'x' });
+    prisma.playlist.update.mockRejectedValue(new Error('db'));
+
+    expect(await unfeaturePlaylist(deps, 'pl1')).toEqual({ success: false, error: 'db' });
+  });
+});
+
 describe('updateFeaturedHidden / updateFeaturedLocale', () => {
   it('updateFeaturedHidden updates and busts the featured cache', async () => {
     const { deps, prisma, cache } = makeDeps();
@@ -670,8 +748,9 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     );
   });
 
-  it('updateFeaturedLocale updates (null allowed) and busts the featured cache', async () => {
+  it('updateFeaturedLocale updates (null allowed), busts the page and locale-gate caches and rebuilds the sitemap', async () => {
     const { deps, prisma, cache } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ slug: 'my-list' });
 
     const res = await updateFeaturedLocale(deps, 'pl1', null);
 
@@ -680,9 +759,25 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
       where: { playlistId: 'pl1' },
       data: { featuredLocale: null, markedForMerchantCenter: true },
     });
-    expect(cache.delPattern).toHaveBeenCalledWith(
-      `${CACHE_KEY_FEATURED_PLAYLISTS}*`
-    );
+    // The locale decides which locales serve the product page and which
+    // sitemaps list it, so all three follow the change.
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
+    expect(cache.del).toHaveBeenCalledWith('productPageLocales_my-list');
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('updateShareDesign stores the admin override and drops the cached product page', async () => {
+    const { deps, prisma } = makeDeps();
+
+    const res = await updateShareDesign(deps, 'pl1', false);
+
+    expect(res).toEqual({ success: true });
+    // The design itself is left in place, so it can be switched back on.
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { playlistId: 'pl1' },
+      data: { promotionalShareDesign: false },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
   });
 
   it('both report errors instead of throwing', async () => {
@@ -753,6 +848,8 @@ describe('updatePromotionalPlaylist', () => {
       },
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'old-slug');
+    // Both the old and the current slug drop out of the locale gate.
+    expect(deps.cache.del).toHaveBeenCalledWith('productPageLocales_old-slug');
   });
 
   it('a whitespace-only slug is ignored (no duplicate check, no slug update)', async () => {

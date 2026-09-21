@@ -657,5 +657,17 @@
   "design_alter.imageCardFront": "Kortets framsida",
   "design_alter.imageCardBack": "Kortets baksida",
   "design_alter.imageBoxFront": "Boxinlägg (fram)",
-  "design_alter.imageBoxBack": "Boxinlägg (bak)"
+  "design_alter.imageBoxBack": "Boxinlägg (bak)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattkod {{code}}",
+  "open_corrections.subject": "Åtgärd krävs: godkänn ändringarna för order {{ orderId }}",
+  "open_corrections.title": "Din order väntar på ditt godkännande",
+  "open_corrections.hello": "Hej",
+  "open_corrections.intro": "Granskningsperioden för din order är slut och normalt skulle vi nu skicka dina kort till tryck. Du har gjort ändringar som du ännu inte har godkänt, så vi har pausat din order.",
+  "open_corrections.whatToDo": "Vi trycker aldrig ändringar som du inte har bekräftat. Öppna korrigeringsformuläret med knappen nedan, kontrollera ändringarna och godkänn dem där. Din order går till tryck direkt efteråt.",
+  "open_corrections.buttonText": "Öppna korrigeringsformuläret",
+  "open_corrections.buttonFallback": "Om knappen inte fungerar, kopiera och klistra in länken i din webbläsare:",
+  "open_corrections.questions": "Om du har några frågor, svara bara på mejlet så hjälper vi dig.",
+  "open_corrections.thanks": "Tack",
+  "open_corrections.team": "QRSong!-teamet"
 }

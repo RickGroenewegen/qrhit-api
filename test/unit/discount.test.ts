@@ -75,7 +75,7 @@ function makePrismaImpls() {
 
 const prismaMock = {
   discountCode: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn() },
+  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   $transaction: vi.fn(),
 };
 
@@ -336,21 +336,37 @@ describe('Discount.removeDiscountUsesByPaymentId', () => {
 // associatePaymentWithDiscountUse
 // ──────────────────────────────────────────────
 
-describe('Discount.associatePaymentWithDiscountUse', () => {
-  it('updates the discountUse with paymentId', async () => {
+describe('Discount.attachPaymentToDiscountUses', () => {
+  it('binds the reserved rows to the payment', async () => {
+    prismaMock.discountCodedUses.updateMany.mockResolvedValueOnce({ count: 1 });
     const svc = makeSvc();
-    const res = await svc.associatePaymentWithDiscountUse(7, 99);
-    expect(res.success).toBe(true);
-    expect(prismaMock.discountCodedUses.update).toHaveBeenCalledWith({
-      where: { id: 7 },
+    await svc.attachPaymentToDiscountUses([7], 99);
+    expect(prismaMock.discountCodedUses.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: [7] } },
       data: { paymentId: 99 },
     });
   });
 
-  it('returns error on exception', async () => {
-    prismaMock.discountCodedUses.update.mockRejectedValueOnce(new Error('fail'));
+  it('does nothing for an empty id list', async () => {
     const svc = makeSvc();
-    const res = await svc.associatePaymentWithDiscountUse(7, 99);
+    await svc.attachPaymentToDiscountUses([], 99);
+    expect(prismaMock.discountCodedUses.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('Discount.releaseDiscountUsesByPaymentId', () => {
+  it('marks the rows released without deleting them', async () => {
+    prismaMock.discountCodedUses.updateMany.mockResolvedValueOnce({ count: 2 });
+    const svc = makeSvc();
+    const res = await svc.releaseDiscountUsesByPaymentId(99);
+    expect(res).toEqual({ success: true, count: 2, message: 'discountUsesReleasedSuccessfully' });
+    expect(prismaMock.discountCodedUses.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('returns error on exception', async () => {
+    prismaMock.discountCodedUses.updateMany.mockRejectedValueOnce(new Error('fail'));
+    const svc = makeSvc();
+    const res = await svc.releaseDiscountUsesByPaymentId(99);
     expect(res.success).toBe(false);
   });
 });
@@ -444,5 +460,144 @@ describe('Discount.checkDiscount', () => {
     expect(res.success).toBe(true);
     expect(res.fullAmount).toBe(20);
     expect(res.amountLeft).toBe(15);
+  });
+});
+
+// ──────────────────────────────────────────────
+// getAppOffer
+// ──────────────────────────────────────────────
+
+describe('Discount.getAppOffer', () => {
+  const live = {
+    id: 1,
+    code: 'JUMPSHIP',
+    type: 'percent',
+    percent: 10,
+    oncePerCustomer: true,
+    startDate: null,
+    endDate: null,
+  };
+
+  it('returns the evergreen percent code', async () => {
+    discountCodeStore.set('JUMPSHIP', live);
+    const svc = makeSvc();
+    const res = await svc.getAppOffer();
+    expect(res).toEqual({
+      success: true,
+      code: 'JUMPSHIP',
+      percent: 10,
+      endDate: null,
+    });
+  });
+
+  it('reports no offer when the code does not exist', async () => {
+    const svc = makeSvc();
+    expect(await svc.getAppOffer()).toEqual({ success: false });
+  });
+
+  it('reports no offer for a fixed voucher', async () => {
+    // Guards against the code being repurposed as a EUR balance voucher: the
+    // app would otherwise advertise "10% off" for a code that discounts euros.
+    discountCodeStore.set('JUMPSHIP', {
+      ...live,
+      type: 'fixed',
+      percent: null,
+      amount: 25,
+    });
+    const svc = makeSvc();
+    expect(await svc.getAppOffer()).toEqual({ success: false });
+  });
+
+  it('reports no offer once the code has expired', async () => {
+    discountCodeStore.set('JUMPSHIP', {
+      ...live,
+      endDate: new Date(Date.now() - 86400000),
+    });
+    const svc = makeSvc();
+    expect(await svc.getAppOffer()).toEqual({ success: false });
+  });
+
+  it('reports no offer before the code starts', async () => {
+    discountCodeStore.set('JUMPSHIP', {
+      ...live,
+      startDate: new Date(Date.now() + 86400000),
+    });
+    const svc = makeSvc();
+    expect(await svc.getAppOffer()).toEqual({ success: false });
+  });
+
+  it('serves a second call from cache without hitting the database again', async () => {
+    discountCodeStore.set('JUMPSHIP', live);
+    const svc = makeSvc();
+    await svc.getAppOffer();
+    const callsAfterFirst = prismaMock.discountCode.findUnique.mock.calls.length;
+    const res = await svc.getAppOffer();
+    expect(res.success).toBe(true);
+    expect(prismaMock.discountCode.findUnique.mock.calls.length).toBe(
+      callsAfterFirst
+    );
+  });
+
+  it('honours APP_OFFER_CODE so the offer can be swapped without a release', async () => {
+    const previous = process.env['APP_OFFER_CODE'];
+    process.env['APP_OFFER_CODE'] = 'otherdeck';
+    discountCodeStore.set('OTHERDECK', { ...live, code: 'OTHERDECK', percent: 15 });
+    try {
+      const svc = makeSvc();
+      const res = await svc.getAppOffer();
+      expect(res).toMatchObject({ success: true, code: 'OTHERDECK', percent: 15 });
+    } finally {
+      if (previous === undefined) delete process.env['APP_OFFER_CODE'];
+      else process.env['APP_OFFER_CODE'] = previous;
+    }
+  });
+});
+
+// ──────────────────────────────────────────────
+// normalizeEmailForLimit (oncePerCustomer bypass)
+// ──────────────────────────────────────────────
+
+describe('normalizeEmailForLimit', () => {
+  let normalize: typeof import('../../src/discount').normalizeEmailForLimit;
+
+  beforeEach(async () => {
+    normalize = (await import('../../src/discount')).normalizeEmailForLimit;
+  });
+
+  it('collapses plus-addressing to one identity', async () => {
+    // The bypass this exists to close: same inbox, three strings.
+    expect(normalize('rick@west14.com')).toBe('rick@west14.com');
+    expect(normalize('rick+try2@west14.com')).toBe('rick@west14.com');
+    expect(normalize('rick+anything.at.all@west14.com')).toBe('rick@west14.com');
+  });
+
+  it('lowercases and trims', async () => {
+    expect(normalize('  Rick+Try2@West14.COM ')).toBe('rick@west14.com');
+  });
+
+  it('ignores dots for Gmail only', async () => {
+    expect(normalize('r.i.c.k@gmail.com')).toBe('rick@gmail.com');
+    expect(normalize('rick@googlemail.com')).toBe('rick@gmail.com');
+    // Elsewhere a dot can separate two real people - do not merge them.
+    expect(normalize('r.ick@west14.com')).toBe('r.ick@west14.com');
+  });
+
+  it('returns null for an empty address', async () => {
+    expect(normalize('')).toBeNull();
+    expect(normalize(null)).toBeNull();
+    expect(normalize(undefined)).toBeNull();
+  });
+
+  it('falls back to the raw string for malformed input rather than dropping the limit', async () => {
+    expect(normalize('notanemail')).toBe('notanemail');
+    expect(normalize('@west14.com')).toBe('@west14.com');
+    expect(normalize('rick@')).toBe('rick@');
+    // Local part that is nothing but a tag must not normalise to "@domain".
+    expect(normalize('+tag@west14.com')).toBe('+tag@west14.com');
+  });
+
+  it('keeps genuinely different people apart', async () => {
+    expect(normalize('rick@west14.com')).not.toBe(normalize('rob@west14.com'));
+    expect(normalize('rick@west14.com')).not.toBe(normalize('rick@other.com'));
   });
 });

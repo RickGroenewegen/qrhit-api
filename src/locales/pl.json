@@ -355,7 +355,7 @@
   "voucher.transform": "Zamień ulubione playlisty Spotify na interaktywne karty muzyczne na imprezy, wieczory gier z przyjaciółmi i quizy muzyczne!",
   "voucher.title": "Bon podarunkowy",
   "voucher.turn": "Zacznij tworzyć własne karty muzyczne w kilka minut!",
-  "voucher.claim": "Odbierz swój bon podarunkowy!",
+  "voucher.claim": "Zgarnij swój voucher!",
   "voucher.goTo": "Idź do",
   "voucher.click": "Kliknij 'Karty podarunkowe'",
   "voucher.enterCode": "Wpisz kod vouchera i kliknij 'Zrealizuj'",
@@ -663,5 +663,17 @@
   "design_alter.imageCardFront": "Przód karty",
   "design_alter.imageCardBack": "Tył karty",
   "design_alter.imageBoxFront": "Wkładka pudełka (przód)",
-  "design_alter.imageBoxBack": "Wkładka pudełka (tył)"
+  "design_alter.imageBoxBack": "Wkładka pudełka (tył)",
+  "invoice.discountPercentLine": "Zniżka {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Kod zniżkowy {{code}}",
+  "open_corrections.subject": "Wymagane działanie: zatwierdź zmiany w zamówieniu {{ orderId }}",
+  "open_corrections.title": "Twoje zamówienie czeka na zatwierdzenie",
+  "open_corrections.hello": "Cześć",
+  "open_corrections.intro": "Okres sprawdzania zamówienia dobiegł końca i zwykle wysłalibyśmy już Twoje karty do druku. Masz jednak niezatwierdzone zmiany, dlatego wstrzymaliśmy zamówienie.",
+  "open_corrections.whatToDo": "Nigdy nie drukujemy zmian bez Twojego potwierdzenia. Otwórz formularz korekty przyciskiem poniżej, sprawdź zmiany i zatwierdź je. Zaraz potem zamówienie trafi do druku.",
+  "open_corrections.buttonText": "Otwórz formularz korekty",
+  "open_corrections.buttonFallback": "Jeśli przycisk nie działa, skopiuj ten link i wklej go do przeglądarki:",
+  "open_corrections.questions": "Jeśli masz pytania, odpowiedz na tego e-maila, a chętnie Ci pomożemy.",
+  "open_corrections.thanks": "Dzięki",
+  "open_corrections.team": "Zespół QRSong!"
 }

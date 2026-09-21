@@ -910,7 +910,7 @@ describe('Spotify.searchTracks', () => {
     );
     expect(res.success).toBe(true);
     expect(res.data.tracks).toEqual([
-      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', image: 'cover' },
+      { id: 's1', trackId: 's1', name: 'Hit', artist: 'Star', artists: ['Star'], image: 'cover' },
     ]);
     expect(res.data).toMatchObject({
       totalCount: 25,
@@ -1021,6 +1021,35 @@ describe('Spotify.resolveSpotifyUrl', () => {
     const sub = await spotify.resolveSpotifyUrl('https://sub.q.me-qr.com/x');
     expect(sub.blacklisted).toBe(true);
     expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it('refuses any host with "qr" in its name', async () => {
+    for (const url of [
+      'https://qrco.de/bfXyz',
+      'https://www.qr-code-generator.com/a',
+      'HTTPS://Scan.MyQR.Example/x',
+      'https://evilqrsong.io/x',
+      'https://qrsong.io.evil.com/x',
+      'https://api.qrsong.io/qr_url2?link=https%3A%2F%2Fqrto.org%2Fabc',
+    ]) {
+      const res = await spotify.resolveSpotifyUrl(url);
+      expect(res, url).toMatchObject({ success: false, blacklisted: true });
+    }
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it('does not blacklist our own domain or "qr" outside the host', async () => {
+    axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
+    for (const url of [
+      'https://api.qrsong.io/qr2/123/abc',
+      'https://qrsong.io/x',
+      'https://api.qrsong.io./qr2/123/abc',
+      'https://example.com/qr/abc?ref=qr',
+    ]) {
+      const res = await spotify.resolveSpotifyUrl(url);
+      expect(res.blacklisted, url).toBeUndefined();
+    }
+    expect(axiosGet).toHaveBeenCalled();
   });
 
   it('extracts the URI from a direct Spotify track URL (protocol added when missing)', async () => {

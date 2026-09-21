@@ -8,12 +8,12 @@ import Translation from '../translation';
 import Utils from '../utils';
 import {
   getYearFontSize,
-  getGoogleFontWeights,
   getGoogleFontName,
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
-import { isMultiCardTemplate } from '../pdf';
+import GoogleFonts from '../googleFonts';
+import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
 import { maxCardsFor } from '../config/constants';
 
 import fs from 'fs/promises';
@@ -21,6 +21,7 @@ import { color } from 'console-log-colors';
 import Formatters from '../formatters';
 import Logger from '../logger';
 import Fx from '../services/fx';
+import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -279,41 +280,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Check discount
-  fastify.post('/discount/:code/:digital', async (request: any, reply: any) => {
-    const result = await discount.checkDiscount(
-      request.params.code,
-      request.body.token,
-      utils.parseBoolean(request.params.digital)
-    );
-    reply.send(result);
-  });
-
-  // Get voucher
-  fastify.get(
-    '/discount/voucher/:type/:code/:paymentId',
-    async (request: any, reply: any) => {
-      const { type, code, paymentId } = request.params;
-      const discountDetails = await discount.getDiscountDetails(code);
-      const payment = await mollie.getPayment(paymentId);
-      if (discountDetails) {
-        try {
-          const translations = await translation.getTranslationsByPrefix(
-            payment.locale,
-            'voucher'
-          );
-          await reply.view(`voucher_${type}.ejs`, {
-            discount: discountDetails,
-            translations,
-          });
-        } catch (error) {
-          reply.status(500).send({ error: 'Internal Server Error' });
-        }
-      } else {
-        reply.status(404).send({ error: 'Code not found' });
-      }
-    }
-  );
+  // Discount check / validate / voucher routes live in discountRoutes.ts.
 
   // Invoice
   fastify.get('/invoice/:paymentId', async (request: any, reply) => {
@@ -354,21 +321,35 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         ? 1
         : presentmentTotal / payment.totalPrice;
     const moneyFormatter = formatters.currencyFormatter(invoiceCurrency);
+    const translations = await translation.getTranslationsByPrefix(
+      payment.locale,
+      'invoice'
+    );
+
+    // Payments written with the discount-aware math carry a snapshot the
+    // line builder renders from; older rows keep the legacy template block.
+    const invoice =
+      (payment.pricingVersion || 1) >= 2
+        ? buildInvoiceLines(
+            payment,
+            playlists,
+            orderType,
+            makeTranslator(translations as Record<string, string>)
+          )
+        : null;
 
     await reply.view(`invoice.ejs`, {
       payment,
       playlists,
       orderType,
+      invoice,
       ...formatters,
       moneyFormatter,
       invoiceCurrency,
       invoiceRate,
       displayRate,
       presentmentTotal,
-      translations: await translation.getTranslationsByPrefix(
-        payment.locale,
-        'invoice'
-      ),
+      translations,
       countries: await translation.getTranslationsByPrefix(
         payment.locale,
         'countries'
@@ -414,15 +395,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       if (payment.email) {
-        // A company list's forced template lives on the shared playlist row.
-        // It applies to company (vibe) orders only, and only to the
-        // single-card printer layout: public orders of the same playlist print
-        // the regular layout, and digital downloads and sheets keep their
-        // multi-card layout instead of coming out one card per page.
+        // An admin-chosen order template, or the company list's forced
+        // template for company orders (see forcedPrinterTemplate), replaces
+        // the single-card printer layout only: digital downloads and sheets
+        // keep their multi-card layout instead of coming out one card per page.
         const requestedTemplate: string = request.params.template;
+        const forcedTemplate = forcedPrinterTemplate(
+          php[0].template,
+          playlist.template,
+          payment.vibe
+        );
         const template =
-          payment.vibe && playlist.template && !isMultiCardTemplate(requestedTemplate)
-            ? playlist.template
+          forcedTemplate && !isMultiCardTemplate(requestedTemplate)
+            ? forcedTemplate
             : requestedTemplate;
 
         // Load how-to card translations if enabled
@@ -447,7 +432,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           startIndex,
           howtoTranslations,
           getYearFontSize,
-          getGoogleFontWeights,
+          // Admin-chosen fonts outside fonts.ts get their weights from the
+          // Google catalogue; the fixed list resolves as before.
+          getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelper(php[0].selectedFont),
           getGoogleFontName,
           getFontWeight,
           getQrTotalModules,
@@ -483,7 +470,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         payment,
         php,
         count,
-        getGoogleFontWeights,
+        getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelper(php.selectedFont),
         getGoogleFontName,
         getFontWeight,
       });

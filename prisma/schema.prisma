@@ -45,6 +45,14 @@ model DiscountCode {
   promotional       Boolean             @default(false)
   promotionalUserId Int?
   promotionalUser   User?               @relation("PromotionalDiscountCode", fields: [promotionalUserId], references: [id], onDelete: SetNull)
+  // 'fixed' codes are EUR balance vouchers (amount = budget). 'percent' codes
+  // take `percent` off the goods subtotal and have no balance; their limits
+  // are maxUses / oncePerCustomer / maxDiscountAmount.
+  type              String              @default("fixed")
+  percent           Float?
+  maxDiscountAmount Float?
+  maxUses           Int?
+  oncePerCustomer   Boolean             @default(false)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
@@ -61,10 +69,20 @@ model DiscountCodedUses {
   discountCodeId Int
   payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   paymentId      Int?
+  // Lifecycle: 'reserved' while the checkout is open (counts until
+  // expiresAt), 'paid' once the payment settled, 'released' when the payment
+  // failed or was superseded. Legacy rows default to 'paid' so they keep
+  // counting exactly as before.
+  status         String       @default("paid")
+  expiresAt      DateTime?
+  email          String?      @db.VarChar(255)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([discountCodeId])
+  @@index([discountCodeId, status])
+  @@index([paymentId])
+  @@index([discountCodeId, email])
   @@map("discount_codes_uses")
 }
 
@@ -149,6 +167,15 @@ model Payment {
   profit                   Float                @default(0)
   discount                 Float                @default(0)
   volumeDiscount           Float                @default(0)
+  // pricingVersion 2 = VAT/profit computed net of discounts and the invoice
+  // rendered from the snapshot fields below (see src/services/invoice-lines.ts).
+  pricingVersion           Int                  @default(1)
+  discountPercent          Float?
+  discountPercentAmount    Float                @default(0)
+  discountCodes            String?              @db.VarChar(255)
+  discountWithoutTax       Float                @default(0)
+  discountVAT              Float                @default(0)
+  discountShipping         Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
   // Custom scan-app theme add-on (see src/appDesign.ts). VAT-inclusive like
@@ -179,7 +206,10 @@ model Payment {
   sentToPrinterAt          DateTime?
   fast                     Boolean              @default(false)
   printerHold              Boolean              @default(false)
-  suggestionWarningSent    Boolean              @default(false)
+  // Why finalCheck put the order on hold (see finalCheckHoldReason); null for
+  // a hold an admin placed by hand
+  printerHoldReason        String?              @db.VarChar(32)
+  suggestionWarningSent   Boolean              @default(false)
   suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
@@ -405,6 +435,13 @@ model Playlist {
   promotionalHide        Boolean              @default(false)
   promotionalLocale      String?              @db.VarChar(10)
   promotionalUserId      Int?
+  // Whether the product page may show the card design stored in `design`,
+  // which for a customer's playlist is the design they ordered with and can
+  // carry personal photos or messages. The customer chooses on the featured
+  // playlist form; false means visitors get the default design. Defaults to
+  // true so curated lists and submissions from before the question existed
+  // keep what they show today.
+  promotionalShareDesign Boolean              @default(true)
   tracks                 PlaylistHasTrack[]
   Payment                PaymentHasPlaylist[]
   UserSuggestion         UserSuggestion[]
@@ -416,11 +453,23 @@ model Playlist {
   // Curation fields for featured playlists
   featuredHidden Boolean @default(false)
 
+  // Set when a featured playlist is taken out of the catalogue (by hand or by
+  // the cover repair when Spotify reports it gone). Keeps it apart from the
+  // ordinary never-featured rows so the Featured page can list it as removed
+  // and offer to bring it back. Cleared when it is featured again.
+  unfeaturedAt DateTime?
+
   // True once the playlist has been reviewed for base-event links (by the AI
   // backfill or manual curation on the Featured page). Drives the backfill's
   // "untagged" query so a playlist reviewed as fitting zero occasions is not
   // re-processed.
   baseEventsTagged Boolean @default(false)
+
+  // True once the description_<locale> columns hold the LLM-written SEO copy
+  // (see seoDescriptions.ts) rather than the customer's own text or nothing.
+  // Set on promotional approval and by the "SEO descriptions" bulk action,
+  // which only visits featured rows where this is still false.
+  seoDescriptionGenerated Boolean @default(false)
 
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
@@ -678,6 +727,7 @@ model PaymentHasPlaylist {
   theme                    String? // Theme slug for app theming (e.g., "acme", "coca-cola")
   themeName                String? // User-readable theme name (e.g., "Acme Company")
   printerType              String                   @default("printnbind") // Printer type: "printnbind", "tromp", "schneiders" or "musicmatch"
+  template                 String? // Admin-chosen card template for this order only (e.g. "facta"); beats Playlist.template
   promotionalCredited      Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt    DateTime? // When the promotional credit was applied
   gamesEnabled             Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
@@ -1027,7 +1077,7 @@ model CompanyList {
   slug                    String
   background              String?
   background2             String?
-  playlistSource          String    @default("voting")
+  playlistSource          String    @default("own")
   playlistUrl             String?
   playlistUrlFull         String?
   qrColor                 String    @default("#000000")
@@ -1392,6 +1442,43 @@ model UnknownLink {
   @@index([createdAt])
   @@index([ignored])
   @@map("unknown_links")
+}
+
+// One row per address the AbuseGuard starts refusing, written when the block
+// first takes effect rather than per refused request (a blocked scraper keeps
+// hammering). `expiresAt` is null for a permanent denylist entry.
+model BlockedIp {
+  id        Int       @id @default(autoincrement())
+  ip        String    @db.VarChar(45)
+  reason    String    @db.VarChar(100)
+  detail    String?   @db.Text
+  userAgent String?   @db.Text
+  // The PaymentHasPlaylist the blocked request was scanning, when it carried
+  // one (/qrlink2 does, the legacy /qrlink does not). It names the order whose
+  // cards were being read.
+  php       Int?
+  // The track the request was asking for when the block hit. For an
+  // enumeration ban this is where in the id range they had got to.
+  trackId   Int?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([ip])
+  @@map("blocked_ips")
+}
+
+// Addresses the AbuseGuard must never ban, however they behave. For the
+// customer whose own deck legitimately trips a detector: a playlist made
+// entirely of tracks we had never seen gets one contiguous block of track
+// ids, so scanning it in order looks like enumeration.
+model AllowedIp {
+  id        Int      @id @default(autoincrement())
+  ip        String   @unique @db.VarChar(45)
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("allowed_ips")
 }
 
 model GameRoom {

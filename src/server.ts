@@ -6,6 +6,7 @@ import vibeRoutes from './routes/vibeRoutes';
 import musicRoutes from './routes/musicRoutes';
 import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import discountRoutes from './routes/discountRoutes';
 import publicRoutes from './routes/publicRoutes';
 import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
@@ -18,11 +19,11 @@ import { getTokenFromRequest } from './cookieAuth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
 import Logger from './logger';
+import ErrorTracking from './errorTracking';
 import { color } from 'console-log-colors';
 import cluster from 'cluster';
-import Data from './data';
 import { ensureLegacyDefaultBackgroundFile } from './legacyBackground';
-import os from 'os';
+import { startClusterWorkers } from './clusterPrimary';
 import Utils from './utils';
 import path from 'path';
 import view from '@fastify/view';
@@ -164,6 +165,7 @@ class Server {
     await appDesignRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await discountRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -198,9 +200,6 @@ class Server {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     await this.setVersion();
     await this.createDirs();
-    if (cluster.isPrimary) {
-      await this.backfillLegacyDefaultBackground();
-    }
     await this.registerPlugins();
     await this.addAuthRoutes();
     await this.addRoutes();
@@ -243,38 +242,16 @@ class Server {
     }
   }
 
-  /**
-   * Pins pre-cutover order lines to the legacy artwork, once per database.
-   * Runs in the primary only; a failure must never keep the API from starting.
-   */
-  private async backfillLegacyDefaultBackground() {
-    try {
-      const affected = await Data.getInstance().backfillLegacyDefaultBackground();
-      if (affected !== null) {
-        this.logger.log(
-          color.blue.bold(
-            `Legacy default card background pinned on ${color.white.bold(affected)} order lines`
-          )
-        );
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(`Legacy default card background backfill failed: ${error}`)
-      );
-    }
-  }
-
   public getWorkerId() {
     return this.workerId;
   }
 
   private async startCluster() {
     if (cluster.isPrimary) {
-      this.logger.log(
-        color.blue.bold(
-          `Master ${color.bold.white(process.pid)} is starting...`
-        )
-      );
+      // app.ts forks the workers before this file is even loaded, so they
+      // boot while the primary sets up what follows. The call here only does
+      // something for an entry point that skipped that step.
+      await startClusterWorkers();
 
       // Initialize queue workers only if explicitly enabled
       // In production, use the standalone worker process instead
@@ -325,31 +302,6 @@ class Server {
       // Initialize CalendarService (starts monthly event-calendar prefill cron;
       // production main server only — see startPrefillCron)
       CalendarService.getInstance();
-
-      const numCPUs = os.cpus().length;
-      // Track each worker's slot: the exit handler runs in the primary,
-      // where WORKER_ID is unset, so the respawn must recover the slot
-      // from the dying worker instead of the environment.
-      const workerSlots = new Map<number, number>();
-      for (let i = 0; i < numCPUs; i++) {
-        const forked = cluster.fork({
-          WORKER_ID: `${i}`,
-        });
-        workerSlots.set(forked.id, i);
-      }
-      cluster.on('exit', (worker, code, signal) => {
-        this.logger.log(
-          color.red.bold(
-            `Worker ${color.white.bold(worker.process.pid)} died. Restarting...`
-          )
-        );
-        const slot = workerSlots.get(worker.id) ?? 0;
-        workerSlots.delete(worker.id);
-        const respawned = cluster.fork({
-          WORKER_ID: `${slot}`,
-        });
-        workerSlots.set(respawned.id, slot);
-      });
     } else {
       this.workerId = parseInt(process.env['WORKER_ID'] as string);
       this.startServer();
@@ -505,6 +457,17 @@ class Server {
     });
 
     await this.fastify.setErrorHandler((error, request, reply) => {
+      // A 4xx (validation, bad body) is the caller's mistake, not ours. The
+      // route pattern, not the URL: paths carry ids and download hashes.
+      const status = (error as { statusCode?: number }).statusCode;
+      if (status && status < 500) {
+        ErrorTracking.getInstance().ignore(error);
+      } else {
+        ErrorTracking.getInstance().capture(error, {
+          method: request.method,
+          route: request.routeOptions?.url ?? null,
+        });
+      }
       console.error(error);
       reply.status(500).send({ error: 'Internal Server Error' });
     });

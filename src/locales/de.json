@@ -360,7 +360,7 @@
   "voucher.transform": "Verwandle deine Lieblings-Spotify-Playlists in interaktive Musikkarten für Partys, Spieleabende mit Freunden und Musikquiz!",
   "voucher.title": "Geschenkgutschein",
   "voucher.turn": "Erstelle in Minuten deine eigenen Musikspielkarten!",
-  "voucher.claim": "Hol dir deinen Geschenkgutschein!",
+  "voucher.claim": "Hol dir deinen Gutschein!",
   "voucher.goTo": "Geh zu",
   "voucher.click": "Klick auf 'Geschenkkarten'",
   "voucher.enterCode": "Gib den Gutscheincode ein und klick auf 'Einlösen'",
@@ -668,5 +668,17 @@
   "design_alter.imageCardFront": "Karten-Vorderseite",
   "design_alter.imageCardBack": "Karten-Rückseite",
   "design_alter.imageBoxFront": "Box-Einlage (Vorne)",
-  "design_alter.imageBoxBack": "Box-Einlage (Hinten)"
+  "design_alter.imageBoxBack": "Box-Einlage (Hinten)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattcode {{code}}",
+  "open_corrections.subject": "Aktion nötig: Bestätige deine Änderungen für Bestellung {{ orderId }}",
+  "open_corrections.title": "Deine Bestellung wartet auf deine Bestätigung",
+  "open_corrections.hello": "Hallo",
+  "open_corrections.intro": "Die Prüfphase deiner Bestellung ist beendet und normalerweise würden wir deine Karten jetzt drucken lassen. Du hast Änderungen vorgenommen, die du noch nicht bestätigt hast. Deshalb haben wir deine Bestellung pausiert.",
+  "open_corrections.whatToDo": "Wir drucken niemals Änderungen, die du nicht bestätigt hast. Öffne das Korrekturformular über den Button unten, prüfe deine Änderungen und bestätige sie dort. Danach geht deine Bestellung direkt in den Druck.",
+  "open_corrections.buttonText": "Korrekturformular öffnen",
+  "open_corrections.buttonFallback": "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
+  "open_corrections.questions": "Wenn du Fragen hast, antworte einfach auf diese E-Mail und wir helfen dir weiter.",
+  "open_corrections.thanks": "Danke",
+  "open_corrections.team": "Das QRSong!-Team"
 }

@@ -644,5 +644,17 @@
   "design_alter.imageCardFront": "Kortforside",
   "design_alter.imageCardBack": "Kortbakside",
   "design_alter.imageBoxFront": "Boksinnlegg (forside)",
-  "design_alter.imageBoxBack": "Boksinnlegg (bakside)"
+  "design_alter.imageBoxBack": "Boksinnlegg (bakside)",
+  "invoice.discountPercentLine": "Rabatt {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Rabattkode {{code}}",
+  "open_corrections.subject": "Handling kreves: godkjenn endringene for ordre {{ orderId }}",
+  "open_corrections.title": "Ordren din venter på godkjenning",
+  "open_corrections.hello": "Hei",
+  "open_corrections.intro": "Gjennomgangsperioden for ordren din er over, og normalt ville vi nå sendt kortene til trykk. Du har gjort endringer som du ennå ikke har godkjent, så vi har satt ordren på pause.",
+  "open_corrections.whatToDo": "Vi trykker aldri endringer du ikke har bekreftet. Åpne korrigeringsskjemaet med knappen nedenfor, sjekk endringene og godkjenn dem der. Ordren går til trykk rett etterpå.",
+  "open_corrections.buttonText": "Åpne korrigeringsskjemaet",
+  "open_corrections.buttonFallback": "Hvis knappen ikke virker, kopier og lim inn denne lenken i nettleseren:",
+  "open_corrections.questions": "Hvis du har spørsmål, er det bare å svare på denne e-posten, så hjelper vi deg.",
+  "open_corrections.thanks": "Takk",
+  "open_corrections.team": "QRSong!-teamet"
 }

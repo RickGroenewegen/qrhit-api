@@ -307,7 +307,8 @@ export async function updatePaymentPrinterHold(
 
     await deps.prisma.payment.update({
       where: { paymentId },
-      data: { printerHold },
+      // A hold toggled by hand is not the checker's, so its reason goes
+      data: { printerHold, printerHoldReason: null },
     });
 
     deps.logger.log(

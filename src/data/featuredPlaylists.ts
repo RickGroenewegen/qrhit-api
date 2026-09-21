@@ -5,10 +5,65 @@ import {
   CACHE_KEY_TRACKS,
   CACHE_KEY_TRACK_COUNT,
 } from '../spotify';
-import { clearPlaylistCache } from './misc';
+import { clearPlaylistCache, createSiteMap } from './misc';
+import { productPageLocales } from './productPageLocales';
 import { DataDeps } from './types';
 
-export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v3_';
+export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
+const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocales_';
+const PRODUCT_PAGE_LOCALE_TTL = 600;
+
+export interface ProductPageLocale {
+  /** False when no featured playlist carries this slug. */
+  exists: boolean;
+  /**
+   * The locales the product page is indexable in (its own plus `en`), or
+   * null for an international list, which is indexable everywhere. See
+   * productPageLocales.ts.
+   */
+  indexableLocales: string[] | null;
+}
+
+/**
+ * What the SSR server asks before rendering /{lang}/product/{slug}. The page
+ * renders in every locale; for a locale-specific list the answer decides
+ * which of those carry the hreflang cluster and which go out `noindex`.
+ * Short cache because the server asks on every uncached page render.
+ */
+export async function getProductPageLocale(
+  deps: DataDeps,
+  slug: string
+): Promise<ProductPageLocale> {
+  const cacheKey = `${CACHE_KEY_PRODUCT_PAGE_LOCALE}${slug}`;
+  const cached = await deps.cache.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached) as ProductPageLocale;
+  }
+
+  const playlist = await deps.prisma.playlist.findFirst({
+    where: { slug, featured: true },
+    select: { featuredLocale: true },
+  });
+  const result: ProductPageLocale = {
+    exists: !!playlist,
+    indexableLocales: productPageLocales(
+      playlist?.featuredLocale,
+      deps.translate.allLocales
+    ),
+  };
+  await deps.cache.set(cacheKey, JSON.stringify(result), PRODUCT_PAGE_LOCALE_TTL);
+  return result;
+}
+
+async function clearProductPageLocale(deps: DataDeps, playlistId: string): Promise<void> {
+  const playlist = await deps.prisma.playlist.findUnique({
+    where: { playlistId },
+    select: { slug: true },
+  });
+  if (playlist?.slug) {
+    await deps.cache.del(`${CACHE_KEY_PRODUCT_PAGE_LOCALE}${playlist.slug}`);
+  }
+}
 
 export async function getFeaturedPlaylists(
   deps: DataDeps,
@@ -55,6 +110,7 @@ export async function getFeaturedPlaylists(
       playlists.decadePercentage0,
       playlists.genreId,
       playlists.description_${locale} as description,
+      playlists.description_en as descriptionEnFallback,
       g.name_${locale} as genreName,
       playlists.promotionalActive as isPromotional,
       playlists.promotionalTitle,
@@ -96,9 +152,9 @@ export async function getFeaturedPlaylists(
     returnList = returnList.map((playlist) => {
       // Ensure description is available, fallback to English if not
       if (!playlist.description && locale !== 'en') {
-        const descriptionField = `description_en`;
-        playlist.description = playlist[descriptionField];
+        playlist.description = playlist.descriptionEnFallback;
       }
+      delete playlist.descriptionEnFallback;
 
       // Ensure genre name is available, fallback to English if not
       if (!playlist.genreName && playlist.genreId && locale !== 'en') {
@@ -138,6 +194,101 @@ export async function getFeaturedPlaylists(
     returnList = JSON.parse(cachedPlaylists);
   }
   return returnList;
+}
+
+// ── Playlist suggestions (admin PDF) ─────────────────────────────
+
+export interface PlaylistSuggestionOptions {
+  /** Playlist markets to include; empty = every market. International (untagged) playlists are always included. */
+  locales: string[];
+  /** Genre ids to include; empty = every genre. */
+  genreIds: number[];
+  /** Cards per box; only playlists with at least this many tracks qualify. */
+  cardCount: number;
+}
+
+function playlistLocales(featuredLocale: unknown): string[] {
+  return String(featuredLocale || '')
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Pure filter over the cached featured list, so the admin document can
+ * combine several markets and genres without a second raw SQL query.
+ * Mirrors the `FIND_IN_SET(locale) OR featuredLocale IS NULL` rule of
+ * getFeaturedPlaylists for every selected locale at once.
+ */
+export function filterPlaylistSuggestions(
+  playlists: any[],
+  opts: PlaylistSuggestionOptions
+): any[] {
+  const wantedLocales = new Set(opts.locales);
+  const wantedGenres = new Set(opts.genreIds);
+
+  const matchesLocale = (p: any): boolean => {
+    if (wantedLocales.size === 0) return true;
+    const own = playlistLocales(p.featuredLocale);
+    if (own.length === 0) return true;
+    return own.some((l) => wantedLocales.has(l));
+  };
+
+  return playlists
+    .filter((p) => matchesLocale(p))
+    .filter((p) => wantedGenres.size === 0 || wantedGenres.has(Number(p.genreId)))
+    .filter((p) => Number(p.numberOfTracks) >= opts.cardCount)
+    .sort((a, b) => {
+      // Explicitly localised playlists first, then by popularity.
+      const aLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(a.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      const bLocal =
+        wantedLocales.size > 0 &&
+        playlistLocales(b.featuredLocale).some((l) => wantedLocales.has(l))
+          ? 0
+          : 1;
+      if (aLocal !== bLocal) return aLocal - bLocal;
+      const score = Number(b.score || 0) - Number(a.score || 0);
+      if (score !== 0) return score;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+}
+
+export async function getPlaylistSuggestions(
+  deps: DataDeps,
+  docLocale: string,
+  opts: PlaylistSuggestionOptions
+): Promise<any[]> {
+  const all = await getFeaturedPlaylists(deps, docLocale, true);
+  return filterPlaylistSuggestions(all, opts);
+}
+
+/** Genres for the suggestions modal, with how many visible featured playlists each has. */
+export async function getGenresWithFeaturedCount(
+  deps: DataDeps
+): Promise<{ id: number; slug: string | null; name: string; featuredCount: number }[]> {
+  const genres = await deps.prisma.genre.findMany({
+    select: {
+      id: true,
+      slug: true,
+      name_en: true,
+      _count: {
+        select: {
+          Playlist: { where: { featured: true, featuredHidden: false } },
+        },
+      },
+    },
+    orderBy: { name_en: 'asc' },
+  });
+  return genres.map((g) => ({
+    id: g.id,
+    slug: g.slug,
+    name: g.name_en,
+    featuredCount: g._count.Playlist,
+  }));
 }
 
 /** Decade columns, weighted against each other to measure musical overlap. */
@@ -436,10 +587,12 @@ export async function searchFeaturedPlaylists(
         slug: true,
         image: true,
         customImage: true,
+        design: true,
         promotionalTitle: true,
         promotionalDescription: true,
         promotionalLocale: true,
         promotionalUserId: true,
+        promotionalShareDesign: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -464,23 +617,30 @@ export async function searchFeaturedPlaylists(
           locale: p.promotionalLocale,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
+          // Whether there is a card design on the row at all, and whether
+          // the product page may show it. The design itself stays here.
+          hasDesign: !!p.design,
+          shareDesign: p.promotionalShareDesign,
         };
       })
     );
 
     // --- Approved playlists (paginated) ---
+    // Removed playlists stay in the overview so they can be brought back.
     const approvedWhere: any = {
-      featured: true,
+      AND: [{ OR: [{ featured: true }, { unfeaturedAt: { not: null } }] }],
       NOT: {
         promotionalActive: true,
         promotionalAccepted: false,
       },
     };
     if (hasSearch) {
-      approvedWhere.OR = [
-        { name: { contains: searchTerm } },
-        { promotionalTitle: { contains: searchTerm } },
-      ];
+      approvedWhere.AND.push({
+        OR: [
+          { name: { contains: searchTerm } },
+          { promotionalTitle: { contains: searchTerm } },
+        ],
+      });
     }
     if (locale) {
       approvedWhere.featuredLocale = locale;
@@ -506,8 +666,11 @@ export async function searchFeaturedPlaylists(
           slug: true,
           image: true,
           customImage: true,
+          design: true,
+          promotionalShareDesign: true,
           featuredHidden: true,
           featuredLocale: true,
+          unfeaturedAt: true,
           promotionalActive: true,
           promotionalAccepted: true,
           promotionalTitle: true,
@@ -584,12 +747,15 @@ export async function searchFeaturedPlaylists(
           description: p.promotionalDescription || '',
           featuredHidden: p.featuredHidden,
           featuredLocale: p.featuredLocale,
+          unfeaturedAt: p.unfeaturedAt,
           isPromotional: p.promotionalActive && p.promotionalAccepted,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
           purchaseCount,
           baseEvents: baseEventsMap.get(p.id) || [],
           baseEventsTagged: p.baseEventsTagged,
+          hasDesign: !!p.design,
+          shareDesign: p.promotionalShareDesign,
         };
       })
     );
@@ -809,6 +975,101 @@ export async function updateFeaturedHidden(
   }
 }
 
+/**
+ * Admin override of the customer's choice on the featured playlist form:
+ * whether the product page may show the card design stored on the row. The
+ * design is never deleted, so switching it back on restores it. The product
+ * page lookup is cached forever, hence the cache clear.
+ */
+export async function updateShareDesign(
+  deps: DataDeps,
+  playlistId: string,
+  shareDesign: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await deps.prisma.playlist.update({
+      where: { playlistId },
+      data: { promotionalShareDesign: shareDesign },
+    });
+
+    await clearPlaylistCache(deps, playlistId);
+
+    deps.logger.log(
+      color.blue.bold(
+        `Card design of ${color.white.bold(playlistId)} is now ${color.white.bold(shareDesign ? 'shown' : 'hidden')} on its product page`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(`Error updating design sharing: ${error.message}`)
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+async function setPlaylistFeatured(
+  deps: DataDeps,
+  playlistId: string,
+  featured: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const verb = featured ? 'Restored' : 'Removed';
+  try {
+    const playlist = await deps.prisma.playlist.findUnique({
+      where: { playlistId },
+      select: { id: true, slug: true },
+    });
+
+    if (!playlist) {
+      return { success: false, error: 'Playlist not found' };
+    }
+
+    await deps.prisma.playlist.update({
+      where: { playlistId },
+      data: {
+        featured,
+        unfeaturedAt: featured ? null : new Date(),
+        markedForMerchantCenter: true,
+      },
+    });
+
+    // The product page lookup of a featured playlist is cached forever, and
+    // a miss is cached too, so the page would keep its old answer without this.
+    await clearPlaylistCache(deps, playlistId, playlist.slug || undefined);
+    // The sitemap is otherwise only rebuilt at boot.
+    await createSiteMap(deps);
+
+    deps.logger.log(
+      color.blue.bold(`${verb} featured playlist ${color.white.bold(playlistId)}`)
+    );
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error ${verb.toLowerCase()} featured playlist ${playlistId}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Takes a playlist out of the catalogue: off the list, the product page, the
+ * sitemap and Merchant Center. "Hidden" only drops it from the list and keeps
+ * the product page, which is the wrong tool for a playlist that no longer
+ * exists on Spotify. The row itself stays, because orders and tracks
+ * reference it, and `unfeaturedAt` keeps it in the admin overview so it can
+ * be brought back with `refeaturePlaylist`.
+ */
+export function unfeaturePlaylist(deps: DataDeps, playlistId: string) {
+  return setPlaylistFeatured(deps, playlistId, false);
+}
+
+export function refeaturePlaylist(deps: DataDeps, playlistId: string) {
+  return setPlaylistFeatured(deps, playlistId, true);
+}
+
 export async function updateFeaturedLocale(
   deps: DataDeps,
   playlistId: string,
@@ -820,8 +1081,13 @@ export async function updateFeaturedLocale(
       data: { featuredLocale, markedForMerchantCenter: true },
     });
 
-    // Clear featured playlists cache
-    await deps.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+    // The locale decides which sitemaps list the product page and which
+    // locales are indexable (the others go out noindex), so the page cache,
+    // the locale gate and the sitemap all have to follow. clearPlaylistCache
+    // also drops the featured list cache.
+    await clearPlaylistCache(deps, playlistId);
+    await clearProductPageLocale(deps, playlistId);
+    await createSiteMap(deps);
 
     return { success: true };
   } catch (error: any) {
@@ -889,6 +1155,10 @@ export async function updatePromotionalPlaylist(
 
     // Clear all relevant caches using central function
     await clearPlaylistCache(deps, playlistId, oldPlaylist?.slug || undefined);
+    if (oldPlaylist?.slug) {
+      await deps.cache.del(`${CACHE_KEY_PRODUCT_PAGE_LOCALE}${oldPlaylist.slug}`);
+    }
+    await clearProductPageLocale(deps, playlistId);
 
     return { success: true };
   } catch (error: any) {

@@ -16,6 +16,7 @@ import Logger from './logger';
 import crypto from 'crypto';
 import cluster from 'cluster';
 import OpenAI from 'openai';
+import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
 import type {
@@ -340,6 +341,107 @@ class Mail {
         color.red.bold(
           `Failed to send design-alter email to ${white.bold(
             email
+          )}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Tell the customer their review period ended while corrections they typed
+   * were never approved. The printer pass holds such an order instead of
+   * submitting the corrections for them, so without this mail it waits in
+   * silence. One button per playlist that still has open corrections.
+   */
+  public async sendOpenCorrectionsMail(
+    payment: {
+      email: string;
+      fullname: string | null;
+      locale: string | null;
+      orderId: string;
+    },
+    playlists: Array<{ name: string; link: string }>
+  ): Promise<void> {
+    if (!this.ses || playlists.length === 0) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const locale = payment.locale || 'en';
+
+    const mailParams = {
+      fullname: payment.fullname || payment.email.split('@')[0],
+      playlists,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations: await this.translation.getTranslationsByPrefix(
+        locale,
+        'open_corrections'
+      ),
+    };
+
+    try {
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/open_corrections_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/open_corrections_text',
+        mailParams
+      );
+
+      const subject = decode(
+        this.translation.translate('open_corrections.subject', locale, {
+          orderId: payment.orderId,
+        })
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          // Sent from the info address so the customer can simply reply
+          from: `${process.env['PRODUCT_NAME']} <${process.env['INFO_EMAIL']}>`,
+          to: payment.email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['INFO_EMAIL'],
+        },
+        false
+      );
+
+      await this.ses.send(
+        new SendRawEmailCommand({
+          RawMessage: {
+            Data: Buffer.from(rawEmail),
+          },
+        })
+      );
+      this.logger.log(
+        color.blue.bold(
+          `Open-corrections email sent to ${white.bold(
+            payment.email
+          )} for order ${white.bold(payment.orderId)}`
+        )
+      );
+    } catch (error) {
+      console.error('Error while sending open-corrections email:', error);
+      this.logger.log(
+        color.red.bold(
+          `Failed to send open-corrections email to ${white.bold(
+            payment.email
           )}: ${error}`
         )
       );
@@ -1235,7 +1337,8 @@ class Mail {
   private async translateContactEmailToDutch(emailId: number, message: string): Promise<void> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {
@@ -1307,7 +1410,8 @@ class Mail {
 
       // Generate draft reply with knowledge and tool results
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_STANDARD,
+        reasoning_effort: 'none',
         temperature: 0.5,
         messages: [
           {
@@ -1351,7 +1455,8 @@ ${knowledgeContext}${toolContext}`,
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: LLM_MODEL_FAST,
+        reasoning_effort: 'none',
         temperature: 0.3,
         messages: [
           {

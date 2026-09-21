@@ -20,7 +20,7 @@ import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
 import { applyQrLogo, clampScale, resolveLogoPath } from './qr-logo';
-import PDF from './pdf';
+import PDF, { forcedPrinterTemplate } from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
@@ -36,6 +36,7 @@ import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
+import { finalCheckHoldReason } from './finalCheckHoldReason';
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 import { computePrintFingerprint } from './printFingerprint';
 
@@ -224,7 +225,16 @@ class Generator {
           paymentId: { in: stuckPaymentIds },
           suggestionWarningSent: false,
         },
-        select: { id: true, paymentId: true, fullname: true, email: true },
+        select: {
+          id: true,
+          paymentId: true,
+          orderId: true,
+          fullname: true,
+          email: true,
+          locale: true,
+          userId: true,
+          user: { select: { hash: true } },
+        },
       });
 
       for (const p of needWarning) {
@@ -244,6 +254,17 @@ class Generator {
           },
           ''
         );
+        try {
+          await this.mailOpenCorrections(p);
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Could not mail open corrections for ${white.bold(
+                p.paymentId
+              )}: ${error}`
+            )
+          );
+        }
         await this.prisma.payment.update({
           where: { id: p.id },
           data: {
@@ -332,6 +353,77 @@ class Generator {
   }
 
   /**
+   * Mail the customer of an order the printer pass just skipped, with a link
+   * to the correction form of every playlist that holds corrections they typed
+   * but never approved. Corrections that are already submitted and wait for us
+   * (suggestionsPending), or that belong to somebody else, are not the
+   * customer's to fix, so those send nothing.
+   */
+  private async mailOpenCorrections(payment: {
+    id: number;
+    paymentId: string;
+    orderId: string;
+    fullname: string | null;
+    email: string;
+    locale: string | null;
+    userId: number;
+    user: { hash: string } | null;
+  }): Promise<void> {
+    if (!payment.user || !payment.email) return;
+
+    const lines = await this.prisma.paymentHasPlaylist.findMany({
+      where: { paymentId: payment.id, suggestionsPending: false },
+      select: {
+        type: true,
+        playlist: { select: { id: true, playlistId: true, name: true } },
+      },
+    });
+    if (lines.length === 0) return;
+
+    const counts = await this.prisma.userSuggestion.groupBy({
+      by: ['playlistId'],
+      where: {
+        userId: payment.userId,
+        playlistId: { in: lines.map((line) => line.playlist.id) },
+      },
+      _count: { _all: true },
+    });
+    const countByPlaylist = new Map(
+      counts.map((row) => [row.playlistId, row._count._all])
+    );
+
+    const locale = payment.locale || 'en';
+    const seen = new Set<number>();
+    const playlists: Array<{ name: string; link: string }> = [];
+    for (const line of lines) {
+      const count = countByPlaylist.get(line.playlist.id) ?? 0;
+      if (count === 0 || seen.has(line.playlist.id)) continue;
+      seen.add(line.playlist.id);
+      playlists.push({
+        name: line.playlist.name,
+        // The last segment is the correction form's digital flag
+        link: `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${
+          payment.paymentId
+        }/${payment.user.hash}/${line.playlist.playlistId}/${
+          line.type === 'digital' ? 1 : 0
+        }`,
+      });
+    }
+
+    if (playlists.length === 0) return;
+
+    await this.mail.sendOpenCorrectionsMail(
+      {
+        email: payment.email,
+        fullname: payment.fullname,
+        locale,
+        orderId: payment.orderId,
+      },
+      playlists
+    );
+  }
+
+  /**
    * Apply the consequences of a failed finalCheck:
    *  - Always: set printerHold=true (so the cron won't pick it up again)
    *           and send a Pushover alert.
@@ -344,7 +436,10 @@ class Generator {
   ): Promise<void> {
     await this.prisma.payment.update({
       where: { id: payment.id },
-      data: { printerHold: true },
+      data: {
+        printerHold: true,
+        printerHoldReason: finalCheckHoldReason(check),
+      },
     });
 
     this.pushover.sendMessage(
@@ -1050,13 +1145,15 @@ class Generator {
 
           let printerTemplate = 'printer';
 
-          // A company list's forced template (CompanyList.forceTemplate) is
-          // written onto the playlist row, which is shared by every later
-          // order of that Spotify playlist. It only means something for the
-          // company (vibe) order itself; a public order of the same playlist
-          // must print the regular layout.
-          if (payment.vibe && playlist.template) {
-            printerTemplate = playlist.template;
+          // An admin-chosen order template, or the company list's forced
+          // template for company orders (see forcedPrinterTemplate).
+          const forcedTemplate = forcedPrinterTemplate(
+            playlist.orderTemplate,
+            playlist.template,
+            payment.vibe
+          );
+          if (forcedTemplate) {
+            printerTemplate = forcedTemplate;
           } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
           } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
@@ -1495,7 +1592,16 @@ class Generator {
       );
 
       let printerTemplate = 'printer';
-      if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
+      const forcedTemplate = forcedPrinterTemplate(
+        playlist.orderTemplate,
+        playlist.template,
+        payment.vibe
+      );
+      if (forcedTemplate) {
+        printerTemplate = forcedTemplate;
+      } else if (payment.vibe) {
+        printerTemplate = 'printer_vibe';
+      } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
         printerTemplate = PRINTER_TYPE.SCHNEIDERS;
       }
 

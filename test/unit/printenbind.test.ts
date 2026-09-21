@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/printers/printenbind.ts (PrintEnBind class).
+ * Unit tests for src/printers/printenbindV2.ts (PrintEnBindV2 class).
  *
  * This module is globally mocked as a recording proxy in test/setup.ts.
  * We vi.unmock it here and re-mock all its heavy dependencies so the real
@@ -22,7 +22,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.unmock('../../src/printers/printenbind');
+vi.unmock('../../src/printers/printenbindV2');
 
 // ─── cluster: suppress the primary-worker cron scheduling ─────────────────
 vi.mock('cluster', () => ({ default: { isPrimary: false }, isPrimary: false }));
@@ -132,7 +132,7 @@ vi.mock('../../src/logger', () => ({
   },
 }));
 
-import PrintEnBind from '../../src/printers/printenbind';
+import PrintEnBind from '../../src/printers/printenbindV2';
 
 const pnb = PrintEnBind.getInstance();
 
@@ -456,40 +456,3 @@ describe('PrintEnBind.calculateOrder', () => {
   });
 });
 
-describe('PrintEnBind.finishOrder', () => {
-  beforeEach(() => {
-    process.env['PRINTENBIND_API_URL'] = 'https://api.printenbind.nl';
-    process.env['PRINTENBIND_API_KEY'] = 'test-key';
-  });
-
-  it('returns success=true when fetch responds 200', async () => {
-    global.fetch = vi.fn(async () =>
-      ({
-        ok: true,
-        status: 200,
-        clone: () => ({
-          json: async () => ({ status: 'ok' }),
-        }),
-        json: async () => ({ status: 'ok' }),
-      } as any)
-    );
-    const result = await pnb.finishOrder('order-123');
-    expect(result.success).toBe(true);
-    expect(result.data?.orderId).toBe('order-123');
-  });
-
-  it('returns success=false when fetch responds non-ok', async () => {
-    global.fetch = vi.fn(async () =>
-      ({
-        ok: false,
-        status: 400,
-        clone: () => ({
-          json: async () => ({ error: 'bad request' }),
-        }),
-        json: async () => ({ error: 'bad request' }),
-      } as any)
-    );
-    const result = await pnb.finishOrder('order-456');
-    expect(result.success).toBe(false);
-  });
-});

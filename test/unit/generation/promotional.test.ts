@@ -28,13 +28,21 @@ const h = vi.hoisted(() => {
       discountCode: {
         findFirst: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
         updateMany: vi.fn(),
       },
       discountCodedUses: { aggregate: vi.fn() },
-      paymentHasPlaylist: { findFirst: vi.fn(), update: vi.fn() },
+      paymentHasPlaylist: {
+        findFirst: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+      },
+      playlistHasTrack: { findFirst: vi.fn() },
       user: { findUnique: vi.fn() },
     },
+    getLiveUsage: vi.fn(async () => ({ amountUsed: 4, useCount: 1 })),
     translateText: vi.fn(),
+    seoGenerate: vi.fn(async () => ({ description: 'SEO copy' })),
     clearPlaylistCache: vi.fn(async () => undefined),
     calcDecades: vi.fn(async () => undefined),
     fsMkdir: vi.fn(async () => undefined),
@@ -46,6 +54,12 @@ const h = vi.hoisted(() => {
 
 vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => h.prisma },
+}));
+// The real Discount class opens a Redis connection on construction.
+vi.mock('../../../src/discount', () => ({
+  default: class {
+    getLiveUsage = h.getLiveUsage;
+  },
 }));
 vi.mock('../../../src/logger', () => ({
   default: class {
@@ -67,6 +81,13 @@ vi.mock('../../../src/data', () => ({
     getInstance: () => ({
       clearPlaylistCache: h.clearPlaylistCache,
       calculateSinglePlaylistDecadePercentages: h.calcDecades,
+    }),
+  },
+}));
+vi.mock('../../../src/seoDescriptions', () => ({
+  default: {
+    getInstance: () => ({
+      generateForPlaylist: h.seoGenerate,
     }),
   },
 }));
@@ -109,6 +130,7 @@ function resetPrisma() {
     h.prisma.discountCode,
     h.prisma.discountCodedUses,
     h.prisma.paymentHasPlaylist,
+    h.prisma.playlistHasTrack,
     h.prisma.user,
   ]) {
     for (const fn of Object.values(model)) {
@@ -121,6 +143,8 @@ beforeEach(() => {
   outbound.reset();
   resetPrisma();
   h.translateText.mockReset();
+  h.seoGenerate.mockReset();
+  h.seoGenerate.mockResolvedValue({ description: 'SEO copy' });
   h.clearPlaylistCache.mockClear();
   h.calcDecades.mockClear();
   h.fsMkdir.mockClear();
@@ -163,19 +187,16 @@ describe('Promotional.getPromotionalSetup', () => {
       promotionalDeclined: null,
     });
     h.prisma.discountCode.findFirst.mockResolvedValue({
+      id: 3,
       code: 'AAAA-BBBB-CCCC-DDDD',
       amount: 10,
     });
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: 4 },
-    });
+    h.getLiveUsage.mockResolvedValueOnce({ amountUsed: 4, useCount: 1 });
 
     const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
 
-    expect(h.prisma.discountCodedUses.aggregate).toHaveBeenCalledWith({
-      where: { discountCode: { promotional: true, promotionalUserId: 7 } },
-      _sum: { amount: true },
-    });
+    // Balance counts paid rows and unexpired reservations only.
+    expect(h.getLiveUsage).toHaveBeenCalledWith(3);
     expect(res).toEqual({
       success: true,
       data: {
@@ -192,8 +213,72 @@ describe('Promotional.getPromotionalSetup', () => {
         playlistName: 'PName',
         accepted: true,
         declined: false,
+        // No card design on this row: nothing to choose, nothing to preview.
+        hasDesign: false,
+        shareDesign: false,
+        design: null,
+        sampleTrack: null,
       },
     });
+    expect(h.prisma.playlistHasTrack.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('hands the owner their design and a sample track, and asks (null) when they never chose', async () => {
+    const design = { backgroundImage: 'wedding.png', fontColor: '#fff' };
+    h.prisma.playlist.findFirst.mockResolvedValue({
+      id: 2,
+      name: 'PName',
+      slug: 'pslug',
+      image: 'img.png',
+      customImage: null,
+      design,
+      promotionalTitle: null, // never submitted
+      promotionalDescription: null,
+      promotionalActive: 0,
+      promotionalAccepted: 0,
+      promotionalDeclined: 0,
+      promotionalShareDesign: true, // the column default, not an answer
+    });
+    h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.prisma.playlistHasTrack.findFirst.mockResolvedValue({
+      track: { artist: 'Queen', name: 'Killer Queen', year: 1974 },
+    });
+
+    const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+
+    expect(res.data?.hasDesign).toBe(true);
+    expect(res.data?.shareDesign).toBeNull();
+    expect(res.data?.design).toEqual(design);
+    expect(res.data?.sampleTrack).toEqual({ artist: 'Queen', name: 'Killer Queen', year: 1974 });
+    expect(h.prisma.playlistHasTrack.findFirst).toHaveBeenCalledWith({
+      where: { playlistId: 2 },
+      orderBy: { order: 'asc' },
+      select: { track: { select: { artist: true, name: true, year: true } } },
+    });
+  });
+
+  it('reports the stored choice once the form has been submitted', async () => {
+    h.prisma.playlist.findFirst.mockResolvedValue({
+      id: 2,
+      name: 'PName',
+      slug: 'pslug',
+      image: 'img.png',
+      customImage: null,
+      design: { backgroundImage: 'wedding.png' },
+      promotionalTitle: 'T',
+      promotionalDescription: 'D',
+      promotionalActive: 1,
+      promotionalAccepted: 0,
+      promotionalDeclined: 0,
+      promotionalShareDesign: false,
+    });
+    h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.prisma.playlistHasTrack.findFirst.mockResolvedValue(null);
+
+    const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+
+    expect(res.data?.shareDesign).toBe(false);
+    expect(res.data?.sampleTrack).toBeNull();
   });
 
   it('defaults active=true on first-time setup and falls back to the playlistId share link', async () => {
@@ -210,10 +295,11 @@ describe('Promotional.getPromotionalSetup', () => {
       promotionalDeclined: null,
     });
     h.prisma.discountCode.findFirst.mockResolvedValue(null);
+    h.getLiveUsage.mockClear();
 
     const res = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
 
-    expect(h.prisma.discountCodedUses.aggregate).not.toHaveBeenCalled();
+    expect(h.getLiveUsage).not.toHaveBeenCalled();
     expect(res.data).toMatchObject({
       title: '',
       description: '',
@@ -271,6 +357,8 @@ describe('Promotional.savePromotionalSetup', () => {
         promotionalActive: true,
         promotionalLocale: 'de',
         promotionalUserId: 7,
+        // Not stated in the request: the customer's design stays private.
+        promotionalShareDesign: false,
         featured: true,
         name: 'Best QRSong! Mix', // hitster -> QRSong!
         slug: 'best-qrsong-mix',
@@ -278,6 +366,25 @@ describe('Promotional.savePromotionalSetup', () => {
     });
     // Old slug differs -> cache for it is cleared.
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'old-slug');
+  });
+
+  it('shares the design only on an explicit true, and always drops the cached product page', async () => {
+    // Same slug as before: the cache used to be left alone in that case, and
+    // a changed design choice then never reached the product page.
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'best-qrsong-mix',
+      customImage: null,
+    });
+
+    await promotional.savePromotionalSetup('pay_1', 'uhash', 'pl_1', {
+      ...saveData,
+      shareDesign: true,
+    });
+
+    expect(
+      h.prisma.playlist.update.mock.calls[0][0].data.promotionalShareDesign
+    ).toBe(true);
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', undefined);
   });
 
   it('appends -2 when the base slug is taken by another playlist', async () => {
@@ -422,11 +529,12 @@ describe('Promotional.creditPromotionalDiscount', () => {
       code: 'CODE-1111-2222-3333',
       amount: 10,
     });
-    h.prisma.discountCode.updateMany.mockResolvedValue({});
-    h.prisma.paymentHasPlaylist.update.mockResolvedValue({});
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: 4 },
-    });
+    // Atomic increment returns the new total.
+    h.prisma.discountCode.update.mockImplementation(async ({ data }: any) => ({
+      amount: 10 + data.amount.increment,
+    }));
+    h.prisma.paymentHasPlaylist.updateMany.mockResolvedValue({ count: 1 });
+    h.getLiveUsage.mockResolvedValue({ amountUsed: 4, useCount: 1 });
   });
 
   it('skips playlists that are not promotional', async () => {
@@ -443,7 +551,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
     h.prisma.user.findUnique.mockResolvedValue(null);
     const res = await promotional.creditPromotionalDiscount(2, 99);
     expect(res).toEqual({ success: true, credited: false });
-    expect(h.prisma.discountCode.updateMany).not.toHaveBeenCalled();
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
   });
 
   it('is idempotent: skips already-credited payment lines', async () => {
@@ -454,7 +562,15 @@ describe('Promotional.creditPromotionalDiscount', () => {
     });
     const res = await promotional.creditPromotionalDiscount(2, 99);
     expect(res).toEqual({ success: true, credited: false });
-    expect(h.prisma.discountCode.updateMany).not.toHaveBeenCalled();
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail')).toHaveLength(0);
+  });
+
+  it('credits nothing when another webhook claimed the line first', async () => {
+    h.prisma.paymentHasPlaylist.updateMany.mockResolvedValue({ count: 0 });
+    const res = await promotional.creditPromotionalDiscount(2, 99);
+    expect(res).toEqual({ success: true, credited: false });
+    expect(h.prisma.discountCode.update).not.toHaveBeenCalled();
     expect(outbound.calls('Mail')).toHaveLength(0);
   });
 
@@ -465,17 +581,19 @@ describe('Promotional.creditPromotionalDiscount', () => {
     expect(
       h.prisma.paymentHasPlaylist.findFirst.mock.calls[0][0].where
     ).toEqual({ paymentId: 99, playlistId: 2 });
-    // 2.5 * quantity(2) = 5 on top of the existing 10.
-    expect(h.prisma.discountCode.updateMany).toHaveBeenCalledWith({
-      where: { promotional: true, promotionalUserId: 7 },
-      data: { amount: 15 },
-    });
-    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
-      where: { id: 5 },
+    // The line is claimed before any money moves.
+    expect(h.prisma.paymentHasPlaylist.updateMany).toHaveBeenCalledWith({
+      where: { id: 5, promotionalCredited: false },
       data: {
         promotionalCredited: true,
         promotionalCreditedAt: expect.any(Date),
       },
+    });
+    // 2.5 * quantity(2) = 5, added atomically.
+    expect(h.prisma.discountCode.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { amount: { increment: 5 } },
+      select: { amount: true },
     });
 
     const mails = outbound.calls('Mail', 'sendPromotionalSaleEmail');
@@ -494,15 +612,17 @@ describe('Promotional.creditPromotionalDiscount', () => {
     ]);
   });
 
-  it('creates a discount code on the fly, which adds an extra initial 2.50 on top of the credit (suspected bug)', async () => {
-    // fetchOrCreateDiscountCode's docblock says "create a new one with 0
-    // balance" but it seeds amount=PROMOTIONAL_CREDIT_AMOUNT (src/promotional.ts
-    // ~line 552-562). creditPromotionalDiscount then adds the sale credit on
-    // top, so a first sale of quantity 1 yields a 5.00 balance, not 2.50.
+  it('creates a missing code with a 0 balance so the first sale credits exactly once', async () => {
+    // The welcome credit is handed out by the approval mail. A code minted
+    // by a sale used to be seeded with that credit AND get the sale credit
+    // on top, so a first sale of quantity 1 yielded 5.00 instead of 2.50.
     h.prisma.discountCode.findFirst.mockResolvedValue(null);
     h.prisma.discountCode.create.mockImplementation(async ({ data }: any) => ({
       id: 9,
       ...data,
+    }));
+    h.prisma.discountCode.update.mockImplementation(async ({ data }: any) => ({
+      amount: data.amount.increment,
     }));
     h.prisma.paymentHasPlaylist.findFirst.mockImplementation(
       async (args: any) =>
@@ -510,9 +630,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
           ? { id: 5, amount: 1, promotionalCredited: false }
           : null // no original payment -> no setup link
     );
-    h.prisma.discountCodedUses.aggregate.mockResolvedValue({
-      _sum: { amount: null },
-    });
+    h.getLiveUsage.mockResolvedValue({ amountUsed: 0, useCount: 0 });
 
     const res = await promotional.creditPromotionalDiscount(2, 99);
 
@@ -520,7 +638,7 @@ describe('Promotional.creditPromotionalDiscount', () => {
     expect(h.prisma.discountCode.create).toHaveBeenCalledWith({
       data: {
         code: expect.stringMatching(/^[0-9A-Z]{4}(-[0-9A-Z]{4}){3}$/),
-        amount: 2.5,
+        amount: 0,
         description: 'Promotional discount for user: Creator',
         promotional: true,
         promotionalUserId: 7,
@@ -528,13 +646,15 @@ describe('Promotional.creditPromotionalDiscount', () => {
         digital: false,
       },
     });
-    // 2.5 (seeded) + 2.5 (credit) = 5 after a single first sale.
-    expect(h.prisma.discountCode.updateMany).toHaveBeenCalledWith({
-      where: { promotional: true, promotionalUserId: 7 },
-      data: { amount: 5 },
+    expect(h.prisma.discountCode.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { amount: { increment: 2.5 } },
+      select: { amount: true },
     });
-    // Without an original payment the mail still goes out, with a null setup link.
+    // Without an original payment the mail still goes out, with a null setup
+    // link, and reports the 2.50 balance.
     const mails = outbound.calls('Mail', 'sendPromotionalSaleEmail');
+    expect(mails[0].args[4]).toBe(2.5);
     expect(mails[0].args[7]).toBeNull();
   });
 
@@ -709,27 +829,28 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     });
   });
 
-  it('translates, sanitizes every locale, updates name/slug and mails approval', async () => {
+  it('accepts, updates name/slug, has the SEO description written and mails approval', async () => {
     const res = await promotional.acceptPromotionalPlaylist('pl_1');
 
     expect(res).toEqual({ success: true });
-    // Source description is brand-sanitized before translation.
-    expect(h.translateText).toHaveBeenCalledWith('Great QRSong! mix', [
-      'en',
-      'nl',
-    ]);
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
     expect(h.prisma.playlist.update).toHaveBeenCalledWith({
       where: { playlistId: 'pl_1' },
       data: {
         promotionalAccepted: true,
         markedForMerchantCenter: true,
-        // Translations are sanitized again post-translation.
-        description_en: 'Great QRSong! mix EN',
-        description_nl: 'Geweldige mix NL',
         name: 'QRSong! Hits',
         slug: 'qrsong-hits',
       },
     });
+    // The description is written from the tracklist (with the customer's
+    // text as intent) after the name/slug update, so the writer sees the
+    // final name; the customer's text is no longer translated as-is.
+    expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
+    expect(h.prisma.playlist.update.mock.invocationCallOrder[0]).toBeLessThan(
+      h.seoGenerate.mock.invocationCallOrder[0]
+    );
+    expect(h.translateText).not.toHaveBeenCalled();
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'oldslug');
     expect(h.calcDecades).toHaveBeenCalledWith(2);
 
@@ -746,7 +867,7 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     ]);
   });
 
-  it('accepts without translation when the description is empty, skipping the mail if no user is linked', async () => {
+  it('still has a description written when the customer left it empty, skipping the mail if no user is linked', async () => {
     h.prisma.playlist.findUnique.mockResolvedValue({
       ...PLAYLIST,
       promotionalTitle: null,
@@ -762,11 +883,51 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
       where: { playlistId: 'pl_1' },
       data: { promotionalAccepted: true, markedForMerchantCenter: true },
     });
+    // The tracklist alone is enough to write from.
+    expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'oldslug');
     expect(h.calcDecades).toHaveBeenCalledWith(2);
     expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(
       0
     );
+  });
+
+  it('falls back to translating the customer text as-is when the writer fails', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    // Source description is brand-sanitized before translation.
+    expect(h.translateText).toHaveBeenCalledWith('Great QRSong! mix', [
+      'en',
+      'nl',
+    ]);
+    // Second update carries the translations, sanitized again post-translation,
+    // and leaves seoDescriptionGenerated alone so the bulk action retries later.
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(2);
+    expect(h.prisma.playlist.update.mock.calls[1][0]).toEqual({
+      where: { playlistId: 'pl_1' },
+      data: {
+        description_en: 'Great QRSong! mix EN',
+        description_nl: 'Geweldige mix NL',
+      },
+    });
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
+  });
+
+  it('does not fall back when the writer fails and there is no customer text', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      ...PLAYLIST,
+      promotionalDescription: '',
+    });
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.translateText).not.toHaveBeenCalled();
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
   });
 
   it('still succeeds but skips the mail when no paid payment exists', async () => {
@@ -778,11 +939,17 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     );
   });
 
-  it('propagates translation failures as an error result', async () => {
+  it('keeps the approval when both the writer and the fallback translation fail', async () => {
+    h.seoGenerate.mockRejectedValue(new Error('model returned nothing'));
     h.translateText.mockRejectedValue(new Error('openai down'));
+
     const res = await promotional.acceptPromotionalPlaylist('pl_1');
-    expect(res).toEqual({ success: false, error: 'openai down' });
-    expect(h.prisma.playlist.update).not.toHaveBeenCalled();
+
+    // The playlist is approved and live; the description is written later by
+    // the bulk action, which visits every row still flagged as not generated.
+    expect(res).toEqual({ success: true });
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
   });
 });
 

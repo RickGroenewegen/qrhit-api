@@ -9,6 +9,8 @@ import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import Utils from './utils';
+import Discount from './discount';
+import SeoDescriptions from './seoDescriptions';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -20,6 +22,7 @@ class Promotional {
   private chatgpt = new ChatGPT();
   private translation = new Translation();
   private utils = new Utils();
+  private discount = new Discount();
 
   private constructor() {}
 
@@ -100,6 +103,17 @@ class Promotional {
       playlistName: string;
       accepted: boolean;
       declined: boolean;
+      /** True when the playlist row carries a card design at all. */
+      hasDesign: boolean;
+      /** The customer's choice; null until they have submitted the form. */
+      shareDesign: boolean | null;
+      /**
+       * Their own design, so the form can preview both options. This route
+       * is only reachable with the owner's payment id and hash.
+       */
+      design: unknown | null;
+      /** One track of the playlist to print on the preview cards. */
+      sampleTrack: { artist: string; name: string; year: number | null } | null;
     };
     error?: string;
   }> {
@@ -119,11 +133,13 @@ class Promotional {
           slug: true,
           image: true,
           customImage: true,
+          design: true,
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalActive: true,
           promotionalAccepted: true,
           promotionalDeclined: true,
+          promotionalShareDesign: true,
         },
       });
 
@@ -138,24 +154,17 @@ class Promotional {
           promotionalUserId: ownership.userId,
         },
         select: {
+          id: true,
           code: true,
           amount: true,
         },
       });
 
-      // Calculate amount used
+      // Calculate amount used (paid rows + unexpired reservations)
       let discountBalance = 0;
       if (discountCode) {
-        const totalUsed = await this.prisma.discountCodedUses.aggregate({
-          where: {
-            discountCode: {
-              promotional: true,
-              promotionalUserId: ownership.userId,
-            },
-          },
-          _sum: { amount: true },
-        });
-        discountBalance = discountCode.amount - (totalUsed._sum.amount || 0);
+        const usage = await this.discount.getLiveUsage(discountCode.id);
+        discountBalance = discountCode.amount - usage.amountUsed;
       }
 
       // Generate share link using existing product page (no language prefix - frontend handles redirection)
@@ -163,6 +172,16 @@ class Promotional {
 
       // Check if this is a first-time setup (user hasn't submitted the form yet)
       const hasSubmitted = !!playlist.promotionalTitle;
+
+      // The first track, to draw on the design previews. Only needed when
+      // there is a design to preview.
+      const firstTrack = playlist.design
+        ? await this.prisma.playlistHasTrack.findFirst({
+            where: { playlistId: playlist.id },
+            orderBy: { order: 'asc' },
+            select: { track: { select: { artist: true, name: true, year: true } } },
+          })
+        : null;
 
       return {
         success: true,
@@ -180,6 +199,19 @@ class Promotional {
           playlistName: playlist.name,
           accepted: !!playlist.promotionalAccepted,
           declined: !!playlist.promotionalDeclined,
+          hasDesign: !!playlist.design,
+          // The column defaults to true, which is not an answer the customer
+          // gave: null tells the form this is the first time, and it starts
+          // on its own default.
+          shareDesign: hasSubmitted ? !!playlist.promotionalShareDesign : null,
+          design: playlist.design ?? null,
+          sampleTrack: firstTrack?.track
+            ? {
+                artist: firstTrack.track.artist,
+                name: firstTrack.track.name,
+                year: firstTrack.track.year ?? null,
+              }
+            : null,
         },
       };
     } catch (error) {
@@ -201,6 +233,12 @@ class Promotional {
       image?: string;
       active: boolean;
       locale?: string;
+      /**
+       * Whether the product page may show the customer's own card design.
+       * Only an explicit true shares it: the design can carry personal photos
+       * or messages, so a request that does not say reads as "no".
+       */
+      shareDesign?: boolean;
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -227,6 +265,7 @@ class Promotional {
         promotionalActive: data.active,
         promotionalLocale: data.locale || 'en',
         promotionalUserId: ownership.userId,
+        promotionalShareDesign: data.shareDesign === true,
         featured: data.active,
         name: sanitizedName,
         slug,
@@ -251,10 +290,13 @@ class Promotional {
         data: updateData,
       });
 
-      // Clear cache for old slug if it changed
-      if (oldSlug && oldSlug !== slug) {
-        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug);
-      }
+      // The product page lookup of a featured playlist is cached forever and
+      // holds the design, so the cache goes on every save (a changed design
+      // choice has to take effect), including the old slug when it changed.
+      await Data.getInstance().clearPlaylistCache(
+        playlistId,
+        oldSlug && oldSlug !== slug ? oldSlug : undefined
+      );
 
       return { success: true };
     } catch (error) {
@@ -426,40 +468,39 @@ class Promotional {
       const quantity = paymentPlaylist.amount || 1;
       const creditAmount = PROMOTIONAL_CREDIT_AMOUNT * quantity;
 
-      // Get or create discount code for this user
-      const discountCodeData = await this.fetchOrCreateDiscountCode(
-        creator.id,
-        creator.displayName || undefined,
-        creator.email
-      );
-
-      // Add the credit amount to the discount code
-      const newTotalAmount = discountCodeData.amount + creditAmount;
-      await this.prisma.discountCode.updateMany({
-        where: {
-          promotional: true,
-          promotionalUserId: creator.id,
-        },
-        data: {
-          amount: newTotalAmount,
-        },
-      });
-
-      // Mark as credited to prevent duplicate credits
-      await this.prisma.paymentHasPlaylist.update({
-        where: { id: paymentPlaylist.id },
+      // Claim the line first so two webhooks for the same sale can never
+      // both credit it.
+      const claim = await this.prisma.paymentHasPlaylist.updateMany({
+        where: { id: paymentPlaylist.id, promotionalCredited: false },
         data: {
           promotionalCredited: true,
           promotionalCreditedAt: new Date(),
         },
       });
+      if (claim.count === 0) {
+        return { success: true, credited: false };
+      }
+
+      // The welcome credit belongs to the approval mail, not to a sale: a
+      // code minted here starts at 0, otherwise the first sale credited twice.
+      const discountCodeData = await this.fetchOrCreateDiscountCode(
+        creator.id,
+        creator.displayName || undefined,
+        creator.email,
+        0
+      );
+
+      // Atomic increment: a concurrent redeem or credit cannot lose an update.
+      const updated = await this.prisma.discountCode.update({
+        where: { id: discountCodeData.id },
+        data: { amount: { increment: creditAmount } },
+        select: { amount: true },
+      });
+      const newTotalAmount = updated.amount;
 
       // Calculate new balance (total amount minus what's been used)
-      const totalUsed = await this.prisma.discountCodedUses.aggregate({
-        where: { discountCodeId: discountCodeData.id },
-        _sum: { amount: true },
-      });
-      const newBalance = newTotalAmount - (totalUsed._sum.amount || 0);
+      const usage = await this.discount.getLiveUsage(discountCodeData.id);
+      const newBalance = newTotalAmount - usage.amountUsed;
 
       // Generate the promotional setup link - find the original payment via payment_has_playlist
       const paymentLink = await this.prisma.paymentHasPlaylist.findFirst({
@@ -526,13 +567,16 @@ class Promotional {
   }
 
   /**
-   * Fetch existing discount code for a user, or create a new one with 0 balance
-   * This ensures promotional users always have a discount code available
+   * Fetch the user's promotional discount code, or create one. The approval
+   * mail promises a welcome credit, so the approval flows create it with
+   * PROMOTIONAL_CREDIT_AMOUNT; a sale credit creates it with 0 and adds the
+   * credit itself.
    */
   public async fetchOrCreateDiscountCode(
     userId: number,
     userDisplayName?: string,
-    userEmail?: string
+    userEmail?: string,
+    initialAmount: number = PROMOTIONAL_CREDIT_AMOUNT
   ): Promise<{ id: number; code: string; amount: number }> {
     // Check if a discount code already exists for this user
     let discountCode = await this.prisma.discountCode.findFirst({
@@ -552,7 +596,7 @@ class Promotional {
       discountCode = await this.prisma.discountCode.create({
         data: {
           code,
-          amount: PROMOTIONAL_CREDIT_AMOUNT,
+          amount: initialAmount,
           description,
           promotional: true,
           promotionalUserId: userId,
@@ -898,68 +942,16 @@ class Promotional {
         };
       };
 
-      if (!description.trim()) {
-        // No description to translate, just accept and update name/slug if promotionalTitle exists
-        const updateData: Record<string, any> = {
-          promotionalAccepted: true,
-          markedForMerchantCenter: true,
-        };
-        if (playlist.promotionalTitle) {
-          const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
-          updateData.name = sanitizedName;
-          updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
-        }
-        const oldSlug = playlist.slug;
-        await this.prisma.playlist.update({
-          where: { playlistId },
-          data: updateData,
-        });
-
-        // Clear all relevant caches (pass old slug in case it changed)
-        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug || undefined);
-
-        // Calculate decade percentages for the newly accepted playlist
-        await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
-
-        // Pass the new slug to fetchEmailData so the email contains the correct URL
-        const emailData = await fetchEmailData(updateData.slug);
-        if (emailData) {
-          await this.mail.sendPromotionalApprovedEmail(
-            emailData.email,
-            emailData.displayName,
-            emailData.playlistName,
-            emailData.discountCode,
-            emailData.shareLink,
-            emailData.setupLink,
-            emailData.locale
-          );
-        } else {
-          this.logger.log(
-            color.yellow.bold(
-              `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user or payment data`
-            )
-          );
-        }
-        return { success: true };
-      }
-
-      // Translate description to all locales using shared helper
-      const translationData = await this.translateToAllLocales(playlistId, description);
-
-      // Build update object with translations and additional fields
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
         markedForMerchantCenter: true,
-        ...translationData,
       };
-
       if (playlist.promotionalTitle) {
         const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
         updateData.name = sanitizedName;
         updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
       }
 
-      // Update playlist with translations and accepted status
       const oldSlug = playlist.slug;
       await this.prisma.playlist.update({
         where: { playlistId },
@@ -971,6 +963,41 @@ class Promotional {
 
       // Calculate decade percentages for the newly accepted playlist
       await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
+
+      // The product page copy is written from the tracklist with the
+      // customer's text as intent (see seoDescriptions.ts), after the name
+      // and slug above so the writer sees the final name. The customer's text
+      // used to be translated as-is into every locale; that is now only the
+      // fallback when the writer fails, so the page is never left without a
+      // description, and the row keeps seoDescriptionGenerated = false so the
+      // bulk action picks it up later.
+      try {
+        await SeoDescriptions.getInstance().generateForPlaylist(playlistId);
+      } catch (error: any) {
+        this.logger.log(
+          color.yellow.bold(
+            `SEO description for ${color.white.bold(playlistId)} failed (${error.message}), storing the customer's text instead`
+          )
+        );
+        if (description.trim()) {
+          try {
+            const translationData = await this.translateToAllLocales(playlistId, description);
+            await this.prisma.playlist.update({
+              where: { playlistId },
+              data: translationData,
+            });
+            await Data.getInstance().clearPlaylistCache(playlistId);
+          } catch (fallbackError: any) {
+            // The approval itself has gone through; a description can be
+            // written later by the bulk action, so this is not a failure.
+            this.logger.log(
+              color.red.bold(
+                `Fallback translation for ${color.white.bold(playlistId)} failed too: ${fallbackError.message}`
+              )
+            );
+          }
+        }
+      }
 
       this.logger.log(
         color.green.bold(

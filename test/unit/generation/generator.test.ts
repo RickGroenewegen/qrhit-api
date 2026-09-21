@@ -38,7 +38,11 @@ vi.mock('../../../src/qr', async () => {
 });
 vi.mock('../../../src/pdf', async () => {
   const { h } = await import('./harness');
-  return { default: function () { return h.pdf; } };
+  const actual = await vi.importActual<typeof import('../../../src/pdf')>('../../../src/pdf');
+  return {
+    default: function () { return h.pdf; },
+    forcedPrinterTemplate: actual.forcedPrinterTemplate,
+  };
 });
 vi.mock('../../../src/order', async () => {
   const { h } = await import('./harness');
@@ -585,11 +589,15 @@ describe('finalizeOrder()', () => {
         filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf',
       },
     });
+    // The parent row also records what the PDFs were built from (a sha256 of
+    // the live design, see printFingerprint.ts) so sendToPrinter can tell a
+    // stale file from a current one.
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 31 },
       data: {
         filename: '',
         filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf',
+        pdfFingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
       },
     });
 
@@ -707,8 +715,19 @@ describe('finalizeOrder()', () => {
     expect(outbound.calls('Mail', 'sendFinalizedMail')).toHaveLength(0);
   });
 
-  it('selects printer templates: CompanyList override (company orders only) > vibe > schneiders', async () => {
+  it('selects printer templates: order template > CompanyList override (company orders only) > vibe > schneiders', async () => {
     const cases = [
+      {
+        // An admin-chosen order template applies to any order on any printer.
+        paymentOver: {},
+        playlistOver: {
+          orderType: 'physical',
+          printerType: 'schneiders',
+          orderTemplate: 'facta',
+          template: 'company_x',
+        },
+        expected: 'facta',
+      },
       {
         paymentOver: { vibe: true },
         playlistOver: { orderType: 'physical', template: 'company_x' },

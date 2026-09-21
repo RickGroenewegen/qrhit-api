@@ -991,7 +991,7 @@ class Suggestion {
           // re-held and re-emailed.
           await this.prisma.payment.update({
             where: { id: paymentDbId },
-            data: { printerHold: false },
+            data: { printerHold: false, printerHoldReason: null },
           });
         }
 

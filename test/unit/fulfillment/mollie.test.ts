@@ -25,7 +25,12 @@ import { outbound } from '../../helpers/recording-mock';
 
 const mollieApi = vi.hoisted(() => {
   const makeClient = () => ({
-    payments: { create: vi.fn(), get: vi.fn(), update: vi.fn() },
+    payments: {
+      create: vi.fn(),
+      get: vi.fn(),
+      update: vi.fn(),
+      cancel: vi.fn(),
+    },
     paymentLinks: { create: vi.fn() },
     refunds: { create: vi.fn() },
   });
@@ -104,19 +109,43 @@ vi.mock('../../../src/order', () => ({
 
 const discountMock = vi.hoisted(() => ({
   calculateDiscounts: vi.fn(),
-  associatePaymentWithDiscountUse: vi.fn(),
-  removeDiscountUsesByPaymentId: vi.fn(),
+  attachPaymentToDiscountUses: vi.fn(),
+  confirmDiscountUsesByIds: vi.fn(),
+  confirmDiscountUsesByPaymentId: vi.fn(),
+  releaseDiscountUsesByPaymentId: vi.fn(),
   removeDiscountUsesByIds: vi.fn(),
+  supersedeOpenReservations: vi.fn(),
+  sweepExpiredReservations: vi.fn(),
 }));
-vi.mock('../../../src/discount', () => ({
-  default: class {
+vi.mock('../../../src/discount', () => {
+  class DiscountStub {
     calculateDiscounts = discountMock.calculateDiscounts;
-    associatePaymentWithDiscountUse =
-      discountMock.associatePaymentWithDiscountUse;
-    removeDiscountUsesByPaymentId = discountMock.removeDiscountUsesByPaymentId;
+    attachPaymentToDiscountUses = discountMock.attachPaymentToDiscountUses;
+    confirmDiscountUsesByIds = discountMock.confirmDiscountUsesByIds;
+    confirmDiscountUsesByPaymentId =
+      discountMock.confirmDiscountUsesByPaymentId;
+    releaseDiscountUsesByPaymentId =
+      discountMock.releaseDiscountUsesByPaymentId;
     removeDiscountUsesByIds = discountMock.removeDiscountUsesByIds;
-  },
-}));
+    supersedeOpenReservations = discountMock.supersedeOpenReservations;
+    sweepExpiredReservations = discountMock.sweepExpiredReservations;
+    // Same normalisation as the real class (trim, upper-case, dedupe).
+    static normalizeCodes(discounts?: { code?: string }[] | null): string[] {
+      const out: string[] = [];
+      for (const d of discounts || []) {
+        const code = String(d?.code || '').trim().toUpperCase();
+        if (code && !out.includes(code)) out.push(code);
+      }
+      return out;
+    }
+  }
+  class DiscountApplyError extends Error {
+    constructor(public code: string, public messageKey: string) {
+      super(`Discount ${code}: ${messageKey}`);
+    }
+  }
+  return { default: DiscountStub, DiscountApplyError };
+});
 
 const translationMock = vi.hoisted(() => ({
   getTranslationsByPrefix: vi.fn(),
@@ -291,13 +320,28 @@ function applyDefaults(): void {
     discountAmount: 0,
     discountUseIds: [],
     discountUsed: false,
+    percentAmount: 0,
+    percent: null,
+    label: '',
   });
-  discountMock.associatePaymentWithDiscountUse.mockResolvedValue(undefined);
-  discountMock.removeDiscountUsesByPaymentId.mockResolvedValue(undefined);
+  discountMock.attachPaymentToDiscountUses.mockResolvedValue(undefined);
+  discountMock.confirmDiscountUsesByIds.mockResolvedValue(undefined);
+  discountMock.confirmDiscountUsesByPaymentId.mockResolvedValue({
+    count: 0,
+    shortfalls: [],
+  });
+  discountMock.releaseDiscountUsesByPaymentId.mockResolvedValue({
+    success: true,
+    count: 0,
+    message: 'discountUsesReleasedSuccessfully',
+  });
   discountMock.removeDiscountUsesByIds.mockResolvedValue({
     success: true,
     message: 'discountUsesRemovedSuccessfully',
   });
+  discountMock.supersedeOpenReservations.mockResolvedValue({ paymentIds: [] });
+  discountMock.sweepExpiredReservations.mockResolvedValue(0);
+  mollieApi.liveClient.payments.cancel.mockResolvedValue({});
 
   translationMock.getTranslationsByPrefix.mockResolvedValue(TRANSLATIONS);
 
@@ -832,10 +876,12 @@ describe('getPaymentUri', () => {
       true,
       false
     );
-    expect(discountMock.associatePaymentWithDiscountUse).toHaveBeenCalledWith(
-      11,
+    // Free orders never get a webhook, so the reservation is settled here.
+    expect(discountMock.confirmDiscountUsesByIds).toHaveBeenCalledWith(
+      [11],
       555
     );
+    expect(discountMock.attachPaymentToDiscountUses).not.toHaveBeenCalled();
   });
 
   it('treats vibe orders with totals <= 10 as paid without Mollie', async () => {
@@ -927,29 +973,151 @@ describe('getPaymentUri', () => {
     expect(discountMock.removeDiscountUsesByIds).not.toHaveBeenCalled();
   });
 
-  it('does NOT discount the VAT breakdown for partially discounted orders (suspected bug)', async () => {
+  it('computes VAT and profit net of the discount and snapshots it on the row', async () => {
     discountMock.calculateDiscounts.mockResolvedValue({
       discountAmount: 10,
       discountUseIds: [11],
       discountUsed: true,
+      percentAmount: 2.5,
+      percent: 10,
+      label: 'SUMMER10 (10%), GIFT-1',
     });
 
     await mollie.getPaymentUri(makeParams(), IP);
 
     const data = prismaMock.payment.create.mock.calls[0][0].data;
-    // SUSPECTED BUG: totalPrice/totalPriceWithoutTax are net of the €10
-    // discount, but productVATPrice/profit are still computed from the
-    // pre-discount product price. The stored VAT (4.34) is the VAT on €25,
-    // not on the €15 actually charged (which would be 15/1.21*0.21 = 2.60),
-    // so totalPriceWithoutTax + totalVATPrice = 16.74 ≠ totalPrice (15) and
-    // profit is overstated by the discount's ex-VAT share.
+    // €25 incl. 21% minus €10 discount: VAT is collected on the €15 actually
+    // charged (15 × 21/121 = 2.60), the ex-VAT total is 15 − 2.60 = 12.40,
+    // and profit drops by the discount's ex-VAT share (10 / 1.21 = 8.26).
     expect(data).toMatchObject({
       totalPrice: 15,
-      totalPriceWithoutTax: 12.4, // 15 / 1.21
-      productVATPrice: 4.34, // pre-discount VAT
-      totalVATPrice: 4.34,
-      profit: 20.66, // pre-discount profit
+      totalPriceWithoutTax: 12.4,
+      productPriceWithoutTax: 20.66,
+      productVATPrice: 2.6,
+      totalVATPrice: 2.6,
+      profit: 12.4,
       discount: 10,
+      pricingVersion: 2,
+      discountPercent: 10,
+      discountPercentAmount: 2.5,
+      discountCodes: 'SUMMER10 (10%), GIFT-1',
+      discountWithoutTax: 8.26,
+      discountVAT: 1.74,
+      discountShipping: 0,
+      volumeDiscount: 0,
+      shipping: 0,
+    });
+    // The customer email travels along for once-per-customer codes.
+    expect(discountMock.calculateDiscounts).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ price: '20.66', taxRate: 21 }),
+      'buyer@example.com'
+    );
+    expect(discountMock.attachPaymentToDiscountUses).toHaveBeenCalledWith(
+      [11],
+      555
+    );
+  });
+
+  it('refuses to create the payment when a cart code cannot be applied', async () => {
+    const { DiscountApplyError } = await import('../../../src/discount');
+    discountMock.calculateDiscounts.mockRejectedValue(
+      new DiscountApplyError('SUMMER10', 'discountCodeExhausted')
+    );
+
+    const result = await mollie.getPaymentUri(
+      makeParams({ cart: { items: [makeItem()], discounts: [{ code: 'SUMMER10' }] } }),
+      IP
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'discount_failed',
+      discount: { code: 'SUMMER10', message: 'discountCodeExhausted' },
+    });
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+    expect(prismaMock.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('supersedes the customer\'s earlier open payment holding the same code and swallows cancel failures', async () => {
+    discountMock.supersedeOpenReservations.mockResolvedValue({
+      paymentIds: ['tr_old1', 'tr_old2'],
+    });
+    mollieApi.liveClient.payments.cancel
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('not cancelable'));
+
+    const result = await mollie.getPaymentUri(
+      makeParams({
+        cart: { items: [makeItem()], discounts: [{ code: ' gift-1 ' }] },
+      }),
+      IP
+    );
+
+    expect(result.success).toBe(true);
+    expect(discountMock.supersedeOpenReservations).toHaveBeenCalledWith(
+      'buyer@example.com',
+      ['GIFT-1']
+    );
+    expect(mollieApi.liveClient.payments.cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores server-owned fields echoed back in extraOrderData', async () => {
+    const params = makeParams();
+    params.extraOrderData.discount = 999;
+    params.extraOrderData.status = 'paid';
+    params.extraOrderData.test = true;
+    params.extraOrderData.profit = 12345;
+    params.extraOrderData.boxFee = 50;
+    params.extraOrderData.totalPrice = 1;
+
+    await mollie.getPaymentUri(params, IP);
+
+    const data = prismaMock.payment.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      discount: 0,
+      status: 'open',
+      test: false,
+      profit: 20.66,
+      boxFee: 0,
+      totalPrice: 25,
+      email: 'buyer@example.com',
+      fullname: 'Buyer One',
+    });
+  });
+
+  it('writes shipping and the volume discount server-side', async () => {
+    orderMock.calculateOrder.mockResolvedValue({
+      success: true,
+      data: {
+        total: 27.99,
+        price: '20.66',
+        payment: '2.99',
+        shipping: 2.99,
+        taxRate: 21,
+        taxRateShipping: 21,
+        boxFee: 0,
+        volumeDiscount: 0,
+        reverseCharge: false,
+        vatIdChecked: null,
+      },
+    });
+    const params = makeParams({
+      orderType: 'physical',
+      cart: { items: [makeItem({ type: 'physical' })] },
+    });
+
+    await mollie.getPaymentUri(params, IP);
+
+    const data = prismaMock.payment.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      shipping: 2.99,
+      volumeDiscount: 0,
+      shippingPriceWithoutTax: 2.47,
+      shippingVATPrice: 0.52,
+      productVATPrice: 4.34,
+      totalVATPrice: 4.86,
+      totalPriceWithoutTax: 23.13,
     });
   });
 
@@ -1295,7 +1463,50 @@ describe('processWebhook', () => {
     const updateData = prismaMock.payment.updateMany.mock.calls[0][0].data;
     expect(updateData).toEqual({ status: 'expired', paymentMethod: 'ideal' });
     expect('settlementAmountEur' in updateData).toBe(false);
-    expect(discountMock.removeDiscountUsesByPaymentId).toHaveBeenCalledWith(10);
+    expect(discountMock.releaseDiscountUsesByPaymentId).toHaveBeenCalledWith(10);
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+  });
+
+  it('replayed failure webhook (no status flip) still releases the discount uses', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({ id: 'tr_x', status: 'expired', method: 'ideal' })
+    );
+    prismaMock.payment.findUnique.mockResolvedValue({
+      id: 10,
+      paymentId: 'tr_x',
+      status: 'expired',
+      user: { hash: 'uhash' },
+    });
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
+
+    await mollie.processWebhook({ id: 'tr_x' });
+
+    expect(discountMock.releaseDiscountUsesByPaymentId).toHaveBeenCalledWith(10);
+  });
+
+  it('paid webhook settles the reservations even on a replay', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_x',
+        status: 'paid',
+        metadata: { clientIp: '9.9.9.9', refreshPlaylists: '' },
+      })
+    );
+    prismaMock.payment.findUnique.mockResolvedValue({
+      id: 10,
+      paymentId: 'tr_x',
+      status: 'paid',
+      user: { hash: 'uhash' },
+    });
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
+    discountMock.confirmDiscountUsesByPaymentId.mockResolvedValue({
+      count: 1,
+      shortfalls: [{ code: 'GIFT-1', over: 5 }],
+    });
+
+    await mollie.processWebhook({ id: 'tr_x' });
+
+    expect(discountMock.confirmDiscountUsesByPaymentId).toHaveBeenCalledWith(10);
     expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
   });
 

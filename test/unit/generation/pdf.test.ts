@@ -36,7 +36,19 @@ const holder = vi.hoisted(() => {
     },
     increaseCounter: undefined as any,
     convertapiConvert: undefined as any,
+    execFile: undefined as any,
   };
+});
+
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  // promisify(execFile) in src/pdf.ts expects the node callback convention.
+  const execFile = (cmd: string, args: string[], cb: (err: any, result?: any) => void) => {
+    Promise.resolve()
+      .then(() => holder.execFile(cmd, args))
+      .then((result: any) => cb(null, result), (err: any) => cb(err));
+  };
+  return { ...actual, execFile, default: { ...actual, execFile } };
 });
 
 vi.mock('@aws-sdk/client-lambda', () => {
@@ -108,7 +120,7 @@ vi.mock('pdf-lib', () => ({
   },
 }));
 
-import PDF, { printerPageSizeMm, isMultiCardTemplate } from '../../../src/pdf';
+import PDF, { printerPageSizeMm, isMultiCardTemplate, needsOutlinedText } from '../../../src/pdf';
 
 const PUBLIC_DIR = process.env['PUBLIC_DIR'];
 const API_URI = 'https://api.test';
@@ -162,6 +174,7 @@ function installDefaultLambda() {
 let pdf: PDF;
 let resizeSpy: any;
 let bleedSpy: any;
+let outlineSpy: any;
 
 beforeEach(() => {
   chunkCounter = 0;
@@ -195,6 +208,8 @@ beforeEach(() => {
     .spyOn(pdf, 'resizePDFPages')
     .mockResolvedValue(undefined as any);
   bleedSpy = vi.spyOn(pdf, 'addBleed').mockResolvedValue(undefined as any);
+  outlineSpy = vi.spyOn(pdf, 'outlineText').mockResolvedValue(undefined as any);
+  holder.execFile = vi.fn(async () => ({ stdout: '', stderr: '' }));
 });
 
 afterEach(() => {
@@ -479,6 +494,42 @@ describe('generatePDF (Lambda path)', () => {
     expect(bleedSpy).not.toHaveBeenCalled();
   });
 
+  it('outlines the text for vibe orders, after the resize', async () => {
+    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
+    await pdf.generatePDF(
+      'v.pdf',
+      playlist,
+      { paymentId: 'pay1', vibe: true } as any,
+      'printnbind',
+      'sub',
+      false,
+      'printnbind'
+    );
+    expect(outlineSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/v.pdf`);
+    expect(outlineSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+      resizeSpy.mock.invocationCallOrder[0]
+    );
+  });
+
+  it.each(['tromp', 'schneiders'])(
+    'outlines the text for the %s printer, after resize and bleed',
+    async (printerType) => {
+      const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
+      await pdf.generatePDF('o.pdf', playlist, payment, 'printer', 'sub', false, printerType);
+      expect(outlineSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/o.pdf`);
+      expect(outlineSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+        bleedSpy.mock.invocationCallOrder[0]
+      );
+    }
+  );
+
+  it('keeps the fonts for other printers and for digital templates', async () => {
+    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
+    await pdf.generatePDF('p.pdf', playlist, payment, 'printer', 'sub', false, 'printnbind');
+    await pdf.generatePDF('d.pdf', playlist, payment, 'digital', 'sub', false, 'tromp');
+    expect(outlineSpy).not.toHaveBeenCalled();
+  });
+
   it('resizes printer_sheets output to A4 dimensions', async () => {
     await pdf.generatePDF(
       'sheets.pdf',
@@ -702,6 +753,57 @@ describe('printerPageSizeMm', () => {
 
   it('keeps 56 mm when the printer itself is Schneiders', () => {
     expect(printerPageSizeMm('printer', 'schneiders')).toBe(56);
+  });
+});
+
+describe('needsOutlinedText', () => {
+  it('is on for Tromp, Schneiders and OnzeVibe orders', () => {
+    expect(needsOutlinedText('tromp', { vibe: false })).toBe(true);
+    expect(needsOutlinedText('schneiders', { vibe: false })).toBe(true);
+    expect(needsOutlinedText('printnbind', { vibe: true })).toBe(true);
+  });
+
+  it('is off for every other printer', () => {
+    expect(needsOutlinedText('printnbind', { vibe: false })).toBe(false);
+    expect(needsOutlinedText('reseller', undefined)).toBe(false);
+    expect(needsOutlinedText('musicmatch', {})).toBe(false);
+  });
+});
+
+describe('outlineText', () => {
+  const input = '/pub/pdf/cards.pdf';
+  let raw: PDF;
+
+  beforeEach(() => {
+    // A fresh instance so the outlineText spy from the shared beforeEach does
+    // not swallow the real implementation.
+    raw = new PDF();
+  });
+
+  it('runs Ghostscript with fonts stripped and images untouched, then swaps the result in', async () => {
+    await raw.outlineText(input);
+
+    expect(holder.execFile).toHaveBeenCalledTimes(1);
+    const [cmd, args] = holder.execFile.mock.calls[0];
+    expect(cmd).toBe('gs');
+    expect(args).toContain('-dNoOutputFonts');
+    expect(args).toContain('-sDEVICE=pdfwrite');
+    expect(args).toContain('-dDownsampleColorImages=false');
+    expect(args).toContain('-dAutoFilterColorImages=false');
+    expect(args).toContain('-sColorImageFilter=FlateEncode');
+    expect(args).toContain(`-sOutputFile=${input}.outlined.tmp`);
+    expect(args[args.length - 1]).toBe(input);
+
+    expect(holder.fsp.rename).toHaveBeenCalledWith(`${input}.outlined.tmp`, input);
+    expect(holder.fsp.unlink).not.toHaveBeenCalled();
+  });
+
+  it('removes the partial output and rethrows when Ghostscript fails', async () => {
+    holder.execFile.mockRejectedValueOnce(new Error('gs: boom'));
+
+    await expect(raw.outlineText(input)).rejects.toThrow('gs: boom');
+    expect(holder.fsp.rename).not.toHaveBeenCalled();
+    expect(holder.fsp.unlink).toHaveBeenCalledWith(`${input}.outlined.tmp`);
   });
 });
 

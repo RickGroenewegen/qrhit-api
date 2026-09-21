@@ -10,8 +10,6 @@ git reset --hard HEAD
 # pm2 start npm --name "qrsong" -- run start
 # pm2 start dist/qrhit/server/server.mjs --name "qrsong-frontend"
 
-pm2 restart qrsong
-
 # Pull the latest changes from the remote repository
 git pull origin HEAD
 
@@ -19,11 +17,22 @@ sudo chmod +x deploy
 sudo chmod +x deploy_api
 sudo chmod +x deploy_frontend
 
-sudo npm install --force
-sudo npx prisma generate
-sudo npx prisma db push
-sudo npx prisma generate
+npm install --force
+npx prisma generate
+npx prisma db push
+npx prisma generate
 echo "Repository has been reset and updated."
+
+# Build while the old process is still serving, then restart: `npm run start`
+# (what pm2 runs) sees that ./build matches this commit and skips its own
+# build. The restart used to sit above the pull, where it raced the pull and
+# rebuilt with the API down. A failed build leaves the old process running and
+# the frontend deploy below still goes ahead.
+if npm run build; then
+  pm2 restart qrsong
+else
+  echo "API build failed, NOT restarting: the API is still running the previous build."
+fi
 
 cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD

@@ -61,9 +61,11 @@ All other backend files (mail.ts, chatgpt.ts, chat.ts, AppleMusicProvider.ts) us
 - **Playlist** model — `description_xx String? @db.Text`
 - **CompanyList** model — `description_xx String @default("")`
 - **genre** model — `name_xx String @default("")`
-- **TrustPilot** model:
-  - `title_xx String @default("")`
-  - `message_xx String @default("") @db.Text`
+- ~~**TrustPilot** model~~ — no longer read. Customer reviews live in
+  `src/_data/reviews/reviews.json`; add the locale to `pillars.blog.locales`
+  (or `pillars.reviews.locales`) in the frontend's `growth.config.json` and run
+  `npm run growth -- reviews translate` there. `growth reviews lint` fails until
+  every visible review has the new locale.
 - **Blog** model:
   - `slug_xx String? @unique`
   - `title_xx String @default("")`

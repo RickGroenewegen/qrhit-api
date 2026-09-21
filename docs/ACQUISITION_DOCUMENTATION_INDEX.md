@@ -190,7 +190,6 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - **TrackingMore** - Multi-carrier shipping tracking
 - **ConvertAPI** - Document conversion
 - **MaxMind** - GeoIP lookup
-- **Sentry** - Error tracking
 
 ---
 

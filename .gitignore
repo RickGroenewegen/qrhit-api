@@ -11,6 +11,7 @@ public/background
 public/logo
 public/companydata
 .build-temp
+.build-old
 public/blog_images
 credentials/
 merchant-center-key.json

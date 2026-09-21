@@ -12,7 +12,14 @@ import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
-import Discount from './discount';
+import Discount, { DiscountApplyError } from './discount';
+import {
+  allocateDiscount,
+  buildDiscountBase,
+  exVat,
+  goodsVatAfterDiscount,
+  round2,
+} from './services/discount-allocation';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
@@ -25,6 +32,7 @@ import AppTheme from './apptheme';
 import AppDesign from './appDesign';
 import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
+import { extractPrintErrorMessage } from './printers/printErrorMessage';
 import Mail from './mail';
 import Fx from './services/fx';
 import SpotifyProvider from './providers/SpotifyProvider';
@@ -862,6 +870,19 @@ class Mollie {
 
   private async cleanPayments(): Promise<void> {
     try {
+      const swept = await this.discount.sweepExpiredReservations();
+      if (swept > 0) {
+        this.logger.log(
+          color.blue.bold(
+            `Released ${color.white.bold(swept)} expired discount reservation(s).`
+          )
+        );
+      }
+    } catch (error: any) {
+      this.logger.log(color.red.bold('Error sweeping discount reservations!'));
+    }
+
+    try {
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
           status: {
@@ -1273,7 +1294,12 @@ class Mollie {
 
   public async getPaymentList(
     search: OrderSearch & { page: number; itemsPerPage: number }
-  ): Promise<{ payments: any[]; totalItems: number }> {
+  ): Promise<{
+    payments: any[];
+    totalItems: number;
+    needsAttentionCount: number;
+    printerHoldCount: number;
+  }> {
     const whereClause =
       Array.isArray(search.status) && search.status.length > 0
         ? { status: { in: search.status } }
@@ -1332,30 +1358,64 @@ class Mollie {
         : {};
 
     // Printer hold filter - if true, only include payments with printerHold = true AND at least one physical playlist
+    const printerHoldFilter: Prisma.PaymentWhereInput = {
+      printerHold: true,
+      PaymentHasPlaylist: {
+        some: {
+          type: 'physical',
+        },
+      },
+    };
     const printerHoldClause =
       typeof search.printerHold === 'boolean' && search.printerHold
-        ? {
-            printerHold: true,
-            PaymentHasPlaylist: {
-              some: {
-                type: 'physical',
-              },
-            },
-          }
+        ? printerHoldFilter
         : {};
 
-    // Not submitted filter - if true, only include payments with printApiStatus = 'Created' AND at least one physical playlist with userConfirmedPrinting = true (Judged)
-    const notSubmittedClause =
-      typeof search.notSubmitted === 'boolean' && search.notSubmitted
-        ? {
-            printApiStatus: 'Created',
-            PaymentHasPlaylist: {
-              some: {
-                type: 'physical',
-                userConfirmedPrinting: true,
-              },
+    // Needs attention filter, part one - physical orders that should have gone
+    // to the printer but are still on printApiStatus = 'Created': either the
+    // customer approved printing (userConfirmedPrinting, shown as Judged) or
+    // the approval timer (canBeSentToPrinterAt) ran out. Orders on printer hold
+    // are parked on purpose and have their own filter.
+    const notSentToPrinterFilter: Prisma.PaymentWhereInput = {
+      printApiStatus: 'Created',
+      printerHold: false,
+      PaymentHasPlaylist: {
+        some: {
+          type: 'physical',
+        },
+      },
+      OR: [
+        {
+          PaymentHasPlaylist: {
+            some: {
+              type: 'physical',
+              userConfirmedPrinting: true,
             },
-          }
+          },
+        },
+        { canBeSentToPrinterAt: { lte: new Date() } },
+        // The printer refused the order: marked as sent, yet no printer order
+        // id. The hourly pass never retries these.
+        { sentToPrinter: true, printApiOrderId: '' },
+      ],
+    };
+
+    // Part two - paid orders that were never finalized. Generation only
+    // finalizes once every track is checked, so an order that stays here has
+    // nothing delivered at all, digital or physical.
+    const notFinalizedFilter: Prisma.PaymentWhereInput = {
+      status: 'paid',
+      finalized: false,
+    };
+
+    // `notSubmitted` is the old name of this flag, still sent by dashboards
+    // loaded before the rename.
+    const needsAttentionFilter: Prisma.PaymentWhereInput = {
+      OR: [notSentToPrinterFilter, notFinalizedFilter],
+    };
+    const needsAttentionClause =
+      search.needsAttention === true || search.notSubmitted === true
+        ? needsAttentionFilter
         : {};
 
     // Printer type filter - if provided, only include payments with at least one physical playlist with matching printerType
@@ -1389,24 +1449,46 @@ class Mollie {
     // Every playlist-scoped filter keys on PaymentHasPlaylist, so they have to
     // be combined with AND: spreading them into one object would let the last
     // one silently drop the others
-    const playlistClauses = [
-      printerHoldClause,
-      notSubmittedClause,
-      printerTypeClause,
-      serviceTypeClause,
-    ].filter((clause) => Object.keys(clause).length > 0);
+    const buildWhereFilter = (
+      holdClause: Prisma.PaymentWhereInput,
+      attentionClause: Prisma.PaymentWhereInput
+    ): Prisma.PaymentWhereInput => {
+      const playlistClauses: Prisma.PaymentWhereInput[] = [
+        holdClause,
+        attentionClause,
+        printerTypeClause,
+        serviceTypeClause,
+      ].filter((clause) => Object.keys(clause).length > 0);
 
-    const whereFilter = {
-      vibe: false,
-      ...whereClause,
-      ...textSearchClause,
-      ...finalizedClause,
-      ...(playlistClauses.length > 0 ? { AND: playlistClauses } : {}),
+      return {
+        vibe: false,
+        ...whereClause,
+        ...textSearchClause,
+        ...finalizedClause,
+        ...(playlistClauses.length > 0 ? { AND: playlistClauses } : {}),
+      };
     };
 
-    const totalItems = await this.prisma.payment.count({
-      where: whereFilter,
-    });
+    const whereFilter = buildWhereFilter(
+      printerHoldClause,
+      needsAttentionClause
+    );
+
+    // What the list would hold with the needs attention or the printer hold
+    // filter switched on and every other filter left as it is; the dashboard
+    // shows them next to the checkboxes. The two exclude each other (an order
+    // on hold never needs attention), so each count leaves the other filter
+    // out instead of dropping to zero as soon as it is ticked.
+    const [totalItems, needsAttentionCount, printerHoldCount] =
+      await Promise.all([
+        this.prisma.payment.count({ where: whereFilter }),
+        this.prisma.payment.count({
+          where: buildWhereFilter({}, needsAttentionFilter),
+        }),
+        this.prisma.payment.count({
+          where: buildWhereFilter(printerHoldFilter, {}),
+        }),
+      ]);
 
     const payments = await this.prisma.payment.findMany({
       where: whereFilter,
@@ -1426,6 +1508,7 @@ class Mollie {
         updatedAt: true,
         orderId: true,
         profit: true,
+        finalized: true,
         printApiStatus: true,
         printApiTrackingLink: true,
         printApiOrderRequest: true,
@@ -1433,8 +1516,10 @@ class Mollie {
         printApiOrderId: true,
         sentToPrinterAt: true,
         sentToPrinter: true,
+        canBeSentToPrinterAt: true,
         fast: true,
         printerHold: true,
+        printerHoldReason: true,
         email: true,
         fullname: true,
         locale: true,
@@ -1471,6 +1556,8 @@ class Mollie {
             blocked: true,
             allowDuplicates: true,
             userConfirmedPrinting: true,
+            suggestionsPending: true,
+            playlistId: true,
             orderType: {
               select: {
                 name: true,
@@ -1536,6 +1623,8 @@ class Mollie {
             boxBackText: true,
             boxBackSelectedFont: true,
             boxBackSelectedFontSize: true,
+            // Production settings
+            template: true,
             // Bingo
             gamesEnabled: true,
             appleStoreFront: true,
@@ -1576,7 +1665,93 @@ class Mollie {
       },
     });
 
-    return { payments, totalItems };
+    // Tell the dashboard why an order needs attention. The hourly printer
+    // pass skips an order as long as its playlists hold unprocessed
+    // corrections (a pending flag or UserSuggestion rows), and the approval
+    // timer never submits those on the customer's behalf.
+    // Mirrors needsAttentionFilter above; keep the two in step.
+    const now = new Date();
+    const isNotSentToPrinter = (payment: (typeof payments)[number]) =>
+      payment.printApiStatus === 'Created' &&
+      !payment.printerHold &&
+      payment.PaymentHasPlaylist.some((php) => php.type === 'physical') &&
+      (payment.PaymentHasPlaylist.some(
+        (php) => php.type === 'physical' && php.userConfirmedPrinting
+      ) ||
+        (payment.canBeSentToPrinterAt !== null &&
+          payment.canBeSentToPrinterAt <= now) ||
+        (payment.sentToPrinter && !payment.printApiOrderId));
+    const isNotFinalized = (payment: (typeof payments)[number]) =>
+      payment.status === 'paid' && !payment.finalized;
+
+    const attentionPayments = payments.filter(
+      (payment) => isNotSentToPrinter(payment) || isNotFinalized(payment)
+    );
+
+    const suggestionCounts =
+      attentionPayments.length > 0
+        ? await this.prisma.userSuggestion.groupBy({
+            by: ['playlistId'],
+            where: {
+              playlistId: {
+                in: attentionPayments.flatMap((payment) =>
+                  payment.PaymentHasPlaylist.map((php) => php.playlistId)
+                ),
+              },
+            },
+            _count: { _all: true },
+          })
+        : [];
+    const suggestionsByPlaylist = new Map(
+      suggestionCounts.map((row) => [row.playlistId, row._count._all])
+    );
+
+    const attentionIds = new Set(attentionPayments.map((payment) => payment.id));
+    const paymentsWithAttention = payments.map((payment) => {
+      if (!attentionIds.has(payment.id)) {
+        return { ...payment, attention: null };
+      }
+
+      const openCorrections = payment.PaymentHasPlaylist.reduce(
+        (total, php) => total + (suggestionsByPlaylist.get(php.playlistId) ?? 0),
+        0
+      );
+      const correctionsPending = payment.PaymentHasPlaylist.some(
+        (php) => php.suggestionsPending
+      );
+
+      // Most specific cause first: a refused send and open corrections both
+      // explain an order that never finalized, so they outrank it
+      let reason:
+        | 'printer-error'
+        | 'open-corrections'
+        | 'not-finalized'
+        | 'not-sent' = 'not-sent';
+      let printerError: string | null = null;
+      if (payment.sentToPrinter && !payment.printApiOrderId) {
+        // The send was attempted and the printer refused it; sentToPrinter
+        // stays set so the hourly pass does not retry
+        reason = 'printer-error';
+        printerError = extractPrintErrorMessage(payment.printApiOrderResponse);
+      } else if (openCorrections > 0 || correctionsPending) {
+        reason = 'open-corrections';
+      } else if (isNotFinalized(payment)) {
+        // Generation never completed: no PDFs, nothing delivered
+        reason = 'not-finalized';
+      }
+
+      return {
+        ...payment,
+        attention: { reason, openCorrections, printerError },
+      };
+    });
+
+    return {
+      payments: paymentsWithAttention,
+      totalItems,
+      needsAttentionCount,
+      printerHoldCount,
+    };
   }
 
   public async deletePayment(
@@ -1747,9 +1922,48 @@ class Mollie {
         };
       }
 
+      const paymentClientResult = await this.getClient(clientIp);
+      const paymentClient = paymentClientResult.client;
+
+      // A second "Pay" click used to find the customer's own balance still
+      // reserved by their earlier, still-open Mollie payment, and then either
+      // refused the code or silently charged full price. Release those
+      // reservations first; cancelling the stale Mollie payment is a courtesy
+      // (iDEAL payments are usually not cancelable) and its failure is fine.
+      const customerEmail: string = String(
+        params.extraOrderData.email || ''
+      ).trim();
+      const cartCodes = Discount.normalizeCodes(params.cart.discounts);
+      if (cartCodes.length > 0 && customerEmail) {
+        const superseded = await this.discount.supersedeOpenReservations(
+          customerEmail,
+          cartCodes
+        );
+        for (const stalePaymentId of superseded.paymentIds) {
+          try {
+            await paymentClient.payments.cancel({ paymentId: stalePaymentId });
+            this.logger.log(
+              color.blue.bold('Cancelled superseded payment: ') +
+                color.white.bold(stalePaymentId)
+            );
+          } catch (e) {
+            this.logger.log(
+              color.yellow.bold(
+                `Could not cancel superseded payment ${color.white.bold(
+                  stalePaymentId
+                )}: ${e instanceof Error ? e.message : String(e)}`
+              )
+            );
+          }
+        }
+      }
+
+      // Throws DiscountApplyError when a code in the cart cannot be applied,
+      // so the customer is told instead of being charged the full amount.
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
-        calculateResult.data.total
+        calculateResult.data,
+        customerEmail
       );
 
       discountAmount = discountResult.discountAmount;
@@ -1760,11 +1974,13 @@ class Mollie {
         discountAmount = calculateResult.data.total;
       }
 
-      calculateResult.data.total -= discountAmount;
-      calculateResult.data.discount = discountAmount;
+      const discountBase = buildDiscountBase(calculateResult.data);
+      const allocation = allocateDiscount(discountAmount, discountBase);
 
-      const paymentClientResult = await this.getClient(clientIp);
-      const paymentClient = paymentClientResult.client;
+      calculateResult.data.total = round2(
+        calculateResult.data.total - discountAmount
+      );
+      calculateResult.data.discount = discountAmount;
 
       const translations = await this.translation.getTranslationsByPrefix(
         params.locale,
@@ -1980,33 +2196,22 @@ class Mollie {
         );
       }
 
-      const productVATPrice = parseFloat(
-        (
-          parseFloat(calculateResult.data.price) *
-          (calculateResult.data.taxRate / 100)
-        ).toFixed(2)
+      // VAT actually collected on the goods: products plus the VAT-inclusive
+      // box / QRGames add-ons, net of the goods share of the discount and of
+      // the volume discount (both are already inside `productsGross`).
+      // Reverse charge sets taxRate to 0, so this is correctly 0 as well.
+      const goodsTaxRate = calculateResult.data.taxRate ?? 0;
+      const goodsGross = round2(
+        discountBase.productsGross + discountBase.addonsGross
+      );
+      const productVATPrice = goodsVatAfterDiscount(
+        goodsGross,
+        allocation.discountGoods,
+        goodsTaxRate
       );
 
-      // Box and QRGames fees are VAT-INCLUSIVE add-ons charged at the product
-      // tax rate (boxTierPrice / QRGAMES_UPGRADE_PRICE are gross amounts) and
-      // are folded straight into `total`. Back out the embedded VAT so the
-      // order's total output VAT (and the invoice) reflects it — otherwise
-      // the line items under-sum the total by the add-on VAT. When reverse
-      // charge applies taxRate is 0, so this is correctly 0 as well.
-      const addonsTaxRate = calculateResult.data.taxRate ?? 0;
-      const addonsGross =
-        (calculateResult.data.boxFee || 0) +
-        (calculateResult.data.gamesFee || 0) +
-        (calculateResult.data.appDesignFee || 0);
-      const addonsVATPrice = parseFloat(
-        (
-          addonsGross -
-          addonsGross / (1 + addonsTaxRate / 100)
-        ).toFixed(2)
-      );
-
-      const totalVATPrice = parseFloat(
-        (productVATPrice + shippingVATPrice + addonsVATPrice).toFixed(2)
+      const totalVATPrice = round2(
+        productVATPrice + shippingVATPrice - allocation.discountShippingVAT
       );
 
       const playlists = await Promise.all(
@@ -2136,8 +2341,17 @@ class Mollie {
         })
       );
 
-      let totalProfit = parseFloat(
-        (productPriceWithoutTax + shippingPriceWithoutTax).toFixed(2)
+      // Ex-VAT revenue: product + shipping price minus what the discount code
+      // and the volume discount took off, also ex-VAT.
+      const volumeDiscountExcl = exVat(
+        discountBase.volumeDiscount,
+        goodsTaxRate
+      );
+      let totalProfit = round2(
+        productPriceWithoutTax +
+          shippingPriceWithoutTax -
+          allocation.discountWithoutTax -
+          volumeDiscountExcl
       );
 
       if (params.cart.items[0].productType == 'giftcard') {
@@ -2149,35 +2363,22 @@ class Mollie {
         }
       }
 
-      delete params.extraOrderData.orderType;
-      delete params.extraOrderData.total;
-      delete params.extraOrderData.price;
-      delete params.extraOrderData.agreeTerms;
-      delete params.extraOrderData.agreeNoRefund;
-      // Strip form-echoed fields the server recomputes below. Without this,
-      // the client's remembered values (from the /order/calculate response)
-      // would spread in via `...params.extraOrderData` and overwrite our
-      // authoritative numbers — masking reverse-charge bugs (taxRate=0 on
-      // row, productVATPrice=2.26 stored from a stale calc) and in general
-      // opening a trust-the-client hole on VAT / shipping / totals.
-      delete params.extraOrderData.taxRate;
-      delete params.extraOrderData.taxRateShipping;
-      delete params.extraOrderData.shipping;
-      delete params.extraOrderData.volumeDiscount;
-      delete params.extraOrderData.gamesFee;
-      delete params.extraOrderData.appDesignFee;
+      // Only the address/contact fields the checkout form owns may reach the
+      // Payment row. Everything the server computes (totals, VAT, discount,
+      // fees, status) is set explicitly below and must never be overwritten
+      // by whatever the client echoes back in extraOrderData.
+      const customerFields = Mollie.pickCustomerFields(params.extraOrderData);
 
-      // Use the tax rate the calculateOrder pipeline resolved (which
-      // already reflects reverse charge when applicable) instead of the
-      // raw country VAT — otherwise totalPriceWithoutTax ends up backed
-      // out of the wrong denominator for B2B reverse-charge orders.
-      const effectiveTaxRate = calculateResult.data.taxRate ?? 0;
-      const molliePaymentAmountWithoutTax = parseFloat(
-        (molliePaymentAmount / (1 + effectiveTaxRate / 100)).toFixed(2)
+      // Ex-VAT total = paid total minus the VAT actually collected. Backing
+      // it out of a single rate would be wrong whenever shipping is taxed at
+      // another rate than the goods, or when a discount is in play.
+      const molliePaymentAmountWithoutTax = round2(
+        molliePaymentAmount - totalVATPrice
       );
 
       const insertResult = await this.prisma.payment.create({
         data: {
+          ...customerFields,
           paymentId: molliePaymentId,
           vibe,
           user: {
@@ -2198,7 +2399,18 @@ class Mollie {
           test: false,
           profit: totalProfit,
           printApiPrice: 0,
+          shipping: useOrderType == 'physical' ? discountBase.shippingGross : 0,
+          volumeDiscount: discountBase.volumeDiscount,
           discount: discountAmount,
+          pricingVersion: 2,
+          discountPercent: discountResult.percent,
+          discountPercentAmount: discountResult.percentAmount,
+          discountCodes: discountResult.label
+            ? discountResult.label.substring(0, 255)
+            : null,
+          discountWithoutTax: allocation.discountWithoutTax,
+          discountVAT: allocation.discountVAT,
+          discountShipping: allocation.discountShipping,
           boxFee: calculateResult.data.boxFee || 0,
           gamesFee: calculateResult.data.gamesFee || 0,
           appDesignFee: calculateResult.data.appDesignFee || 0,
@@ -2210,7 +2422,6 @@ class Mollie {
           vatIdChecked: calculateResult.data.vatIdChecked || null,
           boxInstructionsMailSent: false,
           PaymentHasPlaylist: { create: playlists },
-          ...params.extraOrderData,
         },
         // The App Designer needs the new line ids to attach designs to.
         include: {
@@ -2304,10 +2515,13 @@ class Mollie {
         },
       });
 
-      // Associate the payment with each discount use
-      for (const discountUseId of discountUseIds) {
-        await this.discount.associatePaymentWithDiscountUse(
-          discountUseId,
+      // Bind the reservations to the payment. Free orders have no webhook to
+      // settle them later, so they are confirmed right here.
+      if (molliePaymentStatus === 'paid') {
+        await this.discount.confirmDiscountUsesByIds(discountUseIds, paymentId);
+      } else {
+        await this.discount.attachPaymentToDiscountUses(
+          discountUseIds,
           paymentId
         );
       }
@@ -2381,6 +2595,16 @@ class Mollie {
         );
       }
 
+      // A code in the cart could not be applied: name it so the checkout can
+      // drop it and explain, rather than charging the full price in silence.
+      if (e instanceof DiscountApplyError) {
+        return {
+          success: false,
+          error: 'discount_failed',
+          discount: { code: e.code, message: e.messageKey },
+        };
+      }
+
       // Map the few failures the checkout has specific copy for onto stable
       // codes; everything else stays generic so we don't leak internals.
       const message = e instanceof Error ? e.message : '';
@@ -2396,6 +2620,43 @@ class Mollie {
         error,
       };
     }
+  }
+
+  /**
+   * The checkout form fields that are Payment columns. Anything else the
+   * client sends (echoed totals, VAT, discount, fees, status) is dropped.
+   */
+  public static pickCustomerFields(
+    extra: any
+  ): { fullname: string; email: string } & Record<string, any> {
+    const allowed = [
+      'isBusinessOrder',
+      'companyName',
+      'vatId',
+      'address',
+      'housenumber',
+      'city',
+      'zipcode',
+      'countrycode',
+      'marketingEmails',
+      'differentInvoiceAddress',
+      'invoiceAddress',
+      'invoiceHousenumber',
+      'invoiceCity',
+      'invoiceZipcode',
+      'invoiceCountrycode',
+      'fast',
+    ];
+    const out: { fullname: string; email: string } & Record<string, any> = {
+      fullname: String(extra?.fullname ?? ''),
+      email: String(extra?.email ?? ''),
+    };
+    for (const key of allowed) {
+      if (extra && extra[key] !== undefined) {
+        out[key] = extra[key];
+      }
+    }
+    return out;
   }
 
   public async canDownloadPDF(
@@ -2852,6 +3113,28 @@ class Mollie {
           (statusChanged ? '' : color.yellow.bold(' (replay — side effects skipped)'))
       );
 
+      // Discount reservations follow the payment status on EVERY webhook,
+      // replay or not. Both calls are idempotent, and a replayed failure
+      // webhook used to leave the balance locked forever because the release
+      // sat behind the status-flip claim.
+      if (this.failedPaymentStatus.includes(payment.status)) {
+        await this.discount.releaseDiscountUsesByPaymentId(dbPayment.id);
+      } else if (payment.status == 'paid') {
+        const confirmed = await this.discount.confirmDiscountUsesByPaymentId(
+          dbPayment.id
+        );
+        for (const shortfall of confirmed.shortfalls) {
+          this.logger.log(
+            color.red.bold('Discount shortfall: ') +
+              color.white.bold(shortfall.code) +
+              color.red.bold(' is over its budget by ') +
+              color.white.bold(`€${shortfall.over.toFixed(2)}`) +
+              color.red.bold(' after payment ') +
+              color.white.bold(payment.id)
+          );
+        }
+      }
+
       if (statusChanged || process.env['ENVIRONMENT'] == 'development') {
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
@@ -2893,8 +3176,6 @@ class Mollie {
             false,
             false
           );
-        } else if (this.failedPaymentStatus.includes(payment.status)) {
-          await this.discount.removeDiscountUsesByPaymentId(dbPayment.id);
         }
       }
     }
@@ -3004,6 +3285,13 @@ class Mollie {
         vibe: true,
         discount: true,
         volumeDiscount: true,
+        pricingVersion: true,
+        discountPercent: true,
+        discountPercentAmount: true,
+        discountCodes: true,
+        discountWithoutTax: true,
+        discountVAT: true,
+        discountShipping: true,
         currency: true,
         exchangeRate: true,
         totalPricePresentment: true,

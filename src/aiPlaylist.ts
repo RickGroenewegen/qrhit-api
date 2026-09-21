@@ -10,6 +10,7 @@ import Cache from './cache';
 import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
+import { LLM_MODEL_FAST } from './llmModels';
 
 // Redis cache key prefix for AI-prompt → spotifyPlaylistId lookup.
 // Lives only between AI playlist creation and the eventual PaymentHasPlaylist
@@ -56,7 +57,12 @@ export interface AIPlaylistSnapshot {
 }
 
 const SERVICE_TYPE = 'ai';
-const MODEL = 'gpt-5.4-mini';
+// Luna with reasoning off, measured 2026-09-17 on a 100-candidate batch:
+// terra + 'low' took 26s for keywords and 6.5s per curation batch, luna +
+// 'none' 10s and 1.5s, with the same picks. Curation batches run one after
+// another, so the per-call time is multiplied.
+const MODEL = LLM_MODEL_FAST;
+const REASONING_EFFORT = 'none' as const;
 const KEYWORD_LIMIT = 100;
 const PER_KEYWORD_LIMIT = 50;
 const CURATION_BATCH_SIZE = 100;
@@ -714,13 +720,12 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nUser locale: ${locale}\n\nReturn as many keywords as the theme genuinely warrants (1 if a single artist, more for broad themes; max ${KEYWORD_LIMIT}) and a year range only if explicitly implied.`,
         },
       ],
-      tool_choice: { type: 'function', function: { name: 'returnKeywords' } },
-      tools: [
-        {
-          type: 'function',
-          function: {
+      reasoning_effort: REASONING_EFFORT,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
             name: 'returnKeywords',
-            parameters: {
+            schema: {
               type: 'object',
               properties: {
                 title: {
@@ -766,15 +771,14 @@ class AIPlaylistGenerator {
                 'endYear',
               ],
             },
-          },
         },
-      ],
+      },
     });
 
     cost.recordFromResponse(result);
 
-    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.type !== 'function') {
+    const content = result?.choices[0]?.message?.content;
+    if (!content) {
       throw new Error('Keyword generation returned no tool call');
     }
 
@@ -787,7 +791,7 @@ class AIPlaylistGenerator {
       title?: string;
     };
     try {
-      parsed = JSON.parse(toolCall.function.arguments as string);
+      parsed = JSON.parse(content);
     } catch (e) {
       throw new Error('Failed to parse keyword tool call arguments');
     }
@@ -908,13 +912,12 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nAlready tried (do not repeat any of these):\n${alreadyTried.join(', ')}\n\nReturn up to ${KEYWORD_LIMIT} additional keywords (artist names mainly). Empty list is OK.`,
         },
       ],
-      tool_choice: { type: 'function', function: { name: 'returnMoreKeywords' } },
-      tools: [
-        {
-          type: 'function',
-          function: {
+      reasoning_effort: REASONING_EFFORT,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
             name: 'returnMoreKeywords',
-            parameters: {
+            schema: {
               type: 'object',
               properties: {
                 keywords: {
@@ -925,18 +928,17 @@ class AIPlaylistGenerator {
               },
               required: ['keywords'],
             },
-          },
         },
-      ],
+      },
     });
 
     cost.recordFromResponse(result);
 
-    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.type !== 'function') return [];
+    const content = result?.choices[0]?.message?.content;
+    if (!content) return [];
     let parsed: { keywords: string[] };
     try {
-      parsed = JSON.parse(toolCall.function.arguments as string);
+      parsed = JSON.parse(content);
     } catch {
       return [];
     }
@@ -1346,13 +1348,12 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}${yearHint}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
         },
       ],
-      tool_choice: { type: 'function', function: { name: 'returnPicks' } },
-      tools: [
-        {
-          type: 'function',
-          function: {
+      reasoning_effort: REASONING_EFFORT,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
             name: 'returnPicks',
-            parameters: {
+            schema: {
               type: 'object',
               properties: {
                 trackIds: {
@@ -1363,18 +1364,17 @@ class AIPlaylistGenerator {
               },
               required: ['trackIds'],
             },
-          },
         },
-      ],
+      },
     });
 
     cost.recordFromResponse(result);
 
-    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.type !== 'function') return [];
+    const content = result?.choices[0]?.message?.content;
+    if (!content) return [];
 
     try {
-      const parsed = JSON.parse(toolCall.function.arguments as string) as {
+      const parsed = JSON.parse(content) as {
         trackIds: string[];
       };
       return (parsed.trackIds || []).filter(Boolean);

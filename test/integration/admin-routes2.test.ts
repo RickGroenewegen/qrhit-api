@@ -390,6 +390,47 @@ describe('admin routes — wave 2 coverage', () => {
       });
     });
 
+    it('blocking takes effect on the very next scan, and unblocking too', async () => {
+      // The scan endpoint reads the shared Redis set on every request, so
+      // the toggle must be visible without any restart or sync tick. The
+      // block is decided before the track is looked up, so an unknown
+      // track id is enough here.
+      const scan = async () => {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/qrlink2/999999/${phpId}`,
+        });
+        expect(res.statusCode).toBe(200);
+        return res.json();
+      };
+
+      expect((await scan()).b).toBe(false);
+
+      await app.inject({
+        method: 'POST',
+        url: `/admin/playlist/${phpId}/blocked`,
+        headers,
+        payload: { blocked: true },
+      });
+      const blocked = await scan();
+      expect(blocked.b).toBe(true);
+      expect(blocked.link).toBe('');
+      expect(blocked.yt).toBeNull();
+      expect(blocked.am).toBeNull();
+      expect(await prisma().paymentHasPlaylist.findUnique({
+        where: { id: phpId },
+        select: { blocked: true },
+      })).toEqual({ blocked: true });
+
+      await app.inject({
+        method: 'POST',
+        url: `/admin/playlist/${phpId}/blocked`,
+        headers,
+        payload: { blocked: false },
+      });
+      expect((await scan()).b).toBe(false);
+    });
+
     it('POST /admin/playlist/:id/judged — resets judged status', async () => {
       // Setting any data is fine; we just want to cover the happy path
       const res = await app.inject({
@@ -1152,6 +1193,56 @@ describe('admin routes — wave 2 coverage', () => {
     });
   });
 
+  describe('GET /admin/shipment-labels/recipients', () => {
+    it('returns each company with the users on its Contacts tab', async () => {
+      const company = await prisma().company.create({
+        data: {
+          name: 'Labels Wave2 BV',
+          address: 'Kade',
+          housenumber: '5',
+          city: 'Utrecht',
+          zipcode: '3511AA',
+          countrycode: 'NL',
+          contact: 'Anna',
+          contactemail: 'anna@labels.test',
+        },
+      });
+      const contact = await createTestUser({ displayName: 'Bram' });
+      await prisma().user.update({
+        where: { id: contact.user.id },
+        data: { companyId: company.id },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/admin/shipment-labels/recipients',
+        headers,
+      });
+      expect(res.statusCode).toBe(200);
+
+      const found = res.json().companies.find((c: any) => c.id === company.id);
+      expect(found).toMatchObject({
+        name: 'Labels Wave2 BV',
+        address: 'Kade',
+        contact: 'Anna',
+        contactemail: 'anna@labels.test',
+      });
+      expect(found.User).toBeUndefined();
+      expect(found.contacts).toEqual([
+        { id: contact.user.id, displayName: contact.user.displayName, email: contact.user.email },
+      ]);
+    });
+
+    it('rejects a customer token', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/admin/shipment-labels/recipients',
+        headers: customerHeaders,
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
   // ====================================================================
   // AUTH MATRIX — unauthenticated / wrong-group rejections
   // ====================================================================
@@ -1174,6 +1265,7 @@ describe('admin routes — wave 2 coverage', () => {
       { method: 'POST',   url: '/admin/merchant-center/generate-product-images' },
       { method: 'POST',   url: '/admin/shipping/create-all' },
       { method: 'POST',   url: '/admin/shipment-labels' },
+      { method: 'GET',    url: '/admin/shipment-labels/recipients' },
       { method: 'POST',   url: '/admin/mail-octopus/resync' },
       { method: 'GET',    url: '/day_report' },
       { method: 'GET',    url: '/monthly_report' },

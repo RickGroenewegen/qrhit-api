@@ -4,7 +4,7 @@ import Mail from '../mail';
 import Push from '../push';
 import Suggestion from '../suggestion';
 import Designer from '../designer';
-import Trustpilot from '../trustpilot';
+import Reviews from '../reviews';
 import AudioClient from '../audio';
 import Generator from '../generator';
 import Qr from '../qr';
@@ -24,6 +24,7 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
+import GoogleFonts, { familyToCss } from '../googleFonts';
 import { sendCatalogue } from '../http-cache';
 import { BACKGROUNDS } from '../backgrounds';
 import {
@@ -47,7 +48,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const push = Push.getInstance();
   const suggestion = Suggestion.getInstance();
   const designer = Designer.getInstance();
-  const trustpilot = Trustpilot.getInstance();
+  const reviews = Reviews.getInstance();
   const audio = AudioClient.getInstance();
   const generator = Generator.getInstance();
   const qr = new Qr();
@@ -111,6 +112,68 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       maxCardsPhysical: MAX_CARDS_PHYSICAL,
       maxCardsDigital: MAX_CARDS,
     });
+  });
+
+  // Price examples for the pricing page: one row per sample deck size with
+  // the PDF, sheets and printed-card totals in EUR. The page used to expose
+  // these figures only through its calculator, so a crawler saw exactly one
+  // price. Each cell is an order.getOrderType() call (itself cached per
+  // quantity); the finished table is cached for an hour so the SSR pass
+  // costs a single request.
+  fastify.get('/api/pricing/tiers', async (_request: any, reply: any) => {
+    const cacheKey = 'pricingTiers_v1';
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return reply.send(JSON.parse(cached));
+    }
+
+    const quantities = [50, 100, 150, 200, 300, 500];
+    const priceFor = async (
+      quantity: number,
+      digital: boolean,
+      subType: 'sheets' | 'none'
+    ): Promise<number | null> => {
+      try {
+        const orderType = await order.getOrderType(
+          quantity,
+          digital,
+          'cards',
+          '',
+          subType
+        );
+        const amount = orderType?.amount;
+        return typeof amount === 'number' && amount > 0 ? amount : null;
+      } catch (e: any) {
+        logger.log(
+          color.red.bold(`/api/pricing/tiers error: ${e.message || e}`)
+        );
+        return null;
+      }
+    };
+
+    const rows: Array<{
+      quantity: number;
+      digital: number | null;
+      sheets: number | null;
+      physical: number | null;
+    }> = [];
+    for (const quantity of quantities) {
+      const [digital, sheets, physical] = await Promise.all([
+        priceFor(quantity, true, 'none'),
+        priceFor(quantity, false, 'sheets'),
+        priceFor(quantity, false, 'none'),
+      ]);
+      rows.push({ quantity, digital, sheets, physical });
+    }
+
+    const payload = { success: true, data: { currency: 'EUR', rows } };
+    const complete = rows.every(
+      (row) => row.digital && row.sheets && row.physical
+    );
+    if (complete) {
+      await cache.set(cacheKey, JSON.stringify(payload), 3600);
+    }
+    return reply.send(payload);
   });
 
   // Chat init endpoint - creates or resumes chat session
@@ -352,18 +415,19 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/reviews/:locale/:amount/:landingPage',
     async (request: any, _reply) => {
-      const amount = parseInt(request.params.amount) || 0;
-      return await trustpilot.getReviews(
-        true,
-        amount,
-        request.params.locale,
-        utils.parseBoolean(request.params.landingPage)
-      );
+      // `?apps=1` adds the App Store and Google Play reviews (4 stars and up).
+      // Only the reviews page asks for them; everywhere else is Trustpilot only.
+      return await reviews.getReviews({
+        locale: request.params.locale,
+        amount: parseInt(request.params.amount) || 0,
+        landingPage: utils.parseBoolean(request.params.landingPage),
+        includeApps: utils.parseBoolean(request.query?.apps),
+      });
     }
   );
 
   fastify.get('/reviews_details', async (_request: any, _reply) => {
-    return await trustpilot.getCompanyDetails();
+    return await reviews.getScores();
   });
 
   fastify.get('/unsent_reviews', async (request: any, _reply) => {
@@ -1165,7 +1229,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/promotional/:paymentId/:userHash/:playlistId',
     async (request: any, reply) => {
-      const { title, description, image, active, locale } = request.body;
+      const { title, description, image, active, locale, shareDesign } = request.body;
 
       if (!title) {
         reply.status(400).send({ success: false, error: 'Title is required' });
@@ -1187,6 +1251,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           image,
           active: active !== false,
           locale: locale || 'en',
+          shareDesign: shareDesign === true,
         }
       );
 
@@ -1346,6 +1411,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // -- GET /fonts (public, no auth) --
   fastify.get('/fonts', async (request, reply) => {
     return sendCatalogue(request, reply, { success: true, data: FONTS });
+  });
+
+  // -- GET /google-fonts/lookup?family= (public, no auth) --
+  // Resolves one Google family (an admin-chosen font outside the fixed list)
+  // to its weights, so any card preview can load the right stylesheet.
+  fastify.get('/google-fonts/lookup', async (request: any, reply) => {
+    const family = String(request.query?.family ?? '').trim();
+    if (!family) {
+      return reply.status(400).send({ success: false, error: 'family is required' });
+    }
+    const match = await GoogleFonts.getInstance().findFamily(family);
+    if (!match) {
+      return reply.status(404).send({ success: false, error: 'Unknown Google font' });
+    }
+    return sendCatalogue(request, reply, {
+      success: true,
+      data: { ...match, css: familyToCss(match) },
+    });
   });
 
   // -- GET /backgrounds (public, no auth) --

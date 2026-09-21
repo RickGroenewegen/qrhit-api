@@ -510,7 +510,8 @@ describe('saveUserMessage', () => {
 
     // Exact translation request
     expect(createMock).toHaveBeenCalledExactlyOnceWith({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.6-luna',
+      reasoning_effort: 'none',
       temperature: 0.3,
       messages: [
         {
@@ -573,7 +574,7 @@ describe('saveAdminMessage', () => {
     expect(cacheMock.del).toHaveBeenCalledExactlyOnceWith('chat:history:6');
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-4o-mini');
+    expect(payload.model).toBe('gpt-5.6-luna');
     expect(payload.messages[0].content).toBe(
       'Translate the following Dutch text to German. Keep any markdown formatting intact. Only return the translation, nothing else.'
     );
@@ -726,7 +727,7 @@ describe('getTopics', () => {
     expect(topics).toEqual(['pricing']);
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-4o-mini');
+    expect(payload.model).toBe('gpt-5.6-luna');
     expect(payload.temperature).toBe(0.3);
     expect(payload.function_call).toEqual({ name: 'selectTopics' });
     expect(payload.functions).toHaveLength(1);
@@ -810,7 +811,7 @@ describe('extractRequiredData', () => {
     expect(data).toEqual({ orderNumber: '100123', email: null });
 
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-4o-mini');
+    expect(payload.model).toBe('gpt-5.6-luna');
     expect(payload.temperature).toBe(0);
     expect(payload.response_format).toEqual({ type: 'json_object' });
     expect(payload.messages[0].content).toContain(
@@ -1188,7 +1189,8 @@ describe('answerQuestion', () => {
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-4o-mini');
+    expect(payload.model).toBe('gpt-5.6-terra');
+    expect(payload.reasoning_effort).toBe('none');
     expect(payload.temperature).toBe(0.3);
     expect(payload.stream).toBe(true);
 

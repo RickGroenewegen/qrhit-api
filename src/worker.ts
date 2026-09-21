@@ -5,26 +5,16 @@ import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import AssetQueue from './assetQueue';
-import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import ErrorTracking from './errorTracking';
 
 dotenv.config({ quiet: true });
+ErrorTracking.getInstance().init('worker');
 
 // Configure BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
 };
-
-// Initialize Sentry for production
-if (process.env['ENVIRONMENT'] !== 'development') {
-  Sentry.init({
-    dsn: 'https://fbb350c809685382751c422a65a9766f@o1181344.ingest.us.sentry.io/4507950233223168',
-    integrations: [nodeProfilingIntegration()],
-    tracesSampleRate: 1.0,
-    profilesSampleRate: 1.0,
-  });
-}
 
 class QueueWorker {
   private logger = new Logger();

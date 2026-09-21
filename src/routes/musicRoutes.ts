@@ -23,6 +23,7 @@ import youtubeMusicRoutes from './youtubeMusicRoutes';
 import tidalRoutes from './tidalRoutes';
 import deezerRoutes from './deezerRoutes';
 import appleMusicRoutes from './appleMusicRoutes';
+import { getProductCover } from '../playlistArtwork';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -311,6 +312,46 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     return { success: true, data: playlists };
   });
 
+  // Square cover of a featured playlist from our own domain, for the product
+  // page, its share tags and its structured data (see playlistArtwork.ts).
+  // The ".jpg" is in the route so scrapers that guess the type from the URL
+  // get it right.
+  fastify.get('/product-cover/:slug.jpg', async (request: any, reply: any) => {
+    try {
+      const slug = String(request.params.slug || '');
+      if (!slug || slug.length > 200) {
+        return reply.status(404).send({ error: 'Not found' });
+      }
+      const jpeg = await getProductCover(slug);
+      if (!jpeg) {
+        return reply.status(404).send({ error: 'Not found' });
+      }
+      reply.header('Content-Type', 'image/jpeg');
+      reply.header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return reply.send(jpeg);
+    } catch (error) {
+      console.error('Error serving product cover:', error);
+      return reply.status(500).send({ error: 'Failed to load cover' });
+    }
+  });
+
+  // Which locales a product page is indexable in (null = all). The SSR
+  // server asks before it renders /{lang}/product/{slug}: a list aimed at
+  // one market renders everywhere, but only its own locales and `en` get
+  // the hreflang cluster; the rest go out noindex. See productPageLocales.ts.
+  fastify.get('/product-page/:slug', async (request: any, reply: any) => {
+    const slug = String(request.params.slug || '');
+    if (!slug || slug.length > 200) {
+      return reply.status(404).send({ success: false, error: 'Not found' });
+    }
+    const info = await data.getProductPageLocale(slug);
+    if (!info.exists) {
+      return reply.status(404).send({ success: false, error: 'Not found' });
+    }
+    reply.header('Cache-Control', 'public, max-age=600');
+    return { success: true, indexableLocales: info.indexableLocales };
+  });
+
   // Playlists similar to a given one, for the "you might also like" row on a
   // product page. Small on purpose: the product page renders this server-side,
   // so it must not pull the whole catalogue down with it.
@@ -464,12 +505,64 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // What a decoyed request gets instead of the track it asked for.
+  //
+  // Every link was resolved through our own MusicFetch pipeline from the
+  // Spotify URL, so the id formats are exactly what a genuinely enriched
+  // track carries. `yt` is a bare video id because that is what the column
+  // stores; a full URL there would be the tell that gives this away.
+  const DECOY_LINKS = {
+    link: 'https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8',
+    yt: 'dQw4w9WgXcQ',
+    ym: 'https://music.youtube.com/watch?v=lYBUbBu4W08',
+    am: 'https://music.apple.com/us/album/never-gonna-give-you-up/1559885420?i=1559885421&app=music',
+    az: 'https://music.amazon.com/tracks/B0DZTSF3YS',
+    dz: 'https://www.deezer.com/track/3794316162',
+    td: 'https://tidal.com/track/491206012',
+  };
+
+  /**
+   * Logs a decoyed scan once per minute per address. The whole point is that
+   * the caller keeps going, so a line per request would bury the log.
+   */
+  let lastDecoyLog = 0;
+  const logDecoy = (clientIp: string, trackId: any, userAgent: string) => {
+    const now = Date.now();
+    if (now - lastDecoyLog < 60_000) {
+      return;
+    }
+    lastDecoyLog = now;
+    logger.log(
+      color.yellow.bold(
+        `Serving decoy track to ip=${color.white.bold(
+          clientIp
+        )} (asked for track ${color.white.bold(
+          trackId
+        )}), userAgent=${color.white.bold(userAgent || 'unknown')}`
+      )
+    );
+  };
+
   // Get track link
   fastify.get('/qrlink/:trackId', async (request: any, reply) => {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
-    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    // Run the guard first either way, so the counters, bans and dashboard
+    // records still build up for a decoyed caller. Its verdict is then
+    // ignored for them: they get wrong data rather than a 403 that would
+    // tell them they have been spotted.
+    const guard = await abuseGuard.check(
+      request.clientIp,
+      userAgent,
+      request.params.trackId
+    );
+
+    if (abuseGuard.isDecoy(request.clientIp)) {
+      logDecoy(request.clientIp, request.params.trackId, userAgent);
+      return { ...DECOY_LINKS, r: true, st: null };
+    }
+
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
@@ -511,7 +604,19 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
-    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    const guard = await abuseGuard.check(
+      request.clientIp,
+      userAgent,
+      request.params.trackId,
+      request.params.php
+    );
+
+    // See the note on the decoy in /qrlink above.
+    if (abuseGuard.isDecoy(request.clientIp)) {
+      logDecoy(request.clientIp, request.params.trackId, userAgent);
+      return { ...DECOY_LINKS, r: true, t: null, st: null, b: false };
+    }
+
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
@@ -532,6 +637,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let td = null;
     let t = null;
     let st = null;
+    // A blocked playlist answers with every link empty, which the app and
+    // the web scanner already treat as "this code cannot be played". The
+    // flag is there so clients can tell it apart from an unknown track.
+    const b = result.blocked === true;
 
     if (result.success) {
       link = result.data.link;
@@ -555,7 +664,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       link = '?';
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st, b };
   });
 
   // Hitlist routes

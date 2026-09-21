@@ -85,6 +85,7 @@ describe('admin order routes', () => {
         paymentId: PAYMENT_ID,
         orderId: 'QR900001',
         status: 'paid',
+        finalized: true,
         fullname: 'Order Customer',
         email: 'orders@test.qrsong.io',
         totalPrice: 60.5,
@@ -278,6 +279,379 @@ describe('admin order routes', () => {
         // as well must return nothing
         expect(
           (await search({ printerType: 'tromp', serviceType: 'spotify' })).totalItems
+        ).toBe(0);
+      });
+    });
+
+    describe('needs attention filter', () => {
+      const HOUR = 60 * 60 * 1000;
+      const paymentDbIds: number[] = [];
+      let playlistDbId: number;
+      // The order that never finalized gets a playlist of its own: the
+      // corrections below sit on a playlist and would otherwise reach it too
+      let unfinalizedPlaylistDbId: number;
+
+      // One physical order per case: what the customer did, where the approval
+      // timer stands and how far the order got at the printer
+      const cases = [
+        {
+          paymentId: 'tr_attention_approved',
+          approved: true,
+          timerOffset: 12 * HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_expired',
+          approved: false,
+          timerOffset: -HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_waiting',
+          approved: false,
+          timerOffset: 12 * HOUR,
+          printApiStatus: 'Created',
+        },
+        {
+          paymentId: 'tr_attention_submitted',
+          approved: true,
+          timerOffset: -HOUR,
+          printApiStatus: 'Submitted',
+        },
+        // Parked on purpose, the printer hold filter lists these
+        {
+          paymentId: 'tr_attention_on_hold',
+          approved: true,
+          timerOffset: -HOUR,
+          printApiStatus: 'Created',
+          printerHold: true,
+        },
+      ];
+
+      beforeAll(async () => {
+        const playlist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-attention',
+            name: 'Attention Mix',
+            slug: 'attention-mix',
+            image: 'img.png',
+          },
+        });
+        playlistDbId = playlist.id;
+
+        const orderType = await prisma().orderType.findFirstOrThrow({
+          where: { name: 'cards-500' },
+        });
+        const user = await prisma().user.findFirstOrThrow({
+          where: { userId: 'order-user' },
+        });
+
+        for (const [index, orderCase] of cases.entries()) {
+          const payment = await prisma().payment.create({
+            data: {
+              userId: user.id,
+              paymentId: orderCase.paymentId,
+              orderId: `QR90010${index}`,
+              status: 'paid',
+              fullname: 'Attention Customer',
+              email: 'attention@test.qrsong.io',
+              totalPrice: 60.5,
+              productPriceWithoutTax: 50,
+              shippingPriceWithoutTax: 0,
+              productVATPrice: 10.5,
+              shippingVATPrice: 0,
+              totalVATPrice: 10.5,
+              taxRate: 21,
+              countrycode: 'NL',
+              address: 'Orderstraat 3',
+              city: 'Utrecht',
+              zipcode: '3511AB',
+              housenumber: '3',
+              finalized: true,
+              printApiStatus: orderCase.printApiStatus,
+              printerHold: orderCase.printerHold ?? false,
+              canBeSentToPrinter: true,
+              canBeSentToPrinterAt: new Date(Date.now() + orderCase.timerOffset),
+            },
+          });
+          paymentDbIds.push(payment.id);
+
+          await prisma().paymentHasPlaylist.create({
+            data: {
+              paymentId: payment.id,
+              playlistId: playlist.id,
+              amount: 1,
+              numberOfTracks: 100,
+              orderTypeId: orderType.id,
+              type: 'physical',
+              userConfirmedPrinting: orderCase.approved,
+              price: 60.5,
+              priceWithoutVAT: 50,
+              priceVAT: 10.5,
+            },
+          });
+        }
+
+        // Paid, but generation never finalized it: nothing was delivered, so
+        // it needs attention whatever the printer says
+        const unfinalizedPlaylist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-unfinalized',
+            name: 'Unfinalized Mix',
+            slug: 'unfinalized-mix',
+            image: 'img.png',
+          },
+        });
+        unfinalizedPlaylistDbId = unfinalizedPlaylist.id;
+
+        const unfinalized = await prisma().payment.create({
+          data: {
+            userId: user.id,
+            paymentId: 'tr_attention_unfinalized',
+            orderId: 'QR900105',
+            status: 'paid',
+            finalized: false,
+            fullname: 'Attention Customer',
+            email: 'attention@test.qrsong.io',
+            totalPrice: 60.5,
+            productPriceWithoutTax: 50,
+            shippingPriceWithoutTax: 0,
+            productVATPrice: 10.5,
+            shippingVATPrice: 0,
+            totalVATPrice: 10.5,
+            taxRate: 21,
+            countrycode: 'NL',
+            address: 'Orderstraat 5',
+            city: 'Utrecht',
+            zipcode: '3511AB',
+            housenumber: '5',
+            printApiStatus: 'Submitted',
+          },
+        });
+        paymentDbIds.push(unfinalized.id);
+
+        await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: unfinalized.id,
+            playlistId: unfinalizedPlaylist.id,
+            amount: 1,
+            numberOfTracks: 100,
+            orderTypeId: orderType.id,
+            type: 'physical',
+            price: 60.5,
+            priceWithoutVAT: 50,
+            priceVAT: 10.5,
+          },
+        });
+      });
+
+      afterAll(async () => {
+        await prisma().paymentHasPlaylist.deleteMany({
+          where: { paymentId: { in: paymentDbIds } },
+        });
+        await prisma().payment.deleteMany({
+          where: { id: { in: paymentDbIds } },
+        });
+        await prisma().playlist.delete({ where: { id: playlistDbId } });
+        await prisma().playlist.delete({
+          where: { id: unfinalizedPlaylistDbId },
+        });
+      });
+
+      const search = async (payload: Record<string, unknown>) => {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/orders',
+          headers,
+          payload,
+        });
+        expect(res.statusCode).toBe(200);
+        return res.json();
+      };
+
+      const paymentIds = (body: any) =>
+        body.data.map((payment: any) => payment.paymentId).sort();
+
+      it('returns approved and timed-out orders that are still Created', async () => {
+        const body = await search({ needsAttention: true });
+        expect(paymentIds(body)).toEqual(
+          expect.arrayContaining([
+            'tr_attention_approved',
+            'tr_attention_expired',
+          ])
+        );
+      });
+
+      it('returns paid orders that were never finalized', async () => {
+        const body = await search({ needsAttention: true });
+        expect(body.totalItems).toBe(3);
+        expect(paymentIds(body)).toContain('tr_attention_unfinalized');
+
+        const unfinalized = body.data.find(
+          (payment: any) => payment.paymentId === 'tr_attention_unfinalized'
+        );
+        expect(unfinalized.attention).toEqual({
+          reason: 'not-finalized',
+          openCorrections: 0,
+          printerError: null,
+        });
+      });
+
+      it('still answers to the old notSubmitted flag', async () => {
+        expect((await search({ notSubmitted: true })).totalItems).toBe(3);
+      });
+
+      it('reports the count while the filter is off', async () => {
+        const body = await search({});
+        expect(body.totalItems).toBe(7);
+        expect(body.needsAttentionCount).toBe(3);
+      });
+
+      it('reports the printer hold count the same way', async () => {
+        expect((await search({})).printerHoldCount).toBe(1);
+        expect(
+          (await search({ textSearch: 'tr_attention_approved' }))
+            .printerHoldCount
+        ).toBe(0);
+
+        const held = await search({ printerHold: true });
+        expect(paymentIds(held)).toEqual(['tr_attention_on_hold']);
+        expect(held.printerHoldCount).toBe(1);
+      });
+
+      it('keeps each count while the other filter is ticked', async () => {
+        // The two filters exclude each other, so neither count may be taken
+        // inside the other filter or it would always read zero
+        expect(
+          (await search({ printerHold: true })).needsAttentionCount
+        ).toBe(3);
+        expect(
+          (await search({ needsAttention: true })).printerHoldCount
+        ).toBe(1);
+      });
+
+      it('says why an order needs attention', async () => {
+        const track = await prisma().track.create({
+          data: {
+            trackId: 'attention-track-1',
+            name: 'Attention Track',
+            artist: 'Attention Artist',
+            year: 2001,
+          },
+        });
+        const user = await prisma().user.findFirstOrThrow({
+          where: { userId: 'order-user' },
+        });
+        const reasons = async () => {
+          const body = await search({ needsAttention: true });
+          return Object.fromEntries(
+            body.data
+              // Always listed, and for a reason of its own
+              .filter(
+                (payment: any) =>
+                  payment.paymentId !== 'tr_attention_unfinalized'
+              )
+              .map((payment: any) => [payment.paymentId, payment.attention])
+          );
+        };
+
+        const notSent = {
+          reason: 'not-sent',
+          openCorrections: 0,
+          printerError: null,
+        };
+        expect(await reasons()).toEqual({
+          tr_attention_approved: notSent,
+          tr_attention_expired: notSent,
+        });
+
+        // A refused printer order keeps sentToPrinter set without an order id.
+        // That alone qualifies: this order is neither approved nor timed out.
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_waiting' },
+          data: {
+            sentToPrinter: true,
+            printApiOrderResponse: JSON.stringify({
+              apiCalls: [
+                {
+                  statusCode: 200,
+                  responseBody: { error: 'Pay on account is off', result: false },
+                },
+              ],
+            }),
+          },
+        });
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_expired' } },
+          data: { suggestionsPending: true },
+        });
+
+        expect(await reasons()).toEqual({
+          tr_attention_approved: notSent,
+          tr_attention_expired: {
+            reason: 'open-corrections',
+            openCorrections: 0,
+            printerError: null,
+          },
+          tr_attention_waiting: {
+            reason: 'printer-error',
+            openCorrections: 0,
+            printerError: 'Pay on account is off',
+          },
+        });
+        expect((await search({})).needsAttentionCount).toBe(4);
+
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_waiting' },
+          data: { sentToPrinter: false, printApiOrderResponse: null },
+        });
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_expired' } },
+          data: { suggestionsPending: false },
+        });
+
+        // Draft corrections the customer never submitted; they sit on the
+        // playlist, so both orders of that playlist are blocked by them
+        await prisma().userSuggestion.create({
+          data: {
+            name: 'Corrected title',
+            artist: 'Corrected artist',
+            year: 1999,
+            trackId: track.id,
+            playlistId: playlistDbId,
+            userId: user.id,
+          },
+        });
+
+        expect(await reasons()).toEqual({
+          tr_attention_approved: {
+            reason: 'open-corrections',
+            openCorrections: 1,
+            printerError: null,
+          },
+          tr_attention_expired: {
+            reason: 'open-corrections',
+            openCorrections: 1,
+            printerError: null,
+          },
+        });
+
+        // Deleting the track cascades to the correction
+        await prisma().track.delete({ where: { id: track.id } });
+      });
+
+      it('leaves attention empty on orders that do not need any', async () => {
+        const body = await search({ textSearch: 'Order Mix' });
+        expect(body.data[0].attention).toBeNull();
+      });
+
+      it('counts within the other active filters', async () => {
+        expect(
+          (await search({ textSearch: 'tr_attention_expired' }))
+            .needsAttentionCount
+        ).toBe(1);
+        expect(
+          (await search({ textSearch: 'Order Mix' })).needsAttentionCount
         ).toBe(0);
       });
     });

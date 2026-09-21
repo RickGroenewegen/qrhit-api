@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/printers/printenbind.ts (the REAL module — the global
+ * Unit tests for src/printers/printenbindV1.ts, the legacy JSON API integration (the REAL module — the global
  * recording mock from test/setup.ts is removed via vi.unmock below).
  *
  * Collaborators are mocked at the module boundary:
@@ -28,7 +28,7 @@ import path from 'path';
 import { outbound } from '../../helpers/recording-mock';
 import { MAX_CARDS_PHYSICAL } from '../../../src/config/constants';
 
-vi.unmock('../../../src/printers/printenbind');
+vi.unmock('../../../src/printers/printenbindV1');
 
 // ---------------------------------------------------------------------------
 // Module-boundary mocks (hoisted)
@@ -125,7 +125,7 @@ vi.mock('cron', () => ({
   },
 }));
 
-import PrintEnBind from '../../../src/printers/printenbind';
+import PrintEnBind from '../../../src/printers/printenbindV1';
 
 // ---------------------------------------------------------------------------
 // Fixtures / helpers
@@ -174,7 +174,7 @@ function body(call: any[]): any {
 }
 
 beforeAll(() => {
-  process.env['PRINTENBIND_API_URL'] = PB;
+  process.env['PRINTENBIND_V1_API_URL'] = PB;
   process.env['PRINTENBIND_API_KEY'] = API_KEY;
   peb = PrintEnBind.getInstance();
 });

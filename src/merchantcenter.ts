@@ -18,6 +18,7 @@ import Fx from './services/fx';
 import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
+import { IMAGE_MODEL } from './llmModels';
 import {
   LOCALE_COUNTRY_PAIRS,
   ProductVariant,
@@ -1152,7 +1153,7 @@ export class MerchantCenterService {
         image: [baseFile, frontFile, backFile] as any,
         prompt,
         n: 1,
-        model: 'gpt-image-2',
+        model: IMAGE_MODEL,
         size: '1024x1024',
         quality: 'high',
       });

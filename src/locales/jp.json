@@ -351,7 +351,7 @@
   "voucher.transform": "お気に入りのSpotifyプレイリストを、パーティーや友達とのゲームナイト、音楽クイズ用のインタラクティブな音楽カードに変えよう！",
   "voucher.title": "ギフト券",
   "voucher.turn": "数分で自分の音楽カードを作り始めよう！",
-  "voucher.claim": "ギフト券を受け取ろう！",
+  "voucher.claim": "ギフト券をゲット！",
   "voucher.goTo": "行く",
   "voucher.click": "「ギフトカード」をクリック",
   "voucher.enterCode": "バウチャーコードを入力して「引き換え」をクリック",
@@ -659,5 +659,17 @@
   "design_alter.imageCardFront": "カード表面",
   "design_alter.imageCardBack": "カード裏面",
   "design_alter.imageBoxFront": "箱インレイ（表）",
-  "design_alter.imageBoxBack": "箱インレイ（裏）"
+  "design_alter.imageBoxBack": "箱インレイ（裏）",
+  "invoice.discountPercentLine": "割引 {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "割引コード {{code}}",
+  "open_corrections.subject": "要対応：注文 {{ orderId }} の変更を承認してね",
+  "open_corrections.title": "注文はあなたの承認待ちです",
+  "open_corrections.hello": "こんにちは",
+  "open_corrections.intro": "注文の確認期間が終了したため、通常ならカードを印刷に回すところです。ただし、まだ承認されていない変更があるため、注文を一時停止しています。",
+  "open_corrections.whatToDo": "確認されていない変更を印刷することはありません。下のボタンから修正フォームを開き、変更内容を確認して承認してください。その後すぐに注文を印刷に回します。",
+  "open_corrections.buttonText": "修正フォームを開く",
+  "open_corrections.buttonFallback": "ボタンが動かない場合は、このリンクをブラウザにコピー＆ペーストしてね：",
+  "open_corrections.questions": "質問があれば、このメールに返信してね。サポートします。",
+  "open_corrections.thanks": "ありがとう",
+  "open_corrections.team": "QRSong! チーム"
 }

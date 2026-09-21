@@ -122,8 +122,9 @@ class Spotify {
   private countryCardMaps: { [countryCode: string]: { [cardNumber: string]: string } } = {};
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
-  // Domain blacklist: URLs from these domains will not be resolved
-  private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org', 'qr.codes', 'qr.link'];
+  // Hosts with "qr" in their name (q.me-qr.com, qrto.org, qr.codes, ...) are
+  // QR generators and shorteners and are not resolved, except our own domain.
+  private ownDomain = 'qrsong.io';
 
   // Track enrichment service (singleton - manages its own maps and refresh)
   private trackEnrichment: TrackEnrichment;
@@ -575,10 +576,15 @@ class Spotify {
 
             let customImage: string | null = null;
             let decadePercentages: Record<string, number> = {};
+            // When the catalogue row was created; the product page states it
+            // as dateCreated in its structured data.
+            let createdAt: string | null = null;
             if (featured) {
               // Build select object dynamically based on available locales
               const selectFields: any = {
+                id: true, slug: true, image: true,
                 name: true, design: true, customImage: true,
+                createdAt: true, promotionalShareDesign: true,
                 decadePercentage0: true, decadePercentage1900: true,
                 decadePercentage1950: true, decadePercentage1960: true,
                 decadePercentage1970: true, decadePercentage1980: true,
@@ -597,8 +603,30 @@ class Spotify {
               if (dbPlaylist) {
                 const dbPlaylistAny = dbPlaylist as any;
                 playlistName = dbPlaylistAny.name || playlistName;
-                playlistDesign = dbPlaylistAny.design || null;
+                // The stored design is the one the customer ordered with and
+                // can carry personal photos or messages. They (or an admin)
+                // can keep it off the product page; visitors then get the
+                // default design.
+                playlistDesign =
+                  dbPlaylistAny.promotionalShareDesign === false
+                    ? null
+                    : dbPlaylistAny.design || null;
                 customImage = dbPlaylistAny.customImage || null;
+                createdAt = dbPlaylistAny.createdAt
+                  ? new Date(dbPlaylistAny.createdAt).toISOString()
+                  : null;
+
+                // The playlist list reads the stored cover, this lookup is the
+                // only place that sees the live one. See data/playlistCovers.ts.
+                try {
+                  await this.data.syncFeaturedPlaylistCover(dbPlaylistAny, image);
+                } catch (error: any) {
+                  this.logger.log(
+                    color.red.bold(
+                      `Error storing cover of ${color.white.bold(playlistId)}: ${error.message}`
+                    )
+                  );
+                }
 
                 // Collect decade percentages
                 decadePercentages = {
@@ -636,6 +664,7 @@ class Spotify {
               image,
               customImage,
               design: playlistDesign,
+              createdAt,
               ...decadePercentages,
             };
 
@@ -666,6 +695,7 @@ class Spotify {
               image,
               customImage,
               design: playlistDesign,
+              createdAt,
               ...decadePercentages,
             };
           } catch (error) {
@@ -698,6 +728,7 @@ class Spotify {
           image: cachedData.image,
           customImage: cachedData.customImage || null,
           design: cachedData.design || null,
+          createdAt: cachedData.createdAt || null,
           decadePercentage0: cachedData.decadePercentage0 || 0,
           decadePercentage1900: cachedData.decadePercentage1900 || 0,
           decadePercentage1950: cachedData.decadePercentage1950 || 0,
@@ -1419,6 +1450,9 @@ class Spotify {
 
           // Adapt formatting based on the structure returned by SpotifyApi searchTracks
           const artist = item.artists?.[0]?.name || ''; // Access artist name directly
+          const artists = (item.artists || [])
+            .map((a: any) => a?.name || '')
+            .filter((name: string) => name.length > 0);
 
           const imageUrl = item.album?.images?.[0]?.url || ''; // Access image URL directly (use first image)
 
@@ -1430,6 +1464,7 @@ class Spotify {
             trackId: item.id || '', // Use item.id
             name: trackName,
             artist: artist,
+            artists: artists, // every credited artist, so "feat." tracks can be matched
             image: imageUrl,
             // Add other fields if needed and available from the API response
             // e.g., preview_url, external_urls.spotify
@@ -1924,18 +1959,11 @@ class Spotify {
       .digest('hex')}`;
 
     try {
-      // Check if the URL's domain is in the blacklist
+      // Check if the URL's domain is blacklisted
       try {
         const urlObj = new URL(normalizedUrl);
-        const hostname = urlObj.hostname.toLowerCase();
 
-        if (
-          this.domainBlacklist.some(
-            (domain) =>
-              hostname === domain.toLowerCase() ||
-              hostname.endsWith('.' + domain.toLowerCase())
-          )
-        ) {
+        if (this.isBlacklistedHost(urlObj.hostname)) {
           return {
             success: false,
             error: 'Domain is blacklisted and cannot be resolved',
@@ -2277,6 +2305,19 @@ class Spotify {
         error: e.message || 'Internal error',
       };
     }
+  }
+
+  /**
+   * Any host with "qr" in its name is blacklisted, except qrsong.io and its
+   * subdomains (api.qrsong.io). Matched on the host only, so "qr" in a path or
+   * query string does not count.
+   */
+  private isBlacklistedHost(hostname: string): boolean {
+    const host = hostname.toLowerCase().replace(/\.$/, '');
+    if (host === this.ownDomain || host.endsWith('.' + this.ownDomain)) {
+      return false;
+    }
+    return host.includes('qr');
   }
 
   /**

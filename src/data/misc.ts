@@ -13,6 +13,7 @@ import {
 } from '../spotify';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
 import { LOCALE_PRIMARY_COUNTRY, occasionSlug } from './giftOccasions';
+import { isProductPageIndexable } from './productPageLocales';
 import { DataDeps } from './types';
 
 export async function getPDFFilepath(
@@ -338,17 +339,21 @@ export async function createSiteMap(
   // Get all available locales from Translation class
   const locales = deps.translate.allLocales;
 
-  // Get featured playlists with non-empty slugs
+  // Get featured playlists with non-empty slugs. A promotional submission
+  // that has not been approved yet is not a product page anyone should be
+  // sent to, so it waits for the approval (which rebuilds the sitemap).
   const featuredPlaylists = await deps.prisma.playlist.findMany({
     where: {
       featured: true,
       slug: {
         not: '',
       },
+      OR: [{ promotionalActive: false }, { promotionalAccepted: true }],
     },
     select: {
       slug: true,
       updatedAt: true,
+      featuredLocale: true,
     },
   });
 
@@ -410,6 +415,7 @@ export async function createSiteMap(
     '/terms-and-conditions',
     '/playlists',
     '/business',
+    '/corporate-gifts',
     '/qr-cards-as-a-service',
     '/pubquiz',
     '/shipping-info',
@@ -475,8 +481,16 @@ export async function createSiteMap(
       // content does not change daily, and claiming it does costs credibility
       // without buying anything. (Google ignores both hints, but Bing and
       // others still read them.)
+      //
+      // A playlist aimed at specific markets ("de", or "de,nl") is listed
+      // in those locales' sitemaps and always in the English one; its page
+      // renders in the other locales too but goes out noindex there. See
+      // productPageLocales.ts.
       ...featuredPlaylists
         .filter((playlist) => !isDegenerateProductSlug(playlist.slug || ''))
+        .filter((playlist) =>
+          isProductPageIndexable(playlist.featuredLocale, locale, locales)
+        )
         .map((playlist) => ({
           loc: `/${locale}/product/${playlist.slug}`,
           lastmod: playlist.updatedAt.toISOString().split('T')[0],

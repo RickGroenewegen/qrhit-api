@@ -16,5 +16,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 60000,
     hookTimeout: 60000,
+    // Vitest 5 defaults this to true; keep v4 behaviour, see vitest.config.ts.
+    clearMocks: false,
   },
 });

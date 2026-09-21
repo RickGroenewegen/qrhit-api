@@ -360,7 +360,7 @@
   "voucher.transform": "Verander je favoriete Spotify-afspeellijsten in interactieve muziekkaarten voor feestjes, spelavonden met vrienden en muziekquizzen!",
   "voucher.title": "Cadeaubon",
   "voucher.turn": "Binnen enkele minuten kun je je eigen muziekkaarten te maken!",
-  "voucher.claim": "Claim je cadeaubon!",
+  "voucher.claim": "Pak je cadeaubon!",
   "voucher.goTo": "Ga naar",
   "voucher.click": "Klik op 'Cadeaubonnen'",
   "voucher.enterCode": "Voer de vouchercode in en klik op 'Inwisselen'",
@@ -667,5 +667,17 @@
   "design_alter.imageCardFront": "Voorkant kaart",
   "design_alter.imageCardBack": "Achterkant kaart",
   "design_alter.imageBoxFront": "Doos inlay (voorkant)",
-  "design_alter.imageBoxBack": "Doos inlay (achterkant)"
+  "design_alter.imageBoxBack": "Doos inlay (achterkant)",
+  "invoice.discountPercentLine": "Korting {{code}} ({{percent}}%)",
+  "invoice.discountCodeLine": "Kortingscode {{code}}",
+  "open_corrections.subject": "Actie nodig: keur je wijzigingen voor bestelling {{ orderId }} goed",
+  "open_corrections.title": "Je bestelling wacht op je goedkeuring",
+  "open_corrections.hello": "Hallo",
+  "open_corrections.intro": "De controleperiode voor je bestelling is afgelopen en normaal zouden we je kaarten nu laten drukken. Je hebt wijzigingen aangebracht die je nog niet hebt goedgekeurd, dus hebben we je bestelling gepauzeerd.",
+  "open_corrections.whatToDo": "We drukken nooit wijzigingen die je niet hebt bevestigd. Open het correctieformulier met de knop hieronder, controleer je wijzigingen en keur ze daar goed. Daarna gaat je bestelling direct naar de drukker.",
+  "open_corrections.buttonText": "Open het correctieformulier",
+  "open_corrections.buttonFallback": "Werkt de knop niet? Kopieer en plak deze link dan in je browser:",
+  "open_corrections.questions": "Heb je vragen? Beantwoord dan gewoon deze e-mail en we helpen je verder.",
+  "open_corrections.thanks": "Bedankt",
+  "open_corrections.team": "Het QRSong!-team"
 }

@@ -105,6 +105,8 @@ function makeDeps(overrides: Record<string, any> = {}): any {
     del: vi.fn(),
     executeCommand: vi.fn(),
     delPatternNonBlocking: vi.fn(),
+    // Default: blocked-list key present in Redis, nothing blocked
+    setMembership: vi.fn(async () => ({ exists: true, member: false })),
   };
 
   const logger = { log: vi.fn() };
@@ -125,6 +127,9 @@ function makeDeps(overrides: Record<string, any> = {}): any {
     axiosInstance: { request: vi.fn() },
     blockedPlaylists: new Set<number>(),
     blockedPlaylistsInitialized: true,
+    blockedFailOpenUntil: 0,
+    reloadBlocked: vi.fn(async () => undefined),
+    ensureBlockedLoaded: vi.fn(async () => undefined),
     ...overrides,
   };
 }
@@ -391,23 +396,28 @@ describe('getLink', () => {
     expect(deps.analytics.increaseCounter).toHaveBeenCalledWith('songs', 'played');
   });
 
-  it('returns blocked error when php is in blockedPlaylists and blockedPlaylistsInitialized is true', async () => {
-    const deps = makeDeps({
-      blockedPlaylists: new Set([999]),
-      blockedPlaylistsInitialized: true,
-    });
-    deps.cache.get.mockResolvedValue(null);
+  it('returns a blocked result when Redis lists the php as blocked', async () => {
+    const deps = makeDeps();
+    deps.cache.setMembership.mockResolvedValue({ exists: true, member: true });
+    deps.cache.get.mockResolvedValue(JSON.stringify({ link: 'spotify:track:1' }));
     deps.utils.lookupIp.mockResolvedValue({});
     deps.cache.executeCommand.mockResolvedValue(undefined);
 
     const result = await getLink(deps, 1, '1.2.3.4', true, undefined, 999);
 
-    expect(result).toEqual({ success: false, error: 'This playlist has been blocked' });
+    expect(result).toEqual({
+      success: false,
+      blocked: true,
+      error: 'This playlist has been blocked',
+    });
+    expect(deps.cache.setMembership).toHaveBeenCalledWith('blocked_playlists_v1', '999');
+    // The block is decided before the link cache is consulted
+    expect(deps.cache.get).not.toHaveBeenCalled();
   });
 
-  it('does not block when php is not in the blockedPlaylists set', async () => {
+  it('does not block when Redis says the php is not blocked, even if the local copy is stale', async () => {
     const deps = makeDeps({
-      blockedPlaylists: new Set([100]),
+      blockedPlaylists: new Set([200]),
       blockedPlaylistsInitialized: true,
     });
     deps.cache.get.mockResolvedValue(null);
@@ -418,7 +428,34 @@ describe('getLink', () => {
     const result = await getLink(deps, 1, '1.2.3.4', true, undefined, 200);
 
     expect(result.success).toBe(false);
+    expect(result.blocked).toBeUndefined();
     expect(result.error).not.toBe('This playlist has been blocked');
+  });
+
+  it('falls back to the in-memory list when Redis is unreachable', async () => {
+    const deps = makeDeps({
+      blockedPlaylists: new Set([999]),
+      blockedPlaylistsInitialized: true,
+    });
+    deps.cache.setMembership.mockRejectedValue(new Error('redis gone'));
+    deps.utils.lookupIp.mockResolvedValue({});
+    deps.cache.executeCommand.mockResolvedValue(undefined);
+
+    const result = await getLink(deps, 1, '1.2.3.4', true, undefined, 999);
+
+    expect(result.blocked).toBe(true);
+  });
+
+  it('skips the blocked check entirely when no php is given', async () => {
+    const deps = makeDeps();
+    deps.cache.get.mockResolvedValue(null);
+    deps.utils.lookupIp.mockResolvedValue({});
+    deps.cache.executeCommand.mockResolvedValue(undefined);
+    deps.prisma.$queryRaw.mockResolvedValue([]);
+
+    await getLink(deps, 1, '1.2.3.4');
+
+    expect(deps.cache.setMembership).not.toHaveBeenCalled();
   });
 
   it('returns cache result when useCache=true and there is a cache hit', async () => {

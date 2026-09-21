@@ -377,59 +377,55 @@ describe('public order-servicing routes', () => {
     });
   });
 
+  // Reviews are read from the committed src/_data/reviews/reviews.json (see
+  // src/reviews.ts), so these assert on what must hold for ANY content of that
+  // file. The filtering rules themselves are pinned in test/unit/reviews.test.ts.
   describe('reviews', () => {
-    beforeAll(async () => {
-      const localeFields = (text: string) =>
-        Object.fromEntries(
-          ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn'].flatMap(
-            (l) => [
-              [`title_${l}`, `Great (${l})`],
-              [`message_${l}`, `${text} (${l})`],
-            ]
-          )
-        );
-      await prisma().trustPilot.create({
-        data: {
-          name: 'Happy Customer',
-          country: 'NL',
-          rating: 5,
-          image: 'avatar.png',
-          landingPage: true,
-          ...localeFields('Loved the cards'),
-        } as any,
-      });
-      await prisma().trustPilot.create({
-        data: {
-          name: 'Hidden Review',
-          country: 'NL',
-          rating: 1,
-          image: 'avatar.png',
-          hide: true,
-          ...localeFields('Should not appear'),
-        } as any,
-      });
-    });
-
-    it('returns visible reviews in the requested locale', async () => {
+    it('returns Trustpilot reviews in the requested locale, capped by amount', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/reviews/nl/10/false',
+        url: '/reviews/nl/3/false',
       });
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body.success).toBe(true);
-      expect(body.reviews).toHaveLength(1);
-      expect(body.reviews[0].author).toBe('Happy Customer');
-      expect(body.reviews[0].title).toBe('Great (nl)');
-      expect(body.reviews[0].stars).toBe(5);
+      expect(body.reviews.length).toBeGreaterThan(0);
+      expect(body.reviews.length).toBeLessThanOrEqual(3);
+      for (const review of body.reviews) {
+        expect(review.source).toBe('trustpilot');
+        expect(review.text).toBeTruthy();
+        expect(review.stars).toBeGreaterThanOrEqual(1);
+      }
     });
 
     it('filters on landing-page reviews', async () => {
+      const all = await app.inject({ method: 'GET', url: '/reviews/en/0/false' });
+      const landing = await app.inject({ method: 'GET', url: '/reviews/en/0/true' });
+      expect(landing.json().reviews.length).toBeGreaterThan(0);
+      expect(landing.json().reviews.length).toBeLessThan(all.json().reviews.length);
+    });
+
+    it('adds app store reviews of 4 stars and up only when asked', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/reviews/en/5/true',
+        url: '/reviews/en/0/false?apps=1',
       });
-      expect(res.json().reviews).toHaveLength(1);
+      const fromApps = res
+        .json()
+        .reviews.filter((r: any) => r.source !== 'trustpilot');
+      expect(fromApps.length).toBeGreaterThan(0);
+      for (const review of fromApps) {
+        expect(review.stars).toBeGreaterThanOrEqual(4);
+      }
+    });
+
+    it('serves the scores without calling anyone', async () => {
+      const res = await app.inject({ method: 'GET', url: '/reviews_details' });
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.company.trust_score).toBeGreaterThan(0);
+      expect(body.company.review_count).toBeGreaterThan(0);
+      expect(body.apps.ios.rating_count).toBeGreaterThan(0);
     });
   });
 

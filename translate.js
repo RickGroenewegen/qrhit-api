@@ -120,9 +120,9 @@ const translate = async (texts, currentPaths, translatedCache) => {
       const res = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-          model: 'gpt-4.1',
-          max_tokens: 4000,
-          temperature: 0,
+          model: 'gpt-5.6-sol',
+          max_completion_tokens: 16000,
+          reasoning_effort: 'low',
           messages: [{ role: 'user', content: prompt }],
         },
         {

@@ -17,8 +17,10 @@ import { ChatGPT } from './chatgpt';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
 import { DataDeps } from './data/types';
+import Spotify from './spotify';
 
 // Sub-module imports
+import * as playlistCoversModule from './data/playlistCovers';
 import * as miscModule from './data/misc';
 import * as usersModule from './data/users';
 import * as scoringModule from './data/scoring';
@@ -78,9 +80,14 @@ class Data {
           const playlistStatsJob = new CronJob('0 3 * * *', async () => {
             await this.updateFeaturedPlaylistStats();
           });
+          // Covers the owner replaced on Spotify: the stored URL goes 404
+          const playlistCoversJob = new CronJob('30 3 * * *', async () => {
+            await this.repairFeaturedPlaylistCovers();
+          });
           job.start();
           genreJob.start();
           playlistStatsJob.start();
+          playlistCoversJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -91,9 +98,11 @@ class Data {
         }
       });
     } else {
-      // Worker processes: load blocked list from Redis cache
+      // Worker processes: keep an in-memory copy of the blocked list as a
+      // fallback for when Redis is unreachable. The live check in
+      // isPlaylistBlocked reads Redis per request, so this copy only has
+      // to be roughly fresh; the hourly sync is enough.
       this.loadBlockedFromCache().then(() => {
-        // Schedule hourly sync from Redis
         const blockedSyncJob = new CronJob('5 * * * *', async () => {
           await this.loadBlockedFromCache();
         });
@@ -386,14 +395,24 @@ class Data {
   }
 
   /**
-   * Deduplicated on-demand load, used by getLink when a request arrives
-   * before the list is initialized. Preempts any pending backoff timer so
-   * the waiting request drives an attempt right away. Never rejects.
+   * Deduplicated on-demand load, used by the blocked check when a request
+   * arrives before the list is initialized. Never rejects.
    */
   public ensureBlockedLoaded(): Promise<void> {
     if (this.blockedPlaylistsInitialized) {
       return Promise.resolve();
     }
+    return this.reloadBlocked();
+  }
+
+  /**
+   * Deduplicated reload of the in-memory fallback list (Redis first, DB
+   * when the key is absent). Concurrent callers share one attempt, so a
+   * burst of scans on a fresh Redis costs one query, not one per scan.
+   * Preempts any pending backoff timer so the waiting request drives an
+   * attempt right away. Never rejects.
+   */
+  public reloadBlocked(): Promise<void> {
     if (this.blockedLoadPromise) {
       return this.blockedLoadPromise;
     }
@@ -491,6 +510,17 @@ class Data {
     return featuredPlaylistsModule.getAllFeaturedPlaylists(this.deps);
   }
 
+  public async getPlaylistSuggestions(
+    docLocale: string,
+    opts: featuredPlaylistsModule.PlaylistSuggestionOptions
+  ): Promise<any[]> {
+    return featuredPlaylistsModule.getPlaylistSuggestions(this.deps, docLocale, opts);
+  }
+
+  public async getGenresWithFeaturedCount() {
+    return featuredPlaylistsModule.getGenresWithFeaturedCount(this.deps);
+  }
+
   public async getRelatedFeaturedPlaylists(
     locale: string,
     slug: string,
@@ -527,12 +557,28 @@ class Data {
     return featuredPlaylistsModule.updatePlaylistFeatured(this.deps, playlistId, featured);
   }
 
+  public async unfeaturePlaylist(playlistId: string) {
+    return featuredPlaylistsModule.unfeaturePlaylist(this.deps, playlistId);
+  }
+
+  public async refeaturePlaylist(playlistId: string) {
+    return featuredPlaylistsModule.refeaturePlaylist(this.deps, playlistId);
+  }
+
   public async updateFeaturedHidden(playlistId: string, featuredHidden: boolean) {
     return featuredPlaylistsModule.updateFeaturedHidden(this.deps, playlistId, featuredHidden);
   }
 
   public async updateFeaturedLocale(playlistId: string, featuredLocale: string | null) {
     return featuredPlaylistsModule.updateFeaturedLocale(this.deps, playlistId, featuredLocale);
+  }
+
+  public async updateShareDesign(playlistId: string, shareDesign: boolean) {
+    return featuredPlaylistsModule.updateShareDesign(this.deps, playlistId, shareDesign);
+  }
+
+  public async getProductPageLocale(slug: string) {
+    return featuredPlaylistsModule.getProductPageLocale(this.deps, slug);
   }
 
   public async updatePromotionalPlaylist(
@@ -566,6 +612,37 @@ class Data {
 
   public async updateFeaturedPlaylistStats() {
     return scoringModule.updateFeaturedPlaylistStats(this.deps);
+  }
+
+  public async syncFeaturedPlaylistCover(
+    playlist: { id: number; slug?: string | null; image?: string | null },
+    freshImage: string | null | undefined
+  ) {
+    return playlistCoversModule.syncFeaturedPlaylistCover(this.deps, playlist, freshImage);
+  }
+
+  public async repairFeaturedPlaylistCovers() {
+    return playlistCoversModule.repairFeaturedPlaylistCovers(this.deps, async (playlist) => {
+      // Only Spotify deletes a cover when the owner replaces it; the other
+      // services are reported as unresolved and need a custom image.
+      if (playlist.serviceType !== 'spotify') {
+        return { image: null, gone: false };
+      }
+      // cache=false: the cached lookup of a featured playlist never expires,
+      // so it can hold the same dead URL as the column.
+      const result = await Spotify.getInstance().getPlaylist(
+        playlist.slug,
+        false,
+        '',
+        false,
+        true,
+        true
+      );
+      return {
+        image: result.success ? result.data?.image || null : null,
+        gone: !result.success && result.error === 'playlistNotFound',
+      };
+    });
   }
 
   // ── Misc ─────────────────────────────────────────────────────
