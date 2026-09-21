@@ -35,7 +35,14 @@ import {
   MAX_CARDS,
   MAX_CARDS_PHYSICAL,
   APP_DESIGN_PRICE,
+  PRICE_TABLE_QUANTITIES,
 } from '../config/constants';
+import {
+  CardProduct,
+  cardPrice,
+  priceTokenNames,
+  priceTokenValues,
+} from '../priceTokens';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
 import PrismaInstance from '../prisma';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
@@ -127,22 +134,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       return reply.send(JSON.parse(cached));
     }
 
-    const quantities = [50, 100, 150, 200, 300, 500];
     const priceFor = async (
       quantity: number,
-      digital: boolean,
-      subType: 'sheets' | 'none'
+      product: CardProduct
     ): Promise<number | null> => {
       try {
-        const orderType = await order.getOrderType(
-          quantity,
-          digital,
-          'cards',
-          '',
-          subType
-        );
-        const amount = orderType?.amount;
-        return typeof amount === 'number' && amount > 0 ? amount : null;
+        return await cardPrice(quantity, product);
       } catch (e: any) {
         logger.log(
           color.red.bold(`/api/pricing/tiers error: ${e.message || e}`)
@@ -157,11 +154,11 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       sheets: number | null;
       physical: number | null;
     }> = [];
-    for (const quantity of quantities) {
+    for (const quantity of PRICE_TABLE_QUANTITIES) {
       const [digital, sheets, physical] = await Promise.all([
-        priceFor(quantity, true, 'none'),
-        priceFor(quantity, false, 'sheets'),
-        priceFor(quantity, false, 'none'),
+        priceFor(quantity, 'digital'),
+        priceFor(quantity, 'sheets'),
+        priceFor(quantity, 'physical'),
       ]);
       rows.push({ quantity, digital, sheets, physical });
     }
@@ -171,6 +168,22 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       (row) => row.digital && row.sheets && row.physical
     );
     if (complete) {
+      await cache.set(cacheKey, JSON.stringify(payload), 3600);
+    }
+    return reply.send(payload);
+  });
+
+  // Every named price (src/priceTokens.ts) in EUR, for the blog price tokens:
+  // the site converts and formats them in the visitor's currency.
+  fastify.get('/api/pricing/tokens', async (_request: any, reply: any) => {
+    const cacheKey = 'priceTokens_v1';
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return reply.send(JSON.parse(cached));
+    }
+    const prices = await priceTokenValues();
+    const payload = { success: true, data: { currency: 'EUR', prices } };
+    if (Object.keys(prices).length === priceTokenNames().length) {
       await cache.set(cacheKey, JSON.stringify(payload), 3600);
     }
     return reply.send(payload);
@@ -574,16 +587,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
     let result = { success: false };
 
-    // App Designer assets are phone-sized and live in their own directory;
-    // they never get the square crop the card pipeline applies.
-    if (kind === 'app') {
-      if (type !== 'background' && type !== 'logo') {
-        reply.status(400).send({ success: false, error: 'Invalid upload type' });
-        return;
-      }
-      return await designer.uploadAppThemeImage(image, type);
-    }
-
     if (type == 'background') {
       // Convert hideCircle to qrBackgroundType for backward compatibility
       const backgroundType =
@@ -986,6 +989,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             extraBoxes: price.extraBoxes.toString(),
             newBoxQuantity: price.newBoxQuantity.toString(),
             boxUnitPriceEur: price.boxUnitPriceEur.toString(),
+            // What was charged, for the invoice the webhook sends: EUR,
+            // cards and handling ex-VAT, boxes VAT-inclusive.
+            extraTracksCostEur: price.extraTracksCostEur.toString(),
+            handlingFeeEur: price.handlingFeeEur.toString(),
+            boxesCostEur: price.boxesCostEur.toString(),
+            totalEur: price.totalEur.toString(),
+            taxRate: price.taxRate.toString(),
             source: 'usersuggestions',
           },
           clientIp: request.clientIp,

@@ -5,8 +5,12 @@
  *   prints ONE JSON object on stdout, keys subset of kpi.keys, "?" for
  *   anything this adapter cannot know, exit 0.
  *
- * Reads paid, non-test orders straight from the payments table. Analytics
- * purchase counts are never a substitute for this.
+ * Reads paid, non-test orders straight from the payments table, plus the App
+ * Designer ledger (app_design_purchases: an account upgrade paid through its
+ * own Mollie payment, with no payments row). App Designer counts towards
+ * revenue and profit (it costs nothing to deliver), not towards purchases or
+ * AOV, which stay per order. Analytics purchase counts are never a substitute
+ * for this.
  *
  * Which database: GROWTH_KPI_DATABASE (default "qrhit", the production
  * database) is read using the DATABASE_URL credentials. The local .env points
@@ -32,6 +36,12 @@ interface Row {
   profit: number;
   print_cost: number;
   discount: number;
+}
+
+interface AppDesignRow {
+  sales: number;
+  revenue_exvat: number;
+  revenue_gross: number;
 }
 
 function createClient(): PrismaClient {
@@ -68,24 +78,40 @@ async function main(): Promise<void> {
       AND createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
   `);
 
+  const appDesignRows = await prisma.$queryRawUnsafe<AppDesignRow[]>(`
+    SELECT
+      COUNT(*)                              AS sales,
+      COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat,
+      COALESCE(SUM(totalPrice),0)           AS revenue_gross
+    FROM app_design_purchases
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
+  `);
+
   const r = rows[0];
+  const a = appDesignRows[0];
   const orders = Number(r.orders) || 0;
-  const revenue = round2(Number(r.revenue_exvat));
-  const gross = round2(Number(r.revenue_gross));
-  const profit = round2(Number(r.profit));
+  const orderRevenue = round2(Number(r.revenue_exvat));
+  const appDesignSales = Number(a.sales) || 0;
+  const appDesignRevenue = round2(Number(a.revenue_exvat));
+  const revenue = round2(orderRevenue + appDesignRevenue);
+  const gross = round2(Number(r.revenue_gross) + Number(a.revenue_gross));
+  const profit = round2(Number(r.profit) + appDesignRevenue);
   const printCost = round2(Number(r.print_cost));
   const discount = round2(Number(r.discount));
 
   const note =
-    `revenue=ex-VAT paid non-test orders (payments table, ${WINDOW_DAYS}d); ` +
-    `gross=${gross}; order_profit=${profit} (pre ad-spend, pre payment fees); ` +
+    `revenue=ex-VAT paid non-test orders (payments table) + App Designer ` +
+    `(app_design_purchases), ${WINDOW_DAYS}d; ` +
+    `gross=${gross}; profit=${profit} (pre ad-spend, pre payment fees); ` +
+    `app_designer=${appDesignSales} sales, ${appDesignRevenue} ex-VAT ` +
+    `(in revenue and profit, not in purchases/aov); ` +
     `print_cost=${printCost}; discounts=${discount}`;
 
   process.stdout.write(
     JSON.stringify({
       purchases_28d: orders,
       revenue_28d: revenue,
-      aov_28d: orders > 0 ? round2(revenue / orders) : 0,
+      aov_28d: orders > 0 ? round2(orderRevenue / orders) : 0,
       visitors_28d: '?',
       ad_spend_28d: '?',
       ad_clicks_28d: '?',

@@ -35,12 +35,21 @@ import PrintEnBind from './printers/printenbind';
 import { extractPrintErrorMessage } from './printers/printErrorMessage';
 import Mail from './mail';
 import Fx from './services/fx';
+import UpgradeInvoices, { customerFromOrder } from './upgradeInvoice';
 import SpotifyProvider from './providers/SpotifyProvider';
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
   isSupportedCurrency,
   SupportedCurrency,
 } from './data/currency-map';
+
+interface ExtraTracksInvoiceContext {
+  paymentHasPlaylistId: number;
+  userId: number;
+  originalPaymentId: string;
+  extraTracks: number;
+  extraBoxes: number;
+}
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -167,6 +176,10 @@ class Mollie {
       ? "DATE_FORMAT(gp.createdAt, '%Y-%m-%d')"
       : "DATE_FORMAT(gp.createdAt, '%Y-%m')";
 
+    const appDesignDateExpr = groupBy === 'day'
+      ? "DATE_FORMAT(adp.createdAt, '%Y-%m-%d')"
+      : "DATE_FORMAT(adp.createdAt, '%Y-%m')";
+
     if (filter === 'all') {
       // Net out refunds proportionally. For partial refunds we scale the
       // ex-VAT portion by (totalPriceWithoutTax / totalPrice) so refund VAT
@@ -246,18 +259,44 @@ class Mollie {
 
       const boxMap = new Map(boxResults.map(b => [b.period, b]));
 
-      return results.map(r => ({
-        period: r.period,
-        numberOfSales: Number(r.numberOfSales),
-        totalPrice: Number(r.totalPrice) || 0,
-        totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
-        boxAmount: Number(boxMap.get(r.period)?.boxAmount) || 0,
-        totalRefunded: Number(r.totalRefunded) || 0,
-        gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
-        gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
-        totalProfit: Number(r.totalProfit) || 0,
-        profitAssignedCount: Number(r.profitAssignedCount) || 0,
-      }));
+      // App Designer is bought on the account through its own Mollie payment
+      // and has no Payment row, so it comes from its ledger. appDesignExVat is
+      // what it adds to profit (it costs nothing to deliver).
+      const appDesignResults: any[] = await this.prisma.$queryRawUnsafe(`
+        SELECT
+          ${appDesignDateExpr} as period,
+          COUNT(*) as appDesignAmount,
+          COALESCE(SUM(adp.totalPrice), 0) as appDesignTotal,
+          COALESCE(SUM(adp.totalPriceWithoutTax), 0) as appDesignExVat
+        FROM app_design_purchases adp
+        GROUP BY ${appDesignDateExpr}
+      `);
+
+      const appDesignMap = new Map(appDesignResults.map(a => [a.period, a]));
+
+      // A period whose only sale was App Designer has no payments row.
+      const resultMap = new Map(results.map(r => [r.period, r]));
+      const periods = [...new Set([...resultMap.keys(), ...appDesignMap.keys()])]
+        .sort((a, b) => String(b).localeCompare(String(a)));
+
+      return periods.map(period => {
+        const r = resultMap.get(period);
+        return {
+          period,
+          numberOfSales: Number(r?.numberOfSales) || 0,
+          totalPrice: Number(r?.totalPrice) || 0,
+          totalPriceWithoutTax: Number(r?.totalPriceWithoutTax) || 0,
+          boxAmount: Number(boxMap.get(period)?.boxAmount) || 0,
+          totalRefunded: Number(r?.totalRefunded) || 0,
+          gamesAmount: Number(gamesMap.get(period)?.gamesAmount) || 0,
+          gamesTotal: Number(gamesMap.get(period)?.gamesTotal) || 0,
+          appDesignAmount: Number(appDesignMap.get(period)?.appDesignAmount) || 0,
+          appDesignTotal: Number(appDesignMap.get(period)?.appDesignTotal) || 0,
+          appDesignExVat: Number(appDesignMap.get(period)?.appDesignExVat) || 0,
+          totalProfit: Number(r?.totalProfit) || 0,
+          profitAssignedCount: Number(r?.profitAssignedCount) || 0,
+        };
+      });
     }
 
     let typeFilter = '';
@@ -364,6 +403,9 @@ class Mollie {
       totalRefunded: Number(r.totalRefunded) || 0,
       gamesAmount: 0,
       gamesTotal: 0,
+      appDesignAmount: 0,
+      appDesignTotal: 0,
+      appDesignExVat: 0,
       totalProfit: Number(profitMap.get(r.period)?.totalProfit) || 0,
       profitAssignedCount: Number(profitMap.get(r.period)?.profitAssignedCount) || 0,
     }));
@@ -463,6 +505,32 @@ class Mollie {
     `);
     const boxMap = new Map(boxByCountry.map(b => [b.countrycode || 'Unknown', Number(b.boxAmount) || 0]));
 
+    // App Designer by country, from its own ledger (no Payment row). The
+    // ex-VAT sum is what it adds to profit.
+    const appDesignByCountry = await this.prisma.appDesignPurchase.groupBy({
+      by: ['countrycode'],
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _count: { _all: true },
+      _sum: { totalPrice: true, totalPriceWithoutTax: true },
+      _max: { taxRate: true },
+    });
+    const appDesignMap = new Map(
+      appDesignByCountry.map(a => [
+        a.countrycode || 'Unknown',
+        {
+          amount: a._count._all,
+          total: a._sum.totalPrice || 0,
+          exVat: a._sum.totalPriceWithoutTax || 0,
+          taxRate: a._max.taxRate || 0,
+        },
+      ])
+    );
+
     // Count payments whose profit has been assigned. Digital orders get profit
     // at creation; physical orders only after submission to the print API
     // (printApiPrice > 0). Mirrors the groupBy `where` so it shares the same
@@ -555,11 +623,37 @@ class Mollie {
           boxAmount: boxMap.get(countryKey) || 0,
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
+          appDesignAmount: appDesignMap.get(countryKey)?.amount || 0,
+          appDesignTotal: appDesignMap.get(countryKey)?.total || 0,
+          appDesignExVat: appDesignMap.get(countryKey)?.exVat || 0,
           totalProfit: profitAssignedMap.get(countryKey)?.totalProfit || 0,
           profitAssignedCount: profitAssignedMap.get(countryKey)?.profitAssignedCount || 0,
         };
       })
     );
+
+    // Countries whose only sale this month was App Designer.
+    const reportedCountries = new Set(detailedReport.map(r => r.country));
+    for (const [countryKey, appDesign] of appDesignMap) {
+      if (reportedCountries.has(countryKey)) continue;
+      detailedReport.push({
+        country: countryKey,
+        numberOfSales: 0,
+        totalPrice: 0,
+        totalPriceWithoutTax: 0,
+        totalRefunded: 0,
+        taxRate: appDesign.taxRate,
+        totalPlaylists: 0,
+        boxAmount: 0,
+        gamesAmount: gamesMap.get(countryKey)?.amount || 0,
+        gamesTotal: gamesMap.get(countryKey)?.total || 0,
+        appDesignAmount: appDesign.amount,
+        appDesignTotal: appDesign.total,
+        appDesignExVat: appDesign.exVat,
+        totalProfit: 0,
+        profitAssignedCount: 0,
+      });
+    }
 
     return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
   }
@@ -681,9 +775,69 @@ class Mollie {
       gamesMap.set(key, cur);
     }
 
+    // App Designer: an account upgrade paid through its own Mollie payment,
+    // with no Payment row. Its ledger stores the VAT split, and both parts
+    // count towards the row's taxable totals (totalPriceWithoutTax, totalVAT).
+    // totalPrice and numberOfSales stay the playlists'; appDesign* is the
+    // breakdown. A (zone, country, rate) with only App Designer sales still
+    // gets a row.
+    const appDesignRows = await this.prisma.appDesignPurchase.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: {
+        molliePaymentId: true,
+        countrycode: true,
+        taxRate: true,
+        totalPrice: true,
+        totalPriceWithoutTax: true,
+        totalVAT: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    type AppDesignAgg = {
+      amount: number;
+      total: number;
+      exVat: number;
+      vat: number;
+    };
+    const addAppDesign = (
+      map: Map<string, AppDesignAgg>,
+      key: string,
+      a: (typeof appDesignRows)[number]
+    ) => {
+      const cur = map.get(key) || { amount: 0, total: 0, exVat: 0, vat: 0 };
+      cur.amount += 1;
+      cur.total += a.totalPrice || 0;
+      cur.exVat += a.totalPriceWithoutTax || 0;
+      cur.vat += a.totalVAT || 0;
+      map.set(key, cur);
+    };
+    const appDesignMap = new Map<string, AppDesignAgg>();
+    for (const a of appDesignRows) {
+      const zone = this.getTaxZone(a.countrycode);
+      const countrycode = (a.countrycode || '').toUpperCase();
+      const taxRate = a.taxRate || 0;
+      const key = paymentKey(zone, countrycode, taxRate);
+      addAppDesign(appDesignMap, key, a);
+      if (!agg.has(key)) {
+        agg.set(key, {
+          zone,
+          countrycode,
+          taxRate,
+          firstPaymentId: a.molliePaymentId,
+          numberOfSales: 0,
+          totalPrice: 0,
+          totalPriceWithoutTax: 0,
+          productVATPrice: 0,
+        });
+      }
+    }
+
     const detailedReport = Array.from(agg.values()).map((entry) => {
       const key = paymentKey(entry.zone, entry.countrycode, entry.taxRate);
       const gamesData = gamesMap.get(key);
+      const appDesign = appDesignMap.get(key);
       const adj = refundAdjustments.get(key);
       return {
         zone: entry.zone,
@@ -693,11 +847,20 @@ class Mollie {
         numberOfSales: entry.numberOfSales,
         totalPrice: entry.totalPrice - (adj?.refundedTotal || 0),
         totalPriceWithoutTax:
-          entry.totalPriceWithoutTax - (adj?.refundedExVAT || 0),
-        totalVAT: entry.productVATPrice - (adj?.refundedVAT || 0),
+          entry.totalPriceWithoutTax -
+          (adj?.refundedExVAT || 0) +
+          (appDesign?.exVat || 0),
+        totalVAT:
+          entry.productVATPrice -
+          (adj?.refundedVAT || 0) +
+          (appDesign?.vat || 0),
         totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
+        appDesignAmount: appDesign?.amount || 0,
+        appDesignTotal: appDesign?.total || 0,
+        appDesignExVat: appDesign?.exVat || 0,
+        appDesignVAT: appDesign?.vat || 0,
       };
     });
 
@@ -766,9 +929,30 @@ class Mollie {
       ossGamesMap.set(key, cur);
     }
 
+    // App Designer, same treatment as in the rows above.
+    const ossAppDesignMap = new Map<string, AppDesignAgg>();
+    for (const a of appDesignRows) {
+      if (this.getTaxZone(a.countrycode) !== 'EU') continue;
+      const country = (a.countrycode || '').toUpperCase();
+      const taxRate = a.taxRate || 0;
+      const key = ossKey(country, taxRate);
+      addAppDesign(ossAppDesignMap, key, a);
+      if (!ossAgg.has(key)) {
+        ossAgg.set(key, {
+          country,
+          taxRate,
+          numberOfSales: 0,
+          totalPrice: 0,
+          totalPriceWithoutTax: 0,
+          productVATPrice: 0,
+        });
+      }
+    }
+
     const ossBreakdown = Array.from(ossAgg.values()).map((entry) => {
       const key = ossKey(entry.country, entry.taxRate);
       const gamesData = ossGamesMap.get(key);
+      const appDesign = ossAppDesignMap.get(key);
       const adj = ossRefundAdjustments.get(key);
       return {
         country: entry.country,
@@ -776,11 +960,20 @@ class Mollie {
         numberOfSales: entry.numberOfSales,
         totalPrice: entry.totalPrice - (adj?.refundedTotal || 0),
         totalPriceWithoutTax:
-          entry.totalPriceWithoutTax - (adj?.refundedExVAT || 0),
-        totalVAT: entry.productVATPrice - (adj?.refundedVAT || 0),
+          entry.totalPriceWithoutTax -
+          (adj?.refundedExVAT || 0) +
+          (appDesign?.exVat || 0),
+        totalVAT:
+          entry.productVATPrice -
+          (adj?.refundedVAT || 0) +
+          (appDesign?.vat || 0),
         totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
+        appDesignAmount: appDesign?.amount || 0,
+        appDesignTotal: appDesign?.total || 0,
+        appDesignExVat: appDesign?.exVat || 0,
+        appDesignVAT: appDesign?.vat || 0,
       };
     });
 
@@ -1600,9 +1793,6 @@ class Mollie {
             boxEnabled: true,
             boxQuantity: true,
             boxFilename: true,
-            // App Designer
-            appDesignEnabled: true,
-            appDesignPrice: true,
             boxFrontBackgroundType: true,
             boxFrontBackground: true,
             boxFrontBackgroundColor: true,
@@ -2294,16 +2484,6 @@ class Mollie {
               this.utils.parseBoolean(item.gamesEnabled)
                 ? QRGAMES_UPGRADE_PRICE
                 : 0,
-            // App Designer add-on (custom scan-app theme). The design itself
-            // is stored in app_designs once the row ids are known, below.
-            appDesignEnabled:
-              item.productType === 'cards' &&
-              this.utils.parseBoolean(item.appDesignEnabled),
-            appDesignPrice:
-              item.productType === 'cards' &&
-              this.utils.parseBoolean(item.appDesignEnabled)
-                ? APP_DESIGN_PRICE
-                : 0,
             // Box add-on
             boxEnabled: this.utils.parseBoolean(item.boxEnabled),
             boxQuantity: item.boxQuantity || 0,
@@ -2413,7 +2593,6 @@ class Mollie {
           discountShipping: allocation.discountShipping,
           boxFee: calculateResult.data.boxFee || 0,
           gamesFee: calculateResult.data.gamesFee || 0,
-          appDesignFee: calculateResult.data.appDesignFee || 0,
           currency: presentmentCurrency,
           exchangeRate: presentmentRate,
           totalPricePresentment:
@@ -2423,47 +2602,9 @@ class Mollie {
           boxInstructionsMailSent: false,
           PaymentHasPlaylist: { create: playlists },
         },
-        // The App Designer needs the new line ids to attach designs to.
-        include: {
-          PaymentHasPlaylist: { select: { id: true, playlistId: true, appDesignEnabled: true } },
-        },
       });
 
       const paymentId = insertResult.id;
-
-      // Store the customer's scan-app theme for every line that bought it.
-      // saveDesign also writes the slug onto the line; the reload below
-      // publishes it to the in-memory theme map on every worker.
-      const appDesignItems = params.cart.items.filter(
-        (item: CartItem) =>
-          item.productType === 'cards' &&
-          this.utils.parseBoolean(item.appDesignEnabled) &&
-          item.appDesign
-      );
-      if (appDesignItems.length > 0) {
-        const appDesign = AppDesign.getInstance();
-        for (const item of appDesignItems) {
-          const idx = params.cart.items.indexOf(item);
-          const line = insertResult.PaymentHasPlaylist.find(
-            (php) => php.playlistId === playlistDatabaseIds[idx]
-          );
-          if (!line) continue;
-          try {
-            const { input } = appDesign.normalizeInput({
-              design: item.appDesign,
-              theme: item.appTheme,
-              name: item.playlistName,
-            });
-            await appDesign.saveDesign(line.id, input, { reload: false });
-          } catch (designError: any) {
-            this.logger.log(
-              color.yellow.bold(
-                `Could not store app design for PHP ${line.id}: ${designError.message}`
-              )
-            );
-          }
-        }
-      }
 
       // AI prompts have been persisted on the PaymentHasPlaylist rows above;
       // delete the transient Redis copies so they don't linger past their use.
@@ -2736,73 +2877,51 @@ class Mollie {
             pricePerPlaylist,
             payment.id
           );
+          // Also on a replay: issuing is idempotent.
+          if (result.success) {
+            await this.issueGamesInvoice(payment);
+          }
           return result.success
             ? { success: true }
             : { success: false, error: result.error || 'Failed to process bingo upgrade' };
         }
       }
 
-      // App Designer unlocked after purchase. The design row was stored by
-      // the upgrade route; here we charge the line, publish the slug and
-      // refresh the theme map so the next scan picks it up.
+      // App Designer bought for an account: record the purchase (it is both
+      // the entitlement and the ledger row the reports read) and refresh the
+      // theme map, so every playlist of the account gets its design on the
+      // next scan.
       if (metadata?.type === 'app_design_upgrade' && payment.status === 'paid') {
-        const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
-        const originalPaymentId = metadata.originalPaymentId as string;
-        const price = metadata.price ? parseFloat(metadata.price) : APP_DESIGN_PRICE;
-
-        if (paymentHasPlaylistId && originalPaymentId) {
-          const php = await this.prisma.paymentHasPlaylist.findUnique({
-            where: { id: paymentHasPlaylistId },
-            include: {
-              appDesign: { select: { slug: true, name: true } },
-              payment: { include: { user: { select: { hash: true } } } },
-            },
+        const userId = parseInt(metadata.userId);
+        if (userId) {
+          const result = await AppDesign.getInstance().processUpgradePayment({
+            userId,
+            molliePaymentId: payment.id,
+            price: metadata.price ? parseFloat(metadata.price) : APP_DESIGN_PRICE,
+            taxRate: parseFloat(metadata.taxRate) || 0,
+            countrycode: metadata.countrycode || 'NL',
+            currency: payment.amount?.currency || 'EUR',
+            amountCharged: parseFloat(payment.amount?.value) || 0,
           });
-          if (!php) {
-            return { success: false, error: 'PaymentHasPlaylist not found' };
-          }
-          if (php.appDesignEnabled) {
-            this.logger.log(
-              color.yellow.bold(
-                `App design upgrade already processed for PHP ${paymentHasPlaylistId}, skipping`
-              )
-            );
-            return { success: true };
-          }
-
-          try {
-            await this.prisma.paymentHasPlaylist.update({
-              where: { id: paymentHasPlaylistId },
-              data: {
-                appDesignEnabled: true,
-                appDesignPrice: price,
-                theme: php.appDesign?.slug ?? null,
-                themeName: php.appDesign?.name ?? null,
-              },
-            });
-            await this.prisma.payment.update({
-              where: { paymentId: originalPaymentId },
-              data: {
-                totalPrice: { increment: price },
-                appDesignFee: { increment: price },
-              },
-            });
-            if (php.payment?.user?.hash) {
-              await this.cache.del(`playlists:user:${php.payment.user.hash}`);
+          if (result.created) {
+            try {
+              await this.mail.sendAppDesignEnabledEmail(result.purchaseId as number);
+            } catch (mailError: any) {
+              this.logger.log(
+                color.yellow.bold(
+                  `App Designer confirmation mail failed: ${color.white.bold(mailError.message)}`
+                )
+              );
             }
-            await this.appTheme.reload();
-
-            this.logger.log(
-              color.blue.bold('Processed app design upgrade payment for PHP: ') +
-                color.white.bold(paymentHasPlaylistId.toString())
-            );
-            return { success: true };
-          } catch (error: any) {
-            this.logger.log(
-              color.red.bold(`Error processing app design upgrade: ${error.message}`)
-            );
-            return { success: false, error: 'Failed to process app design upgrade' };
           }
+          // Also on a replay: issuing is idempotent and only resends a mail
+          // that did not go out.
+          if (result.success && result.purchaseId) {
+            await this.issueAppDesignInvoice(result.purchaseId, payment);
+          }
+          return result.success
+            ? { success: true }
+            : { success: false, error: result.error || 'Failed to process App Designer purchase' };
         }
       }
 
@@ -2823,6 +2942,13 @@ class Mollie {
             this.logger.log(
               color.yellow.bold(`Box upgrade already processed for PHP ${paymentHasPlaylistId}, skipping`)
             );
+            // Idempotent: only mails an invoice that did not go out yet.
+            await this.issueBoxInvoice(payment, metadata, {
+              paymentHasPlaylistId,
+              userId,
+              originalPaymentId,
+              quantity,
+            });
             return { success: true };
           }
 
@@ -2841,25 +2967,16 @@ class Mollie {
             });
 
             // Roll the upgrade total into Payment.totalPrice so books reflect
-            // the customer's full lifetime spend on this order. Include the
-            // settled amount (subtotal + VAT + any shipping carried in the
-            // metadata) to match what was actually charged.
+            // the customer's full lifetime spend on this order: what was
+            // charged, the boxes plus any shipping carried in the metadata.
+            // The box price is VAT-inclusive (boxTierPrice), so no VAT is
+            // added on top; that used to book more than the customer paid.
+            // The order invoice subtracts this again (issueBoxInvoice).
             const upgradeShipping = metadata.shippingCost
               ? parseFloat(metadata.shippingCost)
               : 0;
-            // Re-derive VAT from the box subtotal using the original payment's
-            // country, the same way `Upgrade.calculateBoxUpgradePrice` does.
-            const phpForVat = await this.prisma.paymentHasPlaylist.findUnique({
-              where: { id: paymentHasPlaylistId },
-              select: { payment: { select: { countrycode: true } } },
-            });
-            const upgradeTaxRate =
-              (await this.data.getTaxRate(phpForVat?.payment?.countrycode || 'NL')) || 0;
-            const upgradeVat = parseFloat(
-              (boxLineTotal * (upgradeTaxRate / 100)).toFixed(2)
-            );
             const upgradeChargedEur = parseFloat(
-              (boxLineTotal + upgradeVat + upgradeShipping).toFixed(2)
+              (boxLineTotal + upgradeShipping).toFixed(2)
             );
             await this.prisma.payment.update({
               where: { paymentId: originalPaymentId },
@@ -2920,6 +3037,13 @@ class Mollie {
                 color.white.bold(paymentHasPlaylistId.toString())
             );
 
+            await this.issueBoxInvoice(payment, metadata, {
+              paymentHasPlaylistId,
+              userId,
+              originalPaymentId,
+              quantity,
+            });
+
             return { success: true };
           } catch (error: any) {
             this.logger.log(
@@ -2952,6 +3076,14 @@ class Mollie {
             this.logger.log(
               color.yellow.bold(`Tracks upgrade ${payment.id} already processed, skipping`)
             );
+            // Idempotent: only mails an invoice that did not go out yet.
+            await this.issueExtraTracksInvoice(payment, metadata, {
+              paymentHasPlaylistId,
+              userId,
+              originalPaymentId,
+              extraTracks,
+              extraBoxes,
+            });
             return { success: true };
           }
 
@@ -3001,11 +3133,18 @@ class Mollie {
             }
 
             // Roll the charged amount into Payment.totalPrice so the books
-            // reflect the customer's full lifetime spend on this order.
+            // reflect the customer's full lifetime spend on this order. The
+            // EUR price it was sold at, like the order itself; the extra-cards
+            // invoice has the same total and the order invoice subtracts it.
+            // Older payments carry no totalEur: the EUR charge, or Mollie's
+            // settlement for another currency.
+            const metadataTotalEur = parseFloat(metadata.totalEur);
             const chargedAmountEur =
-              payment.amount && payment.amount.currency === 'EUR'
-                ? parseFloat(payment.amount.value)
-                : null;
+              metadataTotalEur > 0
+                ? metadataTotalEur
+                : payment.amount && payment.amount.currency === 'EUR'
+                  ? parseFloat(payment.amount.value)
+                  : null;
             if (chargedAmountEur !== null) {
               await this.prisma.payment.update({
                 where: { paymentId: originalPaymentId },
@@ -3041,6 +3180,14 @@ class Mollie {
                 color.blue.bold(' for PHP: ') +
                 color.white.bold(paymentHasPlaylistId.toString())
             );
+
+            await this.issueExtraTracksInvoice(payment, metadata, {
+              paymentHasPlaylistId,
+              userId,
+              originalPaymentId,
+              extraTracks,
+              extraBoxes,
+            });
 
             return { success: true };
           } catch (error: any) {
@@ -3379,6 +3526,246 @@ class Mollie {
         error: e instanceof Error ? e.message : 'Failed to create payment link',
       };
     }
+  }
+
+  /**
+   * Runs the invoice step of a paid upgrade (src/upgradeInvoice.ts). Never
+   * throws: an invoice problem must not fail a webhook whose purchase was
+   * recorded fine, or Mollie would retry it.
+   */
+  private async invoiceSafely(
+    label: string,
+    payment: any,
+    issue: () => Promise<void>
+  ): Promise<void> {
+    try {
+      await issue();
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `${label} invoice for ${white.bold(payment.id)} failed: ${white.bold(error.message)}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Invoice for a paid App Designer purchase, in the U range. The purchase
+   * has no order, so the billing details come from the account's latest
+   * paid card order, the same order whose country set the VAT.
+   */
+  private async issueAppDesignInvoice(purchaseId: number, payment: any): Promise<void> {
+    await this.invoiceSafely('App Designer', payment, () =>
+      this.issueAppDesignInvoiceUnsafe(purchaseId, payment)
+    );
+  }
+
+  private async issueAppDesignInvoiceUnsafe(purchaseId: number, payment: any): Promise<void> {
+    const purchase = await this.prisma.appDesignPurchase.findUnique({
+      where: { id: purchaseId },
+      include: { user: { select: { id: true, email: true, locale: true } } },
+    });
+    if (!purchase) return;
+    const order = await this.prisma.payment.findFirst({
+      where: {
+        userId: purchase.userId,
+        status: 'paid',
+        PaymentHasPlaylist: { some: { playlist: { type: { not: 'giftcard' } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const email = order?.email || purchase.user?.email;
+    if (!email) return;
+    const locale = payment.metadata?.locale || order?.locale || purchase.user?.locale || 'en';
+    await UpgradeInvoices.getInstance().issue({
+      type: 'app_design',
+      molliePayment: payment,
+      userId: purchase.userId,
+      paymentId: null,
+      email,
+      locale,
+      customer: {
+        ...customerFromOrder(order),
+        countrycode: order?.invoiceCountrycode || order?.countrycode || purchase.countrycode,
+      },
+      taxRate: purchase.taxRate,
+      items: [
+        {
+          description: this.translation.translate('invoice.appDesigner', locale),
+          quantity: 1,
+          totalIncl: purchase.totalPrice,
+        },
+      ],
+    });
+  }
+
+  /**
+   * Invoice for extra cards bought on an order, in the U range. The lines
+   * are rebuilt from the price breakdown the payment was created with; the
+   * cards line takes whatever the rounding leaves, so the lines always add
+   * up to what was charged.
+   */
+  private async issueExtraTracksInvoice(
+    payment: any,
+    metadata: any,
+    context: ExtraTracksInvoiceContext
+  ): Promise<void> {
+    await this.invoiceSafely('Extra cards', payment, () =>
+      this.issueExtraTracksInvoiceUnsafe(payment, metadata, context)
+    );
+  }
+
+  private async issueExtraTracksInvoiceUnsafe(
+    payment: any,
+    metadata: any,
+    context: ExtraTracksInvoiceContext
+  ): Promise<void> {
+    const order = await this.prisma.payment.findUnique({
+      where: { paymentId: context.originalPaymentId },
+    });
+    if (!order?.email) return;
+    const php = await this.prisma.paymentHasPlaylist.findUnique({
+      where: { id: context.paymentHasPlaylistId },
+      select: { playlist: { select: { name: true } } },
+    });
+    const locale = order.locale || 'en';
+    const taxRate = metadata.taxRate !== undefined
+      ? parseFloat(metadata.taxRate) || 0
+      : (await this.data.getTaxRate(order.countrycode || 'NL')) || 0;
+    const cardsLabel = this.translation.translate('invoice.extraCards', locale, {
+      playlist: php?.playlist?.name || '',
+    });
+
+    let items;
+    const totalEur = parseFloat(metadata.totalEur);
+    if (totalEur > 0) {
+      const factor = 1 + taxRate / 100;
+      const boxesIncl = parseFloat(metadata.boxesCostEur) || 0;
+      const handlingIncl = round2((parseFloat(metadata.handlingFeeEur) || 0) * factor);
+      const cardsIncl = round2(totalEur - boxesIncl - handlingIncl);
+      items = [
+        { description: cardsLabel, quantity: context.extraTracks, totalIncl: cardsIncl },
+        {
+          description: this.translation.translate('invoice.handlingFee', locale),
+          quantity: 1,
+          totalIncl: handlingIncl,
+        },
+        {
+          description: this.translation.translate('invoice.giftBox', locale),
+          quantity: context.extraBoxes,
+          totalIncl: boxesIncl,
+        },
+      ];
+    } else {
+      // Payments created before the breakdown travelled in the metadata:
+      // one line for what was charged, in EUR.
+      const chargedEur =
+        payment.amount?.currency === 'EUR' ? parseFloat(payment.amount.value) || 0 : 0;
+      if (!chargedEur) return;
+      items = [{ description: cardsLabel, quantity: context.extraTracks, totalIncl: chargedEur }];
+    }
+
+    await UpgradeInvoices.getInstance().issue({
+      type: 'extra_tracks',
+      molliePayment: payment,
+      userId: context.userId,
+      paymentId: order.id,
+      email: order.email,
+      locale,
+      customer: customerFromOrder(order),
+      taxRate,
+      items,
+    });
+  }
+
+  /**
+   * Invoice for gift boxes added to an order, in the U range: the boxes and
+   * any shipping, both VAT-inclusive as charged, at the order country's
+   * rate. Rebuilt from the payment's metadata, so a replay gives the same
+   * lines.
+   */
+  private async issueBoxInvoice(
+    payment: any,
+    metadata: any,
+    context: { paymentHasPlaylistId: number; userId: number; originalPaymentId: string; quantity: number }
+  ): Promise<void> {
+    await this.invoiceSafely('Gift box', payment, async () => {
+      const order = await this.prisma.payment.findUnique({
+        where: { paymentId: context.originalPaymentId },
+      });
+      if (!order?.email) return;
+      const locale = order.locale || 'en';
+      const unitPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : BOX_PRICE;
+      const shipping = metadata.shippingCost ? parseFloat(metadata.shippingCost) : 0;
+      await UpgradeInvoices.getInstance().issue({
+        type: 'box',
+        molliePayment: payment,
+        userId: context.userId,
+        paymentId: order.id,
+        email: order.email,
+        locale,
+        customer: customerFromOrder(order),
+        taxRate: (await this.data.getTaxRate(order.countrycode || 'NL')) || 0,
+        items: [
+          {
+            description: this.translation.translate('invoice.giftBox', locale),
+            quantity: context.quantity,
+            totalIncl: round2(unitPrice * context.quantity),
+          },
+          {
+            description: this.translation.translate('invoice.shippingAndHandling', locale),
+            quantity: 1,
+            totalIncl: shipping,
+          },
+        ],
+      });
+    });
+  }
+
+  /**
+   * Invoice for a QRGames upgrade, in the U range, from the purchase row
+   * the upgrade wrote (amount, playlist count and the rate it booked). It
+   * is bought on the account and may cover playlists from several orders,
+   * so it is linked to no order; the billing details come from the order of
+   * the first playlist, whose country also set the rate.
+   */
+  private async issueGamesInvoice(payment: any): Promise<void> {
+    await this.invoiceSafely('QRGames', payment, async () => {
+      const purchase = await this.prisma.gamesPurchase.findFirst({
+        where: { molliePaymentId: payment.id, type: 'upgrade' },
+      });
+      if (!purchase) return;
+      const metadata = payment.metadata as any;
+      const firstPhpId = parseInt(
+        String(metadata?.paymentHasPlaylistIds || metadata?.paymentHasPlaylistId || '').split(',')[0]
+      );
+      const php = firstPhpId
+        ? await this.prisma.paymentHasPlaylist.findUnique({
+            where: { id: firstPhpId },
+            select: { payment: true },
+          })
+        : null;
+      const order = php?.payment;
+      if (!order?.email) return;
+      const locale = order.locale || 'en';
+      await UpgradeInvoices.getInstance().issue({
+        type: 'games',
+        molliePayment: payment,
+        userId: purchase.userId,
+        paymentId: null,
+        email: order.email,
+        locale,
+        customer: customerFromOrder(order),
+        taxRate: purchase.taxRate ?? ((await this.data.getTaxRate(order.countrycode || 'NL')) || 0),
+        items: [
+          {
+            description: this.translation.translate('invoice.qrGames', locale),
+            quantity: purchase.playlistCount,
+            totalIncl: purchase.totalPrice,
+          },
+        ],
+      });
+    });
   }
 
   /**

@@ -1,0 +1,19 @@
+{{#if showAppDesign}}
+<!-- App Designer section (Off White band) -->
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 24px; border-collapse: separate;">
+    <tr>
+        <td align="center" bgcolor="#feefe5" style="padding: 26px 24px; background-color: #feefe5; border: 2px solid #eed2bf; border-radius: 20px;">
+            <p style="margin: 0 0 8px; font-size: 24px; line-height: 30px;">📱🎨</p>
+            {{#if appDesignEntitled}}
+            <p style="margin: 0 0 8px; font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 900; font-size: 20px; line-height: 26px; letter-spacing: .02em; text-transform: uppercase; color: #0b2c31;">{{ translations.appDesignSectionTitleOn }}</p>
+            <p style="margin: 0 0 20px; font-size: 14px; line-height: 22px; color: #18565e;">{{ translations.appDesignSectionBodyOn }}</p>
+            {{> mail-btn-disco href=appDesignUrl label=translations.appDesignSectionCtaOn }}
+            {{else}}
+            <p style="margin: 0 0 8px; font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 900; font-size: 20px; line-height: 26px; letter-spacing: .02em; text-transform: uppercase; color: #0b2c31;">{{ translations.appDesignSectionTitle }}</p>
+            <p style="margin: 0 0 20px; font-size: 14px; line-height: 22px; color: #18565e;">{{ translations.appDesignSectionBody }}</p>
+            {{> mail-btn-disco href=appDesignUrl label=translations.appDesignSectionCta }}
+            {{/if}}
+        </td>
+    </tr>
+</table>
+{{/if}}

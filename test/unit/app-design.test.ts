@@ -1,20 +1,26 @@
 import { describe, it, expect } from 'vitest';
 
 /**
- * Unit tests for the pure helpers in src/appDesign.ts: the CSS variable
- * whitelist/grammar, help-text sanitizing, slug and asset checks, and the
- * server-built font block.
+ * Unit tests for the pure helpers in src/appDesign.ts (the CSS variable
+ * whitelist/grammar, help-text sanitizing, customer slugs, asset checks, the
+ * server-built font block) and for the scan-time precedence in
+ * src/apptheme.ts.
  */
 
 import {
+  APP_BUNDLED_BACKGROUND_URL,
   APP_THEME_VARIABLE_KEYS,
   validateCssVariables,
   sanitizeHelpText,
   sanitizeAssetFilename,
   isValidThemeSlug,
-  slugForPaymentHasPlaylist,
+  newCustomerSlug,
+  parseCustomerSlug,
+  servedCustomerSlug,
+  scopeKeyFor,
   fontsForId,
 } from '../../src/appDesign';
+import { resolveLineTheme } from '../../src/apptheme';
 
 describe('validateCssVariables', () => {
   it('keeps known keys with plain colors', () => {
@@ -55,6 +61,29 @@ describe('validateCssVariables', () => {
     );
   });
 
+  it('accepts the photo bundled in the app, in exactly the built-in theme\'s form', () => {
+    const bundled = '#18565e url("assets/images/bg-disco.webp") center / cover no-repeat';
+    expect(validateCssVariables({ '--app-background': bundled }).cssVariables).toEqual({
+      '--app-background': bundled,
+    });
+    expect(APP_BUNDLED_BACKGROUND_URL).toBe('assets/images/bg-disco.webp');
+
+    for (const value of [
+      '#18565e url("https://evil.example/bg-disco.webp") center / cover no-repeat',
+      '#18565e url("assets/images/other.webp") center / cover no-repeat',
+      '#18565e url("assets/images/bg-disco.webp") center / cover no-repeat; color: red',
+      'url("assets/images/bg-disco.webp")',
+    ]) {
+      expect(validateCssVariables({ '--app-background': value }).rejected).toEqual([
+        '--app-background',
+      ]);
+    }
+    // Only the page background may carry it.
+    expect(
+      validateCssVariables({ '--app-modal-content-background': bundled }).rejected
+    ).toEqual(['--app-modal-content-background']);
+  });
+
   it('accepts text shadows, offsets and font families', () => {
     const { rejected } = validateCssVariables({
       '--app-text-shadow': '1px 1px 2px rgba(0, 0, 0, 0.35)',
@@ -78,11 +107,46 @@ describe('validateCssVariables', () => {
 });
 
 describe('sanitizeHelpText', () => {
-  it('escapes markup and wraps paragraphs', () => {
-    const out = sanitizeHelpText('Hi <b>there</b>\n\nSecond "para"\nline two');
-    expect(out).toBe(
-      '<p>Hi &lt;b&gt;there&lt;/b&gt;</p><p>Second &quot;para&quot;<br>line two</p>'
+  it('escapes plain text (designs saved before the editor) and wraps paragraphs', () => {
+    const out = sanitizeHelpText('Hi & welcome\n\nSecond "para"\nline two');
+    expect(out).toBe('<p>Hi &amp; welcome</p><p>Second &quot;para&quot;<br>line two</p>');
+  });
+
+  it('keeps the formats the editor offers, as the app styles them', () => {
+    const html =
+      '<h2>Welcome</h2><p><strong>Scan</strong> a card, <em>guess</em> the <u>year</u>.</p>' +
+      '<ol><li>One</li></ol><ul><li>Two</li></ul><h3>More</h3>';
+    expect(sanitizeHelpText(html)).toBe(html);
+  });
+
+  it('opens links outside the app and drops unsafe ones', () => {
+    expect(sanitizeHelpText('<p><a href="https://qrsong.io">site</a></p>')).toBe(
+      '<p><a href="https://qrsong.io" target="_blank" rel="noopener noreferrer">site</a></p>'
     );
+    expect(sanitizeHelpText('<p><a href="javascript:alert(1)">x</a></p>')).toBe(
+      '<p><a target="_blank" rel="noopener noreferrer">x</a></p>'
+    );
+  });
+
+  it('strips everything else: scripts, handlers, images, styles, classes', () => {
+    const out = sanitizeHelpText(
+      '<p class="ql-align-center" style="color:red" onclick="x()">Hi<script>alert(1)</script>' +
+        '<img src="x" onerror="y()"><span>there</span></p>'
+    );
+    expect(out).toBe('<p>Hithere</p>');
+  });
+
+  it('maps other headings and tags onto the allowed ones', () => {
+    expect(sanitizeHelpText('<h1>A</h1><h4>B</h4><b>C</b><i>D</i><div>E</div>')).toBe(
+      '<h2>A</h2><h3>B</h3><strong>C</strong><em>D</em><p>E</p>'
+    );
+  });
+
+  it('turns the non-breaking spaces Quill writes back into spaces and trims empty lines', () => {
+    expect(sanitizeHelpText('<p><br></p><p>Scan&nbsp;a&nbsp;card</p><p><br></p><p></p>')).toBe(
+      '<p>Scan a card</p>'
+    );
+    expect(sanitizeHelpText('<p><br></p>')).toBeNull();
   });
 
   it('returns null for empty or non-string input', () => {
@@ -93,10 +157,31 @@ describe('sanitizeHelpText', () => {
 });
 
 describe('slugs and asset names', () => {
-  it('derives the slug from the order line id', () => {
-    expect(slugForPaymentHasPlaylist(1234)).toBe('u1234');
-    expect(isValidThemeSlug('u1234')).toBe(true);
+  it('makes random customer slugs that the theme route accepts', () => {
+    const a = newCustomerSlug();
+    const b = newCustomerSlug();
+    expect(a).toMatch(/^c[a-z0-9]{10}$/);
+    expect(a).not.toBe(b);
+    expect(isValidThemeSlug(a)).toBe(true);
+    expect(isValidThemeSlug(servedCustomerSlug(a, 12))).toBe(true);
     expect(isValidThemeSlug('acme')).toBe(true);
+  });
+
+  it('puts the version in the served slug and reads it back', () => {
+    expect(servedCustomerSlug('cabcdefghij', 3)).toBe('cabcdefghij-3');
+    expect(parseCustomerSlug('cabcdefghij-3')).toEqual({ base: 'cabcdefghij', version: 3 });
+    expect(parseCustomerSlug('cabcdefghij')).toEqual({ base: 'cabcdefghij', version: null });
+  });
+
+  it('never mistakes a hand-made theme slug for a customer one', () => {
+    for (const slug of ['acme', 'ahaieee', 'cannock', 'default', 'derby', 'gebo', 'cannock-2']) {
+      expect(parseCustomerSlug(slug)).toBeNull();
+    }
+  });
+
+  it('keys the account default and each playlist override apart', () => {
+    expect(scopeKeyFor({ userId: 7 })).toBe('u7');
+    expect(scopeKeyFor({ userId: 7, paymentHasPlaylistId: 42 })).toBe('p42');
   });
 
   it('refuses slugs that could escape the theme directory', () => {
@@ -130,5 +215,64 @@ describe('fontsForId', () => {
     expect(fontsForId('system').url).toBeNull();
     expect(fontsForId('Not A Font').url).toBeNull();
     expect(fontsForId(undefined).family).toContain('system-ui');
+  });
+});
+
+describe('resolveLineTheme (which theme a scanned card gets)', () => {
+  const entitled = { entitledUserId: 7 };
+  const withDefault = { dfSlug: 'cdefault000', dfVersion: 4, dfName: 'Party', dfHasTheme: 1 };
+  const withOwn = { ovMode: 'custom', ovSlug: 'cplaylist00', ovVersion: 2, ovName: 'Wedding', ovHasTheme: 1 };
+
+  it('gives an admin-assigned B2B theme precedence over everything', () => {
+    expect(
+      resolveLineTheme({ theme: 'acme', themeName: 'Acme', ...entitled, ...withDefault, ...withOwn })
+    ).toEqual({ s: 'acme', n: 'Acme' });
+  });
+
+  it('serves nothing before the account owns the upgrade', () => {
+    expect(resolveLineTheme({ entitledUserId: null, ...withDefault, ...withOwn })).toEqual({
+      s: '',
+      n: '',
+    });
+  });
+
+  it("uses the playlist's own design, then the account default", () => {
+    expect(resolveLineTheme({ ...entitled, ...withDefault, ...withOwn })).toEqual({
+      s: 'cplaylist00-2',
+      n: 'Wedding',
+    });
+    expect(resolveLineTheme({ ...entitled, ...withDefault, ovMode: 'default' })).toEqual({
+      s: 'cdefault000-4',
+      n: 'Party',
+    });
+    expect(resolveLineTheme({ ...entitled, ...withDefault })).toEqual({
+      s: 'cdefault000-4',
+      n: 'Party',
+    });
+  });
+
+  it('shows the plain app for a playlist set to standard', () => {
+    expect(
+      resolveLineTheme({ ...entitled, ...withDefault, ovMode: 'standard', ovSlug: 'cplaylist00' })
+    ).toEqual({ s: '', n: '' });
+  });
+
+  it('reads BigInt flags and versions from MySQL', () => {
+    expect(
+      resolveLineTheme({
+        entitledUserId: BigInt(7),
+        dfSlug: 'cdefault000',
+        dfVersion: BigInt(9),
+        dfName: 'Party',
+        dfHasTheme: BigInt(1),
+      })
+    ).toEqual({ s: 'cdefault000-9', n: 'Party' });
+  });
+
+  it('skips a default that was never saved', () => {
+    expect(resolveLineTheme({ ...entitled, dfSlug: 'cdefault000', dfVersion: 1, dfHasTheme: 0 })).toEqual({
+      s: '',
+      n: '',
+    });
   });
 });

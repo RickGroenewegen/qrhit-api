@@ -359,40 +359,124 @@ cutover rather than overwriting the file.
 
 The scan app (`qrhit-app`) themes itself from `GET /theme/:slug`: a ThemeConfig
 with ~45 `--app-*` CSS variables, flags, a font block, help text and asset
-URLs. Which theme a scanned card gets is decided per order line:
-`payment_has_playlist.theme` holds the slug, `src/apptheme.ts` caches
-`php id → slug` in memory and `GET /qrlink2/:trackId/:php` attaches it as
-`t: {s, n}`.
+URLs. `GET /qrlink2/:trackId/:php` tells it which slug a scanned card uses
+(`t: {s, n}`), from the in-memory `php id → slug` map in `src/apptheme.ts`.
+**All of this works with the released app; nothing here needs an app update.**
 
-Two sources, tried in this order by `src/routes/themeRoutes.ts`:
+Two sources, same file layout (`<slug>/<slug>.json` + optional `logo.png` /
+`background.png`), tried in this order by `src/routes/themeRoutes.ts`, which
+adds `source: 'business' | 'customer'` to the response:
 
-1. Hand-made B2B themes: `src/_data/themes/<slug>/<slug>.json` plus
-   `logo.png` / `background.png`. Untouched by the designer.
-2. Customer designs (App Designer add-on): rows in `app_designs`, slug
-   `u<paymentHasPlaylistId>`, assets under `PUBLIC_DIR/app-theme/`.
+1. Hand-made B2B themes: `src/_data/themes/<slug>/`, in git, assigned per
+   order line by an admin (`payment_has_playlist.theme`).
+2. Customer designs (App Designer): `PUBLIC_DIR/customer-themes/<slug>/`,
+   written by `src/appDesign.ts` on every save (atomically: temp file, then
+   rename). The DB row in `app_designs` keeps what the file cannot: owner,
+   scope, the editor state and the version.
+
+**App Designer is an upgrade on the account.** `APP_DESIGN_PRICE` in
+`src/config/constants.ts` is the only place the amount is written. A paid
+`app_design_upgrade` webhook writes one `app_design_purchases` row, which is
+both the entitlement and the ledger entry the financial reports read (gross,
+ex-VAT and VAT stored, plus what Mollie charged in the customer's currency).
+The account has one default design (`app_designs.paymentHasPlaylistId` null,
+`scopeKey u<userId>`) and optional overrides per order line (`scopeKey
+p<phpId>`, `mode` custom / standard / default).
+
+Which theme a line gets (`resolveLineTheme` in `apptheme.ts`), first match:
+an admin-assigned `php.theme`; the line's own override when the account owns
+the upgrade (`standard` = none); the account default when it owns the
+upgrade; otherwise none. So a design saved before paying is stored and even
+published as a file, but no scan gets it until the purchase exists.
+
+**Why the served slug carries the version.** The app only reloads a theme
+when the scanned slug differs from the active theme's id, and only then
+compares versions. A customer who edits the design under a fixed slug would
+see nothing until an app restart. So a customer theme has a random base slug
+(`c` + 10 characters; random because `/theme/:slug` is public and customer
+photos must not be enumerable) and is served as `<base>-<version>`; every save
+bumps the version, so the next scan is a new slug. `GET /theme/<base>-<n>`
+answers any `n` with the current file and `id` set to the requested slug,
+because the app caches a theme under its id. `/theme/debug/all` (the app's
+dev-mode picker) leaves customer slugs out outside development.
 
 **The API never derives a theme.** The frontend turns the guided editor
 controls into the variable map (`app-design.utils.ts` in qrhit) because the
 live preview needs that math anyway; `src/appDesign.ts` validates what the
-client sends (key whitelist, value grammar that rejects `url(`), builds the
-font URL itself from `src/fonts.ts`, escapes `helpText` into `<p>` blocks
-(the app renders it with `[innerHTML]`), bumps `version` on every save (the
-app's cache compares versions) and calls `appTheme.reload()`.
+client sends (key whitelist, value grammar that rejects `url(`) and builds the
+font URL itself from `src/fonts.ts`. The one `url()` it accepts is
+`--app-background` naming the photo bundled in the app, in exactly the form
+the app's built-in theme uses (`APP_BUNDLED_BACKGROUND_URL`): the app paints
+its own copy, so the default "QRSong! photo" design needs no asset file.
+`helpText` is HTML from the site's Quill editor; `sanitizeHelpText` keeps
+only the tags the app's help screen styles, forces links to open outside the
+webview, and still escapes plain text into `<p>` blocks (the app renders it
+with `[innerHTML]`).
 
-Money: `APP_DESIGN_PRICE` in `src/config/constants.ts`, VAT-inclusive like
-the games fee. Checkout sets `appDesignEnabled`/`appDesignPrice` on the line
-and `Payment.appDesignFee`; `mollie.getPaymentUri` needs the new line ids, so
-the payment create carries an `include` for them. Post-purchase unlock goes
-through `POST /api/app-design/upgrade-payment` and the
-`app_design_upgrade` webhook branch; the design is stored before the customer
-leaves for Mollie but the slug is only published on the paid webhook.
-`POST /api/app-design/ai-theme` sends the uploaded background to OpenAI
-(first vision call in `chatgpt.ts`) with a sharp dominant-colour fallback and
-a per-IP daily counter in Redis.
+Routes (`src/routes/appDesignRoutes.ts`, all logged in): `GET /api/app-design`
+(entitlement, price, default, every paid card playlist and its mode),
+`GET|PUT /api/app-design/playlist/:phpId`, `PUT /api/app-design/default`,
+`PUT /api/app-design/playlist/:phpId/mode`, `POST /api/app-design/upload/:type`
+(editor uploads, `PUBLIC_DIR/app-theme/`), `POST /api/app-design/upgrade-payment`
+(Mollie, in the customer's currency; VAT from the country of their last paid
+order) and `POST /api/app-design/ai-theme` (OpenAI vision via json_schema,
+sharp dominant-colour fallback, per-IP daily counter in Redis). The paid
+webhook mails `app_design_enabled_*` (how it works, where to design) and
+issues an upgrade invoice, see the next section.
 
-`theme`/`themeName` were dropped from `printFingerprint.ts` DESIGN_FIELDS:
-no card template reads them, and enabling a design after purchase must not
-force a printer-PDF rebuild.
+## Upgrade invoices (the U range)
+
+Purchases made after an order get their own invoice, mailed on its own with
+the PDF attached: App Designer and QRGames (on the account), extra cards and
+gift boxes (on an order). `src/upgradeInvoice.ts` does all of it; the
+webhook branches in `mollie.ts` (`app_design_upgrade`, `bingo_upgrade`,
+`box_upgrade`, `tracks_upgrade`) only call `issue()`, through
+`invoiceSafely`.
+
+- **Numbers are `U<year>-<00001>`**, a yearly sequence in `upgrade_invoices`
+  (unique on `year, sequence`). Order invoices keep the order id as their
+  number, so neither range has gaps from the other. Two webhooks racing for
+  the same number: the unique index refuses one, which takes the next.
+- **The row is a snapshot**: billing details, the lines (ex-VAT, VAT and
+  incl. per line), totals in EUR, and what Mollie charged in the customer's
+  currency. The PDF is `src/views/invoice.ejs`, the order invoice template,
+  rendered by `GET /invoice/upgrade/:molliePaymentId` from that snapshot and
+  kept under `PRIVATE_DIR/invoice/upgrade/<number>.pdf`. Like the order
+  invoice route it is public by Mollie payment id, because the PDF Lambda has
+  no session.
+- **Idempotent on the Mollie payment, and never throws.** A replayed webhook
+  finds the invoice and only retries the mail when `mailedAt` is empty (the
+  mail throws on an SES failure for exactly that reason). An invoice problem
+  never fails the webhook: Mollie would retry a purchase that was recorded
+  fine.
+- **Billing details**: extra cards and gift boxes use the order's invoice
+  address (falling back to the delivery address). App Designer has no order,
+  so it uses the account's latest paid card order, the same one whose country
+  set the VAT. QRGames uses the order of the first playlist it unlocked, and
+  its amount, count and rate come from the `games_purchases` row.
+- **The order invoice leaves booked upgrades out.** The extra-cards and
+  gift-box webhooks add what was charged to the order's `totalPrice` (the
+  books, which the reports read), and the order invoice takes its total from
+  that column. `GET /invoice/:paymentId` therefore subtracts
+  `amountBookedOnOrder()`, the sum of the order's `extra_tracks` and `box`
+  upgrade invoices (`ORDER_BOOKED_UPGRADE_TYPES`), before it renders or
+  derives the display rate; otherwise a regenerated order invoice would bill
+  those again. It only works if the webhook books exactly the invoice total:
+  the box webhook books boxes + shipping as charged (it used to add VAT on
+  top of the VAT-inclusive box price), and the extra-cards webhook books the
+  metadata's `totalEur` (for older payments: the EUR charge or Mollie's
+  settlement). Upgrades from before the U range have no invoice to subtract,
+  so their orders' invoices still show the inflated total.
+- **Extra-card lines** come from the price breakdown the payment carries in
+  its Mollie metadata (`extraTracksCostEur`, `handlingFeeEur`,
+  `boxesCostEur`, `totalEur`, `taxRate`, written by the tracks
+  `upgrade-payment` route): cards, handling and gift boxes, with the cards
+  line absorbing the rounding so the lines add up to what was charged.
+  Payments created before those fields existed get one line of the EUR
+  charge.
+- **Gift-box lines** (`box`): the boxes and any shipping, rebuilt from the
+  payment's metadata (`boxPrice` × `quantity`, `shippingCost`), so a replay
+  after the box is already enabled issues the same invoice.
 
 ## Featured playlist covers
 

@@ -766,6 +766,86 @@ describe('admin routes — wave 2 coverage', () => {
       }
     });
 
+    it('POST /tax_report/:period/invoice — books App Designer on its own line', async () => {
+      const bookkeeping = Bookkeeping.getInstance();
+      const createSpy = vi
+        .spyOn(bookkeeping, 'createInvoice')
+        .mockResolvedValue({ id: 'inv-2' } as any);
+      const findTaxRateSpy = vi
+        .spyOn(bookkeeping, 'findTaxRateId')
+        .mockImplementation(async ({ countryCode }: any) => `tax-${countryCode}`);
+      const spies = [
+        createSpy,
+        findTaxRateSpy,
+        vi.spyOn(bookkeeping, 'getStatus').mockResolvedValue({ connected: true } as any),
+        vi.spyOn(bookkeeping, 'findInvoiceByReference').mockResolvedValue(null),
+        vi.spyOn(bookkeeping, 'findContactByCompanyName').mockResolvedValue({
+          id: 'c-1',
+          company_name: 'QRSong!',
+        } as any),
+        vi.spyOn(bookkeeping, 'findLedgerAccountIdByCode').mockResolvedValue('ledger-8010'),
+        vi.spyOn(bookkeeping, 'finalizeInvoice').mockResolvedValue({
+          id: 'inv-2',
+          invoice_id: '2026-0002',
+        } as any),
+        vi.spyOn(Mollie.prototype, 'getPaymentsByTaxRate').mockResolvedValue({
+          rows: [
+            {
+              countrycode: 'NL',
+              zone: 'NL',
+              taxRate: 21,
+              numberOfSales: 3,
+              // includes App Designer's 7.44
+              totalPriceWithoutTax: 107.44,
+              appDesignAmount: 1,
+              appDesignExVat: 7.44,
+            },
+            {
+              countrycode: 'FR',
+              zone: 'EU',
+              taxRate: 20,
+              numberOfSales: 0,
+              totalPriceWithoutTax: 7.5,
+              appDesignAmount: 1,
+              appDesignExVat: 7.5,
+            },
+          ],
+        }),
+      ];
+
+      try {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/tax_report/202601/invoice',
+          headers,
+        });
+        expect(res.statusCode).toBe(200);
+
+        const items = createSpy.mock.calls[0][0].items;
+        expect(items).toHaveLength(3);
+        expect(items[0]).toMatchObject({
+          description: expect.stringMatching(/^Sales Netherlands/),
+          price: '100.00',
+          tax_rate_id: 'tax-NL',
+          ledger_account_id: 'ledger-8010',
+        });
+        expect(items[1]).toMatchObject({
+          description: expect.stringMatching(/^App Designer Netherlands/),
+          price: '7.44',
+          tax_rate_id: 'tax-NL',
+          ledger_account_id: 'ledger-8010',
+        });
+        // France sold only App Designer: no empty sales line.
+        expect(items[2]).toMatchObject({
+          description: expect.stringMatching(/^App Designer France/),
+          price: '7.50',
+          tax_rate_id: 'tax-FR',
+        });
+      } finally {
+        spies.forEach((s) => s.mockRestore());
+      }
+    });
+
     it('POST /admin/process_playback_counts — runs review process', async () => {
       const res = await app.inject({
         method: 'POST',

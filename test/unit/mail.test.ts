@@ -53,6 +53,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   payment: { findFirst: vi.fn(), update: vi.fn() },
   paymentHasPlaylist: { findUnique: vi.fn() },
+  appDesignPurchase: { findUnique: vi.fn() },
 }));
 vi.mock('../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
@@ -776,6 +777,111 @@ describe('order lifecycle mails', () => {
     prismaMock.paymentHasPlaylist.findUnique.mockResolvedValue(null);
     await mail.sendBoxUpgradeConfirmationEmail(999);
     expect(sesSend).not.toHaveBeenCalled();
+  });
+
+  it('sendAppDesignEnabledEmail explains the upgrade and points to the separate invoice', async () => {
+    prismaMock.appDesignPurchase.findUnique.mockResolvedValue({
+      id: 11,
+      userId: 7,
+      user: { email: 'account@example.com', locale: 'en', displayName: 'Jane' },
+    });
+    prismaMock.payment.findFirst.mockResolvedValue({ fullname: 'Jane Buyer', locale: 'en' });
+
+    await mail.sendAppDesignEnabledEmail(11);
+
+    const raw = lastRaw();
+    expect(raw).toContain('To: account@example.com');
+    expect(raw).toContain('Jane Buyer');
+    expect(raw).toContain('http://localhost:4200/en/my-account/app-design');
+    expect(raw).toContain('Your invoice follows in a separate email.');
+    expect(raw).not.toContain('application/pdf');
+  });
+
+  it('sendUpgradeInvoiceEmail attaches the PDF under the invoice number', async () => {
+    await mail.sendUpgradeInvoiceEmail(
+      {
+        invoiceNumber: 'U2026-00007',
+        type: 'extra_tracks',
+        email: 'buyer@example.com',
+        locale: 'en',
+        customer: { fullname: 'Jane Buyer' },
+        currency: 'SEK',
+        amountCharged: 105,
+        createdAt: new Date('2026-09-21T10:00:00Z'),
+      },
+      path.join(PUBLIC, 'invoice-test.pdf')
+    );
+
+    const raw = lastRaw();
+    expect(raw).toContain('Subject: Your QRSong! invoice U2026-00007');
+    expect(raw).toContain('To: buyer@example.com');
+    expect(raw).toContain('filename="invoice-U2026-00007.pdf"');
+    expect(raw).toContain('Content-Type: application/pdf');
+    expect(raw).toContain('Extra cards');
+    expect(raw).toContain('Date: 21 September 2026');
+    expect(raw).toMatch(/Amount paid: SEK\s105\.00/); // Intl puts a no-break space there
+  });
+
+  it('sendUpgradeInvoiceEmail formats date and amount in the reader\'s language', async () => {
+    await mail.sendUpgradeInvoiceEmail(
+      {
+        invoiceNumber: 'U2026-00009',
+        type: 'app_design',
+        email: 'kund@example.com',
+        locale: 'sv',
+        customer: { fullname: 'Anna' },
+        currency: 'SEK',
+        amountCharged: 105,
+        createdAt: new Date('2026-09-21T10:00:00Z'),
+      },
+      path.join(PUBLIC, 'invoice-test.pdf')
+    );
+
+    const raw = lastRaw();
+    expect(raw).toContain('21 september 2026');
+    expect(raw).toMatch(/105,00\s*kr/);
+  });
+
+  it.each([
+    ['box', 'Purchase: Gift box'],
+    ['games', 'Purchase: QRGames'],
+    ['app_design', 'Purchase: App Designer'],
+    ['extra_tracks', 'Purchase: Extra cards'],
+  ])('sendUpgradeInvoiceEmail names a %s purchase', async (type, line) => {
+    await mail.sendUpgradeInvoiceEmail(
+      {
+        invoiceNumber: 'U2026-00010',
+        type,
+        email: 'buyer@example.com',
+        locale: 'en',
+        customer: {},
+        currency: 'EUR',
+        amountCharged: 5,
+        createdAt: new Date('2026-09-21T10:00:00Z'),
+      },
+      path.join(PUBLIC, 'invoice-test.pdf')
+    );
+
+    expect(lastRaw()).toContain(line);
+  });
+
+  it('sendUpgradeInvoiceEmail lets a send failure reach the caller', async () => {
+    sesSend.mockRejectedValueOnce(new Error('SES down'));
+    await expect(
+      mail.sendUpgradeInvoiceEmail(
+        {
+          invoiceNumber: 'U2026-00008',
+          type: 'app_design',
+          email: 'buyer@example.com',
+          locale: 'en',
+          customer: {},
+          currency: 'EUR',
+          amountCharged: 9,
+          createdAt: new Date(),
+        },
+        path.join(PUBLIC, 'invoice-test.pdf')
+      )
+    ).rejects.toThrow('SES down');
   });
 });
 

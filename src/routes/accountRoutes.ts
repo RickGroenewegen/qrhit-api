@@ -18,6 +18,7 @@ import PrismaInstance from '../prisma';
 import crypto from 'crypto';
 import LoginRateLimiter from '../loginRateLimiter';
 import { setAuthCookie, clearAuthCookie } from '../cookieAuth';
+import { APP_DESIGN_PRICE } from '../config/constants';
 
 const prisma = PrismaInstance.getInstance();
 const rateLimiter = LoginRateLimiter.getInstance();
@@ -1303,6 +1304,21 @@ export default async function accountRoutes(
 
         const apiUri = process.env['API_URI'] || 'http://localhost:3004';
 
+        // App Designer is on the account: whether it is owned, and what each
+        // playlist shows (its override mode, `default` when it has none).
+        const [appDesignPurchases, appDesignRows] = await Promise.all([
+          prisma.appDesignPurchase.count({ where: { userId: user.id } }),
+          prisma.appDesign.findMany({
+            where: { userId: user.id },
+            select: { paymentHasPlaylistId: true, mode: true },
+          }),
+        ]);
+        const appDesignModeByLine = new Map(
+          appDesignRows
+            .filter((row) => row.paymentHasPlaylistId !== null)
+            .map((row) => [row.paymentHasPlaylistId as number, row.mode])
+        );
+
         const purchases = payments.map((payment) => {
           // Determine if downloads are available
           // For digital orders: available when filenameDigital exists
@@ -1342,7 +1358,7 @@ export default async function accountRoutes(
               // Whether bingo is enabled for this playlist
               gamesEnabled: php.gamesEnabled,
               boxEnabled: php.boxEnabled,
-              appDesignEnabled: php.appDesignEnabled,
+              appDesignMode: appDesignModeByLine.get(php.id) || 'default',
               // Bingo files for this playlist
               bingoFiles: php.bingoFiles.map((bf: any) => ({
                 filename: bf.filename,
@@ -1359,6 +1375,11 @@ export default async function accountRoutes(
         reply.send({
           success: true,
           purchases,
+          appDesign: {
+            entitled: appDesignPurchases > 0,
+            price: APP_DESIGN_PRICE,
+            hasDefault: appDesignRows.some((row) => row.paymentHasPlaylistId === null),
+          },
         });
       } catch (error) {
         console.error('Error in customer purchases:', error);

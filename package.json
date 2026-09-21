@@ -22,6 +22,7 @@
     "deps:update": "bash ./_scripts/update-deps.sh",
     "deps:check": "node ./_scripts/check-lockfile-age.mjs .",
     "kpi": "tsx scripts/kpi.ts",
+    "price-tokens": "tsx scripts/price-tokens.ts",
     "fix-blog-slugs": "tsx scripts/fix-blog-slugs.ts"
   },
   "keywords": [],

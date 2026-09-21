@@ -3,6 +3,12 @@
 {{ translations.orderShipped }}
 
 {{ translations.trackOrder }}: {{ trackingLink }}
+{{#if showAppDesign}}
+{{#unless appDesignEntitled}}
+
+{{ translations.appDesignTrackingLine }} {{ appDesignUrl }}
+{{/unless}}
+{{/if}}
 
 {{ translations.thankYou }}
 

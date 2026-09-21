@@ -400,6 +400,7 @@ export async function createSiteMap(
     '/blog',
     '/giftcard',
     '/gift-box',
+    '/app-designer',
     '/music-match',
     '/music-bingo',
     '/music-quiz',

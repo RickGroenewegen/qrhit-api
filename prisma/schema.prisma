@@ -178,10 +178,7 @@ model Payment {
   discountShipping         Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
-  // Custom scan-app theme add-on (see src/appDesign.ts). VAT-inclusive like
-  // gamesFee and boxFee.
-  appDesignFee             Float                @default(0)
-  locale                   String               @default("en")
+  locale                  String               @default("en")
   qrSubDir                 String?
   finalized                Boolean              @default(false)
   allTracksChecked         Boolean              @default(false)
@@ -285,6 +282,8 @@ model User {
   GameRoom                  GameRoom[]
   ResellerMedia             ResellerMedia[]
   GamesPurchase             GamesPurchase[]
+  AppDesignPurchase         AppDesignPurchase[]
+  AppDesign                 AppDesign[]
 
   @@index([hash])
   @@map("users")
@@ -737,11 +736,6 @@ model PaymentHasPlaylist {
   boxQuantity              Int                      @default(0)
   boxPrice                 Float                    @default(0)
   boxFilename              String?
-  // Custom scan-app theme add-on. When enabled the customer's design lives in
-  // app_designs and `theme` holds its slug (u<id>) so the scan app picks it up
-  // through the normal /qrlink2 → /theme/:slug path.
-  appDesignEnabled         Boolean                  @default(false)
-  appDesignPrice           Float                    @default(0)
   // Box front design
   boxFrontBackgroundType   String?                  @default("image")
   boxFrontBackground       String?
@@ -1632,25 +1626,96 @@ model EventBasePlaylist {
   @@map("event_base_playlists")
 }
 
-// A customer-made theme for the QRSong scan app, one per order line. The
-// hand-made B2B themes stay as files under src/_data/themes; GET /theme/:slug
-// tries the file first and falls back to this table. `design` is the guided
-// editor state the frontend owns, `theme` the derived ThemeConfig the app
-// consumes (validated by src/appDesign.ts before it is stored).
+// A customer-made theme for the QRSong scan app (App Designer), owned by the
+// account. `paymentHasPlaylistId` null is the account's default design, which
+// every paid playlist of the user gets; a row with an id overrides it for that
+// order line (`mode` custom = its own design, standard = the plain QRSong!
+// look). `scopeKey` (u<userId> / p<phpId>) makes both "one default per user"
+// and "one override per line" a database guarantee.
+//
+// The published artifact is a theme file under PUBLIC_DIR/customer-themes/
+// <slug>/ in the same layout as the hand-made themes in src/_data/themes;
+// this row keeps what the file cannot: owner, scope, the guided editor state
+// (`design`) and the version. A row is only served while the user owns an
+// AppDesignPurchase (see src/apptheme.ts).
 model AppDesign {
-  id                   Int                @id @default(autoincrement())
-  paymentHasPlaylistId Int                @unique
-  slug                 String             @unique @db.VarChar(64)
-  name                 String             @db.VarChar(120)
-  version              Int                @default(1)
-  design               Json
-  theme                Json
-  logo                 String?            @db.VarChar(255)
-  background           String?            @db.VarChar(255)
-  helpText             String?            @db.Text
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+  id                   Int                 @id @default(autoincrement())
+  userId               Int
+  paymentHasPlaylistId Int?                @unique
+  scopeKey             String              @unique @db.VarChar(32)
+  mode                 String              @default("custom") @db.VarChar(16)
+  slug                 String              @unique @db.VarChar(64)
+  name                 String              @db.VarChar(120)
+  version              Int                 @default(1)
+  design               Json?
+  theme                Json?
+  logo                 String?             @db.VarChar(255)
+  background           String?             @db.VarChar(255)
+  helpText             String?             @db.Text
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentHasPlaylist   PaymentHasPlaylist? @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("app_designs")
+}
+
+// The one-off App Designer upgrade on an account (APP_DESIGN_PRICE,
+// VAT-inclusive). Written by the Mollie webhook once the payment is paid, so
+// a row is both the entitlement and the ledger entry the financial reports
+// read. Amounts are EUR; `currency`/`amountCharged` record what Mollie
+// actually charged in the customer's currency.
+model AppDesignPurchase {
+  id                    Int      @id @default(autoincrement())
+  userId                Int
+  molliePaymentId       String   @unique @db.VarChar(255)
+  totalPrice            Float
+  totalPriceWithoutTax  Float
+  totalVAT              Float
+  taxRate               Float
+  countrycode           String   @db.VarChar(10)
+  currency              String   @default("EUR") @db.VarChar(3)
+  amountCharged         Float
+  createdAt             DateTime @default(now())
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("app_design_purchases")
+}
+
+// Invoices for purchases made after an order (App Designer, extra cards),
+// in their own number range: U<year>-<sequence>, e.g. U2026-00001, gap-free
+// per year (`@@unique([year, sequence])`). Order invoices keep the order id
+// as their number. Amounts are EUR; `currency`/`amountCharged` are what
+// Mollie charged. `customer` and `lines` are a snapshot at the time of the
+// purchase, so the PDF can be rebuilt identically later. See
+// src/upgradeInvoice.ts.
+model UpgradeInvoice {
+  id                   Int      @id @default(autoincrement())
+  invoiceNumber        String   @unique @db.VarChar(20)
+  year                 Int
+  sequence             Int
+  type                 String   @db.VarChar(20)
+  molliePaymentId      String   @unique @db.VarChar(255)
+  userId               Int?
+  paymentId            Int?
+  email                String   @db.VarChar(255)
+  locale               String   @default("en") @db.VarChar(5)
+  customer             Json
+  lines                Json
+  totalPrice           Float
+  totalPriceWithoutTax Float
+  totalVAT             Float
+  taxRate              Float
+  currency             String   @default("EUR") @db.VarChar(3)
+  amountCharged        Float
+  paymentMethod        String?  @db.VarChar(40)
+  mailedAt             DateTime?
+  createdAt            DateTime @default(now())
+
+  @@unique([year, sequence])
+  @@index([userId])
+  @@map("upgrade_invoices")
 }

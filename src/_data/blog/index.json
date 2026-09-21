@@ -1,6 +1,62 @@
 {
   "posts": [
     {
+      "id": 19,
+      "date": "2026-09-21",
+      "author": "Rick Groenewegen",
+      "image": "blog_19.jpg",
+      "tags": [],
+      "slugs": {
+        "en": "app-designer-the-qrsong-app-in-your-own-style",
+        "nl": "app-designer-de-qrsong-app-in-je-eigen-stijl",
+        "de": "app-designer-die-qrsong-app-in-deinem-eigenen-stil",
+        "fr": "app-designer-l-app-qrsong-pour-ton-jeu-musique-qr-code-a-ton-style",
+        "es": "app-designer-la-app-qrsong-de-tu-juego-de-canciones-con-qr-a-tu-estilo",
+        "it": "app-designer-l-app-qrsong-nel-tuo-stile",
+        "pt": "app-designer-o-app-qrsong-com-a-sua-cara",
+        "pl": "app-designer-aplikacja-do-quizu-muzycznego-qrsong-w-twoim-stylu",
+        "jp": "app-designer-the-qrsong-app-in-your-own-style",
+        "cn": "app-designer-the-qrsong-app-in-your-own-style",
+        "sv": "app-designer-qrsong-appen-i-din-egen-stil",
+        "no": "app-designer-qrsong-appen-i-din-egen-stil"
+      },
+      "titles": {
+        "en": "App Designer: the QRSong! app in your own style",
+        "nl": "App Designer: de QRSong! app in je eigen stijl",
+        "de": "App Designer: die QRSong! App in deinem eigenen Stil",
+        "fr": "App Designer : l’app QRSong! pour ton jeu musique QR code, à ton style",
+        "es": "App Designer: la app QRSong! de tu juego de canciones con QR, a tu estilo",
+        "it": "App Designer: l'app QRSong! nel tuo stile",
+        "pt": "App Designer: o app QRSong! com a sua cara",
+        "pl": "App Designer: aplikacja do quizu muzycznego QRSong! w Twoim stylu",
+        "jp": "App Designer: QRSong!アプリを自分のスタイルに",
+        "cn": "App Designer：让 QRSong! 应用变成你的风格",
+        "sv": "App Designer: QRSong!-appen i din egen stil",
+        "no": "App Designer: QRSong!-appen i din egen stil"
+      },
+      "summaries": {
+        "en": "Give the free QRSong! app your own colours, photo, logo and help text. How it works, what it changes on each screen, and when it is worth it.",
+        "nl": "Geef de gratis QRSong! app je eigen kleuren, foto, logo en hulptekst. Ontdek wat er per scherm verandert en wanneer App Designer handig is.",
+        "de": "Gib der kostenlosen QRSong! App für deine Karten eigene Farben, Foto, Logo und Hilfetext. So funktioniert es auf jedem Bildschirm und wann es sich lohnt.",
+        "fr": "Personnalise l’app gratuite QRSong! pour ton jeu QR code musique : couleurs, photo, logo et aide. Voici comment ça marche et quand ça vaut le coup.",
+        "es": "Personaliza la app gratuita de QRSong! con tus colores, foto, logo y textos de ayuda. Ve qué cambia en cada pantalla y cuándo merece la pena.",
+        "it": "Personalizza l'app gratuita QRSong! con colori, foto, logo e testo di aiuto. Scopri cosa cambia in ogni schermata e quando vale la pena.",
+        "pt": "Dê suas cores, foto, logo e texto de ajuda ao app grátis da QRSong!. Veja como funciona e quando vale a pena usar.",
+        "pl": "Nadaj darmowej aplikacji QRSong! własne kolory, zdjęcie, logo i tekst pomocy do gry. Zobacz, co zmienia i kiedy warto.",
+        "jp": "無料のQRSong!アプリに、自分の色、写真、ロゴ、ヘルプ文を入れられます。画面ごとの変わり方、設定方法、使う価値がある場面を説明します。",
+        "cn": "了解如何用 App Designer 为免费的 QRSong! 应用换上你的颜色、照片、Logo 和帮助文字：它会改变哪些屏幕、怎么设置，以及什么时候值得用。",
+        "sv": "Ge den kostnadsfria QRSong!-appen egna färger, foto, logotyp och hjälptext för dina spelkort. Se hur det fungerar och när det är värt det.",
+        "no": "Gi den gratis QRSong!-appen egne farger, bilde, logo og hjelpetekst. Se hvordan det fungerer, og når det er verdt det."
+      },
+      "imagePrompt": "A designer's desk seen from above, about the idea of giving an app your own look: in the centre a smartphone lies flat showing exactly the QRSong app screen of reference 1, a purple to pink gradient with a big yellow round scan button and the QRSong! logo. Around the phone, like a mood board, lie fanned colour swatch cards in the same purple, pink and yellow, a small paintbrush with a drop of yellow paint, a printed party photo and a few QR music cards like the real cards in the other references, their white QR panel exactly centred on the front. Bright, clean top light, playful and crafted, no people.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/app-designer-themed-app.png",
+          "note": "the real QRSong scan app with a customer's own design: purple to pink gradient, yellow round scan button, custom font; reproduce this screen faithfully on the phone"
+        }
+      ]
+    },
+    {
       "id": 18,
       "date": "2026-09-17",
       "author": "Rick Groenewegen",

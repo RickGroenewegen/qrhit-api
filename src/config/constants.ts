@@ -12,6 +12,14 @@ export function maxCardsFor(digital: boolean): number {
   return digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
 }
 
+// Digital (PDF) cards: the price of a deck of up to 500 cards, EUR incl. VAT.
+// Bigger decks get a sliding discount on top (printenbind calculateCardPrice).
+export const DIGITAL_CARDS_BASE_PRICE = 13;
+
+// Sample deck sizes of the price table on /pricing (GET /api/pricing/tiers)
+// and of the blog price tokens `cards.<type>.<quantity>` (src/priceTokens.ts).
+export const PRICE_TABLE_QUANTITIES = [50, 100, 150, 200, 300, 500] as const;
+
 // Box product
 export const BOX_PRICE = 6.99;
 export const BOX_MAX_CARDS = 190;
@@ -36,10 +44,12 @@ export function boxDiscount(boxCount: number): number {
   return 1 - boxTierPrice(boxCount) / BOX_PRICE;
 }
 
-// Custom scan-app theme add-on ("App Designer"). One price per order line,
-// VAT-inclusive like QRGAMES_UPGRADE_PRICE; charged at checkout or as a
-// post-purchase upgrade from the account page.
-export const APP_DESIGN_PRICE = 4.99;
+// App Designer: the one-off upgrade on an account that themes the scan app
+// for all of the customer's playlists. EUR, VAT-inclusive like
+// QRGAMES_UPGRADE_PRICE. The only place the amount is written: the upgrade
+// payment, the webhook, the reports, GET /api/pricing (appDesignUnitPrice),
+// the site copy and the blog price tokens all read it from here.
+export const APP_DESIGN_PRICE = 9.0;
 
 // Multiplier on top of the printenbind raw per-card cost for the "add more
 // tracks" upgrade. 1.25 = 25% markup. Keeps post-purchase upgrade pricing

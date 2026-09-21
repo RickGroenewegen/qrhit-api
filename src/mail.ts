@@ -1538,6 +1538,8 @@ ${knowledgeContext}${toolContext}`,
       hasBingo: !!bingoDownloadUrl,
       hasBox: playlists.some((p: any) => p.boxEnabled && p.boxQuantity > 0),
       boxQuantity: playlists.reduce((sum: number, p: any) => sum + (p.boxEnabled ? (p.boxQuantity || 0) : 0), 0),
+      // Gift cards are the voucher_* templates.
+      ...(await this.appDesignMailParams(payment, !orderType.startsWith('voucher'))),
     };
 
     try {
@@ -1679,6 +1681,8 @@ ${knowledgeContext}${toolContext}`,
         payment.locale,
         'mail'
       ),
+      // Tracking mails only go out for printed card orders.
+      ...(await this.appDesignMailParams(payment, true)),
     };
 
     try {
@@ -1959,6 +1963,7 @@ ${knowledgeContext}${toolContext}`,
       hasBingo: !!bingoDownloadUrl,
       hasBox: !!playlist.boxEnabled && (playlist.boxQuantity || 0) > 0,
       boxQuantity: playlist.boxQuantity || 0,
+      ...(await this.appDesignMailParams(payment, true)),
     };
 
     try {
@@ -2103,6 +2108,178 @@ ${knowledgeContext}${toolContext}`,
     } catch (error) {
       console.error('Error sending box upgrade confirmation email', error);
     }
+  }
+
+  /**
+   * What the order mails say about App Designer: an invitation when the
+   * account does not own it yet, a pointer to the designer when it does.
+   * Nothing for gift cards or orders without an account.
+   */
+  private async appDesignMailParams(
+    payment: { userId?: number | null; locale?: string | null },
+    isCards: boolean
+  ): Promise<{ showAppDesign: boolean; appDesignEntitled: boolean; appDesignUrl: string }> {
+    const locale = payment.locale || 'en';
+    if (!isCards || !payment.userId) {
+      return { showAppDesign: false, appDesignEntitled: false, appDesignUrl: '' };
+    }
+    let entitled = false;
+    try {
+      entitled = (await prisma.appDesignPurchase.count({ where: { userId: payment.userId } })) > 0;
+    } catch {
+      // An unknown answer only changes the wording; the mail still goes out.
+    }
+    return {
+      showAppDesign: true,
+      appDesignEntitled: entitled,
+      appDesignUrl: entitled
+        ? `${process.env['FRONTEND_URI']}/${locale}/my-account/app-design`
+        : `${process.env['FRONTEND_URI']}/${locale}/app-designer`,
+    };
+  }
+
+  /**
+   * App Designer bought: how it works and where to design. The invoice goes
+   * out in its own mail (sendUpgradeInvoiceEmail).
+   */
+  async sendAppDesignEnabledEmail(purchaseId: number): Promise<void> {
+    if (!this.ses) return;
+
+    const purchase = await prisma.appDesignPurchase.findUnique({
+      where: { id: purchaseId },
+      include: { user: { select: { email: true, locale: true, displayName: true } } },
+    });
+    if (!purchase?.user?.email) return;
+
+    const lastOrder = await prisma.payment.findFirst({
+      where: { userId: purchase.userId, status: 'paid' },
+      orderBy: { createdAt: 'desc' },
+      select: { fullname: true, locale: true },
+    });
+    const locale = purchase.user.locale || lastOrder?.locale || 'en';
+
+    const translations = await this.translation.getTranslationsByPrefix(locale, 'mail');
+    const mailParams = {
+      productName: process.env['PRODUCT_NAME'],
+      translations,
+      currentYear: new Date().getFullYear(),
+      fullname: lastOrder?.fullname || purchase.user.displayName || '',
+      designUrl: `${process.env['FRONTEND_URI']}/${locale}/my-account/app-design`,
+    };
+
+    try {
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+      const html = await this.templates.render('mails/app_design_enabled_html', mailParams);
+      const text = await this.templates.render('mails/app_design_enabled_text', mailParams);
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: purchase.user.email,
+        subject: this.translation.translate('mail.appDesignEnabledSubject', locale),
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+        text,
+        attachments: [
+          {
+            contentType: 'image/png',
+            filename: 'logo.png',
+            data: logoBase64,
+            isInline: true,
+            cid: 'logo',
+          },
+        ],
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'],
+      });
+
+      await this.ses.send(
+        new SendRawEmailCommand({ RawMessage: { Data: Buffer.from(rawEmail) } })
+      );
+    } catch (error) {
+      console.error('Error sending App Designer confirmation email', error);
+    }
+  }
+
+  /**
+   * The invoice for a purchase made after an order (App Designer, extra
+   * cards), in its own mail with the PDF attached. See src/upgradeInvoice.ts.
+   */
+  async sendUpgradeInvoiceEmail(
+    invoice: {
+      invoiceNumber: string;
+      type: string;
+      email: string;
+      locale: string;
+      customer: any;
+      currency: string;
+      amountCharged: number;
+      createdAt: Date;
+    },
+    pdfPath: string
+  ): Promise<void> {
+    if (!this.ses) return;
+    const locale = invoice.locale || 'en';
+    // Site locale codes are not all BCP 47 (jp, cn, no); getIntlTag is the
+    // business-document one and turns every other language into English.
+    const intlTag =
+      ({ en: 'en-GB', jp: 'ja-JP', cn: 'zh-CN', no: 'nb-NO' } as Record<string, string>)[locale] ||
+      locale;
+    const translations = await this.translation.getTranslationsByPrefix(locale, 'mail');
+    const mailParams = {
+      productName: process.env['PRODUCT_NAME'],
+      translations,
+      currentYear: new Date().getFullYear(),
+      fullname: invoice.customer?.fullname || '',
+      invoiceNumber: invoice.invoiceNumber,
+      purchase: this.translation.translate(
+        ({
+          app_design: 'mail.upgradeInvoicePurchaseAppDesign',
+          box: 'mail.upgradeInvoicePurchaseGiftBox',
+          games: 'mail.upgradeInvoicePurchaseQRGames',
+        } as Record<string, string>)[invoice.type] || 'mail.upgradeInvoicePurchaseExtraCards',
+        locale
+      ),
+      date: new Intl.DateTimeFormat(intlTag, { dateStyle: 'long' }).format(invoice.createdAt),
+      amountFormatted: new Intl.NumberFormat(intlTag, {
+        style: 'currency',
+        currency: invoice.currency,
+      }).format(invoice.amountCharged),
+    };
+
+    const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+    const pdfBuffer = await fs.readFile(pdfPath);
+    const html = await this.templates.render('mails/upgrade_invoice_html', mailParams);
+    const text = await this.templates.render('mails/upgrade_invoice_text', mailParams);
+
+    const rawEmail = await this.renderRaw({
+      from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+      to: invoice.email,
+      subject: this.translation.translate('mail.upgradeInvoiceSubject', locale, {
+        number: invoice.invoiceNumber,
+      }),
+      html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+      text,
+      attachments: [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: this.wrapBase64(logoBuffer.toString('base64')),
+          isInline: true,
+          cid: 'logo',
+        },
+        {
+          contentType: 'application/pdf',
+          filename: `invoice-${invoice.invoiceNumber}.pdf`,
+          data: this.wrapBase64(pdfBuffer.toString('base64')),
+        },
+      ],
+      unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+      replyTo: process.env['REPLY_TO_EMAIL'],
+    });
+
+    // Let a failure reach the caller: it keeps `mailedAt` empty, so a
+    // webhook replay tries again.
+    await this.ses.send(new SendRawEmailCommand({ RawMessage: { Data: Buffer.from(rawEmail) } }));
   }
 
   public async renderRaw(

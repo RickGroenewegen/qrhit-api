@@ -2,8 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { marked } from 'marked';
 
+import { color, white } from 'console-log-colors';
 import Translation from './translation';
 import Cache from './cache';
+import Logger from './logger';
+import { markPriceTokens, priceTokenValues } from './priceTokens';
 
 /**
  * File-backed blog.
@@ -76,6 +79,7 @@ interface BlogPostMeta {
 class Blog {
   private static instance: Blog;
   private cache = Cache.getInstance();
+  private logger = new Logger();
   private contentDir: string | null = null;
   private indexPromise: Promise<BlogPostMeta[]> | null = null;
   /**
@@ -265,6 +269,21 @@ class Blog {
     return marked.parse(markdown, { async: false }) as string;
   }
 
+  /**
+   * Price tokens (src/priceTokens.ts). `[price:appDesign]` becomes
+   * `<span class="qr-price" data-price="appDesign">€9.00</span>`: the site
+   * replaces the text with the amount in the visitor's currency, the EUR text
+   * is what a reader without JavaScript sees. Only names and that fallback
+   * reach the Redis cache, never a converted amount. An unknown name stays
+   * visible as written so it gets noticed; `growth blog lint` stops it
+   * before it ships.
+   */
+  private markPriceTokens(html: string, prices: Record<string, number>): string {
+    return markPriceTokens(html, prices, (token) =>
+      this.logger.log(color.yellow.bold(`Unknown blog price token ${white.bold(token)}`))
+    );
+  }
+
   /* ------------------------------------------------------------- public -- */
 
   private metaFor(post: BlogPostMeta, locale: string) {
@@ -346,19 +365,21 @@ class Blog {
 
       const { body, faq } = this.splitFaq(markdown);
       const localized = this.resolvePlaceholders(body, locale, index);
+      const prices = markdown.includes('[price:') ? await priceTokenValues() : {};
 
       const blog = {
         ...this.metaFor(post, locale),
         author: post.author,
         tags: post.tags ?? [],
-        content: this.render(localized),
+        content: this.markPriceTokens(this.render(localized), prices),
         faq: faq.map((entry) => ({
           question: entry.question,
           // Answers are markdown too, and can contain links. Rendering them
           // keeps formatting in the visible accordion; the SSR layer strips
           // tags again for the JSON-LD, where plain text is required.
-          answer: this.render(
-            this.resolvePlaceholders(entry.answer, locale, index)
+          answer: this.markPriceTokens(
+            this.render(this.resolvePlaceholders(entry.answer, locale, index)),
+            prices
           ),
         })),
         allSlugs: post.slugs,

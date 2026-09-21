@@ -30,6 +30,23 @@
 {{ translations.gamesMoreInfo }}
 {{/if}}
 --}}
+{{#if showAppDesign}}
+
+-------------------
+{{#if appDesignEntitled}}
+📱🎨 {{ translations.appDesignSectionTitleOn }}
+
+{{ translations.appDesignSectionBodyOn }}
+
+{{ translations.appDesignSectionCtaOn }}: {{ appDesignUrl }}
+{{else}}
+📱🎨 {{ translations.appDesignSectionTitle }}
+
+{{ translations.appDesignSectionBody }}
+
+{{ translations.appDesignSectionCta }}: {{ appDesignUrl }}
+{{/if}}
+{{/if}}
 
 {{ translations.greetings }},
 {{ productName }}

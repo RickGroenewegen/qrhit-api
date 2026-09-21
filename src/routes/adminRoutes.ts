@@ -2417,7 +2417,8 @@ export default async function adminRoutes(
 
         const report = await mollie.getPaymentsByTaxRate(startDate, endDate);
         const rows = report.rows.filter(
-          (r: any) => (r.numberOfSales || 0) > 0
+          (r: any) =>
+            (r.numberOfSales || 0) > 0 || (r.appDesignAmount || 0) > 0
         );
         if (rows.length === 0) {
           reply
@@ -2506,16 +2507,31 @@ export default async function adminRoutes(
           return;
         }
 
-        const items: any[] = resolved.map(({ row: r, taxRateId }) => {
+        // A row's totalPriceWithoutTax includes App Designer, which gets a
+        // line of its own, so the sales line carries the rest.
+        const items: any[] = [];
+        for (const { row: r, taxRateId } of resolved) {
           const country = countryName(r.countrycode);
-          return {
-            description: `Sales ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
-            amount: '1 x',
-            price: (r.totalPriceWithoutTax || 0).toFixed(2),
-            ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
-            ledger_account_id: ledgerAccountId,
-          };
-        });
+          const appDesignExVat = r.appDesignExVat || 0;
+          if ((r.numberOfSales || 0) > 0) {
+            items.push({
+              description: `Sales ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
+              amount: '1 x',
+              price: ((r.totalPriceWithoutTax || 0) - appDesignExVat).toFixed(2),
+              ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
+              ledger_account_id: ledgerAccountId,
+            });
+          }
+          if ((r.appDesignAmount || 0) > 0) {
+            items.push({
+              description: `App Designer ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
+              amount: '1 x',
+              price: appDesignExVat.toFixed(2),
+              ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
+              ledger_account_id: ledgerAccountId,
+            });
+          }
+        }
 
         const now = new Date();
         const invoiceDate = [

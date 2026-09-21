@@ -38,6 +38,23 @@
 {{ translation.items }}: {{ numberOfTracks }} cards
 {{ translation.fullname }}: {{ fullname }}
 {{ translation.email }}: {{ email }}
+{{#if showAppDesign}}
+
+-------------------
+{{#if appDesignEntitled}}
+📱🎨 {{ translations.appDesignSectionTitleOn }}
+
+{{ translations.appDesignSectionBodyOn }}
+
+{{ translations.appDesignSectionCtaOn }}: {{ appDesignUrl }}
+{{else}}
+📱🎨 {{ translations.appDesignSectionTitle }}
+
+{{ translations.appDesignSectionBody }}
+
+{{ translations.appDesignSectionCta }}: {{ appDesignUrl }}
+{{/if}}
+{{/if}}
 
 {{ translation.greetings }},
 {{ productName }}

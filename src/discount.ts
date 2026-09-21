@@ -8,6 +8,7 @@ import {
   buildDiscountBase,
   round2,
 } from './services/discount-allocation';
+import { DIGITAL_CARDS_BASE_PRICE } from './config/constants';
 
 export type DiscountKind = 'fixed' | 'percent';
 
@@ -1402,7 +1403,10 @@ class Discount {
     );
 
     // Calculate ideal volume price for total cards
-    const volumePricing = await order.calculateDigitalCardPrice(13, totalCards);
+    const volumePricing = await order.calculateDigitalCardPrice(
+      DIGITAL_CARDS_BASE_PRICE,
+      totalCards
+    );
 
     // Calculate current price (each playlist priced individually at base €13)
     const currentPrice = digitalCardItems.reduce(

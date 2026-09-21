@@ -1,7 +1,8 @@
 /**
  * Unit tests for src/mollie.ts (payment creation, webhook processing,
  * status checks, refunds, payment links, upgrade payments, method/locale
- * resolution and the daily sales report refund math).
+ * resolution, the daily sales report refund math and the App Designer
+ * figures in the sales, country and tax reports).
  *
  * Everything outbound is mocked at the module boundary:
  *  - mollie-api-typescript → Client class replaced (HTTPClient stays real so
@@ -53,6 +54,7 @@ vi.mock('mollie-api-typescript', async (importOriginal) => {
 const prismaMock = vi.hoisted(() => ({
   payment: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -65,9 +67,12 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
+    count: vi.fn(),
   },
   user: { update: vi.fn() },
-  gamesPurchase: { create: vi.fn() },
+  gamesPurchase: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+  appDesignPurchase: { groupBy: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+  $queryRawUnsafe: vi.fn(),
 }));
 vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
@@ -149,10 +154,15 @@ vi.mock('../../../src/discount', () => {
 
 const translationMock = vi.hoisted(() => ({
   getTranslationsByPrefix: vi.fn(),
+  // Echoes the key and its params, so invoice lines can be asserted.
+  translate: vi.fn((key: string, _locale?: string, options?: Record<string, any>) =>
+    options ? `${key} ${JSON.stringify(options)}` : key
+  ),
 }));
 vi.mock('../../../src/translation', () => ({
   default: class {
     getTranslationsByPrefix = translationMock.getTranslationsByPrefix;
+    translate = translationMock.translate;
   },
 }));
 
@@ -199,6 +209,17 @@ vi.mock('../../../src/apptheme', () => ({
 const bingoMock = vi.hoisted(() => ({ processBingoUpgradePayment: vi.fn() }));
 vi.mock('../../../src/bingo', () => ({
   default: { getInstance: () => bingoMock },
+}));
+
+const appDesignMock = vi.hoisted(() => ({ processUpgradePayment: vi.fn() }));
+vi.mock('../../../src/appDesign', () => ({
+  default: { getInstance: () => appDesignMock },
+}));
+
+const upgradeInvoicesMock = vi.hoisted(() => ({ issue: vi.fn() }));
+vi.mock('../../../src/upgradeInvoice', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  default: { getInstance: () => upgradeInvoicesMock },
 }));
 
 const providerMock = vi.hoisted(() => ({ getTracks: vi.fn() }));
@@ -263,6 +284,7 @@ function seedSettlement(
 function applyDefaults(): void {
   (mollie as any).settlementAmounts.clear();
   prismaMock.payment.findUnique.mockResolvedValue(null);
+  prismaMock.payment.findFirst.mockResolvedValue(null);
   prismaMock.payment.findMany.mockResolvedValue([]);
   prismaMock.payment.create.mockResolvedValue({ id: 555 });
   prismaMock.payment.update.mockResolvedValue({});
@@ -273,8 +295,17 @@ function applyDefaults(): void {
   prismaMock.paymentHasPlaylist.findUnique.mockResolvedValue(null);
   prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([]);
   prismaMock.paymentHasPlaylist.update.mockResolvedValue({});
+  prismaMock.paymentHasPlaylist.count.mockResolvedValue(0);
   prismaMock.user.update.mockResolvedValue({});
   prismaMock.gamesPurchase.create.mockResolvedValue({});
+  prismaMock.gamesPurchase.groupBy.mockResolvedValue([]);
+  prismaMock.gamesPurchase.findMany.mockResolvedValue([]);
+  prismaMock.gamesPurchase.findFirst.mockResolvedValue(null);
+  prismaMock.appDesignPurchase.groupBy.mockResolvedValue([]);
+  prismaMock.appDesignPurchase.findMany.mockResolvedValue([]);
+  prismaMock.appDesignPurchase.findUnique.mockResolvedValue(null);
+  prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+  upgradeInvoicesMock.issue.mockResolvedValue(undefined);
 
   cacheMock.get.mockResolvedValue(null);
   cacheMock.set.mockResolvedValue(undefined);
@@ -1570,7 +1601,286 @@ describe('processWebhook', () => {
     expect(prismaMock.payment.updateMany).not.toHaveBeenCalled();
   });
 
-  it('box_upgrade: enables the box, re-derives VAT, increments totalPrice and orders printing', async () => {
+  it('bingo_upgrade issues a QRGames invoice from the purchase row, linked to no order', async () => {
+    bingoMock.processBingoUpgradePayment.mockResolvedValueOnce({ success: true });
+    prismaMock.gamesPurchase.findFirst.mockResolvedValueOnce({
+      id: 3,
+      userId: 5,
+      totalPrice: 9,
+      playlistCount: 2,
+      pricePerPlaylist: 4.5,
+      taxRate: 21,
+      countrycode: 'NL',
+    });
+    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({
+      payment: {
+        id: 400,
+        email: 'gamer@example.com',
+        locale: 'fr',
+        fullname: 'Claire',
+        countrycode: 'FR',
+      },
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_bingo',
+        status: 'paid',
+        metadata: {
+          type: 'bingo_upgrade',
+          paymentHasPlaylistIds: '12,13',
+          userId: '5',
+          pricePerPlaylist: '4.5',
+        },
+      })
+    );
+
+    const result = await mollie.processWebhook({ id: 'tr_bingo' });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.gamesPurchase.findFirst).toHaveBeenCalledWith({
+      where: { molliePaymentId: 'tr_bingo', type: 'upgrade' },
+    });
+    expect(prismaMock.paymentHasPlaylist.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 12 } })
+    );
+    expect(upgradeInvoicesMock.issue.mock.calls[0][0]).toMatchObject({
+      type: 'games',
+      userId: 5,
+      paymentId: null,
+      email: 'gamer@example.com',
+      locale: 'fr',
+      taxRate: 21,
+      items: [{ description: 'invoice.qrGames', quantity: 2, totalIncl: 9 }],
+    });
+  });
+
+  it('bingo_upgrade without a purchase row issues no invoice', async () => {
+    bingoMock.processBingoUpgradePayment.mockResolvedValueOnce({ success: true });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_bingo',
+        status: 'paid',
+        metadata: { type: 'bingo_upgrade', paymentHasPlaylistIds: '12', userId: '5' },
+      })
+    );
+
+    const result = await mollie.processWebhook({ id: 'tr_bingo' });
+
+    expect(result).toEqual({ success: true });
+    expect(upgradeInvoicesMock.issue).not.toHaveBeenCalled();
+  });
+
+  it('app_design_upgrade: records the purchase with what Mollie charged and mails the receipt', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: true,
+      created: true,
+      purchaseId: 11,
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_appdesign',
+        status: 'paid',
+        amount: { value: '105.00', currency: 'SEK' },
+        metadata: {
+          type: 'app_design_upgrade',
+          userId: '5',
+          price: '9',
+          taxRate: '25',
+          countrycode: 'SE',
+        },
+      })
+    );
+
+    const result = await mollie.processWebhook({ id: 'tr_appdesign' });
+
+    expect(appDesignMock.processUpgradePayment).toHaveBeenCalledWith({
+      userId: 5,
+      molliePaymentId: 'tr_appdesign',
+      price: 9,
+      taxRate: 25,
+      countrycode: 'SE',
+      currency: 'SEK',
+      amountCharged: 105,
+    });
+    const mails = outbound.calls('Mail', 'sendAppDesignEnabledEmail');
+    expect(mails[mails.length - 1]?.args).toEqual([11]);
+    expect(result).toEqual({ success: true });
+    // An account purchase never touches an order.
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('app_design_upgrade replays do not mail twice', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: true,
+      created: false,
+      purchaseId: 11,
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_appdesign',
+        status: 'paid',
+        amount: { value: '9.00', currency: 'EUR' },
+        metadata: { type: 'app_design_upgrade', userId: '5', price: '9', taxRate: '21', countrycode: 'NL' },
+      })
+    );
+    const before = outbound.calls('Mail', 'sendAppDesignEnabledEmail').length;
+
+    const result = await mollie.processWebhook({ id: 'tr_appdesign' });
+
+    expect(result).toEqual({ success: true });
+    expect(outbound.calls('Mail', 'sendAppDesignEnabledEmail').length).toBe(before);
+  });
+
+  it('app_design_upgrade replays offer the invoice again (issue is idempotent)', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: true,
+      created: false,
+      purchaseId: 11,
+    });
+    prismaMock.appDesignPurchase.findUnique.mockResolvedValueOnce({
+      id: 11,
+      userId: 5,
+      totalPrice: 9,
+      taxRate: 21,
+      countrycode: 'NL',
+      user: { id: 5, email: 'account@example.com', locale: 'nl' },
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_appdesign',
+        status: 'paid',
+        amount: { value: '9.00', currency: 'EUR' },
+        metadata: { type: 'app_design_upgrade', userId: '5', price: '9', taxRate: '21', countrycode: 'NL' },
+      })
+    );
+
+    await mollie.processWebhook({ id: 'tr_appdesign' });
+
+    // No paid order found: the account's own address and language are used.
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'app_design',
+        email: 'account@example.com',
+        locale: 'nl',
+        customer: expect.objectContaining({ countrycode: 'NL' }),
+      })
+    );
+  });
+
+  it('app_design_upgrade issues an invoice billed to the latest paid card order', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: true,
+      created: true,
+      purchaseId: 11,
+    });
+    prismaMock.appDesignPurchase.findUnique.mockResolvedValueOnce({
+      id: 11,
+      userId: 5,
+      totalPrice: 9,
+      taxRate: 25,
+      countrycode: 'SE',
+      user: { id: 5, email: 'account@example.com', locale: 'en' },
+    });
+    prismaMock.payment.findFirst.mockResolvedValueOnce({
+      id: 900,
+      email: 'order@example.com',
+      locale: 'sv',
+      fullname: 'Anna Svensson',
+      address: 'Gatan',
+      housenumber: '3',
+      zipcode: '111 22',
+      city: 'Stockholm',
+      countrycode: 'SE',
+      invoiceAddress: null,
+    });
+    const molliePayment = fakeMolliePayment({
+      id: 'tr_appdesign_inv',
+      status: 'paid',
+      method: 'klarna',
+      amount: { value: '105.00', currency: 'SEK' },
+      metadata: {
+        type: 'app_design_upgrade',
+        userId: '5',
+        price: '9',
+        taxRate: '25',
+        countrycode: 'SE',
+        locale: 'sv',
+      },
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(molliePayment);
+
+    const result = await mollie.processWebhook({ id: 'tr_appdesign_inv' });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.payment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 5, status: 'paid' }),
+        orderBy: { createdAt: 'desc' },
+      })
+    );
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledTimes(1);
+    const params = upgradeInvoicesMock.issue.mock.calls[0][0];
+    expect(params).toMatchObject({
+      type: 'app_design',
+      userId: 5,
+      paymentId: null,
+      email: 'order@example.com',
+      locale: 'sv',
+      taxRate: 25,
+      items: [{ description: 'invoice.appDesigner', quantity: 1, totalIncl: 9 }],
+    });
+    expect(params.molliePayment.id).toBe('tr_appdesign_inv');
+    expect(params.customer).toMatchObject({
+      fullname: 'Anna Svensson',
+      address: 'Gatan',
+      city: 'Stockholm',
+      countrycode: 'SE',
+    });
+  });
+
+  it('app_design_upgrade still succeeds when the invoice lookups fail', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: true,
+      created: false,
+      purchaseId: 11,
+    });
+    prismaMock.appDesignPurchase.findUnique.mockRejectedValueOnce(new Error('db hiccup'));
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_appdesign_inv_fail',
+        status: 'paid',
+        amount: { value: '9.00', currency: 'EUR' },
+        metadata: { type: 'app_design_upgrade', userId: '5', price: '9', taxRate: '21', countrycode: 'NL' },
+      })
+    );
+
+    const result = await mollie.processWebhook({ id: 'tr_appdesign_inv_fail' });
+
+    expect(result).toEqual({ success: true });
+    expect(upgradeInvoicesMock.issue).not.toHaveBeenCalled();
+  });
+
+  it('app_design_upgrade reports a failure so Mollie retries', async () => {
+    appDesignMock.processUpgradePayment.mockResolvedValueOnce({
+      success: false,
+      created: false,
+      error: 'db down',
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_appdesign_fail',
+        status: 'paid',
+        amount: { value: '9.00', currency: 'EUR' },
+        metadata: { type: 'app_design_upgrade', userId: '5', price: '9', taxRate: '21', countrycode: 'NL' },
+      })
+    );
+
+    const result = await mollie.processWebhook({ id: 'tr_appdesign_fail' });
+
+    expect(result).toEqual({ success: false, error: 'db down' });
+  });
+
+  it('box_upgrade: enables the box, books what was charged, invoices it and orders printing', async () => {
     mollieApi.liveClient.payments.get.mockResolvedValue(
       fakeMolliePayment({
         id: 'tr_box',
@@ -1591,8 +1901,16 @@ describe('processWebhook', () => {
         boxEnabled: false,
         payment: { sentToPrinter: true },
       }) // idempotency check
-      .mockResolvedValueOnce({ payment: { countrycode: 'NL' } }) // VAT lookup
       .mockResolvedValueOnce({ payment: { user: { hash: 'h2' } } }); // cache clear
+    prismaMock.payment.findUnique.mockResolvedValueOnce({
+      id: 321,
+      paymentId: 'tr_orig',
+      email: 'buyer@example.com',
+      locale: 'de',
+      fullname: 'Max Muster',
+      countrycode: 'DE',
+    });
+    dataMock.getTaxRate.mockResolvedValueOnce(19);
 
     const result = await mollie.processWebhook({ id: 'tr_box' });
 
@@ -1601,10 +1919,24 @@ describe('processWebhook', () => {
       where: { id: 77 },
       data: { boxEnabled: true, boxPrice: 13.98 }, // 6.99 * 2
     });
-    // 13.98 + VAT(13.98 * 21% = 2.94) + shipping 3.50 = 20.42
+    // The box price is VAT-inclusive: 13.98 + shipping 3.50, no VAT on top.
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'tr_orig' },
-      data: { totalPrice: { increment: 20.42 } },
+      data: { totalPrice: { increment: 17.48 } },
+    });
+    expect(dataMock.getTaxRate).toHaveBeenCalledWith('DE');
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledTimes(1);
+    expect(upgradeInvoicesMock.issue.mock.calls[0][0]).toMatchObject({
+      type: 'box',
+      userId: 5,
+      paymentId: 321,
+      email: 'buyer@example.com',
+      locale: 'de',
+      taxRate: 19,
+      items: [
+        { description: 'invoice.giftBox', quantity: 2, totalIncl: 13.98 },
+        { description: 'invoice.shippingAndHandling', quantity: 1, totalIncl: 3.5 },
+      ],
     });
     expect(generatorMock.generateBoxInsertPdf).toHaveBeenCalledWith(
       77,
@@ -1635,6 +1967,13 @@ describe('processWebhook', () => {
       boxEnabled: true,
       payment: { sentToPrinter: false },
     });
+    prismaMock.payment.findUnique.mockResolvedValueOnce({
+      id: 321,
+      paymentId: 'tr_orig',
+      email: 'buyer@example.com',
+      locale: 'nl',
+      countrycode: 'NL',
+    });
 
     const result = await mollie.processWebhook({ id: 'tr_box' });
 
@@ -1642,6 +1981,18 @@ describe('processWebhook', () => {
     expect(prismaMock.paymentHasPlaylist.update).not.toHaveBeenCalled();
     expect(prismaMock.payment.update).not.toHaveBeenCalled();
     expect(outbound.calls('PrintEnBind', 'createBoxUpgradeOrder')).toEqual([]);
+    // The invoice is offered again (issue is idempotent), with the same
+    // lines: boxPrice falls back to BOX_PRICE, no shipping.
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'box',
+        paymentId: 321,
+        items: [
+          { description: 'invoice.giftBox', quantity: 1, totalIncl: BOX_PRICE },
+          { description: 'invoice.shippingAndHandling', quantity: 1, totalIncl: 0 },
+        ],
+      })
+    );
   });
 
   it('box_upgrade skips the separate print order when the main order has not shipped', async () => {
@@ -1663,7 +2014,6 @@ describe('processWebhook', () => {
         boxEnabled: false,
         payment: { sentToPrinter: false },
       })
-      .mockResolvedValueOnce({ payment: { countrycode: 'NL' } })
       .mockResolvedValueOnce(null);
 
     const result = await mollie.processWebhook({ id: 'tr_box' });
@@ -1675,6 +2025,8 @@ describe('processWebhook', () => {
       data: { boxEnabled: true, boxPrice: 6.99 },
     });
     expect(outbound.calls('PrintEnBind', 'createBoxUpgradeOrder')).toEqual([]);
+    // No order found for the invoice: nothing is issued, the upgrade stands.
+    expect(upgradeInvoicesMock.issue).not.toHaveBeenCalled();
   });
 
   it('tracks_upgrade: bumps the track count, books the charge and sets the idempotency key', async () => {
@@ -1770,6 +2122,200 @@ describe('processWebhook', () => {
       where: { id: 88 },
       data: { boxQuantity: 3, boxPrice: { increment: 10 } }, // 5.00 * 2
     });
+  });
+
+  const ORIGINAL_ORDER = {
+    id: 321,
+    paymentId: 'tr_orig',
+    email: 'buyer@example.com',
+    locale: 'nl',
+    fullname: 'Jan Jansen',
+    address: 'Straat',
+    housenumber: '1',
+    zipcode: '1000 AA',
+    city: 'Amsterdam',
+    countrycode: 'NL',
+    invoiceAddress: 'Factuurlaan',
+    invoiceHousenumber: '9',
+    invoiceZipcode: '2000 BB',
+    invoiceCity: 'Haarlem',
+    invoiceCountrycode: 'NL',
+  };
+
+  it('tracks_upgrade invoices cards, handling and boxes, adding up to what was charged', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_tracks_inv',
+        status: 'paid',
+        method: 'ideal',
+        amount: { currency: 'EUR', value: '31.08' },
+        metadata: {
+          type: 'tracks_upgrade',
+          paymentHasPlaylistId: '88',
+          userId: '5',
+          originalPaymentId: 'tr_orig',
+          extraTracks: '50',
+          previousNumberOfTracks: '100',
+          extraBoxes: '1',
+          newBoxQuantity: '2',
+          boxUnitPriceEur: '9.95',
+          extraTracksCostEur: '15',
+          handlingFeeEur: '2.5',
+          boxesCostEur: '9.95',
+          totalEur: '31.08',
+          taxRate: '21',
+        },
+      })
+    );
+    prismaMock.paymentHasPlaylist.findUnique
+      .mockResolvedValueOnce({ id: 88, numberOfTracks: 100 })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ playlist: { name: 'Top 2000' } });
+    prismaMock.payment.findUnique.mockResolvedValueOnce(ORIGINAL_ORDER);
+
+    const result = await mollie.processWebhook({ id: 'tr_tracks_inv' });
+
+    expect(result).toEqual({ success: true });
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledTimes(1);
+    const params = upgradeInvoicesMock.issue.mock.calls[0][0];
+    expect(params).toMatchObject({
+      type: 'extra_tracks',
+      userId: 5,
+      paymentId: 321,
+      email: 'buyer@example.com',
+      locale: 'nl',
+      taxRate: 21,
+    });
+    // handling 2.50 ex → 3.03 incl; cards take the rest: 31.08 - 9.95 - 3.03
+    expect(params.items).toEqual([
+      { description: 'invoice.extraCards {"playlist":"Top 2000"}', quantity: 50, totalIncl: 18.1 },
+      { description: 'invoice.handlingFee', quantity: 1, totalIncl: 3.03 },
+      { description: 'invoice.giftBox', quantity: 1, totalIncl: 9.95 },
+    ]);
+    const sum = params.items.reduce((s: number, i: any) => s + i.totalIncl, 0);
+    expect(Math.round(sum * 100) / 100).toBe(31.08);
+    // The invoice address wins over the delivery address.
+    expect(params.customer).toMatchObject({
+      address: 'Factuurlaan',
+      housenumber: '9',
+      zipcode: '2000 BB',
+      city: 'Haarlem',
+    });
+  });
+
+  it('tracks_upgrade in another currency books the EUR price, the same total as its invoice', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_tracks_sek',
+        status: 'paid',
+        amount: { currency: 'SEK', value: '365.00' },
+        metadata: {
+          type: 'tracks_upgrade',
+          paymentHasPlaylistId: '88',
+          userId: '5',
+          originalPaymentId: 'tr_orig',
+          extraTracks: '50',
+          extraTracksCostEur: '22',
+          handlingFeeEur: '2.5',
+          boxesCostEur: '0',
+          totalEur: '30.63',
+          taxRate: '25',
+        },
+      })
+    );
+    seedSettlement('tr_tracks_sek', '29.10');
+    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({ id: 88, numberOfTracks: 100 });
+
+    await mollie.processWebhook({ id: 'tr_tracks_sek' });
+
+    expect(prismaMock.payment.update).toHaveBeenCalledWith({
+      where: { paymentId: 'tr_orig' },
+      data: { totalPrice: { increment: 30.63 } },
+    });
+  });
+
+  it('tracks_upgrade from before the breakdown was stored invoices one line of the EUR charge', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_tracks_old',
+        status: 'paid',
+        amount: { currency: 'EUR', value: '10.00' },
+        metadata: {
+          type: 'tracks_upgrade',
+          paymentHasPlaylistId: '88',
+          userId: '5',
+          originalPaymentId: 'tr_orig',
+          extraTracks: '50',
+        },
+      })
+    );
+    prismaMock.paymentHasPlaylist.findUnique
+      .mockResolvedValueOnce({ id: 88, numberOfTracks: 100 })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ playlist: { name: 'Top 2000' } });
+    prismaMock.payment.findUnique.mockResolvedValueOnce(ORIGINAL_ORDER);
+    dataMock.getTaxRate.mockResolvedValueOnce(21);
+
+    await mollie.processWebhook({ id: 'tr_tracks_old' });
+
+    expect(dataMock.getTaxRate).toHaveBeenCalledWith('NL');
+    expect(upgradeInvoicesMock.issue.mock.calls[0][0].items).toEqual([
+      { description: 'invoice.extraCards {"playlist":"Top 2000"}', quantity: 50, totalIncl: 10 },
+    ]);
+  });
+
+  it('tracks_upgrade replays offer the invoice again without re-applying the upgrade', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_tracks',
+        status: 'paid',
+        amount: { currency: 'EUR', value: '10.00' },
+        metadata: {
+          type: 'tracks_upgrade',
+          paymentHasPlaylistId: '88',
+          userId: '5',
+          originalPaymentId: 'tr_orig',
+          extraTracks: '50',
+          totalEur: '10',
+          handlingFeeEur: '0',
+          boxesCostEur: '0',
+          taxRate: '21',
+        },
+      })
+    );
+    cacheMock.get.mockResolvedValue('1');
+    prismaMock.payment.findUnique.mockResolvedValueOnce(ORIGINAL_ORDER);
+
+    const result = await mollie.processWebhook({ id: 'tr_tracks' });
+
+    expect(result).toEqual({ success: true });
+    expect(dataMock.updatePlaylistDetails).not.toHaveBeenCalled();
+    expect(upgradeInvoicesMock.issue).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'extra_tracks', paymentId: 321 })
+    );
+  });
+
+  it('tracks_upgrade without an order email skips the invoice', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_tracks',
+        status: 'paid',
+        amount: { currency: 'EUR', value: '10.00' },
+        metadata: {
+          type: 'tracks_upgrade',
+          paymentHasPlaylistId: '88',
+          userId: '5',
+          originalPaymentId: 'tr_orig',
+          extraTracks: '50',
+        },
+      })
+    );
+    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({ id: 88, numberOfTracks: 100 });
+
+    const result = await mollie.processWebhook({ id: 'tr_tracks' });
+
+    expect(result).toEqual({ success: true });
+    expect(upgradeInvoicesMock.issue).not.toHaveBeenCalled();
   });
 });
 
@@ -2170,5 +2716,319 @@ describe('getPaymentsByDay', () => {
     // 82.64 - (41.32 * 25/50) = 61.98
     expect(report[1].totalPriceWithoutTax).toBeCloseTo(61.98, 2);
     expect(report[1].totalRefunded).toBe(25);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// App Designer in the financial reports. It is an account upgrade with its
+// own Mollie payment and no Payment row, so every report reads its ledger
+// (app_design_purchases) next to the payments.
+// ---------------------------------------------------------------------------
+
+/** Route the raw sales-report queries by the table they read. */
+function mockSalesReportQueries(tables: {
+  payments?: any[];
+  games?: any[];
+  boxes?: any[];
+  appDesign?: any[];
+}): void {
+  prismaMock.$queryRawUnsafe.mockImplementation(async (sql: string) => {
+    if (sql.includes('FROM app_design_purchases')) return tables.appDesign || [];
+    if (sql.includes('FROM games_purchases')) return tables.games || [];
+    if (sql.includes('boxAmount')) return tables.boxes || [];
+    return tables.payments || [];
+  });
+}
+
+describe('getSalesReport: App Designer', () => {
+  it('adds count, gross and ex-VAT per period, including periods with only App Designer', async () => {
+    mockSalesReportQueries({
+      payments: [
+        {
+          period: '2026-09',
+          numberOfSales: 10n,
+          totalPrice: '250',
+          totalPriceWithoutTax: '206.61',
+          totalRefunded: '0',
+          totalProfit: '80',
+          profitAssignedCount: 10n,
+        },
+        {
+          period: '2026-08',
+          numberOfSales: 4n,
+          totalPrice: '100',
+          totalPriceWithoutTax: '82.64',
+          totalRefunded: '0',
+          totalProfit: '30',
+          profitAssignedCount: 4n,
+        },
+      ],
+      games: [{ period: '2026-09', gamesAmount: 3n, gamesTotal: '5' }],
+      appDesign: [
+        { period: '2026-09', appDesignAmount: 2n, appDesignTotal: '18', appDesignExVat: '14.88' },
+        { period: '2026-07', appDesignAmount: 1n, appDesignTotal: '9', appDesignExVat: '7.44' },
+      ],
+    });
+
+    const report = await mollie.getSalesReport('month');
+
+    expect(report.map((r: any) => r.period)).toEqual(['2026-09', '2026-08', '2026-07']);
+    expect(report[0]).toMatchObject({
+      numberOfSales: 10,
+      totalPrice: 250,
+      gamesAmount: 3,
+      gamesTotal: 5,
+      appDesignAmount: 2,
+      appDesignTotal: 18,
+      appDesignExVat: 14.88,
+      totalProfit: 80,
+    });
+    expect(report[1]).toMatchObject({
+      appDesignAmount: 0,
+      appDesignTotal: 0,
+      appDesignExVat: 0,
+    });
+    // July: App Designer was the only sale, so there is no payments row.
+    expect(report[2]).toEqual({
+      period: '2026-07',
+      numberOfSales: 0,
+      totalPrice: 0,
+      totalPriceWithoutTax: 0,
+      boxAmount: 0,
+      totalRefunded: 0,
+      gamesAmount: 0,
+      gamesTotal: 0,
+      appDesignAmount: 1,
+      appDesignTotal: 9,
+      appDesignExVat: 7.44,
+      totalProfit: 0,
+      profitAssignedCount: 0,
+    });
+
+    const appDesignSql = prismaMock.$queryRawUnsafe.mock.calls
+      .map((c: any[]) => c[0] as string)
+      .find((sql: string) => sql.includes('FROM app_design_purchases'));
+    expect(appDesignSql).toContain("DATE_FORMAT(adp.createdAt, '%Y-%m')");
+  });
+
+  it('dates the day report by the purchase day', async () => {
+    mockSalesReportQueries({
+      appDesign: [
+        { period: '2026-09-14', appDesignAmount: 1n, appDesignTotal: '9', appDesignExVat: '7.44' },
+      ],
+    });
+
+    const report = await mollie.getSalesReport('day');
+
+    expect(report).toHaveLength(1);
+    expect(report[0]).toMatchObject({ period: '2026-09-14', appDesignAmount: 1 });
+    const appDesignSql = prismaMock.$queryRawUnsafe.mock.calls
+      .map((c: any[]) => c[0] as string)
+      .find((sql: string) => sql.includes('FROM app_design_purchases'));
+    expect(appDesignSql).toContain("DATE_FORMAT(adp.createdAt, '%Y-%m-%d')");
+  });
+
+  it('zeroes App Designer in the filtered (per product type) views', async () => {
+    mockSalesReportQueries({
+      payments: [
+        {
+          period: '2026-09',
+          numberOfSales: 2n,
+          totalPrice: '50',
+          totalPriceWithoutTax: '41.32',
+          totalRefunded: '0',
+        },
+      ],
+      appDesign: [
+        { period: '2026-09', appDesignAmount: 2n, appDesignTotal: '18', appDesignExVat: '14.88' },
+      ],
+    });
+
+    const report = await mollie.getSalesReport('month', 'digital');
+
+    expect(report).toHaveLength(1);
+    expect(report[0]).toMatchObject({
+      appDesignAmount: 0,
+      appDesignTotal: 0,
+      appDesignExVat: 0,
+    });
+    const sqls = prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+    expect(sqls.some((sql: string) => sql.includes('app_design_purchases'))).toBe(false);
+  });
+});
+
+describe('getPaymentsByMonth: App Designer', () => {
+  it('adds App Designer per country and a row for a country with only App Designer', async () => {
+    prismaMock.payment.groupBy.mockResolvedValue([
+      {
+        countrycode: 'NL',
+        _count: { _all: 2 },
+        _sum: { totalPrice: 50, totalPriceWithoutTax: 41.32 },
+        _max: { taxRate: 21 },
+      },
+    ]);
+    prismaMock.appDesignPurchase.groupBy.mockResolvedValue([
+      {
+        countrycode: 'NL',
+        _count: { _all: 1 },
+        _sum: { totalPrice: 9, totalPriceWithoutTax: 7.44 },
+        _max: { taxRate: 21 },
+      },
+      {
+        countrycode: 'DE',
+        _count: { _all: 2 },
+        _sum: { totalPrice: 18, totalPriceWithoutTax: 15.13 },
+        _max: { taxRate: 19 },
+      },
+    ]);
+    const start = new Date(2026, 8, 1);
+    const end = new Date(2026, 9, 0, 23, 59, 59);
+
+    const report = await mollie.getPaymentsByMonth(start, end);
+
+    expect(prismaMock.appDesignPurchase.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['countrycode'],
+        where: { createdAt: { gte: start, lte: end } },
+      })
+    );
+    expect(report).toHaveLength(2);
+    expect(report[0]).toMatchObject({
+      country: 'NL',
+      numberOfSales: 2,
+      totalPrice: 50,
+      appDesignAmount: 1,
+      appDesignTotal: 9,
+      appDesignExVat: 7.44,
+    });
+    expect(report[1]).toMatchObject({
+      country: 'DE',
+      numberOfSales: 0,
+      totalPrice: 0,
+      totalPriceWithoutTax: 0,
+      taxRate: 19,
+      totalPlaylists: 0,
+      appDesignAmount: 2,
+      appDesignTotal: 18,
+      appDesignExVat: 15.13,
+      totalProfit: 0,
+    });
+  });
+});
+
+describe('getPaymentsByTaxRate: App Designer', () => {
+  beforeEach(() => {
+    prismaMock.payment.findMany.mockImplementation(async (args: any) =>
+      // The refund lookup asks for refunded payments only; none here.
+      args?.where?.refundAmount
+        ? []
+        : [
+            {
+              paymentId: 'tr_nl',
+              countrycode: 'NL',
+              taxRate: 21,
+              totalPrice: 25,
+              totalPriceWithoutTax: 20.66,
+              productVATPrice: 4.34,
+            },
+            {
+              paymentId: 'tr_de',
+              countrycode: 'de',
+              taxRate: 19,
+              totalPrice: 30,
+              totalPriceWithoutTax: 25.21,
+              productVATPrice: 4.79,
+            },
+          ]
+    );
+    prismaMock.appDesignPurchase.findMany.mockResolvedValue([
+      { molliePaymentId: 'tr_a_nl', countrycode: 'NL', taxRate: 21, totalPrice: 9, totalPriceWithoutTax: 7.44, totalVAT: 1.56 },
+      { molliePaymentId: 'tr_a_de', countrycode: 'DE', taxRate: 19, totalPrice: 9, totalPriceWithoutTax: 7.56, totalVAT: 1.44 },
+      { molliePaymentId: 'tr_a_fr', countrycode: 'FR', taxRate: 20, totalPrice: 9, totalPriceWithoutTax: 7.5, totalVAT: 1.5 },
+      { molliePaymentId: 'tr_a_us', countrycode: 'US', taxRate: 0, totalPrice: 9, totalPriceWithoutTax: 9, totalVAT: 0 },
+    ]);
+  });
+
+  it('keys App Designer by zone, country and rate and counts it in the taxable totals', async () => {
+    const start = new Date(2026, 6, 1);
+    const end = new Date(2026, 9, 0, 23, 59, 59);
+
+    const { rows } = await mollie.getPaymentsByTaxRate(start, end);
+
+    expect(prismaMock.appDesignPurchase.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { createdAt: { gte: start, lte: end } } })
+    );
+    expect(rows.map((r: any) => `${r.zone}|${r.countrycode}|${r.taxRate}`)).toEqual([
+      'NL|NL|21',
+      'EU|DE|19',
+      'EU|FR|20',
+      'EXPORT|US|0',
+    ]);
+
+    const nl = rows[0];
+    expect(nl.numberOfSales).toBe(1);
+    expect(nl.totalPrice).toBe(25); // playlists' gross; App Designer has its own
+    expect(nl.totalPriceWithoutTax).toBeCloseTo(20.66 + 7.44, 2);
+    expect(nl.totalVAT).toBeCloseTo(4.34 + 1.56, 2);
+    expect(nl).toMatchObject({
+      appDesignAmount: 1,
+      appDesignTotal: 9,
+      appDesignExVat: 7.44,
+      appDesignVAT: 1.56,
+    });
+
+    // Lower-case payment country and the ledger's upper-case one share a row.
+    const de = rows[1];
+    expect(de.numberOfSales).toBe(1);
+    expect(de.totalPriceWithoutTax).toBeCloseTo(25.21 + 7.56, 2);
+    expect(de.totalVAT).toBeCloseTo(4.79 + 1.44, 2);
+    expect(de.appDesignAmount).toBe(1);
+
+    // A country whose only sale was App Designer still gets a row.
+    expect(rows[2]).toMatchObject({
+      zone: 'EU',
+      countrycode: 'FR',
+      firstPaymentId: 'tr_a_fr',
+      numberOfSales: 0,
+      totalPrice: 0,
+      totalPriceWithoutTax: 7.5,
+      totalVAT: 1.5,
+      appDesignAmount: 1,
+      appDesignTotal: 9,
+    });
+    expect(rows[3]).toMatchObject({ zone: 'EXPORT', totalVAT: 0, appDesignExVat: 9 });
+
+    // VAT owed is every payment's VAT plus every App Designer VAT, once.
+    const vat = rows.reduce((s: number, r: any) => s + r.totalVAT, 0);
+    expect(vat).toBeCloseTo(4.34 + 4.79 + 1.56 + 1.44 + 1.5, 2);
+  });
+
+  it('adds App Designer to the OSS breakdown for EU countries outside NL only', async () => {
+    const { ossBreakdown } = await mollie.getPaymentsByTaxRate(
+      new Date(2026, 6, 1),
+      new Date(2026, 9, 0, 23, 59, 59)
+    );
+
+    expect(ossBreakdown.map((r: any) => `${r.country}|${r.taxRate}`)).toEqual([
+      'DE|19',
+      'FR|20',
+    ]);
+    expect(ossBreakdown[0].totalPriceWithoutTax).toBeCloseTo(25.21 + 7.56, 2);
+    expect(ossBreakdown[0].totalVAT).toBeCloseTo(4.79 + 1.44, 2);
+    expect(ossBreakdown[0]).toMatchObject({
+      numberOfSales: 1,
+      totalPrice: 30,
+      appDesignAmount: 1,
+      appDesignExVat: 7.56,
+      appDesignVAT: 1.44,
+    });
+    expect(ossBreakdown[1]).toMatchObject({
+      country: 'FR',
+      numberOfSales: 0,
+      totalPriceWithoutTax: 7.5,
+      totalVAT: 1.5,
+      appDesignAmount: 1,
+      appDesignTotal: 9,
+    });
   });
 });

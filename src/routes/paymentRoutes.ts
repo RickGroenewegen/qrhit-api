@@ -22,6 +22,8 @@ import Formatters from '../formatters';
 import Logger from '../logger';
 import Fx from '../services/fx';
 import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
+import PrismaInstance from '../prisma';
+import UpgradeInvoices from '../upgradeInvoice';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -40,6 +42,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const utils = new Utils();
   const formatters = new Formatters().getFormatters();
   const fx = Fx.getInstance();
+  const prisma = PrismaInstance.getInstance();
 
   // Check payment status
   fastify.post('/mollie/check', async (request: any, _reply) => {
@@ -198,8 +201,6 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: result.data.volumeDiscount,
           gamesFee: result.data.gamesFee,
           qrgamesUnitPrice: result.data.qrgamesUnitPrice,
-          appDesignFee: result.data.appDesignFee,
-          appDesignUnitPrice: result.data.appDesignUnitPrice,
           reverseCharge: result.data.reverseCharge,
           vatIdStatus: result.data.vatIdStatus,
         };
@@ -220,8 +221,6 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: await convertField(result.data.volumeDiscount),
           gamesFee: await convertField(result.data.gamesFee),
           qrgamesUnitPrice: await convertField(result.data.qrgamesUnitPrice),
-          appDesignFee: await convertField(result.data.appDesignFee),
-          appDesignUnitPrice: await convertField(result.data.appDesignUnitPrice),
           reverseCharge: result.data.reverseCharge,
           vatIdStatus: result.data.vatIdStatus,
         };
@@ -284,11 +283,24 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // Invoice
   fastify.get('/invoice/:paymentId', async (request: any, reply) => {
-    const payment = await mollie.getPayment(request.params.paymentId);
-    if (!payment) {
+    const storedPayment = await mollie.getPayment(request.params.paymentId);
+    if (!storedPayment) {
       reply.status(404).send({ error: 'Payment not found' });
       return;
     }
+    // Extra cards and gift boxes bought later are added to the order's
+    // totalPrice (the books) but invoiced on their own (U range), so the
+    // order invoice leaves them out again.
+    const bookedUpgrades = await UpgradeInvoices.getInstance().amountBookedOnOrder(
+      storedPayment.id
+    );
+    const payment =
+      bookedUpgrades > 0
+        ? {
+            ...storedPayment,
+            totalPrice: parseFloat((storedPayment.totalPrice - bookedUpgrades).toFixed(2)),
+          }
+        : storedPayment;
     const playlists = await data.getPlaylistsByPaymentId(payment.paymentId);
 
     let orderType = 'digital';
@@ -354,6 +366,61 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         payment.locale,
         'countries'
       ),
+    });
+  });
+
+  // Invoice for a purchase made after an order (App Designer, extra cards),
+  // rendered from its stored snapshot through the order invoice template so
+  // both look the same. Keyed on the Mollie payment id like /invoice/:paymentId.
+  fastify.get('/invoice/upgrade/:molliePaymentId', async (request: any, reply) => {
+    const row = await prisma.upgradeInvoice.findUnique({
+      where: { molliePaymentId: request.params.molliePaymentId },
+    });
+    if (!row) {
+      reply.status(404).send({ error: 'Invoice not found' });
+      return;
+    }
+    const customer = (row.customer || {}) as Record<string, any>;
+    const invoiceCurrency = row.currency || 'EUR';
+    const presentmentTotal = invoiceCurrency === 'EUR' ? row.totalPrice : row.amountCharged;
+    // Effective rate implied by what was charged, so the lines sum to it.
+    const displayRate =
+      invoiceCurrency === 'EUR' || !row.totalPrice ? 1 : row.amountCharged / row.totalPrice;
+    const payment = {
+      ...customer,
+      orderId: row.invoiceNumber,
+      createdAt: row.createdAt,
+      paymentMethod: row.paymentMethod,
+      taxRate: row.taxRate,
+      taxRateShipping: row.taxRate,
+      reverseCharge: false,
+      totalPrice: row.totalPrice,
+      currency: invoiceCurrency,
+    };
+    const translations = await translation.getTranslationsByPrefix(row.locale, 'invoice');
+    await reply.view(`invoice.ejs`, {
+      payment,
+      playlists: [],
+      orderType: 'digital',
+      invoice: {
+        lines: row.lines,
+        summary: {
+          subtotalExcl: row.totalPriceWithoutTax,
+          goodsVatBase: row.totalPriceWithoutTax,
+          goodsVat: row.totalVAT,
+          shippingVatBase: 0,
+          shippingVat: 0,
+          totalIncl: row.totalPrice,
+        },
+      },
+      ...formatters,
+      moneyFormatter: formatters.currencyFormatter(invoiceCurrency),
+      invoiceCurrency,
+      invoiceRate: displayRate,
+      displayRate,
+      presentmentTotal,
+      translations,
+      countries: await translation.getTranslationsByPrefix(row.locale, 'countries'),
     });
   });
 

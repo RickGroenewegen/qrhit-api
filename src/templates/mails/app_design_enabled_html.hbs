@@ -1,0 +1,13 @@
+{{#> mail-layout title=translations.appDesignEnabledTitle preheader=translations.appDesignEnabledBody }}
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ fullname }},</p>
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.appDesignEnabledBody }}</p>
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.appDesignEnabledHowItWorks }}</p>
+<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.appDesignEnabledEdit }}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">
+    <tr>
+        <td align="center">{{> mail-btn-pop href=designUrl label=translations.appDesignEnabledCta }}</td>
+    </tr>
+</table>
+<p style="margin: 0; font-size: 14px; line-height: 22px; color: #18565e;">{{ translations.appDesignEnabledInvoiceNote }}</p>
+{{> mail-closing }}
+{{/mail-layout}}

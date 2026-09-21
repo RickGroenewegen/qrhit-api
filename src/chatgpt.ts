@@ -2743,9 +2743,11 @@ ${htmlString}
   /**
    * Propose a scan-app palette that fits a customer's background image
    * (App Designer "theme from my image"). The image goes in as a data URI;
-   * the answer is forced through a function call so it is always the same
-   * shape. Returns null when the model produced nothing usable; the caller
-   * falls back to a palette computed from the image itself.
+   * the answer comes back as json_schema output so it is always the same
+   * shape (the GPT-5.6 family rejects function tools with reasoning on).
+   * Reasoning is off: the customer waits on this button. Returns null when
+   * the model produced nothing usable; the caller falls back to a palette
+   * computed from the image itself.
    */
   public async suggestAppPalette(
     imageDataUri: string,
@@ -2762,7 +2764,7 @@ ${htmlString}
   } | null> {
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: LLM_MODEL_STANDARD,
         messages: [
           {
             role: 'system',
@@ -2791,47 +2793,44 @@ Return hex colors with six digits.`,
             ],
           },
         ],
-        tool_choice: { type: 'function', function: { name: 'setPalette' } },
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'setPalette',
-              description: 'Store the chosen app palette',
-              parameters: {
-                type: 'object',
-                properties: {
-                  backgroundColor: { type: 'string', description: 'Hex color, e.g. #18565e' },
-                  textColor: { type: 'string', description: 'Hex color' },
-                  accentColor: { type: 'string', description: 'Hex color' },
-                  accentTextColor: { type: 'string', description: 'Hex color' },
-                  buttonStyle: { type: 'string', enum: ['accent', 'glass'] },
-                  fontId: { type: 'string' },
-                  showMusicalNotes: { type: 'boolean' },
-                  mood: { type: 'string' },
-                },
-                required: [
-                  'backgroundColor',
-                  'textColor',
-                  'accentColor',
-                  'accentTextColor',
-                  'buttonStyle',
-                  'fontId',
-                  'showMusicalNotes',
-                  'mood',
-                ],
+        reasoning_effort: 'none',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'appPalette',
+            schema: {
+              type: 'object',
+              properties: {
+                backgroundColor: { type: 'string', description: 'Hex color, e.g. #18565e' },
+                textColor: { type: 'string', description: 'Hex color' },
+                accentColor: { type: 'string', description: 'Hex color' },
+                accentTextColor: { type: 'string', description: 'Hex color' },
+                buttonStyle: { type: 'string', enum: ['accent', 'glass'] },
+                fontId: { type: 'string' },
+                showMusicalNotes: { type: 'boolean' },
+                mood: { type: 'string' },
               },
+              required: [
+                'backgroundColor',
+                'textColor',
+                'accentColor',
+                'accentTextColor',
+                'buttonStyle',
+                'fontId',
+                'showMusicalNotes',
+                'mood',
+              ],
             },
           },
-        ],
+        },
       });
 
-      const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
-      if (toolCall && toolCall.type === 'function') {
-        return JSON.parse(toolCall.function.arguments as string);
+      const content = result?.choices[0]?.message?.content;
+      if (content) {
+        return JSON.parse(content);
       }
       this.logger.log(
-        color.yellow.bold('[AppDesign] No function_call result for suggestAppPalette')
+        color.yellow.bold('[AppDesign] No palette in the suggestAppPalette response')
       );
       return null;
     } catch (error: any) {

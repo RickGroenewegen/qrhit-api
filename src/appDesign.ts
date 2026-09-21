@@ -1,12 +1,16 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { randomInt } from 'crypto';
 import sharp from 'sharp';
+import sanitizeHtml from 'sanitize-html';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import AppTheme from './apptheme';
+import Cache from './cache';
 import { FONTS } from './fonts';
 import { ChatGPT } from './chatgpt';
+import { round2 } from './services/discount-allocation';
 
 /**
  * Customer-made scan-app themes ("App Designer").
@@ -20,6 +24,19 @@ import { ChatGPT } from './chatgpt';
  * it, and serves it back. Assets (logo, background) and the font URL are the
  * two things the server owns, so a client cannot point the app at foreign
  * URLs.
+ *
+ * App Designer is an upgrade on the account (APP_DESIGN_PRICE, one
+ * AppDesignPurchase row). The account has one default design, used for every
+ * playlist the user paid for, and each order line may override it with its
+ * own design or with the plain QRSong! look. A save publishes a theme file in
+ * the same layout as the hand-made B2B themes (src/_data/themes/<slug>/),
+ * under PUBLIC_DIR/customer-themes/<slug>/.
+ *
+ * The served slug carries the version (`<slug>-<version>`). The app only
+ * reloads a theme when the slug of a scan differs from the active theme's id,
+ * so a fixed slug would hide every edit until the app restarts. With the
+ * version in the slug the next scan after a save is a new slug, and the
+ * released app picks the change up without an update.
  */
 
 // Every custom property the scan app reads. Mirrors the defaultTheme in
@@ -79,12 +96,57 @@ export const APP_THEME_VARIABLE_KEYS: readonly string[] = [
 ];
 
 export const APP_THEME_CACHE_TTL = 86400;
+// Editor uploads (random filenames) land here; a save copies the ones a
+// design uses into its theme directory as logo.png / background.png.
 export const APP_THEME_ASSET_DIR = 'app-theme';
-export const APP_DESIGN_SLUG_PREFIX = 'u';
+// Published customer themes, one directory per slug.
+export const CUSTOMER_THEME_DIR = 'customer-themes';
 
-// Public part of the design row: what both the account page and the
-// checkout flow send. Kept as a loose record on purpose; the editor owns
-// the shape and the server only needs a few fields out of it.
+// Base slug of a customer theme: `c` plus 10 random characters. Random, not
+// an id, because GET /theme/:slug is public and customer photos must not be
+// enumerable. Hand-made theme slugs never take this shape.
+const CUSTOMER_SLUG_BASE = /^c[a-z0-9]{10}$/;
+const CUSTOMER_SLUG_SERVED = /^(c[a-z0-9]{10})-(\d{1,9})$/;
+const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+export type AppDesignScope = { userId: number; paymentHasPlaylistId?: number };
+// What an order line does: follow the account default, use its own design,
+// or show the plain QRSong! app.
+export type AppDesignOverrideMode = 'default' | 'custom' | 'standard';
+export const APP_DESIGN_OVERRIDE_MODES: readonly AppDesignOverrideMode[] = [
+  'default',
+  'custom',
+  'standard',
+];
+
+export function newCustomerSlug(): string {
+  let slug = 'c';
+  for (let i = 0; i < 10; i++) slug += SLUG_ALPHABET[randomInt(SLUG_ALPHABET.length)];
+  return slug;
+}
+
+/** The slug the scan app gets: the base slug plus the current version. */
+export function servedCustomerSlug(slug: string, version: number): string {
+  return `${slug}-${version}`;
+}
+
+/**
+ * `c…-<n>` as served to the app, or a bare base slug, back to the base.
+ * Null for anything else (a hand-made theme slug).
+ */
+export function parseCustomerSlug(slug: string): { base: string; version: number | null } | null {
+  const served = CUSTOMER_SLUG_SERVED.exec(slug);
+  if (served) return { base: served[1], version: parseInt(served[2], 10) };
+  if (CUSTOMER_SLUG_BASE.test(slug)) return { base: slug, version: null };
+  return null;
+}
+
+export function scopeKeyFor(scope: AppDesignScope): string {
+  return scope.paymentHasPlaylistId ? `p${scope.paymentHasPlaylistId}` : `u${scope.userId}`;
+}
+
+// What the account page sends. Kept as a loose record on purpose; the editor
+// owns the shape and the server only needs a few fields out of it.
 export interface AppDesignInput {
   design: Record<string, unknown>;
   theme: {
@@ -114,6 +176,11 @@ export interface ThemeConfig {
   helpText: string | null;
 }
 
+// Where a theme came from: a hand-made B2B theme in src/_data/themes, or a
+// customer design from the App Designer. Sent along in GET /theme/:slug; the
+// released app ignores fields it does not know.
+export type ThemeSource = 'business' | 'customer';
+
 export interface PaletteSuggestion {
   backgroundColor: string;
   textColor: string;
@@ -139,6 +206,15 @@ const GRADIENT_RE = new RegExp(
 // "1px 1px 2px rgba(0,0,0,0.35)" or several such tuples, or none.
 const SHADOW_RE = new RegExp(
   `^(?:none|(?:-?\\d{1,2}px\\s+-?\\d{1,2}px\\s+\\d{1,2}px\\s+${COLOR})(?:\\s*,\\s*-?\\d{1,2}px\\s+-?\\d{1,2}px\\s+\\d{1,2}px\\s+${COLOR}){0,3})$`
+);
+// The one image a theme value may name: the photo bundled in the scan app
+// (qrhit-app src/assets/images/bg-disco.webp), which its built-in theme uses
+// in exactly this form. The URL is relative, so the app paints its own copy:
+// no file is published and nothing is downloaded. Every other url() is
+// refused. The App Designer offers it as the "QRSong! photo" background.
+export const APP_BUNDLED_BACKGROUND_URL = 'assets/images/bg-disco.webp';
+const BUNDLED_BACKGROUND_RE = new RegExp(
+  `^${COLOR} url\\("assets/images/bg-disco\\.webp"\\) center / cover no-repeat$`
 );
 const LENGTH_RE = /^-?\d{1,3}(?:px|%)$/;
 const FILTER_RE =
@@ -187,18 +263,52 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// What the help text may contain: the formats the App Designer's editor
+// offers (Quill: headings, bold, italic, underline, lists, links), which are
+// also the tags the app's help screen styles (help-modal.component.scss).
+const HELP_TEXT_HTML: sanitizeHtml.IOptions = {
+  allowedTags: ['p', 'br', 'h2', 'h3', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'a'],
+  allowedAttributes: { a: ['href', 'target', 'rel'] },
+  allowedSchemes: ['https', 'http', 'mailto'],
+  transformTags: {
+    h1: 'h2',
+    h4: 'h3',
+    h5: 'h3',
+    h6: 'h3',
+    b: 'strong',
+    i: 'em',
+    div: 'p',
+    // The app runs in a webview: a link must open outside it, like the
+    // links in its own help text, or it would replace the app.
+    a: sanitizeHtml.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }),
+  },
+};
+
 /**
- * Customers write plain text; the app renders helpText with [innerHTML], so
- * everything is escaped and paragraphs are the only markup we add.
+ * The help text the app shows, as HTML: the app renders it with
+ * [innerHTML]. The editor sends HTML, which is cut down to HELP_TEXT_HTML.
+ * Plain text (designs saved before the editor had formatting) is escaped
+ * and gets paragraphs, as it always did.
  */
 export function sanitizeHelpText(text: unknown): string | null {
   if (typeof text !== 'string') return null;
-  const trimmed = text.replace(/\r\n/g, '\n').trim().slice(0, 4000);
+  const trimmed = text.replace(/\r\n/g, '\n').trim();
   if (!trimmed) return null;
-  return trimmed
-    .split(/\n{2,}/)
-    .map((p) => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
-    .join('');
+  if (!/<[a-z][^>]*>/i.test(trimmed)) {
+    return trimmed
+      .slice(0, 4000)
+      .split(/\n{2,}/)
+      .map((p) => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  }
+  const html = sanitizeHtml(trimmed.slice(0, 20000), HELP_TEXT_HTML)
+    // Quill 2.0.3 writes every space as &nbsp;, which would never wrap.
+    .replace(/&nbsp;| /g, ' ')
+    // Empty lines at the start or end of the editor.
+    .replace(/^(?:\s*<p>(?:\s|<br \/>)*<\/p>)+|(?:<p>(?:\s|<br \/>)*<\/p>\s*)+$/g, '')
+    .trim();
+  const hasText = html.replace(/<[^>]+>/g, '').trim().length > 0;
+  return hasText ? html : null;
 }
 
 /**
@@ -220,17 +330,17 @@ export function validateCssVariables(input: unknown): {
       rejected.push(key);
       continue;
     }
-    if (!valueAllowed(kindFor(key), value as string)) {
+    const bundledBackground =
+      key === '--app-background' &&
+      typeof value === 'string' &&
+      BUNDLED_BACKGROUND_RE.test(value.trim());
+    if (!bundledBackground && !valueAllowed(kindFor(key), value as string)) {
       rejected.push(key);
       continue;
     }
     cssVariables[key] = (value as string).trim();
   }
   return { cssVariables, rejected };
-}
-
-export function slugForPaymentHasPlaylist(phpId: number): string {
-  return `${APP_DESIGN_SLUG_PREFIX}${phpId}`;
 }
 
 export function isValidThemeSlug(slug: unknown): slug is string {
@@ -282,6 +392,7 @@ class AppDesign {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private appTheme = AppTheme.getInstance();
+  private cache = Cache.getInstance();
   private chatgpt = new ChatGPT();
 
   private constructor() {}
@@ -299,6 +410,30 @@ class AppDesign {
 
   public assetPath(filename: string): string {
     return path.join(this.assetDir(), filename);
+  }
+
+  public customerThemeRoot(): string {
+    return path.join(process.env['PUBLIC_DIR'] as string, CUSTOMER_THEME_DIR);
+  }
+
+  /** Directory of one published customer theme (base slug, no version). */
+  public customerThemeDir(slug: string): string {
+    return path.join(this.customerThemeRoot(), slug);
+  }
+
+  /** True when the account owns the App Designer upgrade. */
+  public async isEntitled(userId: number): Promise<boolean> {
+    const count = await this.prisma.appDesignPurchase.count({ where: { userId } });
+    return count > 0;
+  }
+
+  /** The account's default design and every override, keyed for the account page. */
+  public async getDesigns(userId: number) {
+    const rows = await this.prisma.appDesign.findMany({ where: { userId } });
+    return {
+      defaultDesign: rows.find((r) => r.paymentHasPlaylistId === null) || null,
+      overrides: rows.filter((r) => r.paymentHasPlaylistId !== null),
+    };
   }
 
   /**
@@ -348,7 +483,13 @@ class AppDesign {
             ? (design['helpText'] as string)
             : null,
       logo: sanitizeAssetFilename(body.logo ?? design['logo']),
-      background: sanitizeAssetFilename(body.background ?? design['background']),
+      // A photo uploaded earlier stays in the editor state when the customer
+      // switches to a colour or gradient; publishing it then would show the
+      // photo in the app while the preview shows the colour.
+      background:
+        design['backgroundType'] === 'image'
+          ? sanitizeAssetFilename(body.background ?? design['background'])
+          : null,
       fontId:
         typeof (body.fontId ?? design['fontId']) === 'string'
           ? (body.fontId ?? design['fontId'])
@@ -358,16 +499,17 @@ class AppDesign {
   }
 
   /**
-   * Create or replace the design for an order line, bump its version so the
-   * app's cache comparison picks it up, and point the line's theme slug at
-   * it. Reloads the in-memory slug map (and broadcasts to other workers).
+   * Save the account default (no paymentHasPlaylistId) or a playlist's own
+   * design: upsert the row, bump the version, publish the theme file and
+   * reload the scan map (broadcast to every worker). Saving a playlist's
+   * design also switches that line to `custom`.
+   *
+   * Saving does not need the upgrade: a design saved before paying is stored
+   * and published, but src/apptheme.ts only hands its slug to a scan once the
+   * account owns an AppDesignPurchase, so nothing unpaid reaches the app.
    */
-  public async saveDesign(
-    paymentHasPlaylistId: number,
-    input: AppDesignInput,
-    opts: { reload?: boolean } = {}
-  ) {
-    const slug = slugForPaymentHasPlaylist(paymentHasPlaylistId);
+  public async saveDesign(scope: AppDesignScope, input: AppDesignInput) {
+    const scopeKey = scopeKeyFor(scope);
     const storedTheme = {
       cssVariables: input.theme.cssVariables,
       showMusicalNotes: input.theme.showMusicalNotes !== false,
@@ -375,112 +517,251 @@ class AppDesign {
       showEqualizer: input.theme.showEqualizer !== false,
       fontId: input.fontId || null,
     };
+    const fields = {
+      name: input.name || 'My QRSong app',
+      mode: 'custom',
+      design: input.design as any,
+      theme: storedTheme as any,
+      logo: input.logo || null,
+      background: input.background || null,
+      helpText: sanitizeHelpText(input.helpText),
+    };
     const existing = await this.prisma.appDesign.findUnique({
-      where: { paymentHasPlaylistId },
-      select: { version: true },
+      where: { scopeKey },
+      select: { id: true, version: true },
     });
-    const version = (existing?.version || 0) + 1;
-    const row = await this.prisma.appDesign.upsert({
-      where: { paymentHasPlaylistId },
-      create: {
-        paymentHasPlaylistId,
-        slug,
-        name: input.name || 'My QRSong app',
-        version,
-        design: input.design as any,
-        theme: storedTheme as any,
-        logo: input.logo || null,
-        background: input.background || null,
-        helpText: sanitizeHelpText(input.helpText),
-      },
-      update: {
-        name: input.name || 'My QRSong app',
-        version,
-        design: input.design as any,
-        theme: storedTheme as any,
-        logo: input.logo || null,
-        background: input.background || null,
-        helpText: sanitizeHelpText(input.helpText),
-      },
-    });
-    await this.prisma.paymentHasPlaylist.update({
-      where: { id: paymentHasPlaylistId },
-      data: { theme: slug, themeName: row.name },
-    });
-    if (opts.reload !== false) {
-      await this.appTheme.reload();
-    }
+    const row = existing
+      ? await this.prisma.appDesign.update({
+          where: { id: existing.id },
+          data: { ...fields, version: existing.version + 1 },
+        })
+      : await this.createRow(scope, scopeKey, fields);
+
+    await this.publishThemeFiles(row);
+    await this.appTheme.reload();
     this.logger.log(
       color.blue.bold(
-        `Saved app design ${white.bold(slug)} version ${white.bold(
-          String(version)
+        `Saved app design ${white.bold(scopeKey)} as ${white.bold(
+          servedCustomerSlug(row.slug, row.version)
         )}`
       )
     );
     return row;
   }
 
-  public async getBySlug(slug: string) {
-    return this.prisma.appDesign.findUnique({ where: { slug } });
+  /**
+   * Choose what a playlist shows: the account default, its own design or
+   * the plain QRSong! app. `custom` needs a saved design; the other two
+   * keep whatever design the line had, so switching back loses nothing.
+   */
+  public async setOverrideMode(
+    userId: number,
+    paymentHasPlaylistId: number,
+    mode: AppDesignOverrideMode
+  ) {
+    const scope = { userId, paymentHasPlaylistId };
+    const scopeKey = scopeKeyFor(scope);
+    const existing = await this.prisma.appDesign.findUnique({ where: { scopeKey } });
+    if (mode === 'custom' && !existing?.theme) {
+      throw new Error('This playlist has no design of its own yet');
+    }
+    const row = existing
+      ? await this.prisma.appDesign.update({
+          where: { id: existing.id },
+          data: { mode },
+        })
+      : await this.createRow(scope, scopeKey, { name: 'My QRSong app', mode });
+    await this.appTheme.reload();
+    return row;
   }
 
-  public async getByPaymentHasPlaylistId(paymentHasPlaylistId: number) {
-    return this.prisma.appDesign.findUnique({ where: { paymentHasPlaylistId } });
+  /** New row with a fresh random slug; retries the rare slug collision. */
+  private async createRow(scope: AppDesignScope, scopeKey: string, fields: Record<string, any>) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.prisma.appDesign.create({
+          data: {
+            ...fields,
+            userId: scope.userId,
+            paymentHasPlaylistId: scope.paymentHasPlaylistId ?? null,
+            scopeKey,
+            slug: newCustomerSlug(),
+            version: 1,
+          } as any,
+        });
+      } catch (error: any) {
+        const collided =
+          error?.code === 'P2002' && String(error?.meta?.target || '').includes('slug');
+        if (!collided || attempt >= 3) throw error;
+      }
+    }
   }
 
   /**
-   * The exact shape the scan app expects from GET /theme/:slug. Asset URLs
-   * carry the version as a cache buster, same trick as the file-based route.
+   * The theme file, in the shape of the hand-made themes. `id` is the base
+   * slug and `assets` are left null: GET /theme/:slug sets the served id and
+   * builds the asset URLs from the files next to the JSON, as it does for the
+   * hand-made ones.
    */
-  public buildThemeResponse(row: {
+  public buildThemeFile(row: {
     slug: string;
     name: string;
     version: number;
     theme: any;
-    logo: string | null;
-    background: string | null;
     helpText: string | null;
   }): ThemeConfig {
     const theme = (row.theme || {}) as Record<string, any>;
-    const apiUri = process.env['API_URI'] || '';
-    const v = row.version;
     return {
       id: row.slug,
       name: row.name,
-      version: v,
+      version: row.version,
       cacheTTL: APP_THEME_CACHE_TTL,
       showMusicalNotes: theme['showMusicalNotes'] !== false,
       showRecord: theme['showRecord'] !== false,
       showEqualizer: theme['showEqualizer'] !== false,
       cssVariables: theme['cssVariables'] || {},
-      assets: {
-        logo: row.logo ? `${apiUri}/theme/${row.slug}/logo?v=${v}` : null,
-        background: row.background
-          ? `${apiUri}/theme/${row.slug}/background?v=${v}`
-          : null,
-      },
+      assets: { logo: null, background: null },
       fonts: fontsForId(theme['fontId']),
       helpText: row.helpText || null,
     };
   }
 
   /**
-   * Resolve an asset request for a DB-backed theme to a file on disk, or
-   * null when the theme or the asset does not exist.
+   * Write `<slug>.json`, `logo.png` and `background.png` for a row. Every
+   * file is written to a temporary name and renamed, so a worker serving the
+   * theme at the same moment never reads half a file. An asset the design no
+   * longer uses is removed.
    */
-  public async resolveAssetPath(
-    slug: string,
-    kind: 'logo' | 'background'
-  ): Promise<string | null> {
-    const row = await this.getBySlug(slug);
-    const filename = row ? row[kind] : null;
-    if (!filename) return null;
-    const filePath = this.assetPath(filename);
+  public async publishThemeFiles(row: {
+    slug: string;
+    name: string;
+    version: number;
+    theme: any;
+    helpText: string | null;
+    logo: string | null;
+    background: string | null;
+  }): Promise<void> {
+    const dir = this.customerThemeDir(row.slug);
+    await fs.mkdir(dir, { recursive: true });
+    for (const kind of ['logo', 'background'] as const) {
+      const target = path.join(dir, `${kind}.png`);
+      const upload = row[kind] ? sanitizeAssetFilename(row[kind]) : null;
+      if (!upload) {
+        await fs.rm(target, { force: true });
+        continue;
+      }
+      const temp = `${target}.${process.pid}.tmp`;
+      // Uploads are PNG already; anything else is converted so the file name
+      // keeps telling the truth about its content.
+      if (upload.toLowerCase().endsWith('.png')) {
+        await fs.copyFile(this.assetPath(upload), temp);
+      } else {
+        await sharp(this.assetPath(upload)).png().toFile(temp);
+      }
+      await fs.rename(temp, target);
+    }
+    const json = path.join(dir, `${row.slug}.json`);
+    const temp = `${json}.${process.pid}.tmp`;
+    await fs.writeFile(temp, JSON.stringify(this.buildThemeFile(row), null, 2));
+    await fs.rename(temp, json);
+  }
+
+  /**
+   * Record a paid App Designer purchase. Idempotent on the Mollie payment id,
+   * because Mollie replays webhooks. `price` is the VAT-inclusive EUR amount
+   * that was charged (APP_DESIGN_PRICE when the payment was created); the
+   * ex-VAT and VAT parts are stored so no report has to derive them.
+   */
+  public async processUpgradePayment(params: {
+    userId: number;
+    molliePaymentId: string;
+    price: number;
+    taxRate: number;
+    countrycode: string;
+    currency: string;
+    amountCharged: number;
+  }): Promise<{ success: boolean; created: boolean; purchaseId?: number; error?: string }> {
     try {
-      await fs.access(filePath);
-      return filePath;
-    } catch {
-      return null;
+      const existing = await this.prisma.appDesignPurchase.findUnique({
+        where: { molliePaymentId: params.molliePaymentId },
+        select: { id: true },
+      });
+      if (existing) {
+        this.logger.log(
+          color.yellow.bold(
+            `App Designer webhook replay ignored for ${white.bold(params.molliePaymentId)}`
+          )
+        );
+        return { success: true, created: false, purchaseId: existing.id };
+      }
+      if (await this.isEntitled(params.userId)) {
+        // Paid twice (two tabs, say). The money came in, so it is booked;
+        // a refund is a manual decision.
+        this.logger.log(
+          color.yellow.bold(
+            `User ${white.bold(String(params.userId))} bought App Designer again (${white.bold(
+              params.molliePaymentId
+            )})`
+          )
+        );
+      }
+      const totalPriceWithoutTax = round2(params.price / (1 + params.taxRate / 100));
+      let purchase;
+      try {
+        purchase = await this.prisma.appDesignPurchase.create({
+          data: {
+            userId: params.userId,
+            molliePaymentId: params.molliePaymentId,
+            totalPrice: params.price,
+            totalPriceWithoutTax,
+            totalVAT: round2(params.price - totalPriceWithoutTax),
+            taxRate: params.taxRate,
+            countrycode: params.countrycode,
+            currency: params.currency,
+            amountCharged: params.amountCharged,
+          },
+        });
+      } catch (error: any) {
+        // Two webhook deliveries racing past the check above.
+        if (error?.code === 'P2002') return { success: true, created: false };
+        throw error;
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: params.userId },
+        select: { hash: true },
+      });
+      if (user?.hash) {
+        await this.cache.del(`playlists:user:${user.hash}`);
+      }
+      await this.appTheme.reload();
+      this.logger.log(
+        color.green.bold(
+          `App Designer enabled for user ${white.bold(String(params.userId))} (${white.bold(
+            params.molliePaymentId
+          )})`
+        )
+      );
+      return { success: true, created: true, purchaseId: purchase.id };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Failed to record App Designer purchase: ${white.bold(error.message)}`)
+      );
+      return { success: false, created: false, error: error.message };
+    }
+  }
+
+  /** A published customer theme file, or null when there is none. */
+  public async readThemeFile(slug: string): Promise<ThemeConfig | null> {
+    try {
+      const raw = await fs.readFile(
+        path.join(this.customerThemeDir(slug), `${slug}.json`),
+        'utf-8'
+      );
+      return JSON.parse(raw);
+    } catch (error: any) {
+      if (error?.code === 'ENOENT') return null;
+      throw error;
     }
   }
 

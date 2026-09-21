@@ -103,23 +103,43 @@ class AppTheme {
   }
 
   /**
-   * Load all app themes from payment_has_playlist into memory
-   * This runs on API startup to avoid database queries on every request
+   * Load the theme of every order line into memory, so a scan never queries
+   * the database. Runs at startup and on every reload.
+   *
+   * Which theme a line gets, first match wins:
+   *   1. `php.theme` set by an admin: a hand-made B2B theme.
+   *   2. The line's own App Designer override, when the account owns the
+   *      upgrade: `custom` serves its design, `standard` serves nothing (the
+   *      app's built-in look), `default` falls through.
+   *   3. The account's default App Designer design, when it owns the upgrade.
+   * Customer slugs are served as `<slug>-<version>` (see src/appDesign.ts).
    */
   public async loadAppThemes(shouldLog: boolean = false): Promise<void> {
     try {
       const themes: any[] = await this.prisma.$queryRaw`
-        SELECT php.id, php.theme, php.themeName, p.serviceType
+        SELECT php.id, php.theme, php.themeName, p.serviceType,
+               ent.userId AS entitledUserId,
+               ov.mode AS ovMode, ov.slug AS ovSlug, ov.version AS ovVersion,
+               ov.name AS ovName, (ov.theme IS NOT NULL) AS ovHasTheme,
+               df.slug AS dfSlug, df.version AS dfVersion, df.name AS dfName,
+               (df.theme IS NOT NULL) AS dfHasTheme
         FROM payment_has_playlist php
         JOIN playlists p ON php.playlistId = p.id
+        JOIN payments pay ON pay.id = php.paymentId
+        LEFT JOIN (SELECT DISTINCT userId FROM app_design_purchases) ent
+          ON ent.userId = pay.userId
+        LEFT JOIN app_designs ov ON ov.paymentHasPlaylistId = php.id
+        LEFT JOIN app_designs df
+          ON df.userId = pay.userId AND df.paymentHasPlaylistId IS NULL
       `;
 
       this.appThemes.clear();
 
       for (const themeRow of themes) {
+        const { s, n } = resolveLineTheme(themeRow);
         this.appThemes.set(themeRow.id, {
-          s: themeRow.theme || '',
-          n: themeRow.themeName || themeRow.theme || '',
+          s,
+          n,
           st: themeRow.serviceType || 'spotify',
         });
       }
@@ -238,6 +258,30 @@ class AppTheme {
   public getAllThemes(): Map<number, { s: string; n: string; st: string }> {
     return new Map(this.appThemes);
   }
+}
+
+/**
+ * The slug and name one order line gets, from a row of the loadAppThemes
+ * query. Kept pure so the precedence rules can be tested without a database.
+ * MySQL returns the IS NOT NULL flags as 0/1 (sometimes BigInt), hence Number().
+ */
+export function resolveLineTheme(row: any): { s: string; n: string } {
+  if (row.theme) {
+    return { s: row.theme, n: row.themeName || row.theme };
+  }
+  if (row.entitledUserId === null || row.entitledUserId === undefined) {
+    return { s: '', n: '' };
+  }
+  if (row.ovMode === 'standard') {
+    return { s: '', n: '' };
+  }
+  if (row.ovMode === 'custom' && row.ovSlug && Number(row.ovHasTheme) === 1) {
+    return { s: `${row.ovSlug}-${Number(row.ovVersion)}`, n: row.ovName || '' };
+  }
+  if (row.dfSlug && Number(row.dfHasTheme) === 1) {
+    return { s: `${row.dfSlug}-${Number(row.dfVersion)}`, n: row.dfName || '' };
+  }
+  return { s: '', n: '' };
 }
 
 export default AppTheme;

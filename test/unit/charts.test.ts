@@ -96,6 +96,20 @@ describe('Charts.getMovingAverage', () => {
     expect(result).toEqual(fakeRows);
   });
 
+  it('adds App Designer gross to daily_sales and its ex-VAT to daily_profit', async () => {
+    const svc = makeSvc();
+    await svc.getMovingAverage(90);
+    const sql: string = queryRawUnsafe.mock.calls[0][0];
+    const salesExpr = sql.slice(sql.indexOf('DATE(p.createdAt) as date'), sql.indexOf('as daily_sales'));
+    const profitExpr = sql.slice(sql.indexOf('as daily_sales'), sql.indexOf('as daily_profit'));
+    expect(salesExpr).toContain('SUM(adp.totalPrice) FROM app_design_purchases adp');
+    expect(salesExpr).toContain('DATE(adp.createdAt) = DATE(p.createdAt)');
+    expect(profitExpr).toContain('SUM(adp.totalPriceWithoutTax) FROM app_design_purchases adp');
+    expect(profitExpr).not.toContain('SUM(adp.totalPrice)');
+    // the QRGames subquery stays as it was
+    expect(profitExpr).toContain('SUM(gp.totalPrice) FROM games_purchases gp');
+  });
+
   it('generated SQL includes moving average window', async () => {
     const svc = makeSvc();
     await svc.getMovingAverage(90);

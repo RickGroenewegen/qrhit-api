@@ -7,6 +7,7 @@ const { redisStore, prismaMock } = vi.hoisted(() => ({
     paymentHasPlaylist: { groupBy: vi.fn() },
     payment: { findMany: vi.fn() },
     gamesPurchase: { aggregate: vi.fn() },
+    appDesignPurchase: { aggregate: vi.fn() },
   },
 }));
 
@@ -51,6 +52,10 @@ beforeEach(() => {
   prismaMock.paymentHasPlaylist.groupBy.mockReset();
   prismaMock.payment.findMany.mockReset();
   prismaMock.gamesPurchase.aggregate.mockReset();
+  prismaMock.appDesignPurchase.aggregate.mockReset();
+  prismaMock.appDesignPurchase.aggregate.mockResolvedValue({
+    _sum: { totalPriceWithoutTax: null },
+  });
 });
 
 describe('counters', () => {
@@ -136,6 +141,26 @@ describe('getProfitAndTurnOver', () => {
       totalPrice: 150 + 7, // upgrades only
       totalProfit: 30 + 25, // all games revenue is pure profit
     });
+  });
+
+  it('adds App Designer ex-VAT to both turnover and profit', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([
+      { totalPriceWithoutTax: 100, profit: 20 },
+    ]);
+    prismaMock.gamesPurchase.aggregate.mockResolvedValue({
+      _sum: { totalPrice: 0 },
+    });
+    prismaMock.appDesignPurchase.aggregate.mockResolvedValue({
+      _sum: { totalPriceWithoutTax: 14.88 },
+    });
+
+    const totals = await analytics.getProfitAndTurnOver();
+    expect(prismaMock.appDesignPurchase.aggregate).toHaveBeenCalledWith({
+      _sum: { totalPriceWithoutTax: true },
+    });
+    expect(totals.totalPrice).toBeCloseTo(100 + 14.88, 2);
+    // costs nothing to deliver, so ex-VAT (not gross) is profit
+    expect(totals.totalProfit).toBeCloseTo(20 + 14.88, 2);
   });
 
   it('handles no payments and no games purchases', async () => {

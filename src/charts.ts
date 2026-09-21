@@ -76,10 +76,16 @@ class Charts {
       FROM (
         SELECT
           DATE(p.createdAt) as date,
-          ROUND(SUM(p.totalPrice), 2) as daily_sales,
+          ROUND(SUM(p.totalPrice) + COALESCE((
+            SELECT SUM(adp.totalPrice) FROM app_design_purchases adp
+            WHERE DATE(adp.createdAt) = DATE(p.createdAt)
+          ), 0), 2) as daily_sales,
           ROUND(SUM(p.profit) + COALESCE((
             SELECT SUM(gp.totalPrice) FROM games_purchases gp
             WHERE DATE(gp.createdAt) = DATE(p.createdAt)
+          ), 0) + COALESCE((
+            SELECT SUM(adp.totalPriceWithoutTax) FROM app_design_purchases adp
+            WHERE DATE(adp.createdAt) = DATE(p.createdAt)
           ), 0), 2) as daily_profit,
           COUNT(*) as payment_count,
           ROUND(AVG(p.totalPrice), 2) as daily_aov

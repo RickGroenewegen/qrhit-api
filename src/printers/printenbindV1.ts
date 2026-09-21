@@ -1,5 +1,11 @@
 import Log from '../logger';
-import { maxCardsFor, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/constants';
+import {
+  maxCardsFor,
+  BOX_PRICE,
+  BOX_UNIT_COST,
+  boxTierPrice,
+  DIGITAL_CARDS_BASE_PRICE,
+} from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -1556,7 +1562,9 @@ class PrintEnBindV1 {
 
       price += 1.8; // Handling
     } else {
-      price = (await this.calculateCardPrice(13, useCardAmount)).totalPrice;
+      price = (
+        await this.calculateCardPrice(DIGITAL_CARDS_BASE_PRICE, useCardAmount)
+      ).totalPrice;
     }
 
     price = parseFloat(price.toFixed(2));
