@@ -290,6 +290,8 @@ describe('admin order routes', () => {
       // The order that never finalized gets a playlist of its own: the
       // corrections below sit on a playlist and would otherwise reach it too
       let unfinalizedPlaylistDbId: number;
+      // Same for the order that was finalized but never scheduled
+      let unscheduledPlaylistDbId: number;
 
       // One physical order per case: what the customer did, where the approval
       // timer stands and how far the order got at the printer
@@ -443,6 +445,59 @@ describe('admin order routes', () => {
             priceVAT: 10.5,
           },
         });
+
+        // Finalized, but generation stopped before it set the approval
+        // timer: still Created, no printer order id, and nothing will ever
+        // send it
+        const unscheduledPlaylist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-unscheduled',
+            name: 'Unscheduled Mix',
+            slug: 'unscheduled-mix',
+            image: 'img.png',
+          },
+        });
+        unscheduledPlaylistDbId = unscheduledPlaylist.id;
+
+        const unscheduled = await prisma().payment.create({
+          data: {
+            userId: user.id,
+            paymentId: 'tr_attention_unscheduled',
+            orderId: 'QR900106',
+            status: 'paid',
+            finalized: true,
+            fullname: 'Attention Customer',
+            email: 'attention@test.qrsong.io',
+            totalPrice: 60.5,
+            productPriceWithoutTax: 50,
+            shippingPriceWithoutTax: 0,
+            productVATPrice: 10.5,
+            shippingVATPrice: 0,
+            totalVATPrice: 10.5,
+            taxRate: 21,
+            countrycode: 'NL',
+            address: 'Orderstraat 6',
+            city: 'Utrecht',
+            zipcode: '3511AB',
+            housenumber: '6',
+            printApiStatus: 'Created',
+          },
+        });
+        paymentDbIds.push(unscheduled.id);
+
+        await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: unscheduled.id,
+            playlistId: unscheduledPlaylist.id,
+            amount: 1,
+            numberOfTracks: 100,
+            orderTypeId: orderType.id,
+            type: 'physical',
+            price: 60.5,
+            priceWithoutVAT: 50,
+            priceVAT: 10.5,
+          },
+        });
       });
 
       afterAll(async () => {
@@ -455,6 +510,9 @@ describe('admin order routes', () => {
         await prisma().playlist.delete({ where: { id: playlistDbId } });
         await prisma().playlist.delete({
           where: { id: unfinalizedPlaylistDbId },
+        });
+        await prisma().playlist.delete({
+          where: { id: unscheduledPlaylistDbId },
         });
       });
 
@@ -484,7 +542,7 @@ describe('admin order routes', () => {
 
       it('returns paid orders that were never finalized', async () => {
         const body = await search({ needsAttention: true });
-        expect(body.totalItems).toBe(3);
+        expect(body.totalItems).toBe(4);
         expect(paymentIds(body)).toContain('tr_attention_unfinalized');
 
         const unfinalized = body.data.find(
@@ -497,14 +555,50 @@ describe('admin order routes', () => {
         });
       });
 
+      it('returns finalized orders that never got an approval timer', async () => {
+        const unscheduled = async () =>
+          (await search({ needsAttention: true })).data.find(
+            (payment: any) => payment.paymentId === 'tr_attention_unscheduled'
+          );
+
+        expect((await unscheduled()).attention).toEqual({
+          reason: 'not-scheduled',
+          openCorrections: 0,
+          printerError: null,
+        });
+
+        // An approval makes the order eligible for the hourly pass without
+        // a timer, so it is merely not sent yet
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_unscheduled' } },
+          data: { userConfirmedPrinting: true },
+        });
+        expect((await unscheduled()).attention.reason).toBe('not-sent');
+        await prisma().paymentHasPlaylist.updateMany({
+          where: { payment: { paymentId: 'tr_attention_unscheduled' } },
+          data: { userConfirmedPrinting: false },
+        });
+
+        // Parked on purpose, like every other order on hold
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_unscheduled' },
+          data: { printerHold: true },
+        });
+        expect(await unscheduled()).toBeUndefined();
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_unscheduled' },
+          data: { printerHold: false },
+        });
+      });
+
       it('still answers to the old notSubmitted flag', async () => {
-        expect((await search({ notSubmitted: true })).totalItems).toBe(3);
+        expect((await search({ notSubmitted: true })).totalItems).toBe(4);
       });
 
       it('reports the count while the filter is off', async () => {
         const body = await search({});
-        expect(body.totalItems).toBe(7);
-        expect(body.needsAttentionCount).toBe(3);
+        expect(body.totalItems).toBe(8);
+        expect(body.needsAttentionCount).toBe(4);
       });
 
       it('reports the printer hold count the same way', async () => {
@@ -524,7 +618,7 @@ describe('admin order routes', () => {
         // inside the other filter or it would always read zero
         expect(
           (await search({ printerHold: true })).needsAttentionCount
-        ).toBe(3);
+        ).toBe(4);
         expect(
           (await search({ needsAttention: true })).printerHoldCount
         ).toBe(1);
@@ -546,10 +640,11 @@ describe('admin order routes', () => {
           const body = await search({ needsAttention: true });
           return Object.fromEntries(
             body.data
-              // Always listed, and for a reason of its own
+              // Always listed, each for a reason of its own
               .filter(
                 (payment: any) =>
-                  payment.paymentId !== 'tr_attention_unfinalized'
+                  payment.paymentId !== 'tr_attention_unfinalized' &&
+                  payment.paymentId !== 'tr_attention_unscheduled'
               )
               .map((payment: any) => [payment.paymentId, payment.attention])
           );
@@ -599,7 +694,7 @@ describe('admin order routes', () => {
             printerError: 'Pay on account is off',
           },
         });
-        expect((await search({})).needsAttentionCount).toBe(4);
+        expect((await search({})).needsAttentionCount).toBe(5);
 
         await prisma().payment.update({
           where: { paymentId: 'tr_attention_waiting' },
