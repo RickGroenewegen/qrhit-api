@@ -1448,6 +1448,9 @@ model BlockedIp {
   // one (/qrlink2 does, the legacy /qrlink does not). It names the order whose
   // cards were being read.
   php       Int?
+  // The track the request was asking for when the block hit. For an
+  // enumeration ban this is where in the id range they had got to.
+  trackId   Int?
   expiresAt DateTime?
   createdAt DateTime  @default(now())
 

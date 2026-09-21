@@ -53,13 +53,17 @@ const ENV_KEYS = [
   'QRLINK_BAN_REFRESH_SECONDS',
   'QRLINK_BLOCKED_USER_AGENTS',
   'QRLINK_DENY_IPS',
+  'QRLINK_DECOY_IPS',
   'QRLINK_SEQ_STREAK',
   'QRLINK_SEQ_MAX_STEP',
   'QRLINK_SEQ_WINDOW_SECONDS',
 ];
 
-/** Cloudflare's shared Workers egress, denied by default. */
+/** Cloudflare's shared Workers egress: served a decoy by default. */
 const WORKERS_IP = '2a06:98c0:3600::103';
+
+/** A documentation address used wherever a test needs a real denylist entry. */
+const DENIED_IP = '203.0.113.7';
 
 /**
  * Stands in for the Redis-backed sequence counter so a run of ids can be fed
@@ -219,33 +223,81 @@ describe('rate limiting', () => {
 });
 
 describe('permanent denylist', () => {
-  it('blocks Cloudflare\'s shared Workers egress by default', async () => {
+  it('is empty by default: the Workers egress gets a decoy, not a block', async () => {
     const guard = freshGuard();
     await flush();
+    cacheMock.increment.mockResolvedValue(1);
+
     expect(await guard.check(WORKERS_IP, 'Mozilla/5.0 Chrome/120')).toEqual({
+      allowed: true,
+    });
+    expect(guard.isBanned(WORKERS_IP)).toBe(false);
+    expect(guard.isDenied(WORKERS_IP)).toBe(false);
+  });
+
+  it('blocks an address put on it, before the mirror loads and with Redis down', async () => {
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
+    cacheMock.getSortedSetWithScores.mockRejectedValue(new Error('redis gone'));
+    const guard = freshGuard();
+    await flush();
+
+    expect(guard.isBanned(DENIED_IP)).toBe(true);
+    expect(await guard.check(DENIED_IP, 'Mozilla/5.0 Chrome/120')).toEqual({
       allowed: false,
       reason: 'denylist',
     });
-    expect(guard.isBanned(WORKERS_IP)).toBe(true);
     // Denied addresses never reach the counter or the Redis ban set.
     expect(cacheMock.increment).not.toHaveBeenCalled();
     expect(cacheMock.addToSortedSet).not.toHaveBeenCalled();
   });
 
-  it('holds before the mirror has loaded and while Redis is down', async () => {
-    cacheMock.getSortedSetWithScores.mockRejectedValue(new Error('redis gone'));
-    const guard = freshGuard();
-    await flush();
-    expect(guard.isBanned(WORKERS_IP)).toBe(true);
-  });
-
-  it('accepts extra addresses from the env and ignores case', async () => {
+  it('accepts several addresses from the env and ignores case', async () => {
     process.env['QRLINK_DENY_IPS'] = ' 5.6.7.8 , 2A06:98C0:3600::FF ';
     const guard = freshGuard();
     await flush();
     expect(guard.isBanned('5.6.7.8')).toBe(true);
     expect(guard.isBanned('2a06:98c0:3600::ff')).toBe(true);
     expect(guard.isBanned('5.6.7.9')).toBe(false);
+  });
+});
+
+describe('decoy', () => {
+  it('marks the Workers egress for a decoy by default', async () => {
+    const guard = freshGuard();
+    await flush();
+    expect(guard.isDecoy(WORKERS_IP)).toBe(true);
+    expect(guard.isDecoy('5.6.7.8')).toBe(false);
+  });
+
+  it('accepts extra addresses from the env and ignores case', async () => {
+    process.env['QRLINK_DECOY_IPS'] = ' 9.9.9.1 , 2A06:98C0:3600::FE ';
+    const guard = freshGuard();
+    await flush();
+    expect(guard.isDecoy('9.9.9.1')).toBe(true);
+    expect(guard.isDecoy('2a06:98c0:3600::fe')).toBe(true);
+    // The default is still there.
+    expect(guard.isDecoy(WORKERS_IP)).toBe(true);
+  });
+
+  it('never decoys a whitelisted address', async () => {
+    allowlistMock.getAllowedIps.mockResolvedValue([WORKERS_IP]);
+    const guard = freshGuard();
+    await flush();
+    expect(guard.isDecoy(WORKERS_IP)).toBe(false);
+  });
+
+  it('still counts and bans a decoyed caller, so the dashboard sees them', async () => {
+    process.env['QRLINK_RATE_MAX'] = '2';
+    const guard = freshGuard();
+    await flush();
+    cacheMock.increment.mockResolvedValue(3);
+
+    // The route serves the decoy regardless of this verdict; what matters is
+    // that the detectors still ran and recorded it.
+    const result = await guard.check(WORKERS_IP, 'Mozilla/5.0 Chrome/120', 42);
+
+    expect(result).toEqual({ allowed: false, reason: 'rate-limit' });
+    expect(blockedIpMock.logBlock).toHaveBeenCalled();
   });
 });
 
@@ -458,13 +510,14 @@ describe('unban', () => {
   });
 
   it('refuses to lift a permanent denylist entry and says why', async () => {
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
     const guard = freshGuard();
     await flush();
-    const result = await guard.unban(WORKERS_IP);
+    const result = await guard.unban(DENIED_IP);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('QRLINK_DENY_IPS');
-    expect(guard.isBanned(WORKERS_IP)).toBe(true);
+    expect(guard.isBanned(DENIED_IP)).toBe(true);
   });
 
   it('reports a failure when Redis cannot be cleared', async () => {
@@ -510,13 +563,14 @@ describe('whitelist', () => {
   });
 
   it('beats the permanent denylist', async () => {
-    allowlistMock.getAllowedIps.mockResolvedValue([WORKERS_IP]);
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
+    allowlistMock.getAllowedIps.mockResolvedValue([DENIED_IP]);
     const guard = freshGuard();
     await flush();
 
-    expect(guard.isAllowed(WORKERS_IP)).toBe(true);
-    expect(guard.isBanned(WORKERS_IP)).toBe(false);
-    expect(await guard.check(WORKERS_IP, 'ua')).toEqual({ allowed: true });
+    expect(guard.isAllowed(DENIED_IP)).toBe(true);
+    expect(guard.isBanned(DENIED_IP)).toBe(false);
+    expect(await guard.check(DENIED_IP, 'ua')).toEqual({ allowed: true });
   });
 
   it('ignores an explicit ban call for a whitelisted address', async () => {
@@ -601,35 +655,39 @@ describe('whitelist', () => {
 
 describe('block logging', () => {
   it('reports a blocked IP once, not on every refused request', async () => {
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
     const guard = freshGuard();
     await flush();
     const logs: string[] = [];
     (guard as any).logger = { log: (m: string) => logs.push(m) };
 
     for (let i = 0; i < 5; i++) {
-      expect(guard.isBanned(WORKERS_IP)).toBe(true);
+      expect(guard.isBanned(DENIED_IP)).toBe(true);
     }
     const blocked = logs.filter(l => l.includes('Blocking requests from'));
     expect(blocked).toHaveLength(1);
     expect(blocked[0]).toContain('denylist');
-    expect(blocked[0]).toContain(WORKERS_IP);
+    expect(blocked[0]).toContain(DENIED_IP);
   });
 
   it('records the block once for the admin overview', async () => {
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
     const guard = freshGuard();
     await flush();
 
     for (let i = 0; i < 4; i++) {
-      guard.isBanned(WORKERS_IP, 'Mozilla/5.0 Chrome/120');
+      guard.isBanned(DENIED_IP, 'Mozilla/5.0 Chrome/120');
     }
 
     expect(blockedIpMock.logBlock).toHaveBeenCalledTimes(1);
     expect(blockedIpMock.logBlock).toHaveBeenCalledWith({
-      ip: WORKERS_IP,
+      ip: DENIED_IP,
       reason: 'denylist',
       detail: null,
       userAgent: 'Mozilla/5.0 Chrome/120',
-      php: null, // the global hook does not know which playlist was scanned
+      // The global hook knows neither the playlist nor the track.
+      php: null,
+      trackId: null,
       expiresAt: null, // denylist entries never expire
     });
   });
@@ -646,6 +704,9 @@ describe('block logging', () => {
     const record = blockedIpMock.logBlock.mock.calls[0][0];
     expect(record.php).toBe(8817);
     expect(record.detail).toContain('php=8817');
+    // The track they had reached when the block hit.
+    expect(record.trackId).toBe(392322);
+    expect(record.detail).toContain('track=392322');
   });
 
   it('leaves the playlist empty for the legacy endpoint that has none', async () => {
@@ -654,10 +715,11 @@ describe('block logging', () => {
     await flush();
     cacheMock.increment.mockResolvedValue(3);
 
-    // /qrlink/:trackId carries no playlist.
+    // /qrlink/:trackId carries no playlist, but still names the track.
     await guard.check('5.5.5.3', 'Mozilla/5.0 Chrome/120', '392322');
 
     const record = blockedIpMock.logBlock.mock.calls[0][0];
+    expect(record.trackId).toBe(392322);
     expect(record.php).toBeNull();
     expect(record.detail).not.toContain('php=');
   });
@@ -705,11 +767,12 @@ describe('block logging', () => {
   });
 
   it('does not let a failed record write break the block', async () => {
+    process.env['QRLINK_DENY_IPS'] = DENIED_IP;
     blockedIpMock.logBlock.mockRejectedValue(new Error('db down'));
     const guard = freshGuard();
     await flush();
-    expect(() => guard.isBanned(WORKERS_IP)).not.toThrow();
-    expect(guard.isBanned(WORKERS_IP)).toBe(true);
+    expect(() => guard.isBanned(DENIED_IP)).not.toThrow();
+    expect(guard.isBanned(DENIED_IP)).toBe(true);
   });
 
   it('reports again after a ban has expired and the IP returns', async () => {

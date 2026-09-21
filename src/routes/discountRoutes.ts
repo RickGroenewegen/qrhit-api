@@ -42,6 +42,16 @@ export default async function discountRoutes(
     reply.send(result);
   });
 
+  // The mobile app's standing offer, shown when someone scans a card that is
+  // not ours. Public and read-only: it reads one evergreen percent code and
+  // never mints anything, so unlike /discount/:code it needs no reCAPTCHA (the
+  // app has no site key) and adds no abuse surface. A `success: false` answer
+  // simply hides the offer in the app.
+  fastify.get('/app/offer', async (request: any, reply: any) => {
+    const result = await discount.getAppOffer();
+    reply.send(result);
+  });
+
   // Re-validate every code already in the cart (checkout load, back
   // navigation, before "Pay"). Read-only.
   fastify.post('/discount/validate', async (request: any, reply: any) => {

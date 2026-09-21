@@ -35,9 +35,10 @@ class BlockedIp {
     detail?: string | null;
     userAgent?: string | null;
     php?: number | null;
+    trackId?: number | null;
     expiresAt?: Date | null;
   }): Promise<void> {
-    const { ip, reason, detail, userAgent, php, expiresAt } = params;
+    const { ip, reason, detail, userAgent, php, trackId, expiresAt } = params;
     if (!ip || !reason) {
       return;
     }
@@ -61,6 +62,7 @@ class BlockedIp {
           detail: detail || null,
           userAgent: userAgent || null,
           php: php ?? null,
+          trackId: trackId ?? null,
           expiresAt: expiresAt || null,
         },
       });

@@ -65,6 +65,7 @@ class AbuseGuard {
   private readonly refreshSeconds: number;
   private readonly blockedUserAgents: string[];
   private readonly deniedIps: Set<string>;
+  private readonly decoyIps: Set<string>;
   private readonly seqStreak: number;
   private readonly seqMaxStep: number;
   private readonly seqWindowSeconds: number;
@@ -116,20 +117,38 @@ class AbuseGuard {
       s.toLowerCase()
     );
 
-    // Addresses that are never a paying customer. The default is Cloudflare's
-    // shared Workers egress: every Worker on the platform makes its outbound
-    // fetches from this one address, so it is what you see when someone rents
-    // Workers to proxy a scrape. We are behind CloudFront, not Cloudflare, so
-    // no customer scan, no app request and no SSR render can originate here.
-    // It is fixed platform infrastructure, so unlike a VPS the attacker cannot
-    // rotate away from it without leaving the platform.
-    const deniedDefaults = ['2a06:98c0:3600::103'];
+    // Addresses that are never a paying customer and are refused outright.
+    // Deliberately empty: Cloudflare's shared Workers egress
+    // (2a06:98c0:3600::103) used to be here, but it is served a decoy instead
+    // (see `decoyIps`), which keeps the scraper busy on wrong data rather than
+    // telling it it has been spotted. Put an address here to hard-block it.
+    const deniedDefaults: string[] = [];
     const deniedFromEnv = (process.env['QRLINK_DENY_IPS'] || '')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
     this.deniedIps = new Set(
       [...deniedDefaults, ...deniedFromEnv].map(s => s.toLowerCase())
+    );
+
+    // Addresses that get a decoy track instead of the real one. The default
+    // is Cloudflare's shared Workers egress: every Worker on the platform
+    // makes its outbound fetches from this one address, so it is what renting
+    // Workers to proxy a scrape looks like. We are behind CloudFront, not
+    // Cloudflare, so no customer scan, app request or SSR render can come
+    // from it, and it is fixed platform infrastructure the scraper cannot
+    // rotate off without leaving the platform.
+    //
+    // A decoy beats a 403 here: a block tells a scraper it has been spotted
+    // and it returns adapted, as this one already did once after the
+    // user-agent layer caught it. Wrong data that looks right does not.
+    const decoyDefaults = ['2a06:98c0:3600::103'];
+    const decoyFromEnv = (process.env['QRLINK_DECOY_IPS'] || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    this.decoyIps = new Set(
+      [...decoyDefaults, ...decoyFromEnv].map(s => s.toLowerCase())
     );
 
     // Sequential-id detection. A scraper walks ids upwards; a deck does not.
@@ -368,7 +387,7 @@ class AbuseGuard {
     );
     // A denylisted address is never "banned", so nothing else records it.
     if (reason === 'denylist') {
-      this.record(clientIp, reason, null, userAgent, null, expiresAt ?? null);
+      this.record(clientIp, reason, null, userAgent, null, null, expiresAt ?? null);
     }
   }
 
@@ -384,6 +403,7 @@ class AbuseGuard {
     detail: string | null,
     userAgent?: string,
     php?: number | null,
+    trackId?: number | null,
     expiresAt?: Date | null
   ): void {
     void BlockedIp.getInstance()
@@ -393,6 +413,7 @@ class AbuseGuard {
         detail,
         userAgent: userAgent || null,
         php: php ?? null,
+        trackId: trackId ?? null,
         expiresAt: expiresAt ?? null,
       })
       .catch(() => {});
@@ -408,7 +429,7 @@ class AbuseGuard {
     clientIp: string,
     reason: string,
     code: string = 'ban',
-    context?: { userAgent?: string; php?: number | null }
+    context?: { userAgent?: string; php?: number | null; trackId?: number | null }
   ): Promise<void> {
     if (!clientIp || this.isAllowed(clientIp)) {
       return;
@@ -430,6 +451,7 @@ class AbuseGuard {
       reason,
       context?.userAgent,
       context?.php,
+      context?.trackId,
       new Date(expiry)
     );
     this.logger.log(
@@ -564,6 +586,18 @@ class AbuseGuard {
     return !!clientIp && this.deniedIps.has(clientIp.toLowerCase());
   }
 
+  /**
+   * Whether this address gets a decoy track rather than the real one. A
+   * whitelisted address never does, so one mistaken entry cannot feed a real
+   * customer wrong data.
+   */
+  public isDecoy(clientIp: string): boolean {
+    if (!clientIp || this.isAllowed(clientIp)) {
+      return false;
+    }
+    return this.decoyIps.has(clientIp.toLowerCase());
+  }
+
   private isBlockedUserAgent(userAgent: string): boolean {
     if (!userAgent) {
       return false;
@@ -587,8 +621,10 @@ class AbuseGuard {
     // The playlist the card belongs to. `/qrlink2` carries it, the legacy
     // `/qrlink` does not, so it is only sometimes known.
     const playlist = this.parseId(php);
-    const context = { userAgent, php: playlist };
-    const scanned = `${playlist !== undefined ? `php=${playlist}, ` : ''}userAgent=${
+    const context = { userAgent, php: playlist, trackId: this.parseId(trackId) };
+    const scanned = `${
+      context.trackId !== undefined ? `track=${context.trackId}, ` : ''
+    }${playlist !== undefined ? `php=${playlist}, ` : ''}userAgent=${
       userAgent || 'unknown'
     }`;
 
@@ -641,7 +677,7 @@ class AbuseGuard {
       if (streak >= this.seqStreak) {
         await this.ban(
           clientIp,
-          `sequential track ids: ${streak} ascending requests, last=${trackId}, ${scanned}`,
+          `sequential track ids: ${streak} ascending requests, ${scanned}`,
           'enumeration',
           context
         );

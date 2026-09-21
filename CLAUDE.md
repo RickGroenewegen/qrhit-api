@@ -556,7 +556,8 @@ Four layers, in order, all env-tunable:
 | layer | default | env |
 |---|---|---|
 | whitelist, skips everything below | the `allowed_ips` table | admin UI |
-| permanent denylist | `2a06:98c0:3600::103` | `QRLINK_DENY_IPS` |
+| permanent denylist | empty | `QRLINK_DENY_IPS` |
+| decoy (wrong track, not a block) | `2a06:98c0:3600::103` | `QRLINK_DECOY_IPS` |
 | scraper user-agents | `Hitify-QRSong-Sync` | `QRLINK_BLOCKED_USER_AGENTS` |
 | rate limit | 30 per 60s | `QRLINK_RATE_MAX`, `QRLINK_RATE_WINDOW_SECONDS` |
 | sequential track ids | a run of 10, steps of ≤5, within an hour | `QRLINK_SEQ_STREAK`, `QRLINK_SEQ_MAX_STEP`, `QRLINK_SEQ_WINDOW_SECONDS` |
@@ -567,14 +568,24 @@ route by `ipPlugin`, not just these two, minus the checkout paths in
 
 Things here that cost something to learn:
 
-- **The denylisted address is Cloudflare's shared Workers egress.** Every
-  Worker on the platform makes its outbound `fetch` from that one address, so
-  it is what renting Workers to proxy a scrape looks like. We are behind
-  CloudFront, not Cloudflare, so no customer scan, app request or SSR render
-  can come from it. It is fixed platform infrastructure, so unlike a VPS the
-  attacker cannot rotate off it without leaving the platform. Blocking it does
-  cut off any legitimate third-party Worker that calls us, of which there are
-  none today.
+- **`2a06:98c0:3600::103` is Cloudflare's shared Workers egress**, and it gets
+  a decoy rather than a block. Every Worker on the platform makes its outbound
+  `fetch` from that one address, so it is what renting Workers to proxy a
+  scrape looks like. We are behind CloudFront, not Cloudflare, so no customer
+  scan, app request or SSR render can come from it, and it is fixed platform
+  infrastructure the scraper cannot rotate off without leaving the platform.
+- **A decoy beats a 403.** A block tells a scraper it has been spotted and it
+  comes back adapted, which this one already did once after the user-agent
+  layer caught it. A decoyed caller gets Rick Astley's "Never Gonna Give You
+  Up" on every service instead of the track they asked for (`DECOY_LINKS` in
+  `musicRoutes.ts`). Every link there was resolved through our own MusicFetch
+  pipeline from the Spotify URL, so the id formats match a genuinely enriched
+  track; `yt` is a bare video id because that is what the column stores, and a
+  full URL there would give the game away. The detectors still run for a
+  decoyed caller, so the rate limit, the sequential-id check and the dashboard
+  record all still happen, and the decoy is served in place of the verdict.
+  The serve is logged at most once a minute per address, since the whole point
+  is that the caller keeps going.
 - **Sequential-id detection is what catches a patient scraper.** A rate limit
   alone is a speed limit: 29 requests a minute is invisible forever and still
   drains the database. The detector is safe because `Track.trackId` is unique,
@@ -600,8 +611,10 @@ Things here that cost something to learn:
 - Blocks are recorded in `blocked_ips` for the dashboard (Data → Blocked IPs),
   written by the worker that issued the ban, which is the only one that knows
   why. Other workers only learn the address is banned, so leaving it to them
-  would add a vaguer duplicate row each. The stored `php` is resolved to the
-  order, playlist and customer on read.
+  would add a vaguer duplicate row each. Each row keeps the `trackId` they had
+  reached and, when the request carried one, the `php`, which is resolved to
+  the order, playlist and customer on read. `/qrlink2` carries a `php`, the
+  legacy `/qrlink` does not.
 - **Unblocking must clear both counters**, not just the ban: an address let
   back in on a counter that is already over the limit, or mid-run, is banned
   again on its next request.

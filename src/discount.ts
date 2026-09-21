@@ -130,6 +130,49 @@ interface CodeParams {
  * whose checkout window has not run out. Released and expired reservations
  * are ignored, which is what frees a balance after an abandoned checkout.
  */
+/**
+ * Canonical form of an address for the `oncePerCustomer` limit.
+ *
+ * Without this, one person claims the same single-use code as often as they
+ * like: rick@west14.com, rick+try2@west14.com and rick+try3@west14.com are three
+ * distinct strings that all deliver to the same inbox. Sub-addressing after `+`
+ * is stripped for every provider, since no mail host treats the tag as part of
+ * the mailbox identity.
+ *
+ * Dots are only stripped for Gmail, which genuinely ignores them
+ * (r.ick@gmail.com == rick@gmail.com). Elsewhere a dot can distinguish two real
+ * people, so removing it would wrongly merge them and deny a legitimate
+ * customer their discount.
+ *
+ * Only used for the usage limit. The address stored on the Payment, invoiced
+ * and mailed to is always the one the customer actually typed.
+ */
+export function normalizeEmailForLimit(email: string | null | undefined): string | null {
+  const trimmed = (email || '').trim().toLowerCase();
+  if (!trimmed) return null;
+
+  const at = trimmed.lastIndexOf('@');
+  if (at <= 0 || at === trimmed.length - 1) {
+    // Not a shape we can split; fall back to the plain lowercased string rather
+    // than dropping the limit altogether.
+    return trimmed;
+  }
+
+  let local = trimmed.slice(0, at);
+  let domain = trimmed.slice(at + 1);
+
+  const plus = local.indexOf('+');
+  if (plus >= 0) local = local.slice(0, plus);
+
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') local = local.split('.').join('');
+
+  // A local part of only a tag ("+foo@x.com") would normalise to empty.
+  if (!local) return trimmed;
+
+  return `${local}@${domain}`;
+}
+
 const liveUseWhere = (now: Date) => ({
   OR: [
     { status: 'paid' },
@@ -506,6 +549,92 @@ class Discount {
     }
   }
 
+  /**
+   * The standing offer the mobile app shows when someone scans a card that is
+   * not ours: a friend's deck from another service, or a competitor's card.
+   *
+   * Deliberately read-only. Every app-facing endpoint is unauthenticated, so an
+   * endpoint that *minted* a code would be an open faucet. Instead one evergreen
+   * percent code is handed to everyone and `oncePerCustomer` limits it to a
+   * single redemption per e-mail address, which `evaluateWith` already enforces
+   * against DiscountCodedUses.email at checkout.
+   *
+   * Returning `{ success: false }` (expired, deleted, or switched to a fixed
+   * voucher) is a normal answer, not an error: the app simply hides the offer,
+   * so the code can be retired from the database without an app release.
+   */
+  public async getAppOffer(): Promise<{
+    success: boolean;
+    code?: string;
+    percent?: number;
+    endDate?: string | null;
+  }> {
+    const wanted = (process.env['APP_OFFER_CODE'] || 'JUMPSHIP')
+      .trim()
+      .toUpperCase();
+    const cacheKey = `app_offer:${wanted}`;
+
+    try {
+      const cached = await this.cache.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      // A cache miss must never cost us the offer; fall through to the database.
+    }
+
+    let result: {
+      success: boolean;
+      code?: string;
+      percent?: number;
+      endDate?: string | null;
+    } = { success: false };
+
+    try {
+      const offer = await this.prisma.discountCode.findUnique({
+        where: { code: wanted },
+        select: {
+          code: true,
+          type: true,
+          percent: true,
+          startDate: true,
+          endDate: true,
+        },
+      });
+
+      const now = new Date();
+      const isLive =
+        !!offer &&
+        offer.type === 'percent' &&
+        !!offer.percent &&
+        (!offer.startDate || offer.startDate <= now) &&
+        (!offer.endDate || offer.endDate >= now);
+
+      if (isLive && offer) {
+        result = {
+          success: true,
+          code: offer.code,
+          percent: offer.percent as number,
+          endDate: offer.endDate ? offer.endDate.toISOString() : null,
+        };
+      }
+    } catch (error) {
+      // Same contract as getDiscountDetails: a lookup failure is reported as
+      // "no offer", never thrown at the app mid-scan.
+      return { success: false };
+    }
+
+    try {
+      // Short TTL: long enough to absorb a launch spike, short enough that
+      // pausing the code in the database takes effect within the hour.
+      await this.cache.set(cacheKey, JSON.stringify(result), 900);
+    } catch (error) {
+      // Not being able to cache is not a reason to withhold the offer.
+    }
+
+    return result;
+  }
+
   // ---------------------------------------------------------------------
   // Usage queries
   // ---------------------------------------------------------------------
@@ -824,7 +953,11 @@ class Discount {
     mode: DiscountMode
   ): Promise<DiscountEvaluation> {
     const now = ctx.now || new Date();
-    const email = (ctx.email || '').trim().toLowerCase() || null;
+    // Normalised once here, which covers both the oncePerCustomer lookup below
+    // and the email written onto the use row - so what we store is what we
+    // later match against. Rows written before this existed hold the raw
+    // address and simply will not match a tagged variant.
+    const email = normalizeEmailForLimit(ctx.email);
     const items: any[] = cart?.items || [];
     const applied: EvaluatedDiscount[] = [];
     const failed: FailedDiscount[] = [];

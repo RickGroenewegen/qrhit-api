@@ -63,6 +63,7 @@ describe('logBlock', () => {
       detail: 'sequential track ids: 10 ascending requests',
       userAgent: 'Mozilla/5.0',
       php: 8817,
+      trackId: 392351,
       expiresAt,
     });
 
@@ -73,6 +74,7 @@ describe('logBlock', () => {
         detail: 'sequential track ids: 10 ascending requests',
         userAgent: 'Mozilla/5.0',
         php: 8817,
+        trackId: 392351,
         expiresAt,
       },
     });
@@ -102,6 +104,7 @@ describe('logBlock', () => {
         detail: null,
         userAgent: null,
         php: null,
+        trackId: null,
         expiresAt: null,
       },
     });
