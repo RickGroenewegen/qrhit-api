@@ -3484,7 +3484,6 @@ class Mollie {
         vatIdChecked: true,
         boxFee: true,
         gamesFee: true,
-        appDesignFee: true,
         DiscountCodedUses: {
           select: {
             amount: true,
