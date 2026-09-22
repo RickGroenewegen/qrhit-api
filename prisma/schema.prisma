@@ -495,6 +495,7 @@ model UserSuggestion {
   userId               Int
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, trackId]) // one open correction per customer and track
   @@map("usersuggestions")
 }
 
@@ -512,6 +513,7 @@ model TrackExtraInfo {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
+  @@unique([playlistId, trackId]) // a second row makes every track query return the card twice
   @@map("trackextrainfo")
 }
 

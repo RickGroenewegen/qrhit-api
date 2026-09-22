@@ -2307,9 +2307,16 @@ class Vibe {
         const position = i + 1;
         const extraArtistAttributeValue = `#${position}`;
 
+        // Upsert: finalizing a list again reuses its playlist row, and a
+        // second row per track would print every card twice.
         trackExtraInfoCreations.push(
-          this.prisma.trackExtraInfo.create({
-            data: {
+          this.prisma.trackExtraInfo.upsert({
+            where: { playlistId_trackId: { playlistId, trackId } },
+            update: {
+              extraNameAttribute: extraNameAttributeValue,
+              extraArtistAttribute: extraArtistAttributeValue,
+            },
+            create: {
               playlistId: playlistId,
               trackId: trackId,
               extraNameAttribute: extraNameAttributeValue,

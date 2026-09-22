@@ -13,6 +13,21 @@ import Data from './data';
 import Cache from './cache';
 import Settings from './settings';
 
+/**
+ * Prisma's upsert on MySQL is a read followed by a create, not one statement.
+ * Two requests on the same unique key can both miss the row, and the slower
+ * create then fails with P2002. Running it again finds the row the other
+ * request made and updates it.
+ */
+async function retryOnUniqueConflict<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error: any) {
+    if (error?.code !== 'P2002') throw error;
+    return await run();
+  }
+}
+
 class Suggestion {
   private static instance: Suggestion;
   private prisma = PrismaInstance.getInstance();
@@ -201,43 +216,29 @@ class Suggestion {
         return false;
       }
 
-      // Check if suggestion already exists
-      const existingSuggestion = await this.prisma.userSuggestion.findFirst({
-        where: {
-          trackId: trackId,
-          userId: user.id,
-        },
-      });
-
-      if (existingSuggestion) {
-        // Update existing suggestion
-        await this.prisma.userSuggestion.update({
-          where: {
-            id: existingSuggestion.id,
-          },
-          data: {
-            name: suggestion.name,
-            artist: suggestion.artist,
-            year: suggestion.year,
-            extraNameAttribute: suggestion.extraNameAttribute,
-            extraArtistAttribute: suggestion.extraArtistAttribute,
-          },
-        });
-      } else {
-        // Create new suggestion
-        await this.prisma.userSuggestion.create({
-          data: {
-            trackId: trackId,
+      // The correction page saves each field of a track in its own request,
+      // so two of them can arrive together. A find-then-create let both
+      // create a row, and processCorrections then wrote the track's
+      // trackextrainfo twice, which printed the card twice.
+      const data = {
+        name: suggestion.name,
+        artist: suggestion.artist,
+        year: suggestion.year,
+        extraNameAttribute: suggestion.extraNameAttribute,
+        extraArtistAttribute: suggestion.extraArtistAttribute,
+      };
+      await retryOnUniqueConflict(() =>
+        this.prisma.userSuggestion.upsert({
+          where: { userId_trackId: { userId: user.id, trackId } },
+          update: data,
+          create: {
+            ...data,
+            trackId,
             userId: user.id,
             playlistId: check[0].playlistDBId,
-            name: suggestion.name,
-            artist: suggestion.artist,
-            year: suggestion.year,
-            extraNameAttribute: suggestion.extraNameAttribute,
-            extraArtistAttribute: suggestion.extraArtistAttribute,
           },
-        });
-      }
+        })
+      );
 
       return true;
     } catch (error) {
@@ -700,7 +701,7 @@ class Suggestion {
         AND pl.playlistId = ${playlistId}
       `;
 
-      const updateQueries = [];
+      const updateQueries: (() => Promise<unknown>)[] = [];
 
       for (const suggestion of suggestions) {
         const changes = [];
@@ -831,7 +832,7 @@ class Suggestion {
           trackModifications.manuallyCorrected = true;
 
           // Add Track update to queries
-          updateQueries.push(
+          updateQueries.push(() =>
             this.prisma.track.update({
               where: { id: suggestion.trackId },
               data: trackModifications,
@@ -846,56 +847,51 @@ class Suggestion {
             });
 
             if (playlist) {
-              const existingExtraInfo =
-                await this.prisma.trackExtraInfo.findFirst({
-                  where: {
-                    trackId: suggestion.trackId,
-                    playlistId: playlist.id,
-                  },
-                });
-
-              if (existingExtraInfo) {
-                updateQueries.push(
-                  this.prisma.trackExtraInfo.update({
-                    where: { id: existingExtraInfo.id },
-                    data: extraInfoModifications,
+              // An upsert on (playlistId, trackId), not a lookup made now and
+              // a create queued for later: with the track listed twice, both
+              // lookups ran before either create and the row was made twice.
+              const createData: Prisma.TrackExtraInfoCreateInput = {
+                track: { connect: { id: suggestion.trackId } },
+                playlist: { connect: { id: playlist.id } },
+                // Conditionally spread properties, casting to simple types expected by CreateInput
+                ...(extraInfoModifications.name !== undefined && {
+                  name: extraInfoModifications.name as string | null,
+                }),
+                ...(extraInfoModifications.artist !== undefined && {
+                  artist: extraInfoModifications.artist as string | null,
+                }),
+                ...(extraInfoModifications.year !== undefined && {
+                  year: extraInfoModifications.year as number | null,
+                }),
+                ...(extraInfoModifications.extraNameAttribute !==
+                  undefined && {
+                  extraNameAttribute:
+                    extraInfoModifications.extraNameAttribute as
+                      | string
+                      | null,
+                }),
+                ...(extraInfoModifications.extraArtistAttribute !==
+                  undefined && {
+                  extraArtistAttribute:
+                    extraInfoModifications.extraArtistAttribute as
+                      | string
+                      | null,
+                }),
+              };
+              updateQueries.push(() =>
+                retryOnUniqueConflict(() =>
+                  this.prisma.trackExtraInfo.upsert({
+                    where: {
+                      playlistId_trackId: {
+                        playlistId: playlist.id,
+                        trackId: suggestion.trackId,
+                      },
+                    },
+                    update: extraInfoModifications,
+                    create: createData,
                   })
-                );
-              } else {
-                const createData: Prisma.TrackExtraInfoCreateInput = {
-                  track: { connect: { id: suggestion.trackId } },
-                  playlist: { connect: { id: playlist.id } },
-                  // Conditionally spread properties, casting to simple types expected by CreateInput
-                  ...(extraInfoModifications.name !== undefined && {
-                    name: extraInfoModifications.name as string | null,
-                  }),
-                  ...(extraInfoModifications.artist !== undefined && {
-                    artist: extraInfoModifications.artist as string | null,
-                  }),
-                  ...(extraInfoModifications.year !== undefined && {
-                    year: extraInfoModifications.year as number | null,
-                  }),
-                  ...(extraInfoModifications.extraNameAttribute !==
-                    undefined && {
-                    extraNameAttribute:
-                      extraInfoModifications.extraNameAttribute as
-                        | string
-                        | null,
-                  }),
-                  ...(extraInfoModifications.extraArtistAttribute !==
-                    undefined && {
-                    extraArtistAttribute:
-                      extraInfoModifications.extraArtistAttribute as
-                        | string
-                        | null,
-                  }),
-                };
-                updateQueries.push(
-                  this.prisma.trackExtraInfo.create({
-                    data: createData,
-                  })
-                );
-              }
+                )
+              );
             }
           }
         }
@@ -904,8 +900,8 @@ class Suggestion {
       // Execute all text correction updates if there are any
       if (updateQueries.length > 0) {
         // Run updates in series to avoid exhausting the connection pool
-        for (const query of updateQueries) {
-          await query;
+        for (const run of updateQueries) {
+          await run();
         }
 
         this.logger.log(
