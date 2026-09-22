@@ -424,6 +424,31 @@ sharp dominant-colour fallback, per-IP daily counter in Redis). The paid
 webhook mails `app_design_enabled_*` (how it works, where to design) and
 issues an upgrade invoice, see the next section.
 
+**Bought at checkout** (2026-09-22): `cart.appDesign` adds `APP_DESIGN_PRICE`
+once per order (`addAppDesignFee` in `src/order.ts`, an add-on in the
+discount base like box and games); `payments.appDesignFee` holds it, inside
+`totalPrice`, the VAT columns and `profit`, and the order invoice gets an
+`appDesign` line. The designs the site made from the cards wait in
+`payments.appDesignRequest` (`validateCheckoutDesigns` checks them against the
+cart: one per card playlist, only that card's own uploads, the usual theme
+grammar) until `activateCheckoutPurchase` runs from the paid webhook, or right
+after payment creation for a free order: the card uploads are copied into the
+App Designer folder, the first design becomes the account default when there
+is none (lines whose cards look the same follow it), every other one becomes
+that line's own design, a plain design never overrides an existing default,
+and `processUpgradePayment` writes the `app_design_purchases` row with
+`paymentId` set. **The reports count every purchase but add money only for
+rows without a `paymentId`** (day/month, country, tax and OSS, charts,
+dashboard counters, `scripts/kpi.ts`); the tax report carries the checkout
+rows' ex-VAT as `appDesignCheckoutExVat` so the MoneyBird invoice can move it
+from the sales line to the App Designer line. `Order.calculateOrder` looks the
+checkout e-mail up (`email` in the body, only with App Designer ticked) and
+answers `appDesignOwned`, so an owner is shown it as free and never charged
+again; payment creation does the same lookup itself. `GET
+/app-design/card-palette/:filename` (public) gives the dominant and accent
+colour of a card background for the design the site derives. `chat.json`
+carries `{{appDesignPrice}}`, filled from the constant like the card limits.
+
 ## Upgrade invoices (the U range)
 
 Purchases made after an order get their own invoice, mailed on its own with

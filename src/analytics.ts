@@ -171,9 +171,11 @@ class AnalyticsClient {
     totals.totalPrice += upgradeGamesRevenue;
     totals.totalProfit += gamesRevenue;
 
-    // App Designer (account upgrade, own ledger, no Payment row): ex-VAT is
-    // turnover, and since it costs nothing to deliver it is profit as well.
+    // App Designer bought on the account (own ledger, no Payment row): ex-VAT
+    // is turnover, and since it costs nothing to deliver it is profit as
+    // well. Bought at checkout it is already in its order's totals and profit.
     const appDesignTotal = await this.prisma.appDesignPurchase.aggregate({
+      where: { paymentId: null },
       _sum: { totalPriceWithoutTax: true },
     });
     const appDesignRevenue = appDesignTotal._sum.totalPriceWithoutTax || 0;

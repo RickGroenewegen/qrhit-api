@@ -2867,28 +2867,20 @@ describe('getPaymentsByMonth: App Designer', () => {
         _max: { taxRate: 21 },
       },
     ]);
-    prismaMock.appDesignPurchase.groupBy.mockResolvedValue([
-      {
-        countrycode: 'NL',
-        _count: { _all: 1 },
-        _sum: { totalPrice: 9, totalPriceWithoutTax: 7.44 },
-        _max: { taxRate: 21 },
-      },
-      {
-        countrycode: 'DE',
-        _count: { _all: 2 },
-        _sum: { totalPrice: 18, totalPriceWithoutTax: 15.13 },
-        _max: { taxRate: 19 },
-      },
+    prismaMock.appDesignPurchase.findMany.mockResolvedValue([
+      { countrycode: 'NL', paymentId: null, totalPrice: 9, totalPriceWithoutTax: 7.44, taxRate: 21 },
+      // Bought at checkout: already inside the NL order totals above.
+      { countrycode: 'NL', paymentId: 40, totalPrice: 9, totalPriceWithoutTax: 7.44, taxRate: 21 },
+      { countrycode: 'DE', paymentId: null, totalPrice: 9, totalPriceWithoutTax: 7.56, taxRate: 19 },
+      { countrycode: 'DE', paymentId: null, totalPrice: 9, totalPriceWithoutTax: 7.57, taxRate: 19 },
     ]);
     const start = new Date(2026, 8, 1);
     const end = new Date(2026, 9, 0, 23, 59, 59);
 
     const report = await mollie.getPaymentsByMonth(start, end);
 
-    expect(prismaMock.appDesignPurchase.groupBy).toHaveBeenCalledWith(
+    expect(prismaMock.appDesignPurchase.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        by: ['countrycode'],
         where: { createdAt: { gte: start, lte: end } },
       })
     );
@@ -2897,7 +2889,7 @@ describe('getPaymentsByMonth: App Designer', () => {
       country: 'NL',
       numberOfSales: 2,
       totalPrice: 50,
-      appDesignAmount: 1,
+      appDesignAmount: 2,
       appDesignTotal: 9,
       appDesignExVat: 7.44,
     });
@@ -2943,6 +2935,8 @@ describe('getPaymentsByTaxRate: App Designer', () => {
     );
     prismaMock.appDesignPurchase.findMany.mockResolvedValue([
       { molliePaymentId: 'tr_a_nl', countrycode: 'NL', taxRate: 21, totalPrice: 9, totalPriceWithoutTax: 7.44, totalVAT: 1.56 },
+      // Bought at checkout with tr_nl, so already inside its totals and VAT.
+      { molliePaymentId: 'tr_nl', paymentId: 1, countrycode: 'NL', taxRate: 21, totalPrice: 9, totalPriceWithoutTax: 7.44, totalVAT: 1.56 },
       { molliePaymentId: 'tr_a_de', countrycode: 'DE', taxRate: 19, totalPrice: 9, totalPriceWithoutTax: 7.56, totalVAT: 1.44 },
       { molliePaymentId: 'tr_a_fr', countrycode: 'FR', taxRate: 20, totalPrice: 9, totalPriceWithoutTax: 7.5, totalVAT: 1.5 },
       { molliePaymentId: 'tr_a_us', countrycode: 'US', taxRate: 0, totalPrice: 9, totalPriceWithoutTax: 9, totalVAT: 0 },
@@ -2970,11 +2964,14 @@ describe('getPaymentsByTaxRate: App Designer', () => {
     expect(nl.totalPrice).toBe(25); // playlists' gross; App Designer has its own
     expect(nl.totalPriceWithoutTax).toBeCloseTo(20.66 + 7.44, 2);
     expect(nl.totalVAT).toBeCloseTo(4.34 + 1.56, 2);
+    // Both purchases are counted; only the account one adds money, and the
+    // checkout one's ex-VAT is carried for the MoneyBird split.
     expect(nl).toMatchObject({
-      appDesignAmount: 1,
+      appDesignAmount: 2,
       appDesignTotal: 9,
       appDesignExVat: 7.44,
       appDesignVAT: 1.56,
+      appDesignCheckoutExVat: 7.44,
     });
 
     // Lower-case payment country and the ledger's upper-case one share a row.

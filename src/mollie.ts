@@ -29,7 +29,7 @@ import { QRGAMES_UPGRADE_PRICE } from './game';
 import { BOX_PRICE, APP_DESIGN_PRICE } from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
-import AppDesign from './appDesign';
+import AppDesign, { CheckoutAppDesignRequest, validateCheckoutDesigns } from './appDesign';
 import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
 import { extractPrintErrorMessage } from './printers/printErrorMessage';
@@ -259,15 +259,17 @@ class Mollie {
 
       const boxMap = new Map(boxResults.map(b => [b.period, b]));
 
-      // App Designer is bought on the account through its own Mollie payment
-      // and has no Payment row, so it comes from its ledger. appDesignExVat is
-      // what it adds to profit (it costs nothing to deliver).
+      // App Designer bought on the account has its own Mollie payment and no
+      // Payment row, so it comes from its ledger. appDesignExVat is what it
+      // adds to profit (it costs nothing to deliver). Bought at checkout
+      // (paymentId set) it is already in that order's totals and profit:
+      // counted here, summed only there, like initial games.
       const appDesignResults: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${appDesignDateExpr} as period,
           COUNT(*) as appDesignAmount,
-          COALESCE(SUM(adp.totalPrice), 0) as appDesignTotal,
-          COALESCE(SUM(adp.totalPriceWithoutTax), 0) as appDesignExVat
+          COALESCE(SUM(CASE WHEN adp.paymentId IS NULL THEN adp.totalPrice ELSE 0 END), 0) as appDesignTotal,
+          COALESCE(SUM(CASE WHEN adp.paymentId IS NULL THEN adp.totalPriceWithoutTax ELSE 0 END), 0) as appDesignExVat
         FROM app_design_purchases adp
         GROUP BY ${appDesignDateExpr}
       `);
@@ -505,31 +507,40 @@ class Mollie {
     `);
     const boxMap = new Map(boxByCountry.map(b => [b.countrycode || 'Unknown', Number(b.boxAmount) || 0]));
 
-    // App Designer by country, from its own ledger (no Payment row). The
-    // ex-VAT sum is what it adds to profit.
-    const appDesignByCountry = await this.prisma.appDesignPurchase.groupBy({
-      by: ['countrycode'],
+    // App Designer by country, from its own ledger. The ex-VAT sum is what it
+    // adds to profit. Every purchase is counted; only those bought on the
+    // account add money, one bought at checkout (paymentId) is already in
+    // its order's totals.
+    const appDesignRows = await this.prisma.appDesignPurchase.findMany({
       where: {
         createdAt: {
           gte: startDate,
           lte: endDate,
         },
       },
-      _count: { _all: true },
-      _sum: { totalPrice: true, totalPriceWithoutTax: true },
-      _max: { taxRate: true },
+      select: {
+        countrycode: true,
+        paymentId: true,
+        totalPrice: true,
+        totalPriceWithoutTax: true,
+        taxRate: true,
+      },
     });
-    const appDesignMap = new Map(
-      appDesignByCountry.map(a => [
-        a.countrycode || 'Unknown',
-        {
-          amount: a._count._all,
-          total: a._sum.totalPrice || 0,
-          exVat: a._sum.totalPriceWithoutTax || 0,
-          taxRate: a._max.taxRate || 0,
-        },
-      ])
-    );
+    const appDesignMap = new Map<
+      string,
+      { amount: number; total: number; exVat: number; taxRate: number }
+    >();
+    for (const row of appDesignRows) {
+      const key = row.countrycode || 'Unknown';
+      const agg = appDesignMap.get(key) || { amount: 0, total: 0, exVat: 0, taxRate: 0 };
+      agg.amount += 1;
+      if (!row.paymentId) {
+        agg.total = round2(agg.total + (row.totalPrice || 0));
+        agg.exVat = round2(agg.exVat + (row.totalPriceWithoutTax || 0));
+      }
+      agg.taxRate = Math.max(agg.taxRate, row.taxRate || 0);
+      appDesignMap.set(key, agg);
+    }
 
     // Count payments whose profit has been assigned. Digital orders get profit
     // at creation; physical orders only after submission to the print API
@@ -775,18 +786,24 @@ class Mollie {
       gamesMap.set(key, cur);
     }
 
-    // App Designer: an account upgrade paid through its own Mollie payment,
-    // with no Payment row. Its ledger stores the VAT split, and both parts
-    // count towards the row's taxable totals (totalPriceWithoutTax, totalVAT).
-    // totalPrice and numberOfSales stay the playlists'; appDesign* is the
-    // breakdown. A (zone, country, rate) with only App Designer sales still
-    // gets a row.
+    // App Designer bought on the account: paid through its own Mollie
+    // payment, with no Payment row. Its ledger stores the VAT split, and both
+    // parts count towards the row's taxable totals (totalPriceWithoutTax,
+    // totalVAT). totalPrice and numberOfSales stay the playlists'; appDesign*
+    // is the breakdown. A (zone, country, rate) with only App Designer sales
+    // still gets a row.
+    //
+    // Bought at checkout (paymentId set) it is already inside that order's
+    // totals and VAT, so it is counted but adds no money here.
+    // appDesignCheckoutExVat carries its ex-VAT share only so the MoneyBird
+    // invoice can book it on the App Designer line instead of under sales.
     const appDesignRows = await this.prisma.appDesignPurchase.findMany({
       where: {
         createdAt: { gte: startDate, lte: endDate },
       },
       select: {
         molliePaymentId: true,
+        paymentId: true,
         countrycode: true,
         taxRate: true,
         totalPrice: true,
@@ -800,17 +817,22 @@ class Mollie {
       total: number;
       exVat: number;
       vat: number;
+      checkoutExVat: number;
     };
     const addAppDesign = (
       map: Map<string, AppDesignAgg>,
       key: string,
       a: (typeof appDesignRows)[number]
     ) => {
-      const cur = map.get(key) || { amount: 0, total: 0, exVat: 0, vat: 0 };
+      const cur = map.get(key) || { amount: 0, total: 0, exVat: 0, vat: 0, checkoutExVat: 0 };
       cur.amount += 1;
-      cur.total += a.totalPrice || 0;
-      cur.exVat += a.totalPriceWithoutTax || 0;
-      cur.vat += a.totalVAT || 0;
+      if (!a.paymentId) {
+        cur.total += a.totalPrice || 0;
+        cur.exVat += a.totalPriceWithoutTax || 0;
+        cur.vat += a.totalVAT || 0;
+      } else {
+        cur.checkoutExVat += a.totalPriceWithoutTax || 0;
+      }
       map.set(key, cur);
     };
     const appDesignMap = new Map<string, AppDesignAgg>();
@@ -861,6 +883,7 @@ class Mollie {
         appDesignTotal: appDesign?.total || 0,
         appDesignExVat: appDesign?.exVat || 0,
         appDesignVAT: appDesign?.vat || 0,
+        appDesignCheckoutExVat: appDesign?.checkoutExVat || 0,
       };
     });
 
@@ -974,6 +997,7 @@ class Mollie {
         appDesignTotal: appDesign?.total || 0,
         appDesignExVat: appDesign?.exVat || 0,
         appDesignVAT: appDesign?.vat || 0,
+        appDesignCheckoutExVat: appDesign?.checkoutExVat || 0,
       };
     });
 
@@ -2125,6 +2149,26 @@ class Mollie {
       // Refresh track counts from Spotify API (uncached) before calculating price
       await this.refreshCartTrackCounts(params.cart, params.locale);
 
+      // App Designer ticked at checkout: only sold with at least one design
+      // the checkout made from a card, and free for an account that already
+      // has it (the designs are still made).
+      const appDesign = AppDesign.getInstance();
+      const checkoutDesigns =
+        params.cart?.appDesign === true
+          ? validateCheckoutDesigns(params.appDesign, params.cart.items || [], (body) =>
+              appDesign.normalizeInput(body)
+            )
+          : new Map();
+      params.cart.appDesign = checkoutDesigns.size > 0;
+      let appDesignOwned = false;
+      if (params.cart.appDesign) {
+        const owner = await this.prisma.user.findUnique({
+          where: { email: String(params.extraOrderData.email || '').trim() },
+          select: { id: true },
+        });
+        appDesignOwned = owner ? await appDesign.isEntitled(owner.id) : false;
+      }
+
       // Re-run the calculation server-side so we never trust a client-
       // tampered `taxRate` / `total`. MUST include the business/VAT-ID
       // fields — otherwise reverse-charge is silently lost here and the
@@ -2136,6 +2180,7 @@ class Mollie {
         fast: params.extraOrderData.fast || false,
         isBusinessOrder: !!params.extraOrderData.isBusinessOrder,
         vatId: params.extraOrderData.vatId || null,
+        appDesignOwned,
       });
 
       // calculateOrder now refuses (rather than silently returning a €0 total)
@@ -2374,6 +2419,22 @@ class Mollie {
         params.cart.items
       );
 
+      // The checkout's app designs, now keyed by the playlist rows the order
+      // lines point at. Applied once the order is paid.
+      const appDesignRequest: CheckoutAppDesignRequest | null =
+        checkoutDesigns.size > 0
+          ? {
+              designs: [...checkoutDesigns.entries()].flatMap(([spotifyId, entry]) => {
+                const index = params.cart.items.findIndex(
+                  (item: CartItem) => item.playlistId === spotifyId
+                );
+                return index >= 0 && playlistDatabaseIds[index]
+                  ? [{ playlistId: playlistDatabaseIds[index], ...entry }]
+                  : [];
+              }),
+            }
+          : null;
+
       // Look up any AI-generated playlist prompts so we can persist them
       // on the payment_has_playlist records below.
       const cartSpotifyIds = Array.from(
@@ -2565,9 +2626,14 @@ class Mollie {
         discountBase.volumeDiscount,
         goodsTaxRate
       );
+      // App Designer costs nothing to deliver, so all of it is profit. It is
+      // added here because setPaymentInfo, which rebuilds the profit of a
+      // printed order, never runs for a digital one.
+      const appDesignFee = calculateResult.data.appDesignFee || 0;
       let totalProfit = round2(
         productPriceWithoutTax +
-          shippingPriceWithoutTax -
+          shippingPriceWithoutTax +
+          exVat(appDesignFee, goodsTaxRate) -
           allocation.discountWithoutTax -
           volumeDiscountExcl
       );
@@ -2631,6 +2697,8 @@ class Mollie {
           discountShipping: allocation.discountShipping,
           boxFee: calculateResult.data.boxFee || 0,
           gamesFee: calculateResult.data.gamesFee || 0,
+          appDesignFee,
+          ...(appDesignRequest ? { appDesignRequest: appDesignRequest as any } : {}),
           currency: presentmentCurrency,
           exchangeRate: presentmentRate,
           totalPricePresentment:
@@ -2712,6 +2780,16 @@ class Mollie {
           orderId: newOrderId.toString(),
         },
       });
+
+      // An order that needs no payment gets no webhook: switch its App
+      // Designer on here, before generation sends the order mail.
+      if (appDesignRequest && molliePaymentStatus === 'paid') {
+        try {
+          await appDesign.activateCheckoutPurchase(paymentId);
+        } catch (error) {
+          console.error('Checkout App Designer activation failed', error);
+        }
+      }
 
       if (triggerDirectGeneration) {
         if (waitForDirectGeneration) {
@@ -3353,6 +3431,14 @@ class Mollie {
             }
           }
 
+          // App Designer bought at checkout. Before generation, so the order
+          // mail already says the design is on; never in its way.
+          try {
+            await AppDesign.getInstance().activateCheckoutPurchase(dbPayment.id);
+          } catch (e) {
+            console.error('Checkout App Designer activation failed', e);
+          }
+
           this.generator.queueGenerate(
             params.id,
             metadata.clientIp,
@@ -3484,6 +3570,7 @@ class Mollie {
         vatIdChecked: true,
         boxFee: true,
         gamesFee: true,
+        appDesignFee: true,
         DiscountCodedUses: {
           select: {
             amount: true,

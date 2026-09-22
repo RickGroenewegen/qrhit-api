@@ -496,6 +496,35 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
   );
 
   /**
+   * GET /app-design/card-palette/:filename
+   * The dominant and an accent colour of a card's background upload, for the
+   * app design the checkout makes from a card. Public, like the checkout:
+   * guests order too. Only names of card uploads, answered from Redis after
+   * the first time.
+   */
+  fastify.get('/app-design/card-palette/:filename', async (request: any, reply: any) => {
+    const filename = sanitizeAssetFilename(request.params.filename);
+    if (!filename) {
+      return reply.status(400).send({ success: false, error: 'Invalid filename' });
+    }
+    try {
+      const palette = await appDesign.cardPalette(filename);
+      if (!palette) {
+        return reply.status(400).send({ success: false, error: 'Invalid filename' });
+      }
+      return reply.send({ success: true, palette });
+    } catch (error: any) {
+      if (error?.code === 'ENOENT' || /missing|no such file|unsupported image/i.test(error?.message || '')) {
+        return reply.status(404).send({ success: false, error: 'Background not found' });
+      }
+      logger.log(
+        color.red.bold(`Error in GET /app-design/card-palette: ${white.bold(error.message)}`)
+      );
+      return reply.status(500).send({ success: false, error: 'Failed to read the background' });
+    }
+  });
+
+  /**
    * POST /api/app-design/ai-theme
    * Palette suggestion for an uploaded background, rate limited per IP.
    * Admins too, for the dashboard's editor.

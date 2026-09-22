@@ -36,6 +36,19 @@ describe('buildDiscountBase', () => {
     });
   });
 
+  it('counts App Designer bought at checkout as an add-on, not as product revenue', () => {
+    const base = buildDiscountBase({
+      total: 43,
+      shipping: 0,
+      boxFee: 6,
+      gamesFee: 3,
+      appDesignFee: 9,
+      taxRate: 21,
+    });
+    expect(base.addonsGross).toBe(18);
+    expect(base.productsGross).toBe(25);
+  });
+
   it('falls back to `payment` for shipping and never goes negative', () => {
     const base = buildDiscountBase({ total: 1, payment: '2.99', boxFee: 5 });
     expect(base.shippingGross).toBe(2.99);

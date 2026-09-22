@@ -93,6 +93,8 @@ type DbClient = PrismaClient | Prisma.TransactionClient;
 interface CartLike {
   items: any[];
   discounts?: { code?: string }[];
+  /** App Designer ticked at checkout (see addAppDesignFee in order.ts). */
+  appDesign?: boolean;
 }
 
 interface ParsedCodeData {
@@ -1146,16 +1148,18 @@ class Discount {
    */
   private async baseForCart(
     cart: CartLike,
-    opts: { countrycode?: string; fast?: boolean }
+    opts: { countrycode?: string; fast?: boolean; email?: string | null }
   ): Promise<DiscountBase> {
     try {
       const Order = (await import('./order')).default;
       const calc = await Order.getInstance().calculateOrder({
-        cart: { items: cart.items },
+        cart: { items: cart.items, appDesign: cart.appDesign === true },
         countrycode: opts.countrycode || 'NL',
         fast: !!opts.fast,
         isBusinessOrder: false,
         vatId: null,
+        // An account that has App Designer is not charged for it again.
+        email: opts.email || undefined,
       });
       if (calc?.success && calc.data) {
         return buildDiscountBase(calc.data);

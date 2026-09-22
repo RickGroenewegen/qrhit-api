@@ -6,21 +6,27 @@ import { outbound } from '../helpers/recording-mock';
 // Order delegates printing to PrintEnBind (globally mocked by test/setup.ts)
 // and persistence to Prisma/Cache (mocked here). Spotify/PDF are mocked so
 // nothing touches the network or Lambda.
-const { prismaMock, cacheStore, pdfGenerateFromUrl, pdfResizePages } = vi.hoisted(
+const { prismaMock, cacheStore, pdfGenerateFromUrl, pdfResizePages, appDesignEntitled } = vi.hoisted(
   () => ({
     prismaMock: {
       payment: { findUnique: vi.fn(), update: vi.fn() },
       paymentHasPlaylist: { count: vi.fn() },
       orderType: { findMany: vi.fn() },
+      user: { findUnique: vi.fn() },
     },
     cacheStore: new Map<string, string>(),
     pdfGenerateFromUrl: vi.fn().mockResolvedValue(undefined),
     pdfResizePages: vi.fn().mockResolvedValue(undefined),
+    appDesignEntitled: vi.fn(),
   })
 );
 
 vi.mock('../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
+}));
+// The App Designer ownership check behind calculateOrder's e-mail lookup.
+vi.mock('../../src/appDesign', () => ({
+  default: { getInstance: () => ({ isEntitled: appDesignEntitled }) },
 }));
 vi.mock('../../src/cache', () => ({
   default: {
@@ -42,7 +48,8 @@ vi.mock('../../src/pdf', () => ({
   },
 }));
 
-import Order from '../../src/order';
+import Order, { addAppDesignFee } from '../../src/order';
+import { APP_DESIGN_PRICE } from '../../src/config/constants';
 
 const order = Order.getInstance();
 const INVOICE_DIR = path.join(process.env['PRIVATE_DIR']!, 'invoice');
@@ -261,6 +268,69 @@ describe('getPlaylistDownloads (private)', () => {
 describe('calculateSingleItem', () => {
   it('is currently a no-op returning undefined (body commented out)', async () => {
     expect(await order.calculateSingleItem({ anything: true })).toBeUndefined();
+  });
+});
+
+describe('addAppDesignFee (App Designer ticked at checkout)', () => {
+  const calc = () => ({ success: true, data: { total: 30 } as any });
+  const cards = [{ productType: 'cards' }, { productType: 'cards' }];
+
+  it('adds the fee once per order, not per playlist', () => {
+    const result = addAppDesignFee(calc(), { cart: { items: cards, appDesign: true } });
+    expect(result.data.appDesignFee).toBe(APP_DESIGN_PRICE);
+    expect(result.data.total).toBe(30 + APP_DESIGN_PRICE);
+    expect(result.data.appDesignUnitPrice).toBe(APP_DESIGN_PRICE);
+  });
+
+  it('charges nothing when it is not ticked, already owned or there are no cards', () => {
+    for (const params of [
+      { cart: { items: cards } },
+      { cart: { items: cards, appDesign: true }, appDesignOwned: true },
+      { cart: { items: [{ productType: 'giftcard' }], appDesign: true } },
+    ]) {
+      const result = addAppDesignFee(calc(), params);
+      expect(result.data.appDesignFee).toBe(0);
+      expect(result.data.total).toBe(30);
+    }
+  });
+
+  it('passes a failed calculation through untouched', () => {
+    const failed = { success: false, error: 'no_shipping' };
+    expect(addAppDesignFee(failed, { cart: { items: cards, appDesign: true } })).toBe(failed);
+  });
+
+  it('shows it as free for an e-mail address whose account already has it', async () => {
+    outbound.respondWith('PrintEnBind', 'calculateOrder', () => ({ success: true, data: { total: 30 } }));
+    prismaMock.user.findUnique.mockResolvedValue({ id: 7 });
+    appDesignEntitled.mockResolvedValue(true);
+    const result = await order.calculateOrder({
+      cart: { items: cards, appDesign: true },
+      countrycode: 'NL',
+      email: ' owner@example.com ',
+    });
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'owner@example.com' },
+      select: { id: true },
+    });
+    expect(appDesignEntitled).toHaveBeenCalledWith(7);
+    expect(result.data.appDesignFee).toBe(0);
+    expect(result.data.appDesignOwned).toBe(true);
+  });
+
+  it('only looks the address up when App Designer is ticked, and charges an unknown address', async () => {
+    outbound.respondWith('PrintEnBind', 'calculateOrder', () => ({ success: true, data: { total: 30 } }));
+    prismaMock.user.findUnique.mockReset().mockResolvedValue(null);
+    appDesignEntitled.mockReset();
+    await order.calculateOrder({ cart: { items: cards }, email: 'x@example.com' });
+    expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
+
+    const result = await order.calculateOrder({
+      cart: { items: cards, appDesign: true },
+      email: 'x@example.com',
+    });
+    expect(appDesignEntitled).not.toHaveBeenCalled();
+    expect(result.data.appDesignFee).toBe(APP_DESIGN_PRICE);
+    expect(result.data.appDesignOwned).toBe(false);
   });
 });
 

@@ -14,6 +14,7 @@ export type InvoiceLineKind =
   | 'product'
   | 'box'
   | 'games'
+  | 'appDesign'
   | 'shipping'
   | 'volumeDiscount'
   | 'discountPercent'
@@ -146,6 +147,23 @@ export function buildInvoiceLines(
       rate,
       vat: round2(gamesFee - excl),
       totalIncl: gamesFee,
+    });
+  }
+
+  // App Designer ticked at checkout: one per order, it is an upgrade on the
+  // account. Bought later it gets an invoice of its own (upgradeInvoice.ts).
+  const appDesignFee = Number(payment.appDesignFee) || 0;
+  if (appDesignFee > 0) {
+    const excl = reverse ? appDesignFee : exVat(appDesignFee, addonRate);
+    lines.push({
+      kind: 'appDesign',
+      description: t('appDesigner'),
+      quantity: 1,
+      unitExcl: excl,
+      totalExcl: excl,
+      rate,
+      vat: round2(appDesignFee - excl),
+      totalIncl: appDesignFee,
     });
   }
 

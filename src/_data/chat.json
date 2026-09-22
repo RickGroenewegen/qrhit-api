@@ -1065,7 +1065,7 @@
         {
             "slug": "qrgames-how-to-enable",
             "title": "How do I enable QRGames for my playlist?",
-            "description": "Go to your dashboard and find the playlist you want to enable games for. Click the games option and complete the payment. Once purchased, you'll have access to all three games (Music Quiz, Music Bingo, and Music Timeline) for that playlist. Bingo cards are automatically generated after purchase.",
+            "description": "While ordering, the Extras step after designing your cards offers QRGames with one tap (the order summary at checkout has the same switch), and it is then part of the order. For a playlist you already own: go to My Account, find the playlist, click the games option and complete the payment. Either way you'll have access to all three games (Music Quiz, Music Bingo, and Music Timeline) for that playlist. Bingo cards are automatically generated after purchase.",
             "tags": [
                 "enable games",
                 "activate",
@@ -1411,6 +1411,75 @@
                 "ink saving",
                 "packaging",
                 "footprint"
+            ]
+        },
+        {
+            "slug": "app-designer-overview",
+            "title": "What is App Designer?",
+            "description": "App Designer is an optional upgrade that gives the free QRSong! app the look of your own cards, or any design you like: a background photo, colour or gradient, your logo, a font of your choice, the colours of the buttons and text, and your own help text. Whoever plays with your cards (you, or the person you give them to) uses the normal free QRSong! app for iPhone and Android; as soon as the first card of one of your playlists is scanned, the app switches to your design. Nobody needs a different app or an update. It is a one-off purchase of €{{appDesignPrice}} for your whole account: every playlist you have ordered and every playlist you order later can use it. It is not part of the cards themselves: the cards stay the same, the app around them changes.",
+            "tags": [
+                "App Designer",
+                "app design",
+                "custom app",
+                "app look",
+                "app theme",
+                "app colours",
+                "app logo",
+                "own design in the app",
+                "brand the app"
+            ]
+        },
+        {
+            "slug": "app-designer-pricing",
+            "title": "How much does App Designer cost?",
+            "description": "App Designer costs €{{appDesignPrice}}, once, for your whole account. It is not per playlist: all your current and future playlists can use it. You can add it while ordering (the Extras step after designing your cards, where it is included in the order and on the order invoice) or buy it later from My Account under App Designer, where it is paid through Mollie in your own currency and the invoice is e-mailed separately. If your e-mail address already has App Designer, adding it again during a new order is free.",
+            "tags": [
+                "App Designer price",
+                "app design cost",
+                "how much is App Designer",
+                "app designer invoice",
+                "one-off",
+                "per account"
+            ]
+        },
+        {
+            "slug": "app-designer-checkout",
+            "title": "Can I add App Designer while ordering? What does the app look like then?",
+            "description": "Yes. After designing your cards, the Extras step offers App Designer next to the gift box and QRGames, and the order summary at checkout has the same switch. There is nothing to design in the order flow: we make the app design from your card design (its background photo or colours, logo, font and colours), and the preview on that step shows how it will look. Cards that keep the standard QRSong! artwork get the standard app look for now, and you design the app afterwards. Once the order is paid, the design becomes your account's default design; if your account already had a default design, it becomes that playlist's own design instead, so nothing you made earlier is overwritten. You can change it whenever you like in My Account.",
+            "tags": [
+                "add App Designer at checkout",
+                "extras step",
+                "app design from my cards",
+                "order flow",
+                "what will the app look like",
+                "add-ons"
+            ]
+        },
+        {
+            "slug": "app-designer-how-to-edit",
+            "title": "How do I design or change my app design?",
+            "description": "Log in to My Account and open App Designer (the App Designer block on the My Account page, or /my-account/app-design). You choose a background (a colour, a gradient, your own photo or the QRSong! photo), the text and accent colours, filled or glass buttons, a font, a logo, whether the record and the musical notes animate, and your own help text (with headings, bold text, lists and links). The preview shows the real app screens: home, scan, playing, settings and help. There is also an AI button that suggests a palette from your uploaded photo. Save, and the next card that is scanned shows the new version; no app update is needed. Each playlist can use the account's default design, a design of its own, or the standard QRSong! look (handy for cards you give away). Admins can also open a customer's app design from the order in the dashboard.",
+            "tags": [
+                "edit app design",
+                "change app design",
+                "my account app designer",
+                "app design per playlist",
+                "standard look",
+                "help text",
+                "app logo upload"
+            ]
+        },
+        {
+            "slug": "app-designer-which-app",
+            "title": "Does the person playing need a special app to see my app design?",
+            "description": "No. It is the same free QRSong! app for iPhone and Android that everyone uses. When the first card of one of your playlists is scanned, the app loads your design by itself and keeps it while those cards are played; when a card without a design is scanned, it goes back to the standard look. No update or setting is needed, and it works in every language and currency. If a design does not show up, make sure the app is the latest version from the App Store or Google Play and scan a card of the playlist again.",
+            "tags": [
+                "special app",
+                "app update needed",
+                "design not showing",
+                "which app",
+                "iPhone",
+                "Android"
             ]
         }
     ]

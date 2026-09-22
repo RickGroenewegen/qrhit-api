@@ -12,11 +12,37 @@ import Spotify from './spotify';
 import { ChatGPT } from './chatgpt';
 import Translation from './translation';
 import PDF from './pdf';
+import { APP_DESIGN_PRICE } from './config/constants';
 
 interface PriceResult {
   totalPrice: number;
   pricePerCard: number;
   discountPercentage: number;
+}
+
+/**
+ * App Designer bought at checkout (`cart.appDesign`): one fee per order, not
+ * per playlist, because it is an upgrade on the account. VAT-inclusive like
+ * the games and box fees, so it goes onto the total as it is. Added here and
+ * not in the two printer integrations, which would each need a copy.
+ * `appDesignOwned` is set by payment creation when the account already has
+ * the upgrade: the designs are still made, but nothing is charged.
+ */
+export function addAppDesignFee(result: any, params: any): any {
+  if (!result?.success || !result.data) return result;
+  const items: any[] = params?.cart?.items || [];
+  const wanted =
+    params?.cart?.appDesign === true &&
+    !params?.appDesignOwned &&
+    items.some((item) => item?.productType === 'cards');
+  const appDesignFee = wanted ? APP_DESIGN_PRICE : 0;
+  result.data.appDesignFee = appDesignFee;
+  result.data.appDesignUnitPrice = APP_DESIGN_PRICE;
+  result.data.appDesignOwned = !!params?.appDesignOwned;
+  if (appDesignFee > 0) {
+    result.data.total = Math.round(((Number(result.data.total) || 0) + appDesignFee) * 100) / 100;
+  }
+  return result;
 }
 
 class Order {
@@ -226,7 +252,32 @@ class Order {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
-    return await this.printer.calculateOrder(params);
+    const result = await this.printer.calculateOrder(params);
+    return addAppDesignFee(result, {
+      ...params,
+      appDesignOwned: await this.appDesignOwned(params),
+    });
+  }
+
+  /**
+   * Whether the customer already has App Designer, so the checkout shows it
+   * as free instead of charging twice: told by the caller (payment creation
+   * looks it up itself), or looked up from the e-mail address typed at
+   * checkout. Only asked when App Designer is ticked, so the answer is only
+   * ever given about a purchase the customer is about to make.
+   */
+  private async appDesignOwned(params: any): Promise<boolean> {
+    if (params?.appDesignOwned !== undefined) return !!params.appDesignOwned;
+    if (params?.cart?.appDesign !== true) return false;
+    const email = String(params?.email || '').trim();
+    if (!email) return false;
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (!user) return false;
+    const AppDesign = (await import('./appDesign')).default;
+    return AppDesign.getInstance().isEntitled(user.id);
   }
 
   public async testOrder() {

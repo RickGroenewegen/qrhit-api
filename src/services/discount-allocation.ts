@@ -21,7 +21,7 @@ export function exVat(gross: number, rate: number): number {
 export interface DiscountBase {
   /** Products incl. VAT, after fast-track surcharge and volume discount. */
   productsGross: number;
-  /** Gift box + QRGames fees incl. VAT. */
+  /** Gift box, QRGames and App Designer fees incl. VAT. */
   addonsGross: number;
   volumeDiscount: number;
   shippingGross: number;
@@ -42,7 +42,8 @@ export function buildDiscountBase(calc: any): DiscountBase {
   const shippingGross = Number(calc?.shipping ?? calc?.payment) || 0;
   const boxFee = Number(calc?.boxFee) || 0;
   const gamesFee = Number(calc?.gamesFee) || 0;
-  const addonsGross = round2(boxFee + gamesFee);
+  const appDesignFee = Number(calc?.appDesignFee) || 0;
+  const addonsGross = round2(boxFee + gamesFee + appDesignFee);
   const productsGross = round2(
     Math.max(0, total - shippingGross - addonsGross)
   );

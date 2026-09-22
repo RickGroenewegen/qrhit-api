@@ -2508,12 +2508,23 @@ export default async function adminRoutes(
         }
 
         // A row's totalPriceWithoutTax includes App Designer, which gets a
-        // line of its own, so the sales line carries the rest.
+        // line of its own, so the sales line carries the rest. App Designer
+        // bought at checkout is inside its orders' sales; it moves to the App
+        // Designer line too, as long as those orders are in this row (a
+        // purchase paid just after the period's end can land in the next).
         const items: any[] = [];
         for (const { row: r, taxRateId } of resolved) {
           const country = countryName(r.countrycode);
-          const appDesignExVat = r.appDesignExVat || 0;
-          if ((r.numberOfSales || 0) > 0) {
+          const hasSales = (r.numberOfSales || 0) > 0;
+          const accountExVat = r.appDesignExVat || 0;
+          const checkoutExVat = hasSales
+            ? Math.min(
+                r.appDesignCheckoutExVat || 0,
+                Math.max(0, (r.totalPriceWithoutTax || 0) - accountExVat)
+              )
+            : 0;
+          const appDesignExVat = accountExVat + checkoutExVat;
+          if (hasSales) {
             items.push({
               description: `Sales ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
               amount: '1 x',
@@ -2522,7 +2533,7 @@ export default async function adminRoutes(
               ledger_account_id: ledgerAccountId,
             });
           }
-          if ((r.appDesignAmount || 0) > 0) {
+          if (appDesignExVat > 0) {
             items.push({
               description: `App Designer ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
               amount: '1 x',

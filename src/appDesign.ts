@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { randomInt } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import sharp from 'sharp';
 import sanitizeHtml from 'sanitize-html';
 import { color, white } from 'console-log-colors';
@@ -387,6 +387,94 @@ export function fontsForId(fontId: unknown): ThemeConfig['fonts'] {
   };
 }
 
+/**
+ * App Designer bought at checkout. There is no editor in the order flow: the
+ * site makes a design from each card design in the cart (background, logo,
+ * font, colours) and sends it with the payment. It waits on the payment
+ * (`payments.appDesignRequest`) until the order is paid. The card's uploads
+ * stay where they are until then; activation copies them into the App
+ * Designer's own folder.
+ */
+export interface CheckoutAppDesignEntry {
+  /** `playlists.id` of the order line(s) it is for. */
+  playlistId: number;
+  input: AppDesignInput;
+  /** The card's front background upload (PUBLIC_DIR/background). */
+  cardBackground: string | null;
+  /** The card's front logo upload (PUBLIC_DIR/logo). */
+  cardLogo: string | null;
+}
+
+export interface CheckoutAppDesignRequest {
+  designs: CheckoutAppDesignEntry[];
+  /** Set once the designs are live, so a replayed webhook does nothing. */
+  appliedAt?: string;
+}
+
+/**
+ * The designs the checkout sent, keyed by the cart's playlist id and checked
+ * against the cart: one per card item at most, the assets must be the ones
+ * that card uses, and the theme has to pass the same validation as a save.
+ * Anything that does not is left out; an empty map means nothing is sold.
+ */
+export function validateCheckoutDesigns(
+  raw: unknown,
+  cartItems: any[],
+  normalize: (body: any) => { input: AppDesignInput }
+): Map<string, Omit<CheckoutAppDesignEntry, 'playlistId'>> {
+  const result = new Map<string, Omit<CheckoutAppDesignEntry, 'playlistId'>>();
+  const designs = (raw as any)?.designs;
+  if (!Array.isArray(designs)) return result;
+  for (const entry of designs.slice(0, 50)) {
+    const playlistId = typeof entry?.playlistId === 'string' ? entry.playlistId : null;
+    const item = cartItems.find(
+      (i: any) => i?.productType === 'cards' && i.playlistId === playlistId
+    );
+    if (!playlistId || !item || result.has(playlistId)) continue;
+    const cardBackground = sanitizeAssetFilename(entry.cardBackground);
+    const cardLogo = sanitizeAssetFilename(entry.cardLogo);
+    try {
+      const { input } = normalize({
+        ...entry,
+        helpText: null,
+        logo: null,
+        background: null,
+        design: {
+          ...(entry.design || {}),
+          helpText: '',
+          logo: null,
+          logoImage: null,
+          background: null,
+          backgroundImage: null,
+        },
+      });
+      result.set(playlistId, {
+        input,
+        cardBackground: cardBackground && cardBackground === item.background ? cardBackground : null,
+        cardLogo: cardLogo && cardLogo === item.logo ? cardLogo : null,
+      });
+    } catch {
+      // A design the checkout derived but the grammar refuses: not sold.
+    }
+  }
+  return result;
+}
+
+/** The app's own look with no logo: what a card with the standard artwork gives. */
+function isPlainCheckoutDesign(entry: CheckoutAppDesignEntry): boolean {
+  return entry.input.design['backgroundType'] === 'qrsong' && !entry.cardLogo;
+}
+
+/** Two checkout designs that would look the same in the app. */
+function checkoutSignature(entry: CheckoutAppDesignEntry): string {
+  return JSON.stringify({
+    theme: entry.input.theme,
+    fontId: entry.input.fontId || null,
+    cardBackground: entry.cardBackground,
+    cardLogo: entry.cardLogo,
+  });
+}
+
 /** What the access check needs to know about an order line. */
 export interface AppDesignLine {
   payment: { userId: number; status: string };
@@ -703,6 +791,8 @@ class AppDesign {
   public async processUpgradePayment(params: {
     userId: number;
     molliePaymentId: string;
+    /** The card order it was bought with at checkout; see AppDesignPurchase. */
+    paymentId?: number | null;
     price: number;
     taxRate: number;
     countrycode: string;
@@ -739,6 +829,7 @@ class AppDesign {
         purchase = await this.prisma.appDesignPurchase.create({
           data: {
             userId: params.userId,
+            paymentId: params.paymentId ?? null,
             molliePaymentId: params.molliePaymentId,
             totalPrice: params.price,
             totalPriceWithoutTax,
@@ -777,6 +868,190 @@ class AppDesign {
       );
       return { success: false, created: false, error: error.message };
     }
+  }
+
+  /**
+   * App Designer bought at checkout, once the order is paid: the designs made
+   * from the cards become the account's designs and the purchase is
+   * recorded. Called by the paid webhook and, for orders that need no
+   * payment, right after the payment is created; in both cases before
+   * generation, so the order mails already say the design is on.
+   *
+   * Where the designs go:
+   * - an account without a default design gets the first one as its default,
+   *   and every line whose cards look the same follows it;
+   * - every other line gets its own design, so a default the customer made
+   *   earlier is never overwritten.
+   *
+   * No purchase row when nothing was charged (the account already had the
+   * upgrade); the designs are still made, the customer asked for them.
+   */
+  public async activateCheckoutPurchase(paymentId: number): Promise<void> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        id: true,
+        paymentId: true,
+        userId: true,
+        status: true,
+        appDesignFee: true,
+        appDesignRequest: true,
+        taxRate: true,
+        countrycode: true,
+        currency: true,
+        exchangeRate: true,
+        PaymentHasPlaylist: { select: { id: true, playlistId: true } },
+      },
+    });
+    const request = payment?.appDesignRequest as CheckoutAppDesignRequest | null | undefined;
+    if (!payment || payment.status !== 'paid' || !request?.designs?.length) return;
+    if (request.appliedAt) return;
+
+    const userId = payment.userId;
+    const existingDefault = await this.prisma.appDesign.findUnique({
+      where: { scopeKey: scopeKeyFor({ userId }) },
+      select: { theme: true },
+    });
+    let defaultFree = !existingDefault?.theme;
+    let defaultSignature: string | null = null;
+
+    for (const entry of request.designs) {
+      const lines = payment.PaymentHasPlaylist.filter((line) => line.playlistId === entry.playlistId);
+      if (lines.length === 0) continue;
+      const signature = checkoutSignature(entry);
+      if (!defaultFree && signature === defaultSignature) continue;
+      // Cards with the standard artwork and no logo give the plain app look.
+      // An account that already has a default design keeps it for them: a
+      // plain override would hide that design on this playlist.
+      if (!defaultFree && isPlainCheckoutDesign(entry)) continue;
+      try {
+        const input = await this.materializeCheckoutInput(entry);
+        if (defaultFree) {
+          await this.saveDesign({ userId }, input);
+          defaultFree = false;
+          defaultSignature = signature;
+          continue;
+        }
+        for (const line of lines) {
+          await this.saveDesign({ userId, paymentHasPlaylistId: line.id }, input);
+        }
+      } catch (error: any) {
+        this.logger.log(
+          color.red.bold(
+            `Could not apply the checkout app design of playlist ${white.bold(
+              String(entry.playlistId)
+            )} (${white.bold(payment.paymentId)}): ${white.bold(error.message)}`
+          )
+        );
+      }
+    }
+
+    const fee = payment.appDesignFee || 0;
+    if (fee > 0) {
+      const result = await this.processUpgradePayment({
+        userId,
+        molliePaymentId: payment.paymentId,
+        paymentId: payment.id,
+        price: fee,
+        taxRate: payment.taxRate || 0,
+        countrycode: payment.countrycode || 'NL',
+        currency: payment.currency || 'EUR',
+        amountCharged: round2(fee * (payment.exchangeRate || 1)),
+      });
+      // Not marked as applied, so the next webhook for it tries again.
+      if (!result.success) return;
+    } else {
+      this.logger.log(
+        color.blue.bold(
+          `Checkout app design applied without a charge for user ${white.bold(
+            String(userId)
+          )}: the account already had App Designer`
+        )
+      );
+      await this.appTheme.reload();
+    }
+
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        appDesignRequest: { ...request, appliedAt: new Date().toISOString() } as any,
+      },
+    });
+  }
+
+  /** A checkout design with the card's uploads copied into the App Designer folder. */
+  private async materializeCheckoutInput(entry: CheckoutAppDesignEntry): Promise<AppDesignInput> {
+    const background = entry.cardBackground
+      ? await this.importCardAsset('background', entry.cardBackground)
+      : null;
+    const logo = entry.cardLogo ? await this.importCardAsset('logo', entry.cardLogo) : null;
+    const design: Record<string, unknown> = {
+      ...entry.input.design,
+      background,
+      backgroundImage: null,
+      logo,
+      logoImage: null,
+    };
+    return {
+      ...entry.input,
+      design,
+      background: design['backgroundType'] === 'image' ? background : null,
+      logo,
+    };
+  }
+
+  /**
+   * Copy a card upload (PUBLIC_DIR/background or /logo) into the App
+   * Designer's folder under a new name, at the size the App Designer's own
+   * uploads get. A card and its app design are edited separately from then
+   * on. Null when the file is missing or not a card upload.
+   */
+  public async importCardAsset(kind: 'background' | 'logo', filename: string): Promise<string | null> {
+    const name = sanitizeAssetFilename(filename);
+    if (!name) return null;
+    const source = path.join(process.env['PUBLIC_DIR'] as string, kind, name);
+    const target = `${randomBytes(16).toString('hex')}.png`;
+    try {
+      await fs.mkdir(this.assetDir(), { recursive: true });
+      const pipeline =
+        kind === 'background'
+          ? sharp(source).resize(1080, 1920, { fit: 'inside', withoutEnlargement: true })
+          : sharp(source).resize(800, 800, { fit: 'inside', withoutEnlargement: true });
+      await pipeline.png({ compressionLevel: 9 }).toFile(this.assetPath(target));
+      return target;
+    } catch (error: any) {
+      this.logger.log(
+        color.yellow.bold(
+          `Card ${kind} ${white.bold(name)} could not be copied for an app design: ${white.bold(
+            error.message
+          )}`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * The base and accent colour of a card's background photo, which the
+   * checkout needs to make an app design from the card. The dominant colour
+   * fills the app's sheets and decides its text colour. Card uploads never
+   * change, so the answer is kept for a month.
+   */
+  public async cardPalette(
+    filename: string
+  ): Promise<{ backgroundColor: string; accentColor: string } | null> {
+    const name = sanitizeAssetFilename(filename);
+    if (!name) return null;
+    const cacheKey = `appDesign:cardPalette:${name}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    const small = await sharp(path.join(process.env['PUBLIC_DIR'] as string, 'background', name))
+      .resize(256, 256, { fit: 'inside' })
+      .toBuffer();
+    const palette = await this.fallbackPalette(small);
+    const result = { backgroundColor: palette.backgroundColor, accentColor: palette.accentColor };
+    await this.cache.set(cacheKey, JSON.stringify(result), 30 * 86400);
+    return result;
   }
 
   /** A published customer theme file, or null when there is none. */

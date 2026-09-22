@@ -78,11 +78,13 @@ async function main(): Promise<void> {
       AND createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
   `);
 
+  // Bought at checkout (paymentId set) it is already in its order's revenue
+  // and profit: counted as a sale, its money is not added again.
   const appDesignRows = await prisma.$queryRawUnsafe<AppDesignRow[]>(`
     SELECT
-      COUNT(*)                              AS sales,
-      COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat,
-      COALESCE(SUM(totalPrice),0)           AS revenue_gross
+      COUNT(*)                                                                          AS sales,
+      COALESCE(SUM(CASE WHEN paymentId IS NULL THEN totalPriceWithoutTax ELSE 0 END),0) AS revenue_exvat,
+      COALESCE(SUM(CASE WHEN paymentId IS NULL THEN totalPrice ELSE 0 END),0)           AS revenue_gross
     FROM app_design_purchases
     WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
   `);

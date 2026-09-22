@@ -126,6 +126,49 @@ describe('buildInvoiceLines', () => {
     expect(lines.find((l) => l.kind === 'box')!.unitExcl).toBe(2.48);
   });
 
+  it('adds App Designer bought at checkout as one line at the goods rate', () => {
+    const payment = {
+      ...workedExample,
+      totalPrice: 34,
+      totalPriceWithoutTax: 28.1,
+      totalVATPrice: 5.9,
+      productVATPrice: 5.9,
+      shipping: 0,
+      shippingPriceWithoutTax: 0,
+      shippingVATPrice: 0,
+      appDesignFee: 9,
+      discount: 0,
+      discountPercent: null,
+      discountPercentAmount: 0,
+      discountCodes: null,
+      discountWithoutTax: 0,
+      discountVAT: 0,
+    };
+    const translate = makeTranslator({ appDesigner: 'App Designer (one-off, for your whole account)' });
+    const { lines, summary } = buildInvoiceLines(payment, playlists, 'digital', translate);
+    const line = lines.find((l) => l.kind === 'appDesign')!;
+    expect(line).toEqual({
+      kind: 'appDesign',
+      description: 'App Designer (one-off, for your whole account)',
+      quantity: 1,
+      unitExcl: 7.44,
+      totalExcl: 7.44,
+      rate: 21,
+      vat: 1.56,
+      totalIncl: 9,
+    });
+    // The lines still add up to what was paid.
+    expect(sum(lines, 'totalIncl')).toBe(summary.totalIncl);
+
+    const reverse = buildInvoiceLines(
+      { ...payment, reverseCharge: true, taxRate: 0 },
+      playlists,
+      'digital',
+      translate
+    ).lines.find((l) => l.kind === 'appDesign')!;
+    expect(reverse).toMatchObject({ totalExcl: 9, vat: 0, rate: null });
+  });
+
   it('prints no VAT under reverse charge', () => {
     const { lines, summary } = buildInvoiceLines(
       { ...workedExample, reverseCharge: true, taxRate: 0, taxRateShipping: 0 },

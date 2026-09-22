@@ -9,7 +9,7 @@ import path from 'path';
 import cluster from 'cluster';
 import Shipping from './shipping';
 import { CronJob } from 'cron';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS } from './config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS, APP_DESIGN_PRICE } from './config/constants';
 import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
 
 interface RequiredDataItem {
@@ -63,6 +63,8 @@ export class ChatService {
     maxCardsDigital: MAX_CARDS,
     maxCardsPhysical: MAX_CARDS_PHYSICAL,
     boxMaxCards: BOX_MAX_CARDS,
+    // EUR, whole euros when the price has none (9, not 9.00).
+    appDesignPrice: APP_DESIGN_PRICE,
   };
 
   /**

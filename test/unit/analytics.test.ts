@@ -155,7 +155,10 @@ describe('getProfitAndTurnOver', () => {
     });
 
     const totals = await analytics.getProfitAndTurnOver();
+    // Only purchases made on the account: one bought at checkout is already
+    // inside its order's totals and profit.
     expect(prismaMock.appDesignPurchase.aggregate).toHaveBeenCalledWith({
+      where: { paymentId: null },
       _sum: { totalPriceWithoutTax: true },
     });
     expect(totals.totalPrice).toBeCloseTo(100 + 14.88, 2);

@@ -107,6 +107,7 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payments.status,
                   payments.totalPrice,
                   payments.totalPriceWithoutTax,
+                  payments.appDesignFee,
                   payments.differentInvoiceAddress,
                   payments.invoiceAddress,
                   payments.invoiceHousenumber,

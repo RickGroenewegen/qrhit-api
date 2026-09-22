@@ -178,6 +178,12 @@ model Payment {
   discountShipping         Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
   boxFee                   Float                @default(0)
+  // App Designer bought at checkout: VAT-inclusive like gamesFee and boxFee,
+  // inside totalPrice and the VAT columns. The designs made from the cards
+  // wait in appDesignRequest until the payment is paid (src/appDesign.ts,
+  // activateCheckoutPurchase).
+  appDesignFee             Float                @default(0)
+  appDesignRequest         Json?
   locale                  String               @default("en")
   qrSubDir                 String?
   finalized                Boolean              @default(false)
@@ -1665,12 +1671,18 @@ model AppDesign {
 
 // The one-off App Designer upgrade on an account (APP_DESIGN_PRICE,
 // VAT-inclusive). Written by the Mollie webhook once the payment is paid, so
-// a row is both the entitlement and the ledger entry the financial reports
-// read. Amounts are EUR; `currency`/`amountCharged` record what Mollie
-// actually charged in the customer's currency.
+// a row is the entitlement. Amounts are EUR; `currency`/`amountCharged`
+// record what Mollie actually charged in the customer's currency.
+//
+// `paymentId` is the card order it was bought with at checkout, null when it
+// was bought on the account. A checkout purchase is already inside that
+// order's totals and VAT (payments.appDesignFee), so the financial reports
+// count it but add only the rows without a paymentId to the revenue, like
+// games_purchases of type `initial`.
 model AppDesignPurchase {
   id                    Int      @id @default(autoincrement())
   userId                Int
+  paymentId             Int?
   molliePaymentId       String   @unique @db.VarChar(255)
   totalPrice            Float
   totalPriceWithoutTax  Float
@@ -1683,6 +1695,7 @@ model AppDesignPurchase {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([paymentId])
   @@index([createdAt])
   @@map("app_design_purchases")
 }
