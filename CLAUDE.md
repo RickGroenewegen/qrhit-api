@@ -455,7 +455,36 @@ again; payment creation does the same lookup itself. `GET
 colour of a card background for the design the site derives. `chat.json`
 carries `{{appDesignPrice}}`, filled from the constant like the card limits.
 
-## Upgrade invoices (the U range)
+## Turnover and profit: one set of sums
+
+The day and month reports (`Mollie.getSalesReport`), the country report
+(`getPaymentsByMonth`), the tax and OSS report (`getPaymentsByTaxRate`) and
+the dashboard's Finance card (`/analytics` → `Mollie.getSalesTotals`, which
+adds the sales report's rows up) agree by construction; `analytics.ts` no
+longer sums payments itself. All of them take paid, non-vibe, non-test orders
+after 2024-12-05 only. Turnover "Combined €" is gross with refunds netted:
+playlists' `totalPrice` (boxes and checkout add-ons ride inside it) plus
+games upgrades plus account App Designer. Profit "Profit €" is ex-VAT:
+`payments.profit` of the orders whose print cost is known (a physical order
+counts 0 until `printApiPrice` is set, hence the "Known %" column and the
+Finance card's caption) plus `gamesExVat` plus `appDesignExVat`. A games
+upgrade is charged VAT-inclusive at the rate its row stores, so the reports
+carry `gamesTotal` (paid) next to `gamesExVat`/`gamesVAT`, and the tax and
+OSS report add the games shares to `totalPriceWithoutTax` and `totalVAT` the
+way they do App Designer's; a (zone, country, rate) with only a games upgrade
+gets a row. Initial games rows (free with an order) are counted, never summed.
+
+**Upgrades paid after the order are booked in full when their webhook
+lands** (`bookUpgradeOnPayment`): gross into `totalPrice`, the split into
+`totalPriceWithoutTax` and `productVATPrice`, and ex-VAT minus the boxes'
+wholesale cost into `profit`, at the rate the upgrade was sold at (extra
+cards) or the order's (boxes). They used to bump `totalPrice` only, so the
+tax report and the profit missed them until a "Calculate profit" pass. That
+pass (`setPaymentInfo`) recomputes from `totalPrice`, the printer's price and
+the box count and lands on the same figures; a box shipped on its own is a
+separate printer order whose ex-VAT price `createBoxUpgradeOrder` books as
+`payments.extraPrintCost` (off the profit at once, and again in every
+recompute).
 
 Purchases made after an order get their own invoice, mailed on its own with
 the PDF attached: App Designer and QRGames (on the account), extra cards and

@@ -119,6 +119,10 @@ model Payment {
   printApiTrackingLink     String?              @default("")
   printApiPrice            Float                @default(0)
   printApiPriceInclVat     Float                @default(0)
+  // Ex-VAT cost of printer orders placed for this order after the main one
+  // (a gift box bought once the cards had shipped); profit subtracts it
+  // next to printApiPrice, also when it is recomputed.
+  extraPrintCost           Float                @default(0)
   printApiInvoicePrice     Float                @default(0)
   printerInvoiceId         Int?
   clientIp                 String?

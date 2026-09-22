@@ -1052,11 +1052,50 @@ class PrintEnBindV2 {
           color.white.bold(result.data.orderId) +
           color.green.bold(` for PHP ${paymentHasPlaylistId}`)
       );
+      await this.bookExtraPrintCost(payment, result.data.orderId);
     } else {
       this.logger.log(color.red.bold(`Failed to create box upgrade Print&Bind order for PHP ${paymentHasPlaylistId}: ${JSON.stringify(result)}`));
     }
 
     return result;
+  }
+
+  /**
+   * A printer order placed for a payment after its main order (a box
+   * shipped on its own) is a cost the main order's price does not carry.
+   * Book its ex-VAT amount on the payment, off the profit now and, through
+   * extraPrintCost, whenever setPaymentInfo recomputes the profit.
+   */
+  private async bookExtraPrintCost(
+    payment: { id: number; paymentId: string },
+    printApiOrderId: string
+  ): Promise<void> {
+    try {
+      const order = await this.getOrder(printApiOrderId);
+      const cost = parseFloat(order?.amount) || 0;
+      if (cost <= 0) return;
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          extraPrintCost: { increment: cost },
+          profit: { decrement: cost },
+        },
+      });
+      this.logger.log(
+        color.blue.bold('Booked print cost of a separate order on payment ') +
+          color.white.bold(payment.paymentId) +
+          color.blue.bold(': ') +
+          color.white.bold(cost.toFixed(2))
+      );
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to book the print cost of order ${color.white.bold(
+            printApiOrderId
+          )} on payment ${color.white.bold(payment.paymentId)}: ${error.message}`
+        )
+      );
+    }
   }
 
   public async calculateOrder(params: any): Promise<any> {
@@ -1866,8 +1905,12 @@ class PrintEnBindV2 {
       }, 0);
       const boxCost = parseFloat((totalBoxCount * BOX_UNIT_COST).toFixed(2));
 
+      // Printer orders placed for this order after this one (a box shipped
+      // on its own) are booked on the payment as they are placed.
+      const extraPrintCost = payment.extraPrintCost || 0;
+
       const newProfit = parseFloat(
-        (totalPriceWithoutTax - printApiPrice - boxCost).toFixed(2)
+        (totalPriceWithoutTax - printApiPrice - boxCost - extraPrintCost).toFixed(2)
       );
 
       await this.prisma.payment.update({

@@ -26,7 +26,7 @@ import { promises as fs } from 'fs';
 import Cache from './cache';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
-import { BOX_PRICE, APP_DESIGN_PRICE } from './config/constants';
+import { BOX_PRICE, BOX_UNIT_COST, APP_DESIGN_PRICE } from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import AppDesign, { CheckoutAppDesignRequest, validateCheckoutDesigns } from './appDesign';
@@ -223,18 +223,28 @@ class Mollie {
         FROM payments p
         WHERE p.status = 'paid'
           AND p.vibe = 0
+          AND p.test = 0
           AND p.createdAt > '2024-12-05'
           ${emailFilter}
         GROUP BY ${dateExpr}
         ORDER BY period DESC
       `);
 
-      // Count all games (initial + upgrade), but only sum upgrade prices (initial prices are already in payment totals)
+      // Count all games (initial + upgrade), but only sum upgrade prices
+      // (initial prices are already in payment totals). A games upgrade is
+      // charged VAT-inclusive at the rate the row stores, so gamesExVat is
+      // what it adds to profit; gamesTotal is what the customer paid.
       const gamesResults: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${gamesDateExpr} as period,
           COUNT(*) as gamesAmount,
-          COALESCE(SUM(CASE WHEN gp.type = 'upgrade' THEN gp.totalPrice ELSE 0 END), 0) as gamesTotal
+          COALESCE(SUM(CASE WHEN gp.type = 'upgrade' THEN gp.totalPrice ELSE 0 END), 0) as gamesTotal,
+          COALESCE(SUM(
+            CASE WHEN gp.type = 'upgrade'
+              THEN gp.totalPrice / (1 + COALESCE(gp.taxRate, 0) / 100)
+              ELSE 0
+            END
+          ), 0) as gamesExVat
         FROM games_purchases gp
         WHERE gp.createdAt > '2024-12-05'
         GROUP BY ${gamesDateExpr}
@@ -251,6 +261,7 @@ class Mollie {
         JOIN payments p ON php.paymentId = p.id
         WHERE p.status = 'paid'
           AND p.vibe = 0
+          AND p.test = 0
           AND p.createdAt > '2024-12-05'
           AND php.boxEnabled = 1
           ${emailFilter}
@@ -292,6 +303,7 @@ class Mollie {
           totalRefunded: Number(r?.totalRefunded) || 0,
           gamesAmount: Number(gamesMap.get(period)?.gamesAmount) || 0,
           gamesTotal: Number(gamesMap.get(period)?.gamesTotal) || 0,
+          gamesExVat: round2(Number(gamesMap.get(period)?.gamesExVat) || 0),
           appDesignAmount: Number(appDesignMap.get(period)?.appDesignAmount) || 0,
           appDesignTotal: Number(appDesignMap.get(period)?.appDesignTotal) || 0,
           appDesignExVat: Number(appDesignMap.get(period)?.appDesignExVat) || 0,
@@ -350,6 +362,7 @@ class Mollie {
       JOIN payments p ON php.paymentId = p.id
       WHERE p.status = 'paid'
         AND p.vibe = 0
+        AND p.test = 0
         AND p.createdAt > '2024-12-05'
         ${emailFilter}
         ${typeFilter}
@@ -385,6 +398,7 @@ class Mollie {
       FROM payments p
       WHERE p.status = 'paid'
         AND p.vibe = 0
+        AND p.test = 0
         AND p.createdAt > '2024-12-05'
         ${emailFilter}
         AND EXISTS (
@@ -413,6 +427,37 @@ class Mollie {
     }));
   }
 
+  /**
+   * All-time totals for the dashboard's Finance card: the same figures the
+   * day and month reports add up, so the card and the reports agree.
+   * Turnover is the reports' "Combined €" (playlists, games upgrades and
+   * account App Designer, gross, refunds netted); profit is their "Profit €"
+   * (ex-VAT profit of the orders whose print cost is known, plus games
+   * upgrades and App Designer ex-VAT). profitAssignedCount / numberOfSales
+   * is the share of orders that profit covers.
+   */
+  public async getSalesTotals(): Promise<{
+    turnover: number;
+    profit: number;
+    numberOfSales: number;
+    profitAssignedCount: number;
+  }> {
+    const rows: any[] = await this.getSalesReport('month', 'all');
+    const totals = { turnover: 0, profit: 0, numberOfSales: 0, profitAssignedCount: 0 };
+    for (const r of rows) {
+      totals.turnover += (r.totalPrice || 0) + (r.gamesTotal || 0) + (r.appDesignTotal || 0);
+      totals.profit += (r.totalProfit || 0) + (r.gamesExVat || 0) + (r.appDesignExVat || 0);
+      totals.numberOfSales += r.numberOfSales || 0;
+      totals.profitAssignedCount += r.profitAssignedCount || 0;
+    }
+    return {
+      turnover: round2(totals.turnover),
+      profit: round2(totals.profit),
+      numberOfSales: totals.numberOfSales,
+      profitAssignedCount: totals.profitAssignedCount,
+    };
+  }
+
   public async getPaymentsByMonth(
     startDate: Date,
     endDate: Date
@@ -423,8 +468,12 @@ class Mollie {
       ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
     }
 
+    // Paid orders only, like the other reports: an open or failed payment
+    // already carries totals and a profit at creation.
     const where = {
+      status: 'paid',
       vibe: false,
+      test: false,
       AND: [
         {
           createdAt: {
@@ -463,35 +512,29 @@ class Mollie {
       (p) => p.countrycode || 'Unknown'
     );
 
-    // Count all games (initial + upgrade), but only sum upgrade prices (initial prices are already in payment totals)
-    const gamesByCountryCount = await this.prisma.gamesPurchase.groupBy({
-      by: ['countrycode'],
+    // Count all games (initial + upgrade), but only sum upgrade prices
+    // (initial prices are already in payment totals). Upgrades are charged
+    // VAT-inclusive at the rate the row stores; exVat is their profit share.
+    const gameRows = await this.prisma.gamesPurchase.findMany({
       where: {
         createdAt: {
           gte: startDate,
           lte: endDate,
         },
       },
-      _count: { _all: true },
+      select: { countrycode: true, taxRate: true, totalPrice: true, type: true },
     });
-    const gamesByCountryTotal = await this.prisma.gamesPurchase.groupBy({
-      by: ['countrycode'],
-      where: {
-        type: 'upgrade',
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      _sum: { totalPrice: true },
-    });
-    const gamesTotalMap = new Map(gamesByCountryTotal.map(g => [g.countrycode || 'Unknown', g._sum.totalPrice || 0]));
-    const gamesMap = new Map<string, { amount: number; total: number }>(
-      gamesByCountryCount.map(g => {
-        const key = g.countrycode || 'Unknown';
-        return [key, { amount: g._count._all, total: gamesTotalMap.get(key) || 0 }];
-      })
-    );
+    const gamesMap = new Map<string, { amount: number; total: number; exVat: number }>();
+    for (const g of gameRows) {
+      const key = g.countrycode || 'Unknown';
+      const cur = gamesMap.get(key) || { amount: 0, total: 0, exVat: 0 };
+      cur.amount += 1;
+      if (g.type === 'upgrade') {
+        cur.total += g.totalPrice || 0;
+        cur.exVat += round2((g.totalPrice || 0) / (1 + (g.taxRate || 0) / 100));
+      }
+      gamesMap.set(key, cur);
+    }
 
     // Count boxes by country
     const boxByCountry: any[] = await this.prisma.$queryRawUnsafe(`
@@ -573,7 +616,9 @@ class Mollie {
           END
         ), 0) as profitAssignedCount
       FROM payments p
-      WHERE p.vibe = 0
+      WHERE p.status = 'paid'
+        AND p.vibe = 0
+        AND p.test = 0
         AND p.createdAt >= '${startDate.toISOString()}'
         AND p.createdAt <= '${endDate.toISOString()}'
         AND p.createdAt > '2024-12-05'
@@ -634,6 +679,7 @@ class Mollie {
           boxAmount: boxMap.get(countryKey) || 0,
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
+          gamesExVat: round2(gamesData?.exVat || 0),
           appDesignAmount: appDesignMap.get(countryKey)?.amount || 0,
           appDesignTotal: appDesignMap.get(countryKey)?.total || 0,
           appDesignExVat: appDesignMap.get(countryKey)?.exVat || 0,
@@ -643,24 +689,30 @@ class Mollie {
       })
     );
 
-    // Countries whose only sale this month was App Designer.
+    // Countries whose only sales this month were App Designer or games
+    // upgrades, which have no payments row.
     const reportedCountries = new Set(detailedReport.map(r => r.country));
-    for (const [countryKey, appDesign] of appDesignMap) {
+    const extraCountries = new Set([...appDesignMap.keys(), ...gamesMap.keys()]);
+    for (const countryKey of extraCountries) {
       if (reportedCountries.has(countryKey)) continue;
+      const appDesign = appDesignMap.get(countryKey);
+      const gamesData = gamesMap.get(countryKey);
+      if (!appDesign && !(gamesData && gamesData.total > 0)) continue;
       detailedReport.push({
         country: countryKey,
         numberOfSales: 0,
         totalPrice: 0,
         totalPriceWithoutTax: 0,
         totalRefunded: 0,
-        taxRate: appDesign.taxRate,
+        taxRate: appDesign?.taxRate ?? null,
         totalPlaylists: 0,
         boxAmount: 0,
-        gamesAmount: gamesMap.get(countryKey)?.amount || 0,
-        gamesTotal: gamesMap.get(countryKey)?.total || 0,
-        appDesignAmount: appDesign.amount,
-        appDesignTotal: appDesign.total,
-        appDesignExVat: appDesign.exVat,
+        gamesAmount: gamesData?.amount || 0,
+        gamesTotal: gamesData?.total || 0,
+        gamesExVat: round2(gamesData?.exVat || 0),
+        appDesignAmount: appDesign?.amount || 0,
+        appDesignTotal: appDesign?.total || 0,
+        appDesignExVat: appDesign?.exVat || 0,
         totalProfit: 0,
         profitAssignedCount: 0,
       });
@@ -682,6 +734,7 @@ class Mollie {
     const where = {
       status: 'paid',
       vibe: false,
+      test: false,
       AND: [
         {
           createdAt: {
@@ -762,28 +815,55 @@ class Mollie {
 
     // Games: count all rows (initial + upgrade) but only sum upgrade prices.
     // Initial games are free signups so they have no VAT impact, but the count
-    // mirrors the monthly report so the two reports reconcile.
+    // mirrors the monthly report so the two reports reconcile. An upgrade is
+    // charged VAT-inclusive at the rate its row stores (its own Mollie
+    // payment, no Payment row), so its ex-VAT and VAT shares count towards
+    // the row's taxable totals like App Designer's do, and a (zone, country,
+    // rate) with only games upgrades still gets a row.
     const gameRows = await this.prisma.gamesPurchase.findMany({
       where: {
         createdAt: { gte: startDate, lte: endDate },
       },
       select: {
+        molliePaymentId: true,
         countrycode: true,
         taxRate: true,
         totalPrice: true,
         type: true,
       },
     });
-    const gamesMap = new Map<string, { amount: number; total: number }>();
+    type GamesAgg = { amount: number; total: number; exVat: number; vat: number };
+    const addGames = (map: Map<string, GamesAgg>, key: string, g: (typeof gameRows)[number]) => {
+      const cur = map.get(key) || { amount: 0, total: 0, exVat: 0, vat: 0 };
+      cur.amount += 1;
+      if (g.type === 'upgrade') {
+        const total = g.totalPrice || 0;
+        const exVat = round2(total / (1 + (g.taxRate || 0) / 100));
+        cur.total += total;
+        cur.exVat += exVat;
+        cur.vat += round2(total - exVat);
+      }
+      map.set(key, cur);
+    };
+    const gamesMap = new Map<string, GamesAgg>();
     for (const g of gameRows) {
       const zone = this.getTaxZone(g.countrycode);
       const countrycode = (g.countrycode || '').toUpperCase();
       const taxRate = g.taxRate || 0;
       const key = paymentKey(zone, countrycode, taxRate);
-      const cur = gamesMap.get(key) || { amount: 0, total: 0 };
-      cur.amount += 1;
-      if (g.type === 'upgrade') cur.total += g.totalPrice || 0;
-      gamesMap.set(key, cur);
+      addGames(gamesMap, key, g);
+      if (g.type === 'upgrade' && !agg.has(key)) {
+        agg.set(key, {
+          zone,
+          countrycode,
+          taxRate,
+          firstPaymentId: g.molliePaymentId || '',
+          numberOfSales: 0,
+          totalPrice: 0,
+          totalPriceWithoutTax: 0,
+          productVATPrice: 0,
+        });
+      }
     }
 
     // App Designer bought on the account: paid through its own Mollie
@@ -871,14 +951,18 @@ class Mollie {
         totalPriceWithoutTax:
           entry.totalPriceWithoutTax -
           (adj?.refundedExVAT || 0) +
+          (gamesData?.exVat || 0) +
           (appDesign?.exVat || 0),
         totalVAT:
           entry.productVATPrice -
           (adj?.refundedVAT || 0) +
+          (gamesData?.vat || 0) +
           (appDesign?.vat || 0),
         totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
+        gamesExVat: gamesData?.exVat || 0,
+        gamesVAT: gamesData?.vat || 0,
         appDesignAmount: appDesign?.amount || 0,
         appDesignTotal: appDesign?.total || 0,
         appDesignExVat: appDesign?.exVat || 0,
@@ -940,16 +1024,23 @@ class Mollie {
       }
     );
 
-    const ossGamesMap = new Map<string, { amount: number; total: number }>();
+    const ossGamesMap = new Map<string, GamesAgg>();
     for (const g of gameRows) {
       if (this.getTaxZone(g.countrycode) !== 'EU') continue;
       const country = (g.countrycode || '').toUpperCase();
       const taxRate = g.taxRate || 0;
       const key = ossKey(country, taxRate);
-      const cur = ossGamesMap.get(key) || { amount: 0, total: 0 };
-      cur.amount += 1;
-      if (g.type === 'upgrade') cur.total += g.totalPrice || 0;
-      ossGamesMap.set(key, cur);
+      addGames(ossGamesMap, key, g);
+      if (g.type === 'upgrade' && !ossAgg.has(key)) {
+        ossAgg.set(key, {
+          country,
+          taxRate,
+          numberOfSales: 0,
+          totalPrice: 0,
+          totalPriceWithoutTax: 0,
+          productVATPrice: 0,
+        });
+      }
     }
 
     // App Designer, same treatment as in the rows above.
@@ -985,14 +1076,18 @@ class Mollie {
         totalPriceWithoutTax:
           entry.totalPriceWithoutTax -
           (adj?.refundedExVAT || 0) +
+          (gamesData?.exVat || 0) +
           (appDesign?.exVat || 0),
         totalVAT:
           entry.productVATPrice -
           (adj?.refundedVAT || 0) +
+          (gamesData?.vat || 0) +
           (appDesign?.vat || 0),
         totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
+        gamesExVat: gamesData?.exVat || 0,
+        gamesVAT: gamesData?.vat || 0,
         appDesignAmount: appDesign?.amount || 0,
         appDesignTotal: appDesign?.total || 0,
         appDesignExVat: appDesign?.exVat || 0,
@@ -3062,7 +3157,9 @@ class Mollie {
           // Idempotency guard: skip if box is already enabled
           const php = await this.prisma.paymentHasPlaylist.findUnique({
             where: { id: paymentHasPlaylistId },
-            include: { payment: { select: { sentToPrinter: true } } },
+            include: {
+              payment: { select: { sentToPrinter: true, taxRate: true, countrycode: true } },
+            },
           });
           if (php?.boxEnabled === true) {
             this.logger.log(
@@ -3092,24 +3189,28 @@ class Mollie {
               },
             });
 
-            // Roll the upgrade total into Payment.totalPrice so books reflect
-            // the customer's full lifetime spend on this order: what was
-            // charged, the boxes plus any shipping carried in the metadata.
-            // The box price is VAT-inclusive (boxTierPrice), so no VAT is
-            // added on top; that used to book more than the customer paid.
-            // The order invoice subtracts this again (issueBoxInvoice).
+            // Roll the upgrade into the order's books: what was charged, the
+            // boxes plus any shipping carried in the metadata. The box price
+            // is VAT-inclusive (boxTierPrice), so no VAT is added on top;
+            // that used to book more than the customer paid. The order
+            // invoice subtracts this again (issueBoxInvoice). The boxes'
+            // wholesale cost comes off the profit; a box shipped on its own
+            // books its printer order below (createBoxUpgradeOrder).
             const upgradeShipping = metadata.shippingCost
               ? parseFloat(metadata.shippingCost)
               : 0;
             const upgradeChargedEur = parseFloat(
               (boxLineTotal + upgradeShipping).toFixed(2)
             );
-            await this.prisma.payment.update({
-              where: { paymentId: originalPaymentId },
-              data: {
-                totalPrice: { increment: upgradeChargedEur },
-              },
-            });
+            const boxTaxRate =
+              php?.payment?.taxRate ??
+              ((await this.data.getTaxRate(php?.payment?.countrycode || 'NL')) || 0);
+            await this.bookUpgradeOnPayment(
+              originalPaymentId,
+              upgradeChargedEur,
+              boxTaxRate,
+              round2(BOX_UNIT_COST * quantity)
+            );
 
             // Generate box insert card PDF. Pass the purchased box total
             // explicitly: the my-account upgrade stores the user-chosen
@@ -3216,6 +3317,7 @@ class Mollie {
           try {
             const php = await this.prisma.paymentHasPlaylist.findUnique({
               where: { id: paymentHasPlaylistId },
+              include: { payment: { select: { taxRate: true, countrycode: true } } },
             });
             if (!php) {
               return { success: false, error: 'PaymentHasPlaylist not found' };
@@ -3258,33 +3360,34 @@ class Mollie {
               );
             }
 
-            // Roll the charged amount into Payment.totalPrice so the books
-            // reflect the customer's full lifetime spend on this order. The
-            // EUR price it was sold at, like the order itself; the extra-cards
-            // invoice has the same total and the order invoice subtracts it.
-            // Older payments carry no totalEur: the EUR charge, or Mollie's
-            // settlement for another currency.
+            // Roll the charged amount into the order's books so they reflect
+            // the customer's full lifetime spend on this order. The EUR price
+            // it was sold at, like the order itself; the extra-cards invoice
+            // has the same total and the order invoice subtracts it. Older
+            // payments carry no totalEur: the EUR charge, or Mollie's
+            // settlement for another currency. The rate is the one the
+            // upgrade was sold at (the invoice uses the same), else the
+            // order's. Extra boxes cost their wholesale price; the cards'
+            // print cost lands when the order goes to the printer.
             const metadataTotalEur = parseFloat(metadata.totalEur);
             const chargedAmountEur =
               metadataTotalEur > 0
                 ? metadataTotalEur
                 : payment.amount && payment.amount.currency === 'EUR'
                   ? parseFloat(payment.amount.value)
-                  : null;
+                  : this.takeSettlementAmountEur(payment.id);
             if (chargedAmountEur !== null) {
-              await this.prisma.payment.update({
-                where: { paymentId: originalPaymentId },
-                data: { totalPrice: { increment: chargedAmountEur } },
-              });
-            } else {
-              // Non-EUR settlement: prefer settlementAmount in EUR if present.
-              const settlementEur = this.takeSettlementAmountEur(payment.id);
-              if (settlementEur !== null) {
-                await this.prisma.payment.update({
-                  where: { paymentId: originalPaymentId },
-                  data: { totalPrice: { increment: settlementEur } },
-                });
-              }
+              const tracksTaxRate =
+                metadata.taxRate !== undefined
+                  ? parseFloat(metadata.taxRate) || 0
+                  : (php.payment?.taxRate ??
+                    ((await this.data.getTaxRate(php.payment?.countrycode || 'NL')) || 0));
+              await this.bookUpgradeOnPayment(
+                originalPaymentId,
+                chargedAmountEur,
+                tracksTaxRate,
+                round2(BOX_UNIT_COST * extraBoxes)
+              );
             }
 
             // Mark as processed for 60 days; webhook replays after that are
@@ -3818,6 +3921,33 @@ class Mollie {
    * rate. Rebuilt from the payment's metadata, so a replay gives the same
    * lines.
    */
+  /**
+   * Book an upgrade paid after the order on that order's payment row: the
+   * gross amount into totalPrice, its ex-VAT and VAT shares into
+   * totalPriceWithoutTax and productVATPrice, and the ex-VAT share minus
+   * `cost` into profit. So the tax report, the dashboard and the day and
+   * month reports see the upgrade at once, without a "Calculate profit"
+   * pass; when that pass runs later it recomputes the same figures from
+   * totalPrice, the printer's price and the box count.
+   */
+  private async bookUpgradeOnPayment(
+    originalPaymentId: string,
+    grossEur: number,
+    taxRate: number,
+    cost: number
+  ): Promise<void> {
+    const exVat = round2(grossEur / (1 + (taxRate || 0) / 100));
+    await this.prisma.payment.update({
+      where: { paymentId: originalPaymentId },
+      data: {
+        totalPrice: { increment: grossEur },
+        totalPriceWithoutTax: { increment: exVat },
+        productVATPrice: { increment: round2(grossEur - exVat) },
+        profit: { increment: round2(exVat - cost) },
+      },
+    });
+  }
+
   private async issueBoxInvoice(
     payment: any,
     metadata: any,

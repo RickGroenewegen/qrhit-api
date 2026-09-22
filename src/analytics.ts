@@ -74,12 +74,9 @@ class AnalyticsClient {
       result[category][action] = parseInt(value || '0', 10);
     }
 
-    const financeResult = await this.getProfitAndTurnOver();
-
-    if (!result['finance']) result['finance'] = {};
-    result['finance']['profit'] = financeResult.totalProfit;
-    result['finance']['turnover'] = financeResult.totalPrice;
-
+    // Turnover and profit are not computed here: the /analytics route takes
+    // them from the sales report (Mollie.getSalesTotals), so the Finance
+    // card and the reports agree.
     const soldResult = await this.getTotalPlaylistsSoldByType();
 
     if (!result['purchase']) result['purchase'] = {};
@@ -127,64 +124,6 @@ class AnalyticsClient {
     }, initialResult);
   }
 
-  public async getProfitAndTurnOver(
-    excludedEmails: string[] = ['west14@gmail.com', 'info@rickgroenewegen.nl']
-  ): Promise<{ totalPrice: number; totalProfit: number }> {
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        vibe: false,
-        test: false,
-        user: {
-          email: {
-            notIn: excludedEmails,
-          },
-        },
-      },
-      select: {
-        totalPriceWithoutTax: true,
-        profit: true,
-      },
-    });
-
-    const totals = payments.reduce(
-      (acc, payment) => {
-        acc.totalPrice += payment.totalPriceWithoutTax;
-        acc.totalProfit += payment.profit;
-        return acc;
-      },
-      { totalPrice: 0, totalProfit: 0 }
-    );
-
-    // Add QRGames revenue (pure profit)
-    const gamesTotal = await this.prisma.gamesPurchase.aggregate({
-      _sum: { totalPrice: true },
-    });
-    const gamesRevenue = gamesTotal._sum.totalPrice || 0;
-
-    // Only upgrade games add to turnover (initial games already in payment totals)
-    const upgradeGamesTotal = await this.prisma.gamesPurchase.aggregate({
-      where: { type: 'upgrade' },
-      _sum: { totalPrice: true },
-    });
-    const upgradeGamesRevenue = upgradeGamesTotal._sum.totalPrice || 0;
-
-    totals.totalPrice += upgradeGamesRevenue;
-    totals.totalProfit += gamesRevenue;
-
-    // App Designer bought on the account (own ledger, no Payment row): ex-VAT
-    // is turnover, and since it costs nothing to deliver it is profit as
-    // well. Bought at checkout it is already in its order's totals and profit.
-    const appDesignTotal = await this.prisma.appDesignPurchase.aggregate({
-      where: { paymentId: null },
-      _sum: { totalPriceWithoutTax: true },
-    });
-    const appDesignRevenue = appDesignTotal._sum.totalPriceWithoutTax || 0;
-
-    totals.totalPrice += appDesignRevenue;
-    totals.totalProfit += appDesignRevenue;
-
-    return totals;
-  }
 }
 
 export default AnalyticsClient;

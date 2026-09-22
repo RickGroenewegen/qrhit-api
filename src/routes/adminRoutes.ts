@@ -1948,8 +1948,13 @@ export default async function adminRoutes(
     '/analytics',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
-      const analytics = await AnalyticsClient.getInstance().getAllCounters();
-      reply.send({ success: true, data: analytics });
+      // The Finance card takes turnover and profit from the sales report, so
+      // the dashboard and the day and month reports agree.
+      const [analytics, finance] = await Promise.all([
+        AnalyticsClient.getInstance().getAllCounters(),
+        mollie.getSalesTotals(),
+      ]);
+      reply.send({ success: true, data: { ...analytics, finance } });
     }
   );
 

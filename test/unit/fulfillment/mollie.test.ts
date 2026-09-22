@@ -1899,7 +1899,7 @@ describe('processWebhook', () => {
     prismaMock.paymentHasPlaylist.findUnique
       .mockResolvedValueOnce({
         boxEnabled: false,
-        payment: { sentToPrinter: true },
+        payment: { sentToPrinter: true, taxRate: 19, countrycode: 'DE' },
       }) // idempotency check
       .mockResolvedValueOnce({ payment: { user: { hash: 'h2' } } }); // cache clear
     prismaMock.payment.findUnique.mockResolvedValueOnce({
@@ -1920,9 +1920,16 @@ describe('processWebhook', () => {
       data: { boxEnabled: true, boxPrice: 13.98 }, // 6.99 * 2
     });
     // The box price is VAT-inclusive: 13.98 + shipping 3.50, no VAT on top.
+    // Booked with the order's 19% split, the two boxes' wholesale cost
+    // (2 x 0.75) off the profit.
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'tr_orig' },
-      data: { totalPrice: { increment: 17.48 } },
+      data: {
+        totalPrice: { increment: 17.48 },
+        totalPriceWithoutTax: { increment: 14.69 },
+        productVATPrice: { increment: 2.79 },
+        profit: { increment: 13.19 },
+      },
     });
     expect(dataMock.getTaxRate).toHaveBeenCalledWith('DE');
     expect(upgradeInvoicesMock.issue).toHaveBeenCalledTimes(1);
@@ -2057,9 +2064,15 @@ describe('processWebhook', () => {
       150,
       undefined
     );
+    // No rate in the metadata and none on the order: the country's 21%.
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'tr_orig' },
-      data: { totalPrice: { increment: 10 } },
+      data: {
+        totalPrice: { increment: 10 },
+        totalPriceWithoutTax: { increment: 8.26 },
+        productVATPrice: { increment: 1.74 },
+        profit: { increment: 8.26 },
+      },
     });
     expect(cacheMock.set).toHaveBeenCalledWith(
       'tracks_upgrade_processed:tr_tracks',
@@ -2228,9 +2241,15 @@ describe('processWebhook', () => {
 
     await mollie.processWebhook({ id: 'tr_tracks_sek' });
 
+    // Split at the 25% the upgrade was sold at, like its invoice.
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'tr_orig' },
-      data: { totalPrice: { increment: 30.63 } },
+      data: {
+        totalPrice: { increment: 30.63 },
+        totalPriceWithoutTax: { increment: 24.5 },
+        productVATPrice: { increment: 6.13 },
+        profit: { increment: 24.5 },
+      },
     });
   });
 
@@ -2798,6 +2817,7 @@ describe('getSalesReport: App Designer', () => {
       totalRefunded: 0,
       gamesAmount: 0,
       gamesTotal: 0,
+      gamesExVat: 0,
       appDesignAmount: 1,
       appDesignTotal: 9,
       appDesignExVat: 7.44,
@@ -3026,6 +3046,86 @@ describe('getPaymentsByTaxRate: App Designer', () => {
       totalVAT: 1.5,
       appDesignAmount: 1,
       appDesignTotal: 9,
+    });
+  });
+
+  it('counts a games upgrade, charged VAT-inclusive, in the taxable totals', async () => {
+    prismaMock.gamesPurchase.findMany.mockResolvedValue([
+      { molliePaymentId: 'tr_g_nl', countrycode: 'NL', taxRate: 21, totalPrice: 5, type: 'upgrade' },
+      // The free games that came with an order: counted, no money.
+      { molliePaymentId: null, countrycode: 'NL', taxRate: 21, totalPrice: 0, type: 'initial' },
+      // A country whose only sale was a games upgrade still gets a row.
+      { molliePaymentId: 'tr_g_be', countrycode: 'BE', taxRate: 21, totalPrice: 5, type: 'upgrade' },
+    ]);
+
+    const { rows, ossBreakdown } = await mollie.getPaymentsByTaxRate(
+      new Date(2026, 6, 1),
+      new Date(2026, 9, 0, 23, 59, 59)
+    );
+
+    const nl = rows.find((r: any) => r.countrycode === 'NL');
+    expect(nl).toMatchObject({ gamesAmount: 2, gamesTotal: 5, gamesExVat: 4.13, gamesVAT: 0.87 });
+    expect(nl.totalPriceWithoutTax).toBeCloseTo(20.66 + 7.44 + 4.13, 2);
+    expect(nl.totalVAT).toBeCloseTo(4.34 + 1.56 + 0.87, 2);
+
+    const be = rows.find((r: any) => r.countrycode === 'BE');
+    expect(be).toMatchObject({
+      zone: 'EU',
+      firstPaymentId: 'tr_g_be',
+      numberOfSales: 0,
+      totalPrice: 0,
+      totalPriceWithoutTax: 4.13,
+      totalVAT: 0.87,
+      gamesAmount: 1,
+      gamesTotal: 5,
+    });
+    expect(ossBreakdown.find((r: any) => r.country === 'BE')).toMatchObject({
+      totalPriceWithoutTax: 4.13,
+      totalVAT: 0.87,
+      gamesExVat: 4.13,
+    });
+  });
+});
+
+describe('getSalesTotals', () => {
+  it("adds the report's rows up the way the day and month reports do", async () => {
+    mockSalesReportQueries({
+      payments: [
+        {
+          period: '2026-09',
+          numberOfSales: 10n,
+          totalPrice: '250',
+          totalPriceWithoutTax: '206.61',
+          totalRefunded: '5',
+          totalProfit: '80',
+          profitAssignedCount: 8n,
+        },
+        {
+          period: '2026-08',
+          numberOfSales: 4n,
+          totalPrice: '100',
+          totalPriceWithoutTax: '82.64',
+          totalRefunded: '0',
+          totalProfit: '30',
+          profitAssignedCount: 4n,
+        },
+      ],
+      games: [{ period: '2026-09', gamesAmount: 3n, gamesTotal: '5', gamesExVat: '4.13' }],
+      appDesign: [
+        { period: '2026-09', appDesignAmount: 2n, appDesignTotal: '18', appDesignExVat: '14.88' },
+        { period: '2026-07', appDesignAmount: 1n, appDesignTotal: '9', appDesignExVat: '7.44' },
+      ],
+    });
+
+    const totals = await mollie.getSalesTotals();
+
+    // Turnover: the reports' "Combined €" (gross playlists, games upgrades
+    // and account App Designer); profit: their "Profit €" (ex-VAT).
+    expect(totals).toEqual({
+      turnover: 250 + 100 + 5 + 18 + 9,
+      profit: 136.45, // 80 + 30 + 4.13 + 14.88 + 7.44
+      numberOfSales: 14,
+      profitAssignedCount: 12,
     });
   });
 });

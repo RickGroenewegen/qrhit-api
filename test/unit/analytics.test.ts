@@ -5,9 +5,6 @@ const { redisStore, prismaMock } = vi.hoisted(() => ({
   redisStore: new Map<string, string>(),
   prismaMock: {
     paymentHasPlaylist: { groupBy: vi.fn() },
-    payment: { findMany: vi.fn() },
-    gamesPurchase: { aggregate: vi.fn() },
-    appDesignPurchase: { aggregate: vi.fn() },
   },
 }));
 
@@ -50,12 +47,6 @@ const analytics = AnalyticsClient.getInstance();
 beforeEach(() => {
   redisStore.clear();
   prismaMock.paymentHasPlaylist.groupBy.mockReset();
-  prismaMock.payment.findMany.mockReset();
-  prismaMock.gamesPurchase.aggregate.mockReset();
-  prismaMock.appDesignPurchase.aggregate.mockReset();
-  prismaMock.appDesignPurchase.aggregate.mockResolvedValue({
-    _sum: { totalPriceWithoutTax: null },
-  });
 });
 
 describe('counters', () => {
@@ -124,74 +115,12 @@ describe('getTotalPlaylistsSoldByType', () => {
   });
 });
 
-describe('getProfitAndTurnOver', () => {
-  it('sums payments and adds games revenue (all games to profit, upgrades to turnover)', async () => {
-    prismaMock.payment.findMany.mockResolvedValue([
-      { totalPriceWithoutTax: 100, profit: 20 },
-      { totalPriceWithoutTax: 50, profit: 10 },
-    ]);
-    prismaMock.gamesPurchase.aggregate.mockImplementation(async (args: any) =>
-      args?.where?.type === 'upgrade'
-        ? { _sum: { totalPrice: 7 } }
-        : { _sum: { totalPrice: 25 } }
-    );
-
-    const totals = await analytics.getProfitAndTurnOver();
-    expect(totals).toEqual({
-      totalPrice: 150 + 7, // upgrades only
-      totalProfit: 30 + 25, // all games revenue is pure profit
-    });
-  });
-
-  it('adds App Designer ex-VAT to both turnover and profit', async () => {
-    prismaMock.payment.findMany.mockResolvedValue([
-      { totalPriceWithoutTax: 100, profit: 20 },
-    ]);
-    prismaMock.gamesPurchase.aggregate.mockResolvedValue({
-      _sum: { totalPrice: 0 },
-    });
-    prismaMock.appDesignPurchase.aggregate.mockResolvedValue({
-      _sum: { totalPriceWithoutTax: 14.88 },
-    });
-
-    const totals = await analytics.getProfitAndTurnOver();
-    // Only purchases made on the account: one bought at checkout is already
-    // inside its order's totals and profit.
-    expect(prismaMock.appDesignPurchase.aggregate).toHaveBeenCalledWith({
-      where: { paymentId: null },
-      _sum: { totalPriceWithoutTax: true },
-    });
-    expect(totals.totalPrice).toBeCloseTo(100 + 14.88, 2);
-    // costs nothing to deliver, so ex-VAT (not gross) is profit
-    expect(totals.totalProfit).toBeCloseTo(20 + 14.88, 2);
-  });
-
-  it('handles no payments and no games purchases', async () => {
-    prismaMock.payment.findMany.mockResolvedValue([]);
-    prismaMock.gamesPurchase.aggregate.mockResolvedValue({
-      _sum: { totalPrice: null },
-    });
-    expect(await analytics.getProfitAndTurnOver()).toEqual({
-      totalPrice: 0,
-      totalProfit: 0,
-    });
-  });
-});
-
 describe('getAllCounters', () => {
-  it('merges Redis counters with finance and purchase aggregates', async () => {
+  it('merges Redis counters with the purchase aggregates (finance comes from the sales report)', async () => {
     await analytics.increaseCounter('page', 'views', 3);
     await analytics.increaseCounter('page', 'clicks', 2);
     await analytics.increaseCounter('mail', 'sent', 9);
 
-    prismaMock.payment.findMany.mockResolvedValue([
-      { totalPriceWithoutTax: 200, profit: 40 },
-    ]);
-    prismaMock.gamesPurchase.aggregate.mockImplementation(async (args: any) =>
-      args?.where?.type === 'upgrade'
-        ? { _sum: { totalPrice: 0 } }
-        : { _sum: { totalPrice: 0 } }
-    );
     prismaMock.paymentHasPlaylist.groupBy.mockResolvedValue([
       { type: 'digital', _sum: { amount: 2, numberOfTracks: 80 } },
       { type: 'physical', _sum: { amount: 1, numberOfTracks: 40 } },
@@ -200,7 +129,7 @@ describe('getAllCounters', () => {
     const all = await analytics.getAllCounters();
     expect(all.page).toEqual({ views: 3, clicks: 2 });
     expect(all.mail).toEqual({ sent: 9 });
-    expect(all.finance).toEqual({ profit: 40, turnover: 200 });
+    expect(all.finance).toBeUndefined();
     expect(all.purchase).toEqual({
       digital: 2,
       physical: 1,
