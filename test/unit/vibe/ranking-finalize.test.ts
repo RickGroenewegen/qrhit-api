@@ -491,15 +491,15 @@ describe('addTrackExtraInfo (private)', () => {
         },
       },
     ]);
-    h.prisma.trackExtraInfo.create.mockResolvedValue({});
+    h.prisma.trackExtraInfo.upsert.mockResolvedValue({});
   }
 
   it('writes ranked positions and consenting card names (nbsp-joined)', async () => {
     arrangeSubmissionTracks();
     await anyVibe.addTrackExtraInfo(1, 500, true, [20, 10]);
 
-    expect(h.prisma.trackExtraInfo.create).toHaveBeenCalledTimes(2);
-    const datas = h.prisma.trackExtraInfo.create.mock.calls.map((c) => c[0].data);
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledTimes(2);
+    const datas = h.prisma.trackExtraInfo.upsert.mock.calls.map((c) => c[0].create);
     expect(datas[0]).toEqual({
       playlistId: 500,
       trackId: 20,
@@ -514,22 +514,36 @@ describe('addTrackExtraInfo (private)', () => {
     });
   });
 
+  it('updates the existing row on a second finalize instead of adding one', async () => {
+    arrangeSubmissionTracks();
+    await anyVibe.addTrackExtraInfo(1, 500, true, [20, 10]);
+
+    const [first] = h.prisma.trackExtraInfo.upsert.mock.calls[0];
+    expect(first.where).toEqual({
+      playlistId_trackId: { playlistId: 500, trackId: 20 },
+    });
+    expect(first.update).toEqual({
+      extraNameAttribute: '',
+      extraArtistAttribute: '#1',
+    });
+  });
+
   it('omits all names when shownames is false', async () => {
     arrangeSubmissionTracks();
     await anyVibe.addTrackExtraInfo(1, 500, false, [10, 20]);
-    const datas = h.prisma.trackExtraInfo.create.mock.calls.map((c) => c[0].data);
+    const datas = h.prisma.trackExtraInfo.upsert.mock.calls.map((c) => c[0].create);
     expect(datas.every((d: any) => d.extraNameAttribute === '')).toBe(true);
   });
 
   it('falls back to map ordering when no ranking is provided', async () => {
     arrangeSubmissionTracks();
     await anyVibe.addTrackExtraInfo(1, 500, true);
-    expect(h.prisma.trackExtraInfo.create).toHaveBeenCalledTimes(2);
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledTimes(2);
   });
 
   it('swallows database errors instead of failing the caller', async () => {
     h.prisma.companyListSubmissionTrack.findMany.mockRejectedValue(new Error('x'));
     await expect(anyVibe.addTrackExtraInfo(1, 500, true)).resolves.toBeUndefined();
-    expect(h.prisma.trackExtraInfo.create).not.toHaveBeenCalled();
+    expect(h.prisma.trackExtraInfo.upsert).not.toHaveBeenCalled();
   });
 });

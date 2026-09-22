@@ -43,7 +43,7 @@ export const h = {
     companyListSubmissionTrack: model('findMany', 'updateMany'),
     companyListQuestion: model('findMany'),
     track: model('findMany'),
-    trackExtraInfo: model('create'),
+    trackExtraInfo: model('upsert'),
     playlist: model('findUnique', 'update', 'delete'),
     playlistHasTrack: model('count'),
     payment: model('delete'),

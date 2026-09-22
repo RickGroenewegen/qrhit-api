@@ -18,14 +18,12 @@ const h = vi.hoisted(() => ({
     },
     user: { findFirst: vi.fn() },
     userSuggestion: {
-      findFirst: vi.fn(),
-      update: vi.fn(),
-      create: vi.fn(),
+      upsert: vi.fn(),
       count: vi.fn(),
       deleteMany: vi.fn(),
     },
     track: { update: vi.fn() },
-    trackExtraInfo: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+    trackExtraInfo: { upsert: vi.fn() },
     $queryRaw: vi.fn(),
     $executeRaw: vi.fn(),
   },
@@ -269,7 +267,7 @@ describe('saveUserSuggestion', () => {
     const ok = await suggestion.saveUserSuggestion(...args, body);
     expect(ok).toBe(false);
     expect(rawQueryCalls(SQL.trackCheck)).toHaveLength(0);
-    expect(h.prisma.userSuggestion.create).not.toHaveBeenCalled();
+    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 
   it('rejects when the track does not belong to the payment/playlist', async () => {
@@ -284,13 +282,13 @@ describe('saveUserSuggestion', () => {
     h.prisma.user.findFirst.mockResolvedValue(null);
     const ok = await suggestion.saveUserSuggestion(...args, body);
     expect(ok).toBe(false);
-    expect(h.prisma.userSuggestion.findFirst).not.toHaveBeenCalled();
+    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 
-  it('updates an existing suggestion in place', async () => {
+  it('upserts on (user, track): updates the fields, creates bound to the playlist from the access check', async () => {
     routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
     h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
-    h.prisma.userSuggestion.findFirst.mockResolvedValue({ id: 333 });
+    h.prisma.userSuggestion.upsert.mockResolvedValue({ id: 333 });
 
     const ok = await suggestion.saveUserSuggestion(...args, {
       ...body,
@@ -299,39 +297,44 @@ describe('saveUserSuggestion', () => {
     });
 
     expect(ok).toBe(true);
-    expect(h.prisma.userSuggestion.update).toHaveBeenCalledWith({
-      where: { id: 333 },
-      data: {
-        name: 'New',
-        artist: 'Artist',
-        year: 1999,
-        extraNameAttribute: 'Remastered',
-        extraArtistAttribute: 'feat. X',
-      },
+    const fields = {
+      name: 'New',
+      artist: 'Artist',
+      year: 1999,
+      extraNameAttribute: 'Remastered',
+      extraArtistAttribute: 'feat. X',
+    };
+    expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledWith({
+      where: { userId_trackId: { userId: 5, trackId: 42 } },
+      update: fields,
+      create: { ...fields, trackId: 42, userId: 5, playlistId: 9 },
     });
-    expect(h.prisma.userSuggestion.create).not.toHaveBeenCalled();
   });
 
-  it('creates a new suggestion bound to the playlist from the access check', async () => {
+  it('retries once when a concurrent save created the row first', async () => {
     routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
     h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
-    h.prisma.userSuggestion.findFirst.mockResolvedValue(null);
+    h.prisma.userSuggestion.upsert
+      .mockRejectedValueOnce(Object.assign(new Error('unique'), { code: 'P2002' }))
+      .mockResolvedValueOnce({ id: 333 });
 
     const ok = await suggestion.saveUserSuggestion(...args, body);
 
     expect(ok).toBe(true);
-    expect(h.prisma.userSuggestion.create).toHaveBeenCalledWith({
-      data: {
-        trackId: 42,
-        userId: 5,
-        playlistId: 9,
-        name: 'New',
-        artist: 'Artist',
-        year: 1999,
-        extraNameAttribute: undefined,
-        extraArtistAttribute: undefined,
-      },
-    });
+    expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry other database errors', async () => {
+    routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
+    h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
+    h.prisma.userSuggestion.upsert.mockRejectedValue(
+      Object.assign(new Error('fk'), { code: 'P2003' })
+    );
+
+    const ok = await suggestion.saveUserSuggestion(...args, body);
+
+    expect(ok).toBe(false);
+    expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledTimes(1);
   });
 
   it('swallows database errors and returns false', async () => {
@@ -685,8 +688,7 @@ describe('processCorrections', () => {
         where: { id: 42 },
         data: { name: 'New Name', year: 1991, manuallyCorrected: true },
       });
-      expect(h.prisma.trackExtraInfo.update).not.toHaveBeenCalled();
-      expect(h.prisma.trackExtraInfo.create).not.toHaveBeenCalled();
+      expect(h.prisma.trackExtraInfo.upsert).not.toHaveBeenCalled();
 
       const execs = execCalls();
       const pendingClear = execs.find((e) =>
@@ -719,7 +721,7 @@ describe('processCorrections', () => {
     }
   });
 
-  it('routes onlyForMe corrections to trackExtraInfo.update, still marking the global track manuallyCorrected', async () => {
+  it('routes onlyForMe corrections to a trackExtraInfo upsert, still marking the global track manuallyCorrected', async () => {
     routeRaw([
       OWNED,
       [SQL.phpInfo, PHP_DIGITAL],
@@ -735,7 +737,6 @@ describe('processCorrections', () => {
       ],
     ]);
     h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
-    h.prisma.trackExtraInfo.findFirst.mockResolvedValue({ id: 88 });
 
     expect(
       await call({ titleOnlyForMe: true, artistOnlyForMe: true })
@@ -746,11 +747,16 @@ describe('processCorrections', () => {
       where: { id: 42 },
       data: { manuallyCorrected: true },
     });
-    expect(h.prisma.trackExtraInfo.update).toHaveBeenCalledWith({
-      where: { id: 88 },
-      data: { name: 'Local Name', artist: 'Local Artist' },
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledWith({
+      where: { playlistId_trackId: { playlistId: 20, trackId: 42 } },
+      update: { name: 'Local Name', artist: 'Local Artist' },
+      create: {
+        track: { connect: { id: 42 } },
+        playlist: { connect: { id: 20 } },
+        name: 'Local Name',
+        artist: 'Local Artist',
+      },
     });
-    expect(h.prisma.trackExtraInfo.create).not.toHaveBeenCalled();
 
     // onlyForMe flags are persisted on the php row
     const pendingClear = execCalls().find((e) =>
@@ -775,19 +781,63 @@ describe('processCorrections', () => {
       ],
     ]);
     h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
-    h.prisma.trackExtraInfo.findFirst.mockResolvedValue(null);
 
     expect(await call()).toBe(true);
 
-    expect(h.prisma.trackExtraInfo.create).toHaveBeenCalledWith({
-      data: {
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledWith({
+      where: { playlistId_trackId: { playlistId: 20, trackId: 42 } },
+      update: {
+        extraNameAttribute: 'Remaster 2020',
+        extraArtistAttribute: 'feat. Q',
+      },
+      create: {
         track: { connect: { id: 42 } },
         playlist: { connect: { id: 20 } },
         extraNameAttribute: 'Remaster 2020',
         extraArtistAttribute: 'feat. Q',
       },
     });
-    expect(h.prisma.trackExtraInfo.update).not.toHaveBeenCalled();
+  });
+
+  it('writes a track listed twice through one upsert key, one write at a time', async () => {
+    // The 501-card order: the track came back twice, both lookups ran before
+    // either create, and trackextrainfo got two rows for it.
+    const row = { ...baseRow, suggestedYear: 2021 };
+    routeRaw([OWNED, [SQL.phpInfo, PHP_DIGITAL], [SQL.suggestions, [row, row]]]);
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    h.prisma.trackExtraInfo.upsert.mockImplementation(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await Promise.resolve();
+      inFlight--;
+      return {};
+    });
+
+    expect(await call({ yearOnlyForMe: true })).toBe(true);
+
+    const keys = h.prisma.trackExtraInfo.upsert.mock.calls.map((c) => c[0].where);
+    expect(keys).toEqual([
+      { playlistId_trackId: { playlistId: 20, trackId: 42 } },
+      { playlistId_trackId: { playlistId: 20, trackId: 42 } },
+    ]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it('retries the trackExtraInfo upsert when a concurrent run created the row first', async () => {
+    routeRaw([
+      OWNED,
+      [SQL.phpInfo, PHP_DIGITAL],
+      [SQL.suggestions, [{ ...baseRow, suggestedYear: 2021 }]],
+    ]);
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
+    h.prisma.trackExtraInfo.upsert
+      .mockRejectedValueOnce(Object.assign(new Error('unique'), { code: 'P2002' }))
+      .mockResolvedValueOnce({});
+
+    expect(await call({ yearOnlyForMe: true })).toBe(true);
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledTimes(2);
   });
 
   it('clears an extra attribute to null when the suggestion empties it', async () => {
@@ -806,14 +856,15 @@ describe('processCorrections', () => {
       ],
     ]);
     h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
-    h.prisma.trackExtraInfo.findFirst.mockResolvedValue({ id: 88 });
 
     expect(await call()).toBe(true);
 
-    expect(h.prisma.trackExtraInfo.update).toHaveBeenCalledWith({
-      where: { id: 88 },
-      data: { extraNameAttribute: null },
-    });
+    expect(h.prisma.trackExtraInfo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { playlistId_trackId: { playlistId: 20, trackId: 42 } },
+        update: { extraNameAttribute: null },
+      })
+    );
   });
 
   it('digital with no text changes: clears flags, resets judged status and re-enables suggestions', async () => {
