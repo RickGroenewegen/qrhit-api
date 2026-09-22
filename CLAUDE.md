@@ -549,16 +549,19 @@ prices, and the API cannot redo that: it only knows the printer cost. Until
 inputs and billed Tromp and Schneider lists at roughly the printer's price,
 so no invoice matched the quotation or the Sell column.
 
+- Lists are printed by Tromp (`printer = 'qrsong'`) or Schneider. The
+  OnzeVibe list calculator was removed on 2026-09-22; `listPrinterVariant`
+  reads a list still stored with `printer = 'onzevibe'` (or none) as
+  Schneider, and the list update refuses any other printer. The OnzeVibe
+  portal (qrhit-vibe) still uses `/vibe/calculate`, the company-level
+  `calculation` endpoints and the OnzeVibe quotation, company-level only.
 - Every calculator save carries a `pricing` snapshot inside the variant's
-  calculation JSON (`calculation` / `calculationTromp` /
-  `calculationSchneider`): quantity, unit price, one-off extras, app and
-  portal fees, discount %. `src/listPricing.ts` parses it and does the sums;
+  calculation JSON (`calculationTromp` / `calculationSchneider`): quantity,
+  unit price, one-off extras, app and portal fees, discount %. `src/listPricing.ts` parses it and does the sums;
   the frontend mirrors it in `shared/list-pricing.util.ts` with the same
   rounding. The save endpoints set `sellPrice` from it (excl. VAT, after
   discount), and `buildInvoiceLineItems` builds the lines from it. A list
   without a snapshot cannot be invoiced; opening its calculator saves one.
-- Only an admin sets a snapshot: the OnzeVibe list endpoint also takes
-  companyadmin saves, which keep the stored one.
 - The discount belongs to the list. Tromp and Schneider used to write it to
   `company.calculation` (company-wide), where the quotation read it and the
   invoice did not. Lists saved before the move still fall back to the

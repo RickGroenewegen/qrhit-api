@@ -13,7 +13,7 @@
  * functions; keep the rounding identical.
  */
 
-export type ListVariant = 'onzevibe' | 'qrsong' | 'schneider';
+export type ListVariant = 'qrsong' | 'schneider';
 export type PaymentOption = 'full' | 'down' | 'remaining';
 
 export const DOWN_PAYMENT_FRACTION = 0.3;
@@ -59,14 +59,18 @@ export function round2(n: number): number {
   return Math.round(Number((n * 100).toPrecision(15))) / 100;
 }
 
+/**
+ * The price variant of a list's printer. Lists saved with the retired
+ * OnzeVibe printer count as Schneider, the default.
+ */
+export function listPrinterVariant(printer: string | null | undefined): ListVariant {
+  return printer === 'qrsong' ? 'qrsong' : 'schneider';
+}
+
 export function variantCalculationColumn(
   variant: ListVariant
-): 'calculation' | 'calculationTromp' | 'calculationSchneider' {
-  return variant === 'qrsong'
-    ? 'calculationTromp'
-    : variant === 'schneider'
-      ? 'calculationSchneider'
-      : 'calculation';
+): 'calculationTromp' | 'calculationSchneider' {
+  return variant === 'qrsong' ? 'calculationTromp' : 'calculationSchneider';
 }
 
 function money(value: unknown): number | null {

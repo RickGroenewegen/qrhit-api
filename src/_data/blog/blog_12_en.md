@@ -38,7 +38,7 @@ This matters because a timeline game is only playable if the years are right, an
 
 ## If you already own cards
 
-The free app reads cards from other music card games as well as ours, so a retail deck you already own plays on any of these services. If you bought one that only supports Spotify and you do not have Spotify, [this is the way round it](/[lang]/hitster-without-spotify).
+The free app reads Hitster cards and selected other music cards as well as ours, so a retail deck you already own plays on any of these services. If you bought one that only supports Spotify and you do not have Spotify, [this is the way round it](/[lang]/hitster-without-spotify).
 
 Full details are on the [supported platforms page](/[lang]/supported-platforms), and the app is free on [iPhone and Android](/[lang]/download-app).
 

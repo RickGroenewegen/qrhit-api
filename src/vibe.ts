@@ -26,6 +26,7 @@ import {
   ListPricingTotals,
   listPricingFromCalculation,
   listPricingTotals,
+  listPrinterVariant,
   paymentAmounts,
   variantCalculationColumn,
 } from './listPricing';
@@ -1339,12 +1340,7 @@ class Vibe {
       });
 
       const rows = lists.map((list: any) => {
-        const column =
-          list.printer === 'qrsong'
-            ? 'calculationTromp'
-            : list.printer === 'schneider'
-            ? 'calculationSchneider'
-            : 'calculation';
+        const column = variantCalculationColumn(listPrinterVariant(list.printer));
         let boxes = Number(list.numberOfBoxes) || 0;
         if (!boxes) {
           try {
@@ -1360,7 +1356,7 @@ class Vibe {
           companyName: list.Company?.name || '',
           name: list.name,
           slug: list.slug,
-          printer: list.printer,
+          printer: listPrinterVariant(list.printer),
           status: list.status,
           numberOfCards: list.numberOfCards,
           numberOfBoxes: boxes,
@@ -1404,12 +1400,8 @@ class Vibe {
 
       // Total number of boxes comes from the current quotation/calculator
       // state stored on the list (per-printer column).
-      const column =
-        list.printer === 'qrsong'
-          ? 'calculationTromp'
-          : list.printer === 'schneider'
-          ? 'calculationSchneider'
-          : 'calculation';
+      const printer = listPrinterVariant(list.printer);
+      const column = variantCalculationColumn(printer);
       let calcState: any = {};
       try {
         calcState = JSON.parse(list[column] || '{}');
@@ -1425,7 +1417,7 @@ class Vibe {
 
       // Printer-specific product description
       let productDescription = '';
-      if (list.printer === 'schneider') {
+      if (printer === 'schneider') {
         const cardCount = Number(calcState.cardCount) || list.numberOfCards || 96;
         const bundleByCount: Record<number, { bundle: string; box: string }> = {
           48: { bundle: '1x 48 in banderol', box: '1-vaks' },
@@ -1435,7 +1427,7 @@ class Vibe {
         };
         const spec = bundleByCount[cardCount] || bundleByCount[96];
         productDescription = `${cardCount} kaarten (${spec.bundle}), formaat 56 x 56 mm, wit 350 grams Condat, 2-zijdig uniek, fc/fc + lak bedrukt, met afgeronde hoeken in een luxe ${spec.box} dekseldoosje van wit SK2 karton, deksel + bodem fc/0 bedrukt + glanslaminaat.`;
-      } else if (list.printer === 'qrsong') {
+      } else {
         const printingType = calcState.printingType || 'eigen';
         const trompDescriptions: Record<string, string> = {
           eigen:
@@ -1448,11 +1440,6 @@ class Vibe {
         };
         productDescription =
           trompDescriptions[printingType] || trompDescriptions['eigen'];
-      } else {
-        productDescription = `${list.numberOfCards || 200} kaarten per doos`;
-        warnings.push(
-          'Deze lijst gebruikt de OnzeVibe printer; controleer de productomschrijving.'
-        );
       }
 
       // Desired delivery date in Dutch
@@ -4029,7 +4016,8 @@ class Vibe {
 
       // Persist a quotation history row. Pull the current calculation JSON
       // from the list (or fall back to the company-level one) so we can
-      // extract the flags and totals the admin cares about.
+      // extract the flags and totals the admin cares about. OnzeVibe
+      // quotations come from the OnzeVibe portal and are company-level only.
       try {
         const column =
           type === 'qrsong'
@@ -4048,7 +4036,6 @@ class Vibe {
             select: {
               name: true,
               numberOfCards: true,
-              calculation: true,
               calculationTromp: true,
               calculationSchneider: true,
             },
@@ -4056,7 +4043,9 @@ class Vibe {
           if (list) {
             listName = list.name;
             listNumberOfCards = list.numberOfCards ?? null;
-            calcJson = list[column] as string | null;
+            if (column !== 'calculation') {
+              calcJson = list[column] as string | null;
+            }
           }
         }
         if (!calcJson) {
@@ -4337,17 +4326,8 @@ class Vibe {
             : calc.printingType === 'klein'
               ? t('smallBox')
               : t('standardBox');
-      } else if (type === 'schneider') {
-        productDescription = t('qrsongBox', { count: calc.cardCount || 48 });
       } else {
-        // Priced with personalization unless it was switched off explicitly.
-        const detailParts = [
-          calc.includePersonalization === false
-            ? t('detailNoPersonalization')
-            : t('detailPersonalization'),
-        ];
-        if (calc.shipmentOnLocation) detailParts.push(t('detailSingleLocation'));
-        productDescription = t('vibeBox', { details: detailParts.join(', ') });
+        productDescription = t('qrsongBox', { count: calc.cardCount || 48 });
       }
 
       const items: { description: string; amount: string; price: string }[] = [

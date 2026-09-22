@@ -440,17 +440,17 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     expect(res.totals!.subtotal).toBe(472 + 350 + 500);
   });
 
-  it('onzevibe adds the custom app line at the saved fee', async () => {
+  it('adds the custom app line at the saved fee', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue({
       id: 2,
       companyId: 1,
       name: 'L',
-      calculation: JSON.stringify({
-        includePersonalization: true,
+      calculationSchneider: JSON.stringify({
+        cardCount: 48,
         pricing: pricing({ customAppFee: 395 }),
       }),
     });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toContainEqual({
       description: 'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
       amount: '1',

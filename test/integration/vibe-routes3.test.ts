@@ -177,23 +177,20 @@ describe('vibe portal routes — wave 3 coverage', () => {
         method: 'POST',
         url: '/vibe/companies/abc/lists/def/invoice',
         headers: adminHeaders,
-        payload: { type: 'onzevibe', paymentOption: 'full' },
+        payload: { type: 'schneider', paymentOption: 'full' },
       });
       expect(res.statusCode).toBe(400);
     });
 
-    it('attempts invoice creation (bookkeeping may or may not be connected in test env)', async () => {
+    it('rejects the retired OnzeVibe variant before contacting MoneyBird', async () => {
       const res = await app.inject({
         method: 'POST',
         url: `/vibe/companies/${companyId}/lists/${listId}/invoice`,
         headers: adminHeaders,
         payload: { type: 'onzevibe', paymentOption: 'full' },
       });
-      // If bookkeeping not connected: 409
-      // If connected but contact creation fails (test email domain): 500
-      // If connected and succeeds: 200
-      // NOTE: In test env, MoneyBird is connected but test email domains fail contact creation
-      expect([200, 400, 409, 500]).toContain(res.statusCode);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('Unknown price variant');
     });
   });
 

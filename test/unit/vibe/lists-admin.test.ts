@@ -509,7 +509,7 @@ describe('getOrderEmail', () => {
     h.prisma.companyList.findUnique.mockResolvedValue(
       baseList({
         printer: null,
-        calculation: null,
+        calculationSchneider: null,
         desiredDeliveryDate: null,
         CompanyListDeliveryAddress: [],
         CompanyListFile: [{ type: 'cards', originalName: 'c.pdf' }],
@@ -527,9 +527,11 @@ describe('getOrderEmail', () => {
     expect(d.addressCount).toBe(1);
     expect(d.text).toContain('op één verschillende adressen');
 
+    // A list without a printer (or the retired OnzeVibe one) is ordered as
+    // Schneider, the default.
+    expect(d.text).toContain('dekseldoosje');
     expect(d.warnings).toEqual([
       expect.stringContaining('Geen aantal dozen gevonden'),
-      expect.stringContaining('OnzeVibe printer'),
       expect.stringContaining('Geen gewenste leverdatum'),
       expect.stringContaining('Geen leveradressen'),
       expect.stringContaining('doosje ontbreekt'),

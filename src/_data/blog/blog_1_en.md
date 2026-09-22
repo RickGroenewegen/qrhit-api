@@ -24,7 +24,7 @@ Three things went wrong with the homemade version, and fixing them is what took 
 
 ## What it turned into
 
-These days a deck plays [four different games](/[lang]/music-timeline) rather than one, works on [five streaming services](/[lang]/supported-platforms), and the app reads cards from other music card games as well as ours. Companies order them as [branded gifts](/[lang]/business), which I genuinely did not see coming.
+These days a deck plays [four different games](/[lang]/music-timeline) rather than one, works on [five streaming services](/[lang]/supported-platforms), and the app reads Hitster cards and selected other music cards as well as ours. Companies order them as [branded gifts](/[lang]/business), which I genuinely did not see coming.
 
 The part I am still most pleased about is the smallest: the app does not show you the song. Everything else is logistics.
 

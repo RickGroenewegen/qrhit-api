@@ -415,7 +415,7 @@ describe('buildInvoiceLineItems', () => {
     ...overrides,
   });
   const listWith = (
-    column: 'calculation' | 'calculationTromp' | 'calculationSchneider',
+    column: 'calculationTromp' | 'calculationSchneider',
     calc: Record<string, unknown>,
     name = 'Feest 2026'
   ) =>
@@ -620,13 +620,11 @@ describe('buildInvoiceLineItems', () => {
     expect(res.totals!.total).toBe(1725);
   });
 
-  it('onzevibe: personalization and voting portal from the saved price', async () => {
+  it('voting portal at the saved fee, and no discount line without a discount', async () => {
     listWith(
-      'calculation',
+      'calculationSchneider',
       {
-        quantity: 100,
-        includePersonalization: true,
-        includeVotingPortal: true,
+        cardCount: 48,
         pricing: snapshot({
           quantity: 100,
           unitPrice: 39.95,
@@ -639,14 +637,9 @@ describe('buildInvoiceLineItems', () => {
     );
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toEqual([
-      {
-        description:
-          'OnzeVibe box met 200 QR muziekkaarten (inclusief personalisatie)',
-        amount: '100',
-        price: '39.95',
-      },
+      { description: 'QRSong! Box - 48 kaarten', amount: '100', price: '39.95' },
       {
         description: 'Voting Portal - eenmalige kosten, gebruik stemportaal',
         amount: '1',
@@ -655,24 +648,6 @@ describe('buildInvoiceLineItems', () => {
     ]);
     expect(res.totals!.total).toBe(4495);
     expect(res.totals!.discountAmount).toBe(0);
-  });
-
-  it('onzevibe without personalization mentions it in the description', async () => {
-    listWith(
-      'calculation',
-      {
-        quantity: 100,
-        includePersonalization: false,
-        shipmentOnLocation: true,
-        pricing: snapshot({ quantity: 100, unitPrice: 30 }),
-      },
-      'Lijst'
-    );
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
-    expect(res.items![0].description).toBe(
-      'OnzeVibe box met 200 QR muziekkaarten (geen personalisatie, levering op één locatie)'
-    );
   });
 
   it('renders the line items in the company language, not always Dutch', async () => {

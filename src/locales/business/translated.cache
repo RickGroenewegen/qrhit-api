@@ -547,10 +547,6 @@
     "nl",
     "de"
   ],
-  "invoice_lines.vibeBox": [
-    "nl",
-    "de"
-  ],
   "invoice_lines.extraOneOff": [
     "nl",
     "de"
@@ -592,18 +588,6 @@
     "de"
   ],
   "invoice_lines.standardBox": [
-    "nl",
-    "de"
-  ],
-  "invoice_lines.detailPersonalization": [
-    "nl",
-    "de"
-  ],
-  "invoice_lines.detailNoPersonalization": [
-    "nl",
-    "de"
-  ],
-  "invoice_lines.detailSingleLocation": [
     "nl",
     "de"
   ],

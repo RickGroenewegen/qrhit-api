@@ -245,7 +245,7 @@ describe('vibe portal routes — wave 2 coverage', () => {
     it('GET /vibe/companies/:cId/lists/:lId/calculation — returns empty source', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers: adminHeaders,
       });
       expect(res.statusCode).toBe(200);
@@ -255,16 +255,16 @@ describe('vibe portal routes — wave 2 coverage', () => {
       expect(['list', 'company', 'empty']).toContain(body.source);
     });
 
-    it('GET /vibe/companies/:cId/lists/:lId/calculation — falls back to company', async () => {
-      // Company already has a calculation set above
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=onzevibe`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      // Source is 'company' (company.calculation was set) or 'empty' (depends on parse)
-      expect(['company', 'empty', 'list']).toContain(res.json().source);
+    it('GET /vibe/companies/:cId/lists/:lId/calculation — 400 without a Tromp or Schneider variant', async () => {
+      // The OnzeVibe list calculator is gone; lists are Tromp or Schneider.
+      for (const query of ['?variant=onzevibe', '']) {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/vibe/companies/${companyId}/lists/${listId}/calculation${query}`,
+          headers: adminHeaders,
+        });
+        expect(res.statusCode).toBe(400);
+      }
     });
 
     it('GET /vibe/companies/:cId/lists/:lId/calculation — tromp variant', async () => {
@@ -299,33 +299,18 @@ describe('vibe portal routes — wave 2 coverage', () => {
     it('GET /vibe/companies/:cId/lists/:lId/calculation — 404 for unknown list', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/999999/calculation`,
+        url: `/vibe/companies/${companyId}/lists/999999/calculation?variant=schneider`,
         headers: adminHeaders,
       });
       expect(res.statusCode).toBe(404);
     });
 
-    it('PUT /vibe/companies/:cId/lists/:lId/calculation — sets list calculation', async () => {
-      const calc = JSON.stringify({ quantity: 150, soldBy: 'happibox' });
+    it('PUT /vibe/companies/:cId/lists/:lId/calculation — the OnzeVibe list save is gone', async () => {
       const res = await app.inject({
         method: 'PUT',
         url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
         headers: adminHeaders,
-        payload: { calculation: calc, numberOfBoxes: 150, buyPrice: 30.5, sellPrice: 45 },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      const row = await prisma().companyList.findUnique({ where: { id: listId } });
-      expect(row!.calculation).toBe(calc);
-      expect(row!.numberOfBoxes).toBe(150);
-    });
-
-    it('PUT /vibe/companies/:cId/lists/:lId/calculation — 404 for unknown list', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/999999/calculation`,
-        headers: adminHeaders,
-        payload: { calculation: '{}' },
+        payload: { calculation: '{"quantity":150}' },
       });
       expect(res.statusCode).toBe(404);
     });
@@ -377,10 +362,10 @@ describe('vibe portal routes — wave 2 coverage', () => {
     });
 
     it('GET /vibe/companies/:cId/lists/:lId/calculation — returns "list" source once set', async () => {
-      // List now has calculation set from the PUT above
+      // List now has a Schneider calculation set from the PUT above
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers: adminHeaders,
       });
       expect(res.statusCode).toBe(200);

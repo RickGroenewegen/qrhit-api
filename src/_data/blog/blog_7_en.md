@@ -44,7 +44,7 @@ Do not handicap them. It is a party, not a tournament.
 
 A fixed deck stops being a game once everyone has learned it. That is the moment to [build another one from a different playlist](/[lang]/generate/playlist): a different decade, a genre nobody at the table listens to, or one built from songs each guest nominated.
 
-The free app is on [iPhone and Android](/[lang]/download-app), and it reads cards from other music card games too, so a deck you already own mixes in with a new one.
+The free app is on [iPhone and Android](/[lang]/download-app), and it reads Hitster cards and selected other music cards too, so a deck you already own mixes in with a new one.
 
 ## FAQ
 

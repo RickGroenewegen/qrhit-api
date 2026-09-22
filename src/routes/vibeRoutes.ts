@@ -24,6 +24,7 @@ import {
   ListVariant,
   listPricingFromCalculation,
   listPricingTotals,
+  listPrinterVariant,
 } from '../listPricing';
 import {
   ListInvoices,
@@ -88,35 +89,8 @@ export default async function vibeRoutes(
     return metrics;
   };
 
-  // Invoices are built from the snapshot, so only an admin sets it. Anyone
-  // else saving a calculation keeps the snapshot that was stored.
-  const keepStoredPricing = (
-    incoming: unknown,
-    stored: string | null
-  ): unknown => {
-    if (typeof incoming !== 'string') return incoming;
-    let next: any;
-    try {
-      next = JSON.parse(incoming);
-    } catch {
-      return incoming;
-    }
-    if (!next || typeof next !== 'object') return incoming;
-    let previous: unknown;
-    try {
-      previous = stored ? JSON.parse(stored)?.pricing : undefined;
-    } catch {
-      previous = undefined;
-    }
-    if (previous === undefined) delete next.pricing;
-    else next.pricing = previous;
-    return JSON.stringify(next);
-  };
-
   const parseVariant = (value: unknown): ListVariant | null =>
-    value === 'onzevibe' || value === 'qrsong' || value === 'schneider'
-      ? value
-      : null;
+    value === 'qrsong' || value === 'schneider' ? value : null;
 
   // ============================================
   // Bookkeeping (MoneyBird) — invoice creation
@@ -161,9 +135,7 @@ export default async function vibeRoutes(
           select: { locale: true },
         });
         const variant: ListVariant =
-          parseVariant(request.query?.type) ||
-          parseVariant(list.printer) ||
-          'schneider';
+          parseVariant(request.query?.type) || listPrinterVariant(list.printer);
 
         const status = await bookkeeping.getStatus();
         let invoices: ListInvoices = { full: null, down: null, remaining: null };
@@ -240,7 +212,7 @@ export default async function vibeRoutes(
   );
 
   // Create a sales invoice from a list's quotation values.
-  // body: { type: 'onzevibe' | 'qrsong' | 'schneider', paymentOption: 'full' | 'down' | 'remaining' }
+  // body: { type: 'qrsong' | 'schneider', paymentOption: 'full' | 'down' | 'remaining' }
   fastify.post(
     '/vibe/companies/:companyId/lists/:listId/invoice',
     getAuthHandler(['admin']),
@@ -253,7 +225,11 @@ export default async function vibeRoutes(
           return;
         }
         const { type, paymentOption } = request.body || {};
-        const t = parseVariant(type) || 'onzevibe';
+        const t = parseVariant(type);
+        if (!t) {
+          reply.status(400).send({ error: 'Unknown price variant' });
+          return;
+        }
         const po =
           paymentOption === 'down' || paymentOption === 'remaining'
             ? paymentOption
@@ -678,21 +654,22 @@ export default async function vibeRoutes(
     }
   );
 
-  // Get list-level calculation with fallback to company-level
+  // Get list-level calculation with fallback to company-level.
+  // ?variant=tromp|schneider (lists are priced by Tromp or Schneider).
   fastify.get(
     '/vibe/companies/:companyId/lists/:listId/calculation',
     getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
-      const variant = (request.query?.variant || 'onzevibe') as string;
+      const variant = request.query?.variant as string;
 
       if (isNaN(companyId) || isNaN(listId)) {
         reply.status(400).send({ error: 'Invalid company or list ID' });
         return;
       }
 
-      if (!['onzevibe', 'tromp', 'schneider'].includes(variant)) {
+      if (!['tromp', 'schneider'].includes(variant)) {
         reply.status(400).send({ error: 'Invalid variant' });
         return;
       }
@@ -706,11 +683,7 @@ export default async function vibeRoutes(
       }
 
       const listColumn =
-        variant === 'tromp'
-          ? 'calculationTromp'
-          : variant === 'schneider'
-            ? 'calculationSchneider'
-            : 'calculation';
+        variant === 'tromp' ? 'calculationTromp' : 'calculationSchneider';
 
       const prisma = PrismaInstance.getInstance();
       const list = await prisma.companyList.findUnique({
@@ -720,7 +693,6 @@ export default async function vibeRoutes(
           companyId: true,
           numberOfCards: true,
           numberOfBoxes: true,
-          calculation: true,
           calculationTromp: true,
           calculationSchneider: true,
         },
@@ -749,7 +721,6 @@ export default async function vibeRoutes(
       const company = await prisma.company.findUnique({
         where: { id: companyId },
         select: {
-          calculation: true,
           calculationTromp: true,
           calculationSchneider: true,
         },
@@ -867,6 +838,12 @@ export default async function vibeRoutes(
           }
           updateData[field] = body[field].trim();
         }
+      }
+
+      // Lists are printed by Tromp ('qrsong') or Schneider.
+      if (body.printer !== undefined && !parseVariant(body.printer)) {
+        reply.status(400).send({ error: 'Invalid printer' });
+        return;
       }
 
       for (const field of optionalStringFields) {
@@ -1685,50 +1662,6 @@ export default async function vibeRoutes(
     }
   );
 
-  // Update list-level OnzeVibe calculation
-  fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/calculation',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      const { calculation } = request.body || {};
-
-      if (isNaN(companyId) || isNaN(listId)) {
-        reply.status(400).send({ error: 'Invalid company or list ID' });
-        return;
-      }
-
-      if (
-        request.user.userGroups.includes('companyadmin') &&
-        request.user.companyId !== companyId
-      ) {
-        reply.status(403).send({ error: 'Forbidden' });
-        return;
-      }
-
-      const prisma = PrismaInstance.getInstance();
-      const list = await prisma.companyList.findUnique({ where: { id: listId } });
-      if (!list || list.companyId !== companyId) {
-        reply.status(404).send({ error: 'List not found' });
-        return;
-      }
-
-      const stored = request.user.userGroups.includes('admin')
-        ? calculation
-        : keepStoredPricing(calculation, list.calculation);
-      const updated = await prisma.companyList.update({
-        where: { id: listId },
-        data: {
-          calculation: stored as string,
-          ...calculationMetrics(request.body, stored),
-        },
-      });
-
-      reply.send({ success: true, list: updated });
-    }
-  );
-
   // Update list-level Tromp calculation
   fastify.put(
     '/vibe/companies/:companyId/lists/:listId/calculation-tromp',
@@ -1904,8 +1837,9 @@ export default async function vibeRoutes(
 
         // If a list was specified, load its per-list calculation so per-list
         // toggles (e.g. includeVotingPortal) override the company defaults.
+        // Lists are priced by Tromp or Schneider; an OnzeVibe quotation comes
+        // from the OnzeVibe portal and is company-level.
         let listCalc: {
-          calculation: string | null;
           calculationTromp: string | null;
           calculationSchneider: string | null;
         } | null = null;
@@ -1916,7 +1850,6 @@ export default async function vibeRoutes(
               where: { id: listIdParam },
               select: {
                 companyId: true,
-                calculation: true,
                 calculationTromp: true,
                 calculationSchneider: true,
               },
@@ -2071,7 +2004,7 @@ export default async function vibeRoutes(
             fluidMode: false,
           };
 
-          const onzevibeSource = listCalc?.calculation ?? company.calculation;
+          const onzevibeSource = company.calculation;
           if (onzevibeSource) {
             try {
               const storedCalc = JSON.parse(onzevibeSource);

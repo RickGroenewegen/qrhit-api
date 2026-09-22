@@ -34,7 +34,7 @@ Both are in the app, and both are worth a minute before the first round rather t
 
 ## It reads other decks too
 
-The scanner is not limited to our cards. It reads Hitster cards and other music QR cards, so a deck you already own plays through the same app, on whichever service you connected. That is genuinely useful if the cards you have came with an app that only supports one service.
+The scanner is not limited to our cards. It reads Hitster cards and selected other music QR cards, so a deck you already own plays through the same app, on whichever service you connected. That is genuinely useful if the cards you have came with an app that only supports one service.
 
 The app is free on iPhone and Android: [download it here](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Yes, on iPhone and Android, with no account required. It is also the only part o
 
 ### Does it work with cards I bought elsewhere?
 
-Yes. The scanner reads Hitster cards and other music QR cards as well as ours, and plays them through whichever service you connected.
+For Hitster cards and selected other music QR cards, yes. The scanner plays them through whichever service you connected. Which other cards it supports is our choice and can change.

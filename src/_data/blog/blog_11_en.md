@@ -31,7 +31,7 @@ The app skips all of that. It resolves the card, sends the track to the service 
 
 ## It also reads the cards you already own
 
-The same scanner works on Hitster cards and other music QR cards, not just ours. If you own a retail deck and do not have Spotify, you can play it through Apple Music with the free app and never buy anything from me at all. I would rather people knew that than not, and if you want the longer version I wrote it up separately: [playing your Hitster cards without Spotify](/[lang]/hitster-without-spotify).
+The same scanner works on Hitster cards and selected other music QR cards, not just ours. If you own a retail deck and do not have Spotify, you can play it through Apple Music with the free app and never buy anything from me at all. I would rather people knew that than not, and if you want the longer version I wrote it up separately: [playing your Hitster cards without Spotify](/[lang]/hitster-without-spotify).
 
 When the deck stops being fun because everyone has learned it, that is the moment to [make one from your own playlist](/[lang]/pricing).
 

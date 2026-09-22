@@ -502,7 +502,7 @@
         {
             "slug": "scan-other-cards",
             "title": "Can the app scan other QR card types?",
-            "description": "Yes! The QRSong! app supports both QRSong! cards and Hitster cards, as well as any other cards that contain a Spotify URL. So you only need one app for all your music card games.",
+            "description": "Yes. The QRSong! app plays QRSong! cards, Hitster cards and selected other music QR cards. Which other cards the app supports is QRSong!'s choice and can change at any time, so cards from other companies are not guaranteed to work. If a card from another company does not play, that company is responsible for its own product. QRSong! is not affiliated with companies that tell their customers to use our app.",
             "tags": [
                 "compatibility",
                 "other cards",
@@ -514,7 +514,7 @@
         {
             "slug": "hitster-app-not-compatible",
             "title": "Why can't the Hitster app scan my QRSong! cards?",
-            "description": "QRSong! is not affiliated with Hitster. The Hitster app can only scan Hitster cards and cannot read QRSong! cards. To scan QRSong! cards, you need to download the free QRSong! app from the App Store or Google Play. The QRSong! app actually supports both QRSong! and Hitster cards, so you can use it for all your music card games.",
+            "description": "QRSong! is not affiliated with Hitster. The Hitster app can only scan Hitster cards and cannot read QRSong! cards. To scan QRSong! cards, you need to download the free QRSong! app from the App Store or Google Play. The QRSong! app supports both QRSong! and Hitster cards, so one app plays both.",
             "tags": [
                 "hitster",
                 "hitster app",

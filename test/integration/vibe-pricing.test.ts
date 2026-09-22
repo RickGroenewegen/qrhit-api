@@ -111,23 +111,23 @@ describe('vibe pricing and quotation views', () => {
     it('falls back to the company calculation when the list has none', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=onzevibe`,
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers,
       });
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body.source).toBe('company');
-      expect(JSON.parse(body.calculation).quantity).toBe(250);
+      expect(JSON.parse(body.calculation).quantity).toBe(50);
       expect(body.numberOfCards).toBe(96);
     });
 
     it('saves a list-level calculation with order metrics', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation-schneider`,
         headers,
         payload: {
-          calculation: '{"quantity":75}',
+          calculationSchneider: '{"quantity":75}',
           numberOfBoxes: 75.4,
           buyPrice: 10.005,
           sellPrice: 19.999,
@@ -143,12 +143,35 @@ describe('vibe pricing and quotation views', () => {
     it('prefers the list-level value once present', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers,
       });
       const body = res.json();
       expect(body.source).toBe('list');
       expect(JSON.parse(body.calculation).quantity).toBe(75);
+    });
+
+    it('has no OnzeVibe list calculation any more', async () => {
+      // Lists are priced by Tromp or Schneider; the OnzeVibe calculator is gone.
+      const read = await app.inject({
+        method: 'GET',
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=onzevibe`,
+        headers,
+      });
+      expect(read.statusCode).toBe(400);
+      const noVariant = await app.inject({
+        method: 'GET',
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        headers,
+      });
+      expect(noVariant.statusCode).toBe(400);
+      const write = await app.inject({
+        method: 'PUT',
+        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        headers,
+        payload: { calculation: '{"quantity":75}' },
+      });
+      expect(write.statusCode).toBe(404);
     });
 
     it('returns empty when neither list nor company has the variant', async () => {
@@ -198,9 +221,9 @@ describe('vibe pricing and quotation views', () => {
     it('404s list calculations for the wrong company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/999999/lists/${listId}/calculation`,
+        url: `/vibe/companies/999999/lists/${listId}/calculation-schneider`,
         headers,
-        payload: { calculation: '{}' },
+        payload: { calculationSchneider: '{}' },
       });
       expect(res.statusCode).toBe(404);
     });
