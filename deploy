@@ -38,7 +38,12 @@ cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
 sudo npm install --force
-sudo npm run build
 
-pm2 restart qrsong-frontend
+# See deploy_frontend: publish, restart, then clear CloudFront.
+if sudo npm run build; then
+  pm2 restart qrsong-frontend
+  sudo npm run invalidate-cloudfront
+else
+  echo "Frontend build failed, NOT restarting: the site is still running the previous build."
+fi
 

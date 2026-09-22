@@ -10,8 +10,16 @@ git reset --hard HEAD
 git pull origin HEAD
 # git checkout 5ef384f615b09a1ea3c5f2b37b12a7eaec2f51d8
 sudo npm install --force
-sudo npm run build
 
-pm2 restart qrsong-frontend
+# The build is published into dist/qrhit next to the previous one, whose
+# chunks stay, so pages the running server renders keep working until the
+# restart. CloudFront is cleared after the restart: cleared before it, the
+# edge would cache pages rendered by the old process.
+if sudo npm run build; then
+  pm2 restart qrsong-frontend
+  sudo npm run invalidate-cloudfront
+else
+  echo "Frontend build failed, NOT restarting: the site is still running the previous build."
+fi
 
 pm2 logs qrsong --lines 1000
