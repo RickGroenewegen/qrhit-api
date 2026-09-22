@@ -10,6 +10,7 @@ import Cache from './cache';
 import ExcelJS from 'exceljs';
 import SiteSettings from './sitesettings';
 import ShippingConfig from './shippingconfig';
+import { SHIPPING_INFO_CACHE_KEY } from './config/constants';
 
 class Shipping {
   private static instance: Shipping;
@@ -1105,8 +1106,9 @@ class Shipping {
     }[];
   }> {
     try {
-      // Cache key bumped when the response shape changes.
-      const cacheKey = 'shipping_info_by_country_v4';
+      // Bumped when the response shape changes; the settings and shipping
+      // config clear it, so it lives in constants.ts.
+      const cacheKey = SHIPPING_INFO_CACHE_KEY;
       const cachedData = await this.cache.get(cacheKey);
 
       if (cachedData) {

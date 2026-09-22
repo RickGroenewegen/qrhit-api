@@ -2,6 +2,7 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Cache from './cache';
+import { SHIPPING_INFO_CACHE_KEY } from './config/constants';
 
 interface SettingsData {
   id: number;
@@ -142,7 +143,7 @@ class SiteSettings {
 
       // Clear caches
       await this.cache.del('production_settings');
-      await this.cache.del('shipping_info_by_country');
+      await this.cache.del(SHIPPING_INFO_CACHE_KEY);
 
       this.logger.log(color.green.bold('Production settings updated successfully'));
 

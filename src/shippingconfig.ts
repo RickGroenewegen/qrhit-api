@@ -2,6 +2,7 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Cache from './cache';
+import { SHIPPING_INFO_CACHE_KEY } from './config/constants';
 
 export interface CountryShippingConfigData {
   id: number;
@@ -175,7 +176,7 @@ class ShippingConfig {
     try {
       await this.cache.del('country_shipping_configs');
       await this.cache.del('average_delivery_times');
-      await this.cache.del('shipping_info_by_country');
+      await this.cache.del(SHIPPING_INFO_CACHE_KEY);
     } catch (error) {
       this.logger.log(
         color.red.bold(

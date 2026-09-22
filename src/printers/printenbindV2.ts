@@ -5,6 +5,7 @@ import {
   BOX_UNIT_COST,
   boxTierPrice,
   DIGITAL_CARDS_BASE_PRICE,
+  SHIPPING_INFO_CACHE_KEY,
 } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
@@ -2144,7 +2145,7 @@ class PrintEnBindV2 {
     }
 
     // The shipping-info page caches its table for an hour; show new rates now.
-    await this.cache.del('shipping_info_by_country_v4');
+    await this.cache.del(SHIPPING_INFO_CACHE_KEY);
   }
 
   public async getShippingCosts(

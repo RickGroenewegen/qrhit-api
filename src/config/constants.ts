@@ -20,6 +20,14 @@ export const DIGITAL_CARDS_BASE_PRICE = 13;
 // and of the blog price tokens `cards.<type>.<quantity>` (src/priceTokens.ts).
 export const PRICE_TABLE_QUANTITIES = [50, 100, 150, 200, 300, 500] as const;
 
+// Redis key of GET /api/shipping/info-by-country's answer (production days
+// and message, delivery times, shipping costs; 1 hour). Bumped when the
+// response shape changes, and written here because the site settings and the
+// shipping config clear it when they change: a key that only lived in
+// shipping.ts left both clearing a key nobody read any more, so the checkout
+// showed the old production time for up to an hour.
+export const SHIPPING_INFO_CACHE_KEY = 'shipping_info_by_country_v4';
+
 // Box product
 export const BOX_PRICE = 6.99;
 export const BOX_MAX_CARDS = 190;
