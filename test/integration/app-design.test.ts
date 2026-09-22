@@ -568,4 +568,90 @@ describe('app design (account upgrade)', () => {
       expect(appTheme().getTheme(firstPhpId)).toMatchObject({ s: 'acme', n: 'Acme' });
     });
   });
+
+  describe('admin, from an order line', () => {
+    let admin: Awaited<ReturnType<typeof createTestUser>>;
+
+    beforeAll(async () => {
+      admin = await createTestUser({ groups: ['admin'] });
+    });
+
+    it('is admin only', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/admin/playlist/${secondPhpId}/app-design`,
+        headers: authHeader(owner.token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("loads the customer's line, default design and entitlement", async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/admin/playlist/${secondPhpId}/app-design`,
+        headers: authHeader(admin.token),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toMatchObject({
+        success: true,
+        paymentHasPlaylistId: secondPhpId,
+        entitled: true,
+        mode: 'custom',
+      });
+      expect(body.design.name).toBe('Wedding');
+      expect(body.defaultDesign).not.toBeNull();
+    });
+
+    it('saves for the owner of the line, never for the admin', async () => {
+      const own = await app.inject({
+        method: 'PUT',
+        url: `/admin/playlist/${secondPhpId}/app-design`,
+        headers: authHeader(admin.token),
+        payload: { design: { ...DESIGN, name: 'Fixed by support' }, theme: THEME },
+      });
+      expect(own.statusCode).toBe(200);
+      const row = await prisma().appDesign.findUnique({
+        where: { paymentHasPlaylistId: secondPhpId },
+      });
+      expect(row).toMatchObject({ userId: owner.user.id, name: 'Fixed by support' });
+
+      const def = await app.inject({
+        method: 'PUT',
+        url: `/admin/playlist/${secondPhpId}/app-design/default`,
+        headers: authHeader(admin.token),
+        payload: { design: { ...DESIGN, name: 'Support default' }, theme: THEME },
+      });
+      expect(def.statusCode).toBe(200);
+      const defaults = await prisma().appDesign.findMany({
+        where: { paymentHasPlaylistId: null, name: 'Support default' },
+      });
+      expect(defaults.map((d) => d.userId)).toEqual([owner.user.id]);
+      expect(await prisma().appDesign.count({ where: { userId: admin.user.id } })).toBe(0);
+    });
+
+    it("switches the line's mode", async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/admin/playlist/${secondPhpId}/app-design/mode`,
+        headers: authHeader(admin.token),
+        payload: { mode: 'standard' },
+      });
+      expect(res.statusCode).toBe(200);
+      const row = await prisma().appDesign.findUnique({
+        where: { paymentHasPlaylistId: secondPhpId },
+      });
+      expect(row?.mode).toBe('standard');
+    });
+
+    it('lets the editor upload with an admin token', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/app-design/upload/logo',
+        headers: authHeader(admin.token),
+        payload: { image: await redPngDataUri() },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
 });

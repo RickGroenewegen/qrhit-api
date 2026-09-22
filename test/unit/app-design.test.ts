@@ -19,8 +19,44 @@ import {
   servedCustomerSlug,
   scopeKeyFor,
   fontsForId,
+  appDesignLineError,
 } from '../../src/appDesign';
 import { resolveLineTheme } from '../../src/apptheme';
+
+describe('appDesignLineError (who may design an order line)', () => {
+  const line = (over: { userId?: number; status?: string; type?: string | null } = {}) => ({
+    payment: { userId: over.userId ?? 7, status: over.status ?? 'paid' },
+    playlist: { type: over.type === undefined ? 'cards' : over.type },
+  });
+
+  it("lets the customer design their own paid card line", () => {
+    expect(appDesignLineError(line(), 7)).toBeNull();
+  });
+
+  it("refuses another customer's line", () => {
+    expect(appDesignLineError(line(), 8)).toEqual({ status: 403, error: 'Unauthorized' });
+  });
+
+  it('lets an admin (no requester) design any customer line', () => {
+    expect(appDesignLineError(line({ userId: 8 }), null)).toBeNull();
+  });
+
+  it('404s a missing line for customers and admins alike', () => {
+    expect(appDesignLineError(null, 7)?.status).toBe(404);
+    expect(appDesignLineError(null, null)?.status).toBe(404);
+  });
+
+  it('keeps the paid card order rule for admins too', () => {
+    for (const requester of [7, null]) {
+      expect(appDesignLineError(line({ status: 'open' }), requester)?.status).toBe(400);
+      expect(appDesignLineError(line({ type: 'giftcard' }), requester)?.status).toBe(400);
+    }
+  });
+
+  it('checks ownership before the order rule, so a stranger learns nothing about the order', () => {
+    expect(appDesignLineError(line({ status: 'open' }), 8)?.status).toBe(403);
+  });
+});
 
 describe('validateCssVariables', () => {
   it('keeps known keys with plain colors', () => {

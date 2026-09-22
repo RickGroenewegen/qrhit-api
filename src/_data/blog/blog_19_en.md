@@ -1,6 +1,6 @@
 For years the cards were the only part of QRSong! you could make your own. Your photos on the front, your logo, your colours. Then everybody opened the same teal app to scan them.
 
-That always felt like a missed step, especially at weddings and company parties, where the app is the thing people hold in their hands all evening. So we built App Designer.
+That always felt like a missed step, especially at birthday parties and company events, where the app is the thing people hold in their hands all evening. So we built App Designer.
 
 ## What it does
 
@@ -19,13 +19,13 @@ You can design and preview everything before you pay, so you know exactly what y
 
 ## One design, or one per playlist
 
-Your default design applies to every playlist you bought, and to the ones you buy later. If one set needs to look different (the wedding deck in ivory, the birthday deck in neon), you give that playlist its own design.
+Your default design applies to every playlist you bought, and to the ones you buy later. If one set needs to look different (the office party deck in company colours, the birthday deck in neon), you give that playlist its own design.
 
 There is a third option I did not expect to matter as much as it does: the standard look. If you order a set as a present for someone else, you probably do not want your party theme to follow the cards into their living room. Set that playlist to the standard QRSong! look and it stays neutral.
 
 ## Changing it later
 
-Whenever you like. Change the colours the week before the party, swap the photo on the morning of the wedding. The next card that is scanned shows the new version, and nobody has to update anything.
+Whenever you like. Change the colours the week before the party, swap the photo an hour before the guests arrive. The next card that is scanned shows the new version, and nobody has to update anything.
 
 ## Let AI pick the colours
 
@@ -33,7 +33,7 @@ If you have a photo you love but no idea which colours go with it, upload it and
 
 ## When it is worth it, and when it is not
 
-Honestly: for a game night with friends, the standard app is fine. App Designer earns its keep when the evening has a theme. A wedding, a milestone birthday, a company party in brand colours, a pub quiz that wants to look like the pub. That is when a guest picks up a phone, sees the couple's photo behind the scan button, and smiles before the first song even plays.
+Honestly: for a game night with friends, the standard app is fine. App Designer earns its keep when the evening has a theme. A milestone birthday, a company party in brand colours, a pub quiz that wants to look like the pub, a Christmas party in red and gold. That is when a guest picks up a phone, sees the birthday photo behind the scan button, and smiles before the first song even plays.
 
 If you are a business that wants the app fully branded for a large event, we still make [hand-made themes](/[lang]/business) as part of the business offer. App Designer is the self-service version for everybody else.
 

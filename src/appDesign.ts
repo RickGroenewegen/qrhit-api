@@ -387,6 +387,34 @@ export function fontsForId(fontId: unknown): ThemeConfig['fonts'] {
   };
 }
 
+/** What the access check needs to know about an order line. */
+export interface AppDesignLine {
+  payment: { userId: number; status: string };
+  playlist: { type: string | null };
+}
+
+/**
+ * Why this order line's app design may not be worked on, as the HTTP status
+ * and message to send, or null when it may. A customer (`requesterUserId`)
+ * must own the line; an admin (null) acts for whoever does. Either way the
+ * line has to be a paid card order.
+ */
+export function appDesignLineError(
+  line: AppDesignLine | null,
+  requesterUserId: number | null
+): { status: number; error: string } | null {
+  if (!line) {
+    return { status: 404, error: 'PaymentHasPlaylist not found' };
+  }
+  if (requesterUserId !== null && line.payment.userId !== requesterUserId) {
+    return { status: 403, error: 'Unauthorized' };
+  }
+  if (line.payment.status !== 'paid' || line.playlist.type === 'giftcard') {
+    return { status: 400, error: 'App design is only available for paid card orders' };
+  }
+  return null;
+}
+
 class AppDesign {
   private static instance: AppDesign;
   private prisma = PrismaInstance.getInstance();

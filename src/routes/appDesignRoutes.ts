@@ -10,6 +10,7 @@ import Designer from '../designer';
 import AppDesign, {
   APP_DESIGN_OVERRIDE_MODES,
   AppDesignOverrideMode,
+  appDesignLineError,
   sanitizeAssetFilename,
 } from '../appDesign';
 import { APP_DESIGN_PRICE } from '../config/constants';
@@ -76,9 +77,11 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
   }
 
   /**
-   * One of the caller's paid card lines, or null after sending the error.
+   * A paid card line the requester may design, or null after sending the
+   * error. `userId` is the customer, who must own the line; null is an admin,
+   * who works on it for its owner (`php.payment.userId`).
    */
-  async function ownedLine(reply: any, userId: number, rawId: any) {
+  async function ownedLine(reply: any, userId: number | null, rawId: any) {
     const phpId = parseInt(rawId);
     if (isNaN(phpId)) {
       reply.status(400).send({ success: false, error: 'Invalid paymentHasPlaylistId' });
@@ -91,22 +94,12 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
         playlist: { select: { name: true, type: true } },
       },
     });
-    if (!php) {
-      reply.status(404).send({ success: false, error: 'PaymentHasPlaylist not found' });
+    const problem = appDesignLineError(php, userId);
+    if (problem) {
+      reply.status(problem.status).send({ success: false, error: problem.error });
       return null;
     }
-    if (php.payment.userId !== userId) {
-      reply.status(403).send({ success: false, error: 'Unauthorized' });
-      return null;
-    }
-    if (php.payment.status !== 'paid' || php.playlist.type === 'giftcard') {
-      reply.status(400).send({
-        success: false,
-        error: 'App design is only available for paid card orders',
-      });
-      return null;
-    }
-    return php;
+    return php!;
   }
 
   function designPayload(row: any) {
@@ -131,6 +124,25 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
       version: row.version,
       rejected: normalized.rejected,
     });
+  }
+
+  /**
+   * Set what a line shows, for its owner; sends the response. `requesterUserId`
+   * as in ownedLine: the customer, or null for an admin.
+   */
+  async function changeMode(request: any, reply: any, requesterUserId: number | null) {
+    const mode = request.body?.mode;
+    if (!APP_DESIGN_OVERRIDE_MODES.includes(mode)) {
+      return reply.status(400).send({ success: false, error: 'Invalid mode' });
+    }
+    const php = await ownedLine(reply, requesterUserId, request.params.paymentHasPlaylistId);
+    if (!php) return;
+    try {
+      await appDesign.setOverrideMode(php.payment.userId, php.id, mode);
+    } catch (e: any) {
+      return reply.status(400).send({ success: false, error: e.message });
+    }
+    return reply.send({ success: true, mode });
   }
 
   /**
@@ -256,21 +268,118 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
       try {
         const user = await currentUser(request, reply);
         if (!user) return;
-        const mode = request.body?.mode;
-        if (!APP_DESIGN_OVERRIDE_MODES.includes(mode)) {
-          return reply.status(400).send({ success: false, error: 'Invalid mode' });
-        }
-        const php = await ownedLine(reply, user.id, request.params.paymentHasPlaylistId);
-        if (!php) return;
-        try {
-          await appDesign.setOverrideMode(user.id, php.id, mode);
-        } catch (e: any) {
-          return reply.status(400).send({ success: false, error: e.message });
-        }
-        return reply.send({ success: true, mode });
+        return await changeMode(request, reply, user.id);
       } catch (error: any) {
         logger.log(
           color.red.bold(`Error in PUT /api/app-design/playlist/mode: ${white.bold(error.message)}`)
+        );
+        return reply.status(500).send({ success: false, error: 'Failed to change the app design' });
+      }
+    }
+  );
+
+  // ─── Admin: any customer's design, from an order line ───────────────────
+  // The dashboard opens a customer's app design from an order line, like the
+  // card and box designers. The owner always comes from the line, never from
+  // the admin's token. An admin save unlocks nothing: src/apptheme.ts still
+  // only serves the design once the customer owns the upgrade.
+
+  /**
+   * GET /admin/playlist/:paymentHasPlaylistId/app-design
+   * The line's mode and own design, its owner's default design and whether
+   * the owner has the upgrade.
+   */
+  fastify.get(
+    '/admin/playlist/:paymentHasPlaylistId/app-design',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
+        if (!php) return;
+        const ownerId = php.payment.userId;
+        const [entitled, designs] = await Promise.all([
+          appDesign.isEntitled(ownerId),
+          appDesign.getDesigns(ownerId),
+        ]);
+        const override = designs.overrides.find((row) => row.paymentHasPlaylistId === php.id);
+        return reply.send({
+          success: true,
+          paymentHasPlaylistId: php.id,
+          playlistName: php.playlist.name,
+          entitled,
+          mode: (override?.mode as AppDesignOverrideMode) || 'default',
+          design: designPayload(override),
+          defaultDesign: designPayload(designs.defaultDesign),
+        });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(`Error in GET /admin/playlist/app-design: ${white.bold(error.message)}`)
+        );
+        return reply.status(500).send({ success: false, error: 'Failed to load app design' });
+      }
+    }
+  );
+
+  /**
+   * PUT /admin/playlist/:paymentHasPlaylistId/app-design
+   * Save the line's own design; the line switches to it.
+   */
+  fastify.put(
+    '/admin/playlist/:paymentHasPlaylistId/app-design',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
+        if (!php) return;
+        return await save(request, reply, {
+          userId: php.payment.userId,
+          paymentHasPlaylistId: php.id,
+        });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(`Error in PUT /admin/playlist/app-design: ${white.bold(error.message)}`)
+        );
+        return reply.status(500).send({ success: false, error: 'Failed to save app design' });
+      }
+    }
+  );
+
+  /**
+   * PUT /admin/playlist/:paymentHasPlaylistId/app-design/default
+   * Save the default design of the account that owns the line.
+   */
+  fastify.put(
+    '/admin/playlist/:paymentHasPlaylistId/app-design/default',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
+        if (!php) return;
+        return await save(request, reply, { userId: php.payment.userId });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(
+            `Error in PUT /admin/playlist/app-design/default: ${white.bold(error.message)}`
+          )
+        );
+        return reply.status(500).send({ success: false, error: 'Failed to save app design' });
+      }
+    }
+  );
+
+  /**
+   * PUT /admin/playlist/:paymentHasPlaylistId/app-design/mode
+   * What the line shows: the default design, its own, or the plain app.
+   */
+  fastify.put(
+    '/admin/playlist/:paymentHasPlaylistId/app-design/mode',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        return await changeMode(request, reply, null);
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(`Error in PUT /admin/playlist/app-design/mode: ${white.bold(error.message)}`)
         );
         return reply.status(500).send({ success: false, error: 'Failed to change the app design' });
       }
@@ -368,11 +477,11 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
    * POST /api/app-design/upload/:type (background | logo)
    * Editor uploads. Phone-sized, no square crop or QR clearance like the card
    * pipeline; stored under PUBLIC_DIR/app-theme until a save copies them into
-   * a theme directory.
+   * a theme directory. Admins too: the dashboard opens the same editor.
    */
   fastify.post(
     '/api/app-design/upload/:type',
-    getAuthHandler(['users']),
+    getAuthHandler(['users', 'admin']),
     async (request: any, reply: any) => {
       const { type } = request.params;
       if (type !== 'background' && type !== 'logo') {
@@ -389,10 +498,11 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
   /**
    * POST /api/app-design/ai-theme
    * Palette suggestion for an uploaded background, rate limited per IP.
+   * Admins too, for the dashboard's editor.
    */
   fastify.post(
     '/api/app-design/ai-theme',
-    getAuthHandler(['users']),
+    getAuthHandler(['users', 'admin']),
     async (request: any, reply: any) => {
       const background = sanitizeAssetFilename(request.body?.background);
       if (!background) {

@@ -48,11 +48,15 @@
         "sv": "Ge den kostnadsfria QRSong!-appen egna färger, foto, logotyp och hjälptext för dina spelkort. Se hur det fungerar och när det är värt det.",
         "no": "Gi den gratis QRSong!-appen egne farger, bilde, logo og hjelpetekst. Se hvordan det fungerer, og når det er verdt det."
       },
-      "imagePrompt": "A designer's desk seen from above, about the idea of giving an app your own look: in the centre a smartphone lies flat showing exactly the QRSong app screen of reference 1, a purple to pink gradient with a big yellow round scan button and the QRSong! logo. Around the phone, like a mood board, lie fanned colour swatch cards in the same purple, pink and yellow, a small paintbrush with a drop of yellow paint, a printed party photo and a few QR music cards like the real cards in the other references, their white QR panel exactly centred on the front. Bright, clean top light, playful and crafted, no people.",
+      "imagePrompt": "A designer's desk seen from above, about the idea of giving an app your own look and your own logo: in the centre a smartphone lies flat showing the QRSong app screen from the app screen reference, a purple to pink gradient with a big yellow round scan button, but with the customer's own logo from the logo reference in place of the QRSong! logo: a compact stacked two-line lockup, no wider than the scan button area, with no icon or badge above it: \"Emma's\" large in an ornate yellow script with a cream outline and a cream swash underline, and below it a smaller \"MUSIC QUIZ\" in spaced cream capitals between two small yellow stars, spelled exactly like that. Around the phone, like a mood board, lie fanned colour swatch cards in the same purple, pink and yellow, a small paintbrush with a drop of yellow paint, a printed party photo, an open notebook with a pencil sketch of a vinyl record with a question mark, and a few QR music cards like the real cards in the other references, their white QR panel exactly centred on the front. Bright, clean top light, playful and crafted, no people.",
       "referenceImages": [
         {
           "path": "blog-image-references/app-designer-themed-app.png",
-          "note": "the real QRSong scan app with a customer's own design: purple to pink gradient, yellow round scan button, custom font; reproduce this screen faithfully on the phone"
+          "note": "the app screen reference: the real QRSong scan app with a customer's own design, purple to pink gradient, yellow round scan button, custom font; reproduce this screen faithfully on the phone, except that the QRSong! logo is replaced by the customer's logo from the logo reference"
+        },
+        {
+          "path": "blog-image-references/emmas-music-quiz-logo.png",
+          "note": "the logo reference: the customer's own logo, Emma's Music Quiz, shown on the phone's app screen where the QRSong! logo was; reproduce it exactly as a stacked two-line lockup with nothing above it: \"Emma's\" in an ornate yellow script with a cream outline and swash underline, a smaller \"MUSIC QUIZ\" in spaced cream capitals between two yellow stars below it"
         }
       ]
     },
