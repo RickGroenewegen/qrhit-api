@@ -387,6 +387,45 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
   );
 
   /**
+   * POST /admin/playlist/:paymentHasPlaylistId/app-design-enabled
+   * The dashboard's switch, next to the QRGames one on an order line: App
+   * Designer on or off for the whole account that owns the line, whatever
+   * it bought. A later purchase puts the account back on its purchases.
+   */
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/app-design-enabled',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const enabled = request.body?.appDesignEnabled;
+        if (typeof enabled !== 'boolean') {
+          return reply
+            .status(400)
+            .send({ success: false, error: 'appDesignEnabled must be a boolean' });
+        }
+        const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
+        if (!php) return;
+        await appDesign.setEnabled(php.payment.userId, enabled);
+        logger.log(
+          color.blue.bold(
+            `App Designer switched ${white.bold(enabled ? 'on' : 'off')} for user ${white.bold(
+              String(php.payment.userId)
+            )} from the dashboard`
+          )
+        );
+        return reply.send({ success: true, appDesignEnabled: enabled });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(
+            `Error in POST /admin/playlist/app-design-enabled: ${white.bold(error.message)}`
+          )
+        );
+        return reply.status(500).send({ success: false, error: 'Failed to switch App Designer' });
+      }
+    }
+  );
+
+  /**
    * POST /api/app-design/upgrade-payment
    * Buy App Designer for the account. Charged in the customer's currency
    * (converted from APP_DESIGN_PRICE); the webhook records the purchase.

@@ -537,10 +537,28 @@ class AppDesign {
     return path.join(this.customerThemeRoot(), slug);
   }
 
-  /** True when the account owns the App Designer upgrade. */
+  /**
+   * True when the account owns the App Designer upgrade: a purchase row, or
+   * the dashboard's switch (`users.appDesignEnabled`), which wins either way
+   * while it is set. `src/apptheme.ts` applies the same rule in SQL.
+   */
   public async isEntitled(userId: number): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { appDesignEnabled: true },
+    });
+    if (typeof user?.appDesignEnabled === 'boolean') return user.appDesignEnabled;
     const count = await this.prisma.appDesignPurchase.count({ where: { userId } });
     return count > 0;
+  }
+
+  /**
+   * The dashboard's switch for an account: on or off regardless of
+   * purchases, null to follow them again. The served themes follow at once.
+   */
+  public async setEnabled(userId: number, enabled: boolean | null): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { appDesignEnabled: enabled } });
+    await this.appTheme.reload();
   }
 
   /** The account's default design and every override, keyed for the account page. */
@@ -846,8 +864,11 @@ class AppDesign {
         throw error;
       }
 
-      const user = await this.prisma.user.findUnique({
+      // A purchase is the customer's word; the dashboard's switch, if an
+      // admin had turned the account off, steps aside.
+      const user = await this.prisma.user.update({
         where: { id: params.userId },
+        data: { appDesignEnabled: null },
         select: { hash: true },
       });
       if (user?.hash) {

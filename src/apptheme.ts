@@ -116,9 +116,16 @@ class AppTheme {
    */
   public async loadAppThemes(shouldLog: boolean = false): Promise<void> {
     try {
+      // entitledUserId: the owner when the account has App Designer, else
+      // NULL. The dashboard's switch (users.appDesignEnabled) wins over the
+      // purchases while it is set, the same rule as AppDesign.isEntitled.
       const themes: any[] = await this.prisma.$queryRaw`
         SELECT php.id, php.theme, php.themeName, p.serviceType,
-               ent.userId AS entitledUserId,
+               CASE
+                 WHEN u.appDesignEnabled IS TRUE THEN pay.userId
+                 WHEN u.appDesignEnabled IS FALSE THEN NULL
+                 ELSE ent.userId
+               END AS entitledUserId,
                ov.mode AS ovMode, ov.slug AS ovSlug, ov.version AS ovVersion,
                ov.name AS ovName, (ov.theme IS NOT NULL) AS ovHasTheme,
                df.slug AS dfSlug, df.version AS dfVersion, df.name AS dfName,
@@ -126,6 +133,7 @@ class AppTheme {
         FROM payment_has_playlist php
         JOIN playlists p ON php.playlistId = p.id
         JOIN payments pay ON pay.id = php.paymentId
+        LEFT JOIN users u ON u.id = pay.userId
         LEFT JOIN (SELECT DISTINCT userId FROM app_design_purchases) ent
           ON ent.userId = pay.userId
         LEFT JOIN app_designs ov ON ov.paymentHasPlaylistId = php.id

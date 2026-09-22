@@ -379,6 +379,12 @@ adds `source: 'business' | 'customer'` to the response:
 `app_design_upgrade` webhook writes one `app_design_purchases` row, which is
 both the entitlement and the ledger entry the financial reports read (gross,
 ex-VAT and VAT stored, plus what Mollie charged in the customer's currency).
+The dashboard's "App Design" switch on an order line (next to the QRGames
+one, `POST /admin/playlist/:phpId/app-design-enabled`) sets
+`users.appDesignEnabled`: null follows the purchases, true or false wins over
+them for the whole account (`AppDesign.isEntitled`, and the same rule in SQL
+in `loadAppThemes`). It never touches the ledger, and the next purchase puts
+the account back on its purchases (`processUpgradePayment` clears it).
 The account has one default design (`app_designs.paymentHasPlaylistId` null,
 `scopeKey u<userId>`) and optional overrides per order line (`scopeKey
 p<phpId>`, `mode` custom / standard / default).

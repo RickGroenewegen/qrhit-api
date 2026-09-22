@@ -278,6 +278,9 @@ model User {
   gamesActivationCodeExpiry DateTime?
   apiKey                    String?          @unique
   upgraded                  Boolean          @default(false)
+  // The dashboard's App Designer switch: null follows the purchases (the
+  // normal state), true or false wins over them until the next purchase.
+  appDesignEnabled          Boolean?
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
   UserSuggestion            UserSuggestion[]

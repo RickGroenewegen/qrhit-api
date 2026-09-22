@@ -15,7 +15,7 @@ const { prismaMock, reload } = vi.hoisted(() => ({
     payment: { findUnique: vi.fn(), update: vi.fn() },
     appDesign: { findUnique: vi.fn() },
     appDesignPurchase: { findUnique: vi.fn(), count: vi.fn(), create: vi.fn() },
-    user: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), update: vi.fn() },
   },
   reload: vi.fn(),
 }));
@@ -262,5 +262,66 @@ describe('importCardAsset', () => {
   it('refuses anything but a card upload name and survives a missing file', async () => {
     expect(await appDesign.importCardAsset('logo', '../secret.png')).toBeNull();
     expect(await appDesign.importCardAsset('logo', 'd'.repeat(32) + '.png')).toBeNull();
+  });
+});
+
+// The dashboard's switch (users.appDesignEnabled) beats the purchases while
+// it is set; a purchase clears it again.
+describe('isEntitled / setEnabled', () => {
+  beforeEach(() => {
+    // The checkout tests above spy on processUpgradePayment; this block runs
+    // the real one.
+    vi.restoreAllMocks();
+    prismaMock.user.findUnique.mockReset();
+    prismaMock.user.update.mockReset().mockResolvedValue({ hash: 'h' });
+    prismaMock.appDesignPurchase.count.mockReset();
+    reload.mockClear();
+  });
+
+  it('follows the purchases when the switch is not set', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ appDesignEnabled: null });
+    prismaMock.appDesignPurchase.count.mockResolvedValue(0);
+    expect(await appDesign.isEntitled(5)).toBe(false);
+    prismaMock.appDesignPurchase.count.mockResolvedValue(1);
+    expect(await appDesign.isEntitled(5)).toBe(true);
+  });
+
+  it('lets the switch override the purchases either way', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ appDesignEnabled: true });
+    prismaMock.appDesignPurchase.count.mockResolvedValue(0);
+    expect(await appDesign.isEntitled(5)).toBe(true);
+
+    prismaMock.user.findUnique.mockResolvedValue({ appDesignEnabled: false });
+    prismaMock.appDesignPurchase.count.mockResolvedValue(3);
+    expect(await appDesign.isEntitled(5)).toBe(false);
+  });
+
+  it('stores the switch and reloads the served themes', async () => {
+    await appDesign.setEnabled(5, false);
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 5 },
+      data: { appDesignEnabled: false },
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('a purchase puts the account back on its purchases', async () => {
+    prismaMock.appDesignPurchase.findUnique.mockResolvedValue(null);
+    prismaMock.user.findUnique.mockResolvedValue({ appDesignEnabled: false });
+    prismaMock.appDesignPurchase.count.mockResolvedValue(0);
+    prismaMock.appDesignPurchase.create.mockResolvedValue({ id: 9 });
+    const result = await appDesign.processUpgradePayment({
+      userId: 5,
+      molliePaymentId: 'tr_switch',
+      price: 9,
+      taxRate: 21,
+      countrycode: 'NL',
+      currency: 'EUR',
+      amountCharged: 9,
+    });
+    expect(result).toEqual({ success: true, created: true, purchaseId: 9 });
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 5 }, data: { appDesignEnabled: null } })
+    );
   });
 });

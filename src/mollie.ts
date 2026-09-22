@@ -1774,6 +1774,10 @@ class Mollie {
         user: {
           select: {
             hash: true,
+            // For the App Designer switch on the order line: the account's
+            // override and whether it ever bought the upgrade
+            appDesignEnabled: true,
+            _count: { select: { AppDesignPurchase: true } },
           },
         },
         PaymentHasPlaylist: {
@@ -1952,8 +1956,13 @@ class Mollie {
 
     const attentionIds = new Set(attentionPayments.map((payment) => payment.id));
     const paymentsWithAttention = payments.map((payment) => {
+      // App Designer is owned per account: the dashboard's switch when it is
+      // set, else a purchase (AppDesign.isEntitled, without a query per row)
+      const appDesignEnabled =
+        payment.user?.appDesignEnabled ??
+        (payment.user?._count?.AppDesignPurchase ?? 0) > 0;
       if (!attentionIds.has(payment.id)) {
-        return { ...payment, attention: null };
+        return { ...payment, appDesignEnabled, attention: null };
       }
 
       const openCorrections = payment.PaymentHasPlaylist.reduce(
@@ -1994,6 +2003,7 @@ class Mollie {
 
       return {
         ...payment,
+        appDesignEnabled,
         attention: { reason, openCorrections, printerError },
       };
     });
