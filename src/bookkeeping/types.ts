@@ -38,6 +38,8 @@ export interface BookkeepingInvoice {
   id: string | number;
   invoice_id?: string;
   url?: string;
+  reference?: string;
+  contact_id?: string | number;
   total_price_excl_tax?: string;
   total_price_incl_tax?: string;
 }
@@ -98,10 +100,24 @@ export interface BookkeepingProvider {
   /** Download the PDF for a sales invoice as a Buffer. */
   downloadInvoicePdf(invoiceId: string | number): Promise<Buffer>;
 
-  /** Look up a sales invoice by its `reference` field; returns null if none. */
+  /** Find a contact by our internal stable customer key; null if none. */
+  findContactByCustomerId(
+    customerKey: string,
+    options?: { strict?: boolean }
+  ): Promise<BookkeepingContact | null>;
+
+  /**
+   * The sales invoice whose `reference` is exactly this one, optionally only
+   * for one contact; null if none. `strict` throws on a provider error
+   * instead of reporting "none".
+   */
   findInvoiceByReference(
-    reference: string
+    reference: string,
+    options?: { contactId?: string | number; strict?: boolean }
   ): Promise<BookkeepingInvoice | null>;
+
+  /** A sales invoice by id; null when it does not exist (any more). */
+  getInvoice(invoiceId: string | number): Promise<BookkeepingInvoice | null>;
 
   /** Move a draft sales invoice to a finalized state (assigns a number). */
   finalizeInvoice(invoiceId: string | number): Promise<BookkeepingInvoice | null>;

@@ -405,6 +405,57 @@ describe('vibe portal routes — wave 2 coverage', () => {
       expect(typeof body.connected).toBe('boolean');
     });
 
+    it('previews the invoices from the saved price, which also sets the Sell column', async () => {
+      const pricing = {
+        quantity: 250,
+        unitPrice: 6.83,
+        extras: [],
+        customAppFee: 350,
+        votingPortalFee: 0,
+        discountPercent: 10,
+      };
+      const put = await app.inject({
+        method: 'PUT',
+        url: `/vibe/companies/${companyId}/lists/${secondListId}/calculation-schneider`,
+        headers: adminHeaders,
+        payload: {
+          calculationSchneider: JSON.stringify({ quantity: 250, cardCount: 48, pricing }),
+          buyPrice: 800,
+          sellPrice: 9999,
+        },
+      });
+      expect(put.statusCode).toBe(200);
+      // 250 x 6.83 + 350 = 2057.50, less 10%. The client's own figure loses.
+      const row = await prisma().companyList.findUnique({ where: { id: secondListId } });
+      expect(row!.sellPrice).toBe(1851.75);
+      expect(row!.buyPrice).toBe(800);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/companies/${companyId}/lists/${secondListId}/invoices?type=schneider`,
+        headers: adminHeaders,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().pricing).toEqual({
+        subtotal: 2057.5,
+        discountPercent: 10,
+        discountAmount: 205.75,
+        total: 1851.75,
+        amounts: { full: 1851.75, down: 555.53, remaining: 1296.22 },
+      });
+    });
+
+    it('says so when the list has no saved price yet', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/vibe/companies/${companyId}/lists/${listId}/invoices?type=qrsong`,
+        headers: adminHeaders,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().pricing).toBeNull();
+      expect(res.json().pricingError).toMatch(/no saved prices/);
+    });
+
     it('400s for NaN companyId', async () => {
       const res = await app.inject({
         method: 'GET',

@@ -426,6 +426,7 @@ describe('sales invoices', () => {
         document_style_id: '483050618946061479',
         identity_id: '483052548427613969',
         language: 'de',
+        prices_are_incl_tax: false,
         details_attributes: [
           {
             description: 'QR cards',
@@ -557,6 +558,76 @@ describe('sales invoices', () => {
     expect(await mb.findInvoiceByReference('QRX')).toBeNull();
 
     expect(await mb.findInvoiceByReference('')).toBeNull();
+  });
+
+  it('findInvoiceByReference never falls back to a result whose reference differs', async () => {
+    // Taking the first result reported "Feest - Aanbetaling 30%" as the full
+    // invoice of list "Feest", and hid that option.
+    const mb = fresh();
+    axiosRequest.mockResolvedValue({
+      data: [{ id: 1, reference: 'Feest - Aanbetaling 30%' }],
+    } as any);
+    expect(await mb.findInvoiceByReference('Feest')).toBeNull();
+  });
+
+  it('findInvoiceByReference with a contact only matches that contact', async () => {
+    // Two companies can both have a list called "Kerst 2026".
+    const mb = fresh();
+    axiosRequest.mockResolvedValue({
+      data: [
+        { id: 1, reference: 'Kerst 2026', contact_id: '900' },
+        { id: 2, reference: 'Kerst 2026', contact_id: '42' },
+      ],
+    } as any);
+
+    expect(await mb.findInvoiceByReference('Kerst 2026', { contactId: 42 })).toMatchObject({ id: 2 });
+    expect(await mb.findInvoiceByReference('Kerst 2026', { contactId: 7 })).toBeNull();
+  });
+
+  it('findInvoiceByReference reports an outage as "none" unless strict', async () => {
+    const mb = fresh();
+    axiosRequest.mockRejectedValue({ response: { status: 503 }, message: 'down' });
+    expect(await mb.findInvoiceByReference('QR1')).toBeNull();
+    await expect(mb.findInvoiceByReference('QR1', { strict: true })).rejects.toMatchObject({
+      response: { status: 503 },
+    });
+  });
+
+  it('getInvoice fetches by id with the admin url, null when deleted, and throws on outages', async () => {
+    const mb = fresh();
+    axiosRequest.mockResolvedValueOnce({
+      data: { id: 555, invoice_id: '2026-0001', total_price_excl_tax: '100.0' },
+    } as any);
+    expect(await mb.getInvoice(555)).toEqual({
+      id: 555,
+      invoice_id: '2026-0001',
+      total_price_excl_tax: '100.0',
+      url: 'https://moneybird.com/admin1/sales_invoices/555',
+    });
+    expect(axiosRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'GET',
+        url: `${API}/admin1/sales_invoices/555.json`,
+      })
+    );
+
+    axiosRequest.mockRejectedValueOnce({ response: { status: 404 } });
+    expect(await mb.getInvoice(556)).toBeNull();
+
+    axiosRequest.mockRejectedValueOnce({ response: { status: 500 }, message: 'x' });
+    await expect(mb.getInvoice(557)).rejects.toBeTruthy();
+  });
+
+  it('findContactByCustomerId throws on outages only when strict', async () => {
+    const mb = fresh();
+    axiosRequest.mockRejectedValue({ response: { status: 500 }, message: 'x' });
+    expect(await mb.findContactByCustomerId('qrhit-1')).toBeNull();
+    await expect(
+      mb.findContactByCustomerId('qrhit-1', { strict: true })
+    ).rejects.toBeTruthy();
+
+    axiosRequest.mockRejectedValue({ response: { status: 404 } });
+    expect(await mb.findContactByCustomerId('qrhit-1', { strict: true })).toBeNull();
   });
 
   it('downloadInvoicePdf requests an arraybuffer with PDF accept header and returns a Buffer', async () => {

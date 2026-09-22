@@ -18,6 +18,17 @@ import Translation from './translation';
 import Mail from './mail';
 import PushoverClient from './pushover';
 import PrismaInstance from './prisma';
+import {
+  ListVariant,
+  PaymentOption,
+  PaymentAmounts,
+  ListPricing,
+  ListPricingTotals,
+  listPricingFromCalculation,
+  listPricingTotals,
+  paymentAmounts,
+  variantCalculationColumn,
+} from './listPricing';
 
 class Vibe {
   private static instance: Vibe;
@@ -4085,7 +4096,7 @@ class Vibe {
             includeCustomApp: !!state.includeCustomApp,
             includePersonalization: !!state.includePersonalization,
             isReseller: !!(pricingOptions?.isReseller ?? state.isReseller),
-            manualDiscountPercent: Number(state.manualDiscountPercent) || 0,
+            manualDiscountPercent: this.quotedDiscountPercent(type, state, company),
             locale,
             payload: JSON.stringify({
               state,
@@ -4112,6 +4123,23 @@ class Vibe {
     } catch (error: any) {
       this.logger.log(color.red.bold(`Error generating quotation: ${error}`));
       return { success: false, error: 'Failed to generate quotation' };
+    }
+  }
+
+  /**
+   * The discount a quotation prints: the list calculation's own, or, for a
+   * Tromp or Schneider calculation saved before the discount moved onto the
+   * list, the company-wide one (the quotation route applies the same rule).
+   */
+  private quotedDiscountPercent(type: string, state: any, company: any): number {
+    if (typeof state?.manualDiscountPercent === 'number') {
+      return state.manualDiscountPercent;
+    }
+    if (type === 'onzevibe' || !company?.calculation) return 0;
+    try {
+      return Number(JSON.parse(company.calculation).manualDiscountPercent) || 0;
+    } catch {
+      return 0;
     }
   }
 
@@ -4217,36 +4245,44 @@ class Vibe {
   }
 
   /**
-   * Build invoice line items + totals for a company list, mirroring the
-   * line items shown in the corresponding quotation EJS templates.
+   * Invoice lines for a company list, built from the price snapshot its
+   * calculator saved (see listPricing.ts). The quotation and the Sell column
+   * show the same numbers, so the invoice matches both. Nothing is
+   * recalculated here: the server only knows the printer cost, not the
+   * profit table, reseller prices or forced prices.
    *
-   * Returns excl-VAT prices. The caller (MoneyBird invoice) attaches the
-   * VAT rate id, MoneyBird computes BTW itself.
+   * Prices are excl. VAT; the caller attaches the VAT rate and MoneyBird
+   * computes the VAT.
    *
    * paymentOption:
-   *   - 'full' : full invoice with all line items
-   *   - 'down' : single-line 30% down-payment line
-   *   - 'remaining' : single-line 70% remaining-payment line
+   *   - 'full': every line, plus a discount line when there is a discount
+   *   - 'down': one line, 30% of the total
+   *   - 'remaining': one line, the total minus `downPaymentExclVat` (the
+   *     down payment actually invoiced), or minus 30% when there is none
    */
   public async buildInvoiceLineItems(
     companyId: number,
     listId: number,
-    type: 'onzevibe' | 'qrsong' | 'schneider',
-    paymentOption: 'full' | 'down' | 'remaining'
+    type: ListVariant,
+    paymentOption: PaymentOption,
+    options: { downPaymentExclVat?: number | null } = {}
   ): Promise<{
     success: boolean;
     error?: string;
+    /** 'no_pricing': the list has no saved price snapshot yet. */
+    code?: 'no_pricing';
     items?: { description: string; amount: string; price: string }[];
     company?: any;
     list?: any;
     reference?: string;
     /** Business locale the line items were rendered in. */
     locale?: string;
-    totals?: {
-      subtotalExclVat: number;
-      discountAmount: number;
-      totalAfterDiscount: number;
-    };
+    pricing?: ListPricing;
+    totals?: ListPricingTotals;
+    /** What each of the three invoices comes to, excl. VAT. */
+    amounts?: PaymentAmounts;
+    /** What this invoice comes to, excl. VAT. */
+    invoiceTotal?: number;
   }> {
     try {
       const list: any = await (this.prisma as any).companyList.findUnique({
@@ -4259,6 +4295,20 @@ class Vibe {
         where: { id: companyId },
       });
       if (!company) return { success: false, error: 'Company not found' };
+
+      const rawCalculation = list[variantCalculationColumn(type)];
+      const pricing = listPricingFromCalculation(rawCalculation);
+      if (!pricing) {
+        return {
+          success: false,
+          code: 'no_pricing',
+          error:
+            'This list has no saved prices yet. Open its calculator, check the prices, and try again.',
+        };
+      }
+      const calc = JSON.parse(rawCalculation);
+      const totals = listPricingTotals(pricing);
+      const amounts = paymentAmounts(totals.total, options.downPaymentExclVat);
 
       // Invoice line text is free text we supply, so it has to be translated
       // here; MoneyBird's own labels are handled by the `language` we send
@@ -4277,275 +4327,102 @@ class Vibe {
       const extraName = (e: any): string =>
         e.key ? tExtra(e.key, e.keyVars) : e.name;
 
-      // Pull manualDiscountPercent from the LIST's per-type calculation
-      // (calculation / calculationTromp / calculationSchneider). Each printer
-      // type stores its own discount on the list, so we must read the field
-      // that matches the invoice type rather than the company-wide one.
-      const listCalcField =
-        type === 'qrsong'
-          ? 'calculationTromp'
-          : type === 'schneider'
-            ? 'calculationSchneider'
-            : 'calculation';
-      let listDiscountPercent = 0;
-      const rawListCalc = (list as any)[listCalcField];
-      if (rawListCalc) {
-        try {
-          listDiscountPercent =
-            JSON.parse(rawListCalc).manualDiscountPercent || 0;
-        } catch {
-          /* ignore */
-        }
-      }
-
-      const items: { description: string; amount: string; price: string }[] = [];
-      let subtotalExclVat = 0;
-
+      // The product line names what the quotation names; the numbers all
+      // come from the snapshot.
+      let productDescription: string;
       if (type === 'qrsong') {
-        const stored = list.calculationTromp
-          ? JSON.parse(list.calculationTromp)
-          : (company as any).calculationTromp
-            ? JSON.parse((company as any).calculationTromp)
-            : {};
-        const calc = { ...stored, manualDiscountPercent: listDiscountPercent };
-        const r = await this.calculateTrompPricing({
-          quantity: calc.quantity || 100,
-          includeStansmestekening: calc.includeStansmestekening || false,
-          includeStansvorm: calc.includeStansvorm || false,
-          includeCustomApp: calc.includeCustomApp || false,
-          includeVotingPortal: calc.includeVotingPortal || false,
-          profitMargin: calc.profitMargin || 0,
-          printingType: calc.printingType || 'eigen',
-        });
-        if (!r.success) return { success: false, error: 'Pricing failed' };
-        const cr = r.calculation;
-        const pricePerUnit = cr.pricePerSet;
-        const quantity = cr.quantity;
-
-        let itemDescription: string;
-        if (calc.printingType === 'luxe') {
-          itemDescription = t('luxeBox');
-        } else if (calc.printingType === 'klein') {
-          itemDescription = t('smallBox');
-        } else {
-          itemDescription = t('standardBox');
-        }
-
-        items.push({
-          description: itemDescription,
-          amount: String(quantity),
-          price: pricePerUnit.toFixed(2),
-        });
-
-        if (Array.isArray(cr.extras)) {
-          for (const e of cr.extras) {
-            if (e.key === 'customApp' || e.key === 'votingPortal') continue;
-            items.push({
-              description: t('extraOneOff', { name: extraName(e) }),
-              amount: '1',
-              price: Number(e.price).toFixed(2),
-            });
-          }
-        }
-        if (cr.customAppFee > 0) {
-          items.push({
-            description: t('customApp'),
-            amount: '1',
-            price: '350.00',
-          });
-        }
-        if (cr.votingPortalFee > 0) {
-          items.push({
-            description: t('votingPortal'),
-            amount: '1',
-            price: '500.00',
-          });
-        }
-
-        subtotalExclVat =
-          pricePerUnit * quantity +
-          (cr.extras
-            ?.filter(
-              (e: any) => e.key !== 'customApp' && e.key !== 'votingPortal'
-            )
-            .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
-          (cr.customAppFee || 0) +
-          (cr.votingPortalFee || 0);
+        productDescription =
+          calc.printingType === 'luxe'
+            ? t('luxeBox')
+            : calc.printingType === 'klein'
+              ? t('smallBox')
+              : t('standardBox');
       } else if (type === 'schneider') {
-        const stored = list.calculationSchneider
-          ? JSON.parse(list.calculationSchneider)
-          : (company as any).calculationSchneider
-            ? JSON.parse((company as any).calculationSchneider)
-            : {};
-        const calc = { ...stored, manualDiscountPercent: listDiscountPercent };
-        const r = await this.calculateSchneiderPricing({
-          quantity: calc.quantity || 100,
-          cardCount: calc.cardCount || 48,
-          includeStansmes: calc.includeStansmes || false,
-          includeCustomApp: calc.includeCustomApp || false,
-          includeVotingPortal: calc.includeVotingPortal || false,
-          profitMargin: calc.profitMargin || 0,
-        });
-        if (!r.success) return { success: false, error: 'Pricing failed' };
-        const cr = r.calculation;
-        const pricePerUnit = cr.pricePerBox;
-        const quantity = cr.quantity;
-        const cardCount = calc.cardCount || 48;
-
-        items.push({
-          description: t('qrsongBox', { count: cardCount }),
-          amount: String(quantity),
-          price: pricePerUnit.toFixed(2),
-        });
-
-        if (Array.isArray(cr.extras)) {
-          for (const e of cr.extras) {
-            if (e.key === 'customApp' || e.key === 'votingPortal') continue;
-            items.push({
-              description: t('extraOneOff', { name: extraName(e) }),
-              amount: '1',
-              price: Number(e.price).toFixed(2),
-            });
-          }
-        }
-        if (cr.customAppFee > 0) {
-          items.push({
-            description: t('customApp'),
-            amount: '1',
-            price: '350.00',
-          });
-        }
-        if (cr.votingPortalFee > 0) {
-          items.push({
-            description: t('votingPortal'),
-            amount: '1',
-            price: '500.00',
-          });
-        }
-
-        subtotalExclVat =
-          pricePerUnit * quantity +
-          (cr.extras
-            ?.filter(
-              (e: any) => e.key !== 'customApp' && e.key !== 'votingPortal'
-            )
-            .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
-          (cr.customAppFee || 0) +
-          (cr.votingPortalFee || 0);
+        productDescription = t('qrsongBox', { count: calc.cardCount || 48 });
       } else {
-        // OnzeVibe
-        const stored = list.calculation
-          ? JSON.parse(list.calculation)
-          : (company as any).calculation
-            ? JSON.parse((company as any).calculation)
-            : {};
-        const calc = { ...stored };
-        const r = await this.calculatePricing({
-          quantity: calc.quantity || 100,
-          includePersonalization:
-            calc.includePersonalization !== undefined
-              ? calc.includePersonalization
-              : true,
-          shipmentOnLocation: calc.shipmentOnLocation || false,
-          soldBy: calc.soldBy || 'onzevibe',
-          isReseller: calc.isReseller || false,
-          manualDiscount: calc.manualDiscount || 0,
-          fluidMode: calc.fluidMode || false,
-          includeCustomApp: calc.includeCustomApp || false,
-          includeVotingPortal: calc.includeVotingPortal || false,
-          forceResellerPrice: calc.forceResellerPrice || null,
-          forceClientPrice: calc.forceClientPrice || null,
-        });
-        if (!r.success) return { success: false, error: 'Pricing failed' };
-        const cr = r.calculation;
-        const pricePerUnit = cr.pricing.commercialPricePerBox;
-        const quantity = cr.quantity;
-
-        const detailParts: string[] = [];
-        if (calc.includePersonalization) detailParts.push(t('detailPersonalization'));
-        else detailParts.push(t('detailNoPersonalization'));
-        if (calc.shipmentOnLocation) detailParts.push(t('detailSingleLocation'));
-
-        items.push({
-          description: t('vibeBox', { details: detailParts.join(', ') }),
-          amount: String(quantity),
-          price: pricePerUnit.toFixed(2),
-        });
-
-        if (cr.pricing.customAppFee > 0) {
-          items.push({
-            description: t('customApp'),
-            amount: '1',
-            price: '350.00',
-          });
-        }
-        if (cr.pricing.votingPortalFee > 0) {
-          items.push({
-            description: t('votingPortal'),
-            amount: '1',
-            price: '500.00',
-          });
-        }
-
-        subtotalExclVat =
-          pricePerUnit * quantity +
-          (cr.pricing.customAppFee || 0) +
-          (cr.pricing.votingPortalFee || 0);
-      }
-
-      // Apply manual discount as a negative line (mirrors quotation totals
-      // section). MoneyBird applies this excl. VAT before BTW is computed.
-      const discountPct = Number(listDiscountPercent) || 0;
-      const discountAmount = subtotalExclVat * (discountPct / 100);
-      if (discountPct > 0) {
-        items.push({
-          description: t('discount', { percent: discountPct }),
-          amount: '1',
-          price: (-discountAmount).toFixed(2),
-        });
-      }
-
-      const totalAfterDiscount = subtotalExclVat - discountAmount;
-      const reference = `${list.name}`;
-
-      // For down/remaining payment, collapse to a single line.
-      if (paymentOption === 'down' || paymentOption === 'remaining') {
-        const fraction = paymentOption === 'down' ? 0.3 : 0.7;
-        const label =
-          paymentOption === 'down'
-            ? `${t('downPayment')} - ${list.name}`
-            : `${t('remainingPayment')} - ${list.name}`;
-        const collapsed = [
-          {
-            description: label,
-            amount: '1',
-            price: (totalAfterDiscount * fraction).toFixed(2),
-          },
+        // Priced with personalization unless it was switched off explicitly.
+        const detailParts = [
+          calc.includePersonalization === false
+            ? t('detailNoPersonalization')
+            : t('detailPersonalization'),
         ];
-        return {
-          success: true,
-          items: collapsed,
-          company,
-          list,
-          reference,
-          locale,
-          totals: {
-            subtotalExclVat,
-            discountAmount,
-            totalAfterDiscount: totalAfterDiscount * fraction,
-          },
-        };
+        if (calc.shipmentOnLocation) detailParts.push(t('detailSingleLocation'));
+        productDescription = t('vibeBox', { details: detailParts.join(', ') });
       }
 
-      return {
+      const items: { description: string; amount: string; price: string }[] = [
+        {
+          description: productDescription,
+          amount: String(pricing.quantity),
+          price: pricing.unitPrice.toFixed(2),
+        },
+      ];
+      for (const e of pricing.extras) {
+        items.push({
+          description: t('extraOneOff', { name: extraName(e) }),
+          amount: '1',
+          price: e.price.toFixed(2),
+        });
+      }
+      if (pricing.customAppFee > 0) {
+        items.push({
+          description: t('customApp'),
+          amount: '1',
+          price: pricing.customAppFee.toFixed(2),
+        });
+      }
+      if (pricing.votingPortalFee > 0) {
+        items.push({
+          description: t('votingPortal'),
+          amount: '1',
+          price: pricing.votingPortalFee.toFixed(2),
+        });
+      }
+      // A negative line, excl. VAT, so MoneyBird computes the VAT on the
+      // discounted total like the quotation does.
+      if (totals.discountAmount > 0) {
+        items.push({
+          description: t('discount', { percent: pricing.discountPercent }),
+          amount: '1',
+          price: (-totals.discountAmount).toFixed(2),
+        });
+      }
+
+      const reference = `${list.name}`;
+      const result = {
         success: true,
-        items,
         company,
         list,
         reference,
         locale,
-        totals: { subtotalExclVat, discountAmount, totalAfterDiscount },
+        pricing,
+        totals,
+        amounts,
       };
+
+      if (paymentOption === 'down' || paymentOption === 'remaining') {
+        const invoiceTotal =
+          paymentOption === 'down' ? amounts.down : amounts.remaining;
+        if (invoiceTotal <= 0) {
+          return {
+            success: false,
+            error: `Nothing left to invoice: the down payment already invoiced covers the list total of € ${totals.total.toFixed(2)} excl. VAT.`,
+          };
+        }
+        const label =
+          paymentOption === 'down'
+            ? `${t('downPayment')} - ${list.name}`
+            : `${t('remainingPayment')} - ${list.name}`;
+        return {
+          ...result,
+          items: [
+            { description: label, amount: '1', price: invoiceTotal.toFixed(2) },
+          ],
+          invoiceTotal,
+        };
+      }
+
+      return { ...result, items, invoiceTotal: totals.total };
     } catch (error: any) {
       this.logger.log(
         color.red.bold(`Error building invoice items: ${error?.message || error}`)

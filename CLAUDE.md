@@ -538,6 +538,48 @@ webhook branches in `mollie.ts` (`app_design_upgrade`, `bingo_upgrade`,
   payment's metadata (`boxPrice` × `quantity`, `shippingCost`), so a replay
   after the box is already enabled issues the same invoice.
 
+## Company list invoices (MoneyBird, 30/70/100%)
+
+The dashboard's Lists tab invoices a company list in MoneyBird, in full or as
+a 30% down payment plus the rest. **The invoice never recalculates the
+price.** The admin calculators (in the frontend) work out the client price
+from the printer cost, the profit table, the reseller toggle and forced
+prices, and the API cannot redo that: it only knows the printer cost. Until
+2026-09-22 `buildInvoiceLineItems` recomputed from the stored calculator
+inputs and billed Tromp and Schneider lists at roughly the printer's price,
+so no invoice matched the quotation or the Sell column.
+
+- Every calculator save carries a `pricing` snapshot inside the variant's
+  calculation JSON (`calculation` / `calculationTromp` /
+  `calculationSchneider`): quantity, unit price, one-off extras, app and
+  portal fees, discount %. `src/listPricing.ts` parses it and does the sums;
+  the frontend mirrors it in `shared/list-pricing.util.ts` with the same
+  rounding. The save endpoints set `sellPrice` from it (excl. VAT, after
+  discount), and `buildInvoiceLineItems` builds the lines from it. A list
+  without a snapshot cannot be invoiced; opening its calculator saves one.
+- Only an admin sets a snapshot: the OnzeVibe list endpoint also takes
+  companyadmin saves, which keep the stored one.
+- The discount belongs to the list. Tromp and Schneider used to write it to
+  `company.calculation` (company-wide), where the quotation read it and the
+  invoice did not. Lists saved before the move still fall back to the
+  company value, on the quotation and in the calculator.
+- The remaining payment is the list total minus the down payment **as
+  invoiced** (its `total_price_excl_tax` in MoneyBird), not 70% recomputed.
+- Invoices are recorded by MoneyBird id in `company_list_invoices` and found
+  by id (`src/listInvoices.ts`). The reference (the list name) is only the
+  fallback for invoices from before the table, and only exact matches on
+  the company's own contact (`qrhit-<companyId>`). Searching by name alone
+  showed another company's invoice for a list of the same name and lost
+  invoices when a list was renamed. The POST refuses a payment that is
+  already covered (409), and a MoneyBird outage fails the lookup instead of
+  reading as "nothing invoiced".
+- `createInvoice` sends `prices_are_incl_tax: false`; every caller passes
+  excl. VAT prices, and leaving it out lets the workflow default decide.
+- MoneyBird contacts are keyed on the company id, and the dev database has
+  its own ids, so a company in `qrhit_dev` can resolve to a real customer's
+  contact in the shared administration (dev company 53 finds contact
+  `qrhit-53`). An invoice created from a local API is a real invoice.
+
 ## Featured playlist covers
 
 `playlists.image` is a URL on the music service's CDN, stored once when the

@@ -364,17 +364,27 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
   });
 
+  const pricing = (overrides: Record<string, unknown> = {}) => ({
+    quantity: 100,
+    unitPrice: 50,
+    extras: [],
+    customAppFee: 0,
+    votingPortalFee: 0,
+    discountPercent: 0,
+    ...overrides,
+  });
+
   it('qrsong luxe description with extras and voting portal lines', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue({
       id: 2,
       companyId: 1,
       name: 'L',
       calculationTromp: JSON.stringify({
-        quantity: 100,
         printingType: 'luxe',
-        profitMargin: 1,
-        includeStansvorm: true,
-        includeVotingPortal: true,
+        pricing: pricing({
+          votingPortalFee: 500,
+          extras: [{ key: 'cuttingDie', name: 'Stansvorm', price: 425 }],
+        }),
       }),
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
@@ -393,7 +403,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
       price: '500.00',
     });
     // 50/set * 100 + 425 stansvorm + 500 portal
-    expect(res.totals!.subtotalExclVat).toBeCloseTo(5925, 2);
+    expect(res.totals!.subtotal).toBe(5925);
   });
 
   it('qrsong klein description', async () => {
@@ -401,11 +411,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
       id: 2,
       companyId: 1,
       name: 'L',
-      calculationTromp: JSON.stringify({
-        quantity: 100,
-        printingType: 'klein',
-        profitMargin: 0,
-      }),
+      calculationTromp: JSON.stringify({ printingType: 'klein', pricing: pricing() }),
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.items![0].description).toBe(
@@ -413,17 +419,14 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
     );
   });
 
-  it('schneider keeps app/voting out of the extras lines but adds dedicated lines', async () => {
+  it('schneider adds dedicated app and voting lines with the saved fees', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue({
       id: 2,
       companyId: 1,
       name: 'L',
       calculationSchneider: JSON.stringify({
-        quantity: 100,
         cardCount: 48,
-        profitMargin: 1,
-        includeCustomApp: true,
-        includeVotingPortal: true,
+        pricing: pricing({ unitPrice: 4.72, customAppFee: 350, votingPortalFee: 500 }),
       }),
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
@@ -434,27 +437,24 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
       'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
       'Voting Portal - eenmalige kosten, gebruik stemportaal',
     ]);
-    // No duplicated "(eenmalige kosten)" lines for app/voting extras
-    expect(descriptions.filter((d) => d.includes('eenmalige kosten'))).toHaveLength(2);
-    expect(res.totals!.subtotalExclVat).toBeCloseTo(472 + 350 + 500, 2);
+    expect(res.totals!.subtotal).toBe(472 + 350 + 500);
   });
 
-  it('onzevibe adds the custom app line', async () => {
+  it('onzevibe adds the custom app line at the saved fee', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue({
       id: 2,
       companyId: 1,
       name: 'L',
       calculation: JSON.stringify({
-        quantity: 100,
         includePersonalization: true,
-        includeCustomApp: true,
+        pricing: pricing({ customAppFee: 395 }),
       }),
     });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
     expect(res.items).toContainEqual({
       description: 'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
       amount: '1',
-      price: '350.00',
+      price: '395.00',
     });
   });
 });

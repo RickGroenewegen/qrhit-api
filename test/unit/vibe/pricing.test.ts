@@ -403,6 +403,29 @@ describe('calculateSchneiderPricing', () => {
 });
 
 describe('buildInvoiceLineItems', () => {
+  // What the calculator saved: 1000 sets at €12.50 (printer cost plus the
+  // profit table, which the server cannot work out itself), the app, 10% off.
+  const snapshot = (overrides: Record<string, unknown> = {}) => ({
+    quantity: 1000,
+    unitPrice: 12.5,
+    extras: [],
+    customAppFee: 350,
+    votingPortalFee: 0,
+    discountPercent: 10,
+    ...overrides,
+  });
+  const listWith = (
+    column: 'calculation' | 'calculationTromp' | 'calculationSchneider',
+    calc: Record<string, unknown>,
+    name = 'Feest 2026'
+  ) =>
+    h.prisma.companyList.findUnique.mockResolvedValue({
+      id: 2,
+      companyId: 1,
+      name,
+      [column]: JSON.stringify(calc),
+    });
+
   it('rejects unknown lists and company mismatches', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(null);
     expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
@@ -425,18 +448,14 @@ describe('buildInvoiceLineItems', () => {
     });
   });
 
-  it('qrsong: builds set line + app fee + percentage discount line', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Feest 2026',
-      calculationTromp: JSON.stringify({
-        quantity: 1000,
-        printingType: 'eigen',
-        profitMargin: 2,
-        includeCustomApp: true,
-        manualDiscountPercent: 10,
-      }),
+  it('bills the saved price, not a server recomputation of the printer cost', async () => {
+    // printingType eigen at 1000 sets costs €9.32 at Tromp; the customer was
+    // quoted €12.50. The invoice used to charge the €9.32.
+    listWith('calculationTromp', {
+      quantity: 1000,
+      printingType: 'eigen',
+      profitMargin: 0,
+      pricing: snapshot(),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
@@ -448,7 +467,7 @@ describe('buildInvoiceLineItems', () => {
         description:
           'QRSong! muziekkaarten set - Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)',
         amount: '1000',
-        price: '9.32',
+        price: '12.50',
       },
       {
         description:
@@ -456,100 +475,169 @@ describe('buildInvoiceLineItems', () => {
         amount: '1',
         price: '350.00',
       },
-      { description: 'Korting (10%)', amount: '1', price: '-967.00' },
+      { description: 'Korting (10%)', amount: '1', price: '-1285.00' },
     ]);
-    expect(res.totals!.subtotalExclVat).toBeCloseTo(9670, 2);
-    expect(res.totals!.discountAmount).toBeCloseTo(967, 2);
-    expect(res.totals!.totalAfterDiscount).toBeCloseTo(8703, 2);
-  });
-
-  it('qrsong: down payment collapses to a single 30% line', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Feest 2026',
-      calculationTromp: JSON.stringify({
-        quantity: 1000,
-        printingType: 'eigen',
-        profitMargin: 2,
-        includeCustomApp: true,
-        manualDiscountPercent: 10,
-      }),
+    expect(res.totals).toEqual({
+      productTotal: 12500,
+      extrasTotal: 0,
+      subtotal: 12850,
+      discountAmount: 1285,
+      total: 11565,
     });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
-    expect(res.items).toEqual([
-      {
-        description: 'Aanbetaling 30% - Feest 2026',
-        amount: '1',
-        price: '2610.90',
-      },
-    ]);
-    expect(res.totals!.totalAfterDiscount).toBeCloseTo(2610.9, 2);
+    expect(res.invoiceTotal).toBe(11565);
+    expect(res.amounts).toEqual({ full: 11565, down: 3469.5, remaining: 8095.5 });
   });
 
-  it('remaining payment collapses to a single 70% line', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Feest 2026',
-      calculationTromp: JSON.stringify({
-        quantity: 1000,
-        printingType: 'eigen',
-        profitMargin: 2,
-      }),
-    });
-    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
-    expect(res.items![0].description).toBe('Slottermijn 70% - Feest 2026');
-    expect(res.items![0].price).toBe('6524.00'); // 9320 * 0.7, no discount
-  });
-
-  it('schneider: box line plus stansmes as a one-time line', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Lijst',
-      calculationSchneider: JSON.stringify({
-        quantity: 10,
-        cardCount: 144,
-        includeStansmes: true,
-        profitMargin: 5,
-      }),
+  it('the lines add up to the total MoneyBird will show', async () => {
+    listWith('calculationSchneider', {
+      cardCount: 48,
+      pricing: snapshot({ quantity: 333, unitPrice: 3.07, discountPercent: 7.5 }),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const sum = res.items!.reduce(
+      (s, i) => s + Number(i.amount) * Number(i.price),
+      0
+    );
+    expect(Math.round(sum * 100) / 100).toBe(res.totals!.total);
+  });
+
+  it('refuses a list without a saved price instead of guessing one', async () => {
+    // Also when the company has a calculation: its price was never shown for
+    // this list.
+    listWith('calculationTromp', { quantity: 1000, printingType: 'eigen' });
+    h.prisma.company.findUnique.mockResolvedValue({
+      id: 1,
+      name: 'Acme',
+      locale: 'nl',
+      calculationTromp: JSON.stringify({ quantity: 1000 }),
+    });
+
+    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+      success: false,
+      code: 'no_pricing',
+    });
+  });
+
+  it('reads the snapshot of the requested variant only', async () => {
+    listWith('calculationTromp', { pricing: snapshot() });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+    expect(await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full')).toMatchObject({
+      success: false,
+      code: 'no_pricing',
+    });
+  });
+
+  it('down payment is one line of 30% of the total after discount', async () => {
+    listWith('calculationTromp', { printingType: 'eigen', pricing: snapshot() });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
     expect(res.items).toEqual([
-      { description: 'QRSong! Box - 144 kaarten', amount: '10', price: '107.65' },
+      { description: 'Aanbetaling 30% - Feest 2026', amount: '1', price: '3469.50' },
+    ]);
+    expect(res.invoiceTotal).toBe(3469.5);
+  });
+
+  it('remaining payment is the total minus the down payment actually invoiced', async () => {
+    listWith('calculationTromp', { printingType: 'eigen', pricing: snapshot() });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+    // Down payment invoiced at €3,000 (the price went up since).
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+      downPaymentExclVat: 3000,
+    });
+    expect(res.items).toEqual([
+      { description: 'Slottermijn 70% - Feest 2026', amount: '1', price: '8565.00' },
+    ]);
+  });
+
+  it('remaining payment without a down payment invoice is the total minus 30%', async () => {
+    listWith('calculationTromp', { pricing: snapshot({ discountPercent: 0, customAppFee: 0 }) });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
+    expect(res.items![0].price).toBe('8750.00');
+  });
+
+  it('30% and the remainder add up to the total, to the cent', async () => {
+    // 100.05 * 0.3 = 30.015: rounding both halves separately came out a cent
+    // over.
+    listWith('calculationTromp', {
+      pricing: snapshot({ quantity: 1, unitPrice: 100.05, customAppFee: 0, discountPercent: 0 }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+    const down = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    const rest = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+      downPaymentExclVat: down.invoiceTotal,
+    });
+    expect(down.invoiceTotal! + rest.invoiceTotal!).toBeCloseTo(100.05, 10);
+  });
+
+  it('refuses a remaining payment when the down payment covers the total', async () => {
+    listWith('calculationTromp', { pricing: snapshot() });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+      downPaymentExclVat: 11565,
+    });
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/Nothing left to invoice/);
+  });
+
+  it('schneider: box line plus the saved one-off extras', async () => {
+    listWith(
+      'calculationSchneider',
+      {
+        cardCount: 144,
+        pricing: snapshot({
+          quantity: 10,
+          unitPrice: 140,
+          customAppFee: 0,
+          discountPercent: 0,
+          extras: [
+            {
+              key: 'cuttingDieBox',
+              keyVars: { compartments: 2 },
+              name: 'Stansmes 2-vaks doosje',
+              price: 325,
+            },
+          ],
+        }),
+      },
+      'Lijst'
+    );
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    expect(res.items).toEqual([
+      { description: 'QRSong! Box - 144 kaarten', amount: '10', price: '140.00' },
       {
         description: 'Stansmes 2-vaks doosje (eenmalige kosten)',
         amount: '1',
         price: '325.00',
       },
     ]);
-    expect(res.totals!.subtotalExclVat).toBeCloseTo(1401.5, 2);
+    expect(res.totals!.total).toBe(1725);
   });
 
-  it('onzevibe: falls back to the company-level calculation when the list has none', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Lijst',
-      calculation: null,
-    });
-    h.prisma.company.findUnique.mockResolvedValue({
-      id: 1,
-      name: 'Acme',
-      locale: 'nl',
-      calculation: JSON.stringify({
+  it('onzevibe: personalization and voting portal from the saved price', async () => {
+    listWith(
+      'calculation',
+      {
         quantity: 100,
         includePersonalization: true,
-        soldBy: 'onzevibe',
         includeVotingPortal: true,
-      }),
-    });
+        pricing: snapshot({
+          quantity: 100,
+          unitPrice: 39.95,
+          customAppFee: 0,
+          votingPortalFee: 500,
+          discountPercent: 0,
+        }),
+      },
+      'Lijst'
+    );
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
     expect(res.items).toEqual([
@@ -565,21 +653,21 @@ describe('buildInvoiceLineItems', () => {
         price: '500.00',
       },
     ]);
-    expect(res.totals!.subtotalExclVat).toBeCloseTo(4495, 2);
+    expect(res.totals!.total).toBe(4495);
     expect(res.totals!.discountAmount).toBe(0);
   });
 
   it('onzevibe without personalization mentions it in the description', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'Lijst',
-      calculation: JSON.stringify({
+    listWith(
+      'calculation',
+      {
         quantity: 100,
         includePersonalization: false,
         shipmentOnLocation: true,
-      }),
-    });
+        pricing: snapshot({ quantity: 100, unitPrice: 30 }),
+      },
+      'Lijst'
+    );
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
     const res = await vibe.buildInvoiceLineItems(1, 2, 'onzevibe', 'full');
     expect(res.items![0].description).toBe(
@@ -597,6 +685,7 @@ describe('buildInvoiceLineItems', () => {
         printingType: 'eigen',
         profitMargin: 2,
         includeCustomApp: true,
+        pricing: snapshot(),
       }),
     });
     h.prisma.company.findUnique.mockResolvedValue({
@@ -615,7 +704,7 @@ describe('buildInvoiceLineItems', () => {
       id: 2,
       companyId: 1,
       name: 'Fete 2026',
-      calculationTromp: JSON.stringify({ quantity: 1000, printingType: 'eigen', profitMargin: 2 }),
+      calculationTromp: JSON.stringify({ printingType: 'eigen', pricing: snapshot() }),
     });
     h.prisma.company.findUnique.mockResolvedValue({
       id: 1,
@@ -633,7 +722,7 @@ describe('buildInvoiceLineItems', () => {
       id: 2,
       companyId: 1,
       name: 'Party',
-      calculationTromp: JSON.stringify({ quantity: 1000, printingType: 'eigen', profitMargin: 2 }),
+      calculationTromp: JSON.stringify({ printingType: 'eigen', pricing: snapshot() }),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Legacy BV', locale: null });
 
@@ -650,10 +739,18 @@ describe('buildInvoiceLineItems', () => {
       companyId: 1,
       name: 'Feier',
       calculationSchneider: JSON.stringify({
-        quantity: 100,
         cardCount: 192,
-        includeStansmes: true,
-        profitMargin: 5,
+        pricing: snapshot({
+          quantity: 100,
+          extras: [
+            {
+              key: 'cuttingDieBox',
+              keyVars: { compartments: 4 },
+              name: 'Stansmes 4-vaks doosje',
+              price: 375,
+            },
+          ],
+        }),
       }),
     });
     h.prisma.company.findUnique.mockResolvedValue({
@@ -678,12 +775,16 @@ describe('buildInvoiceLineItems', () => {
       companyId: 1,
       name: 'Feest',
       calculationSchneider: JSON.stringify({
-        quantity: 100,
         cardCount: 192,
-        includeStansmes: true,
-        includeCustomApp: true,
-        includeVotingPortal: true,
-        profitMargin: 5,
+        pricing: snapshot({
+          quantity: 100,
+          votingPortalFee: 500,
+          extras: [
+            { key: 'cuttingDieBox', keyVars: { compartments: 4 }, name: 'Stansmes 4-vaks doosje', price: 375 },
+            { key: 'customApp', name: 'App in eigen stijl', price: 350 },
+            { key: 'votingPortal', name: 'Voting Portal', price: 500 },
+          ],
+        }),
       }),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });

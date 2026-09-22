@@ -20,6 +20,19 @@ import {
   resolveVatRegion,
 } from '../services/vat';
 import Cache from '../cache';
+import {
+  ListVariant,
+  listPricingFromCalculation,
+  listPricingTotals,
+} from '../listPricing';
+import {
+  ListInvoices,
+  blockingInvoice,
+  companyCustomerKey,
+  findListInvoices,
+  invoiceExclVat,
+  recordListInvoice,
+} from '../listInvoices';
 import { ZipArchive } from 'archiver';
 import * as fsPromises from 'fs/promises';
 import * as pathModule from 'path';
@@ -63,6 +76,48 @@ export default async function vibeRoutes(
     return metrics;
   };
 
+  // The Sell column has to show what the invoice will add up to, so when the
+  // calculator sent a price snapshot the sell price is taken from it rather
+  // than from the client's own sum.
+  const calculationMetrics = (body: any, calculation: unknown) => {
+    const metrics = extractCalculationMetrics(body);
+    if (typeof calculation === 'string') {
+      const pricing = listPricingFromCalculation(calculation);
+      if (pricing) metrics.sellPrice = listPricingTotals(pricing).total;
+    }
+    return metrics;
+  };
+
+  // Invoices are built from the snapshot, so only an admin sets it. Anyone
+  // else saving a calculation keeps the snapshot that was stored.
+  const keepStoredPricing = (
+    incoming: unknown,
+    stored: string | null
+  ): unknown => {
+    if (typeof incoming !== 'string') return incoming;
+    let next: any;
+    try {
+      next = JSON.parse(incoming);
+    } catch {
+      return incoming;
+    }
+    if (!next || typeof next !== 'object') return incoming;
+    let previous: unknown;
+    try {
+      previous = stored ? JSON.parse(stored)?.pricing : undefined;
+    } catch {
+      previous = undefined;
+    }
+    if (previous === undefined) delete next.pricing;
+    else next.pricing = previous;
+    return JSON.stringify(next);
+  };
+
+  const parseVariant = (value: unknown): ListVariant | null =>
+    value === 'onzevibe' || value === 'qrsong' || value === 'schneider'
+      ? value
+      : null;
+
   // ============================================
   // Bookkeeping (MoneyBird) — invoice creation
   // ============================================
@@ -77,9 +132,10 @@ export default async function vibeRoutes(
     }
   );
 
-  // List existing MoneyBird invoices for a company list, keyed by payment
-  // option ('full' | 'down' | 'remaining'). Returns null entries for ones
-  // that don't exist yet.
+  // The list's existing MoneyBird invoices per payment option ('full' |
+  // 'down' | 'remaining', null when not created), plus what each option
+  // would invoice (excl. VAT), so the admin sees the amounts before creating
+  // anything. `?type=` picks the price variant, default the list's printer.
   fastify.get(
     '/vibe/companies/:companyId/lists/:listId/invoices',
     getAuthHandler(['admin']),
@@ -91,20 +147,10 @@ export default async function vibeRoutes(
           reply.status(400).send({ error: 'Invalid company or list ID' });
           return;
         }
-        const status = await bookkeeping.getStatus();
-        if (!status.connected) {
-          reply.send({
-            connected: false,
-            full: null,
-            down: null,
-            remaining: null,
-          });
-          return;
-        }
         const prisma = PrismaInstance.getInstance();
         const list: any = await (prisma as any).companyList.findUnique({
           where: { id: listId },
-          select: { id: true, name: true, companyId: true },
+          select: { id: true, name: true, companyId: true, printer: true },
         });
         if (!list || list.companyId !== companyId) {
           reply.status(404).send({ error: 'List not found' });
@@ -114,23 +160,42 @@ export default async function vibeRoutes(
           where: { id: companyId },
           select: { locale: true },
         });
-        const refs = await vibe.buildInvoiceReferences(
-          list.name,
-          company?.locale
+        const variant: ListVariant =
+          parseVariant(request.query?.type) ||
+          parseVariant(list.printer) ||
+          'schneider';
+
+        const status = await bookkeeping.getStatus();
+        let invoices: ListInvoices = { full: null, down: null, remaining: null };
+        if (status.connected) {
+          const references = await vibe.buildInvoiceReferences(
+            list.name,
+            company?.locale
+          );
+          invoices = await findListInvoices({ listId, companyId, references });
+        }
+
+        const built = await vibe.buildInvoiceLineItems(
+          companyId,
+          listId,
+          variant,
+          'full',
+          { downPaymentExclVat: invoiceExclVat(invoices.down) }
         );
-        const [full, down, remaining, legacyDown, legacyRemaining] =
-          await Promise.all([
-            bookkeeping.findInvoiceByReference(refs.full),
-            bookkeeping.findInvoiceByReference(refs.down),
-            bookkeeping.findInvoiceByReference(refs.remaining),
-            bookkeeping.findInvoiceByReference(refs.legacyDown),
-            bookkeeping.findInvoiceByReference(refs.legacyRemaining),
-          ]);
+
         reply.send({
-          connected: true,
-          full,
-          down: down || legacyDown,
-          remaining: remaining || legacyRemaining,
+          connected: status.connected,
+          ...invoices,
+          pricing: built.success
+            ? {
+                subtotal: built.totals!.subtotal,
+                discountPercent: built.pricing!.discountPercent,
+                discountAmount: built.totals!.discountAmount,
+                total: built.totals!.total,
+                amounts: built.amounts,
+              }
+            : null,
+          pricingError: built.success ? null : built.error,
         });
       } catch (error: any) {
         console.error('Error listing invoices:', error?.message || error);
@@ -188,8 +253,7 @@ export default async function vibeRoutes(
           return;
         }
         const { type, paymentOption } = request.body || {};
-        const t =
-          type === 'qrsong' || type === 'schneider' ? type : 'onzevibe';
+        const t = parseVariant(type) || 'onzevibe';
         const po =
           paymentOption === 'down' || paymentOption === 'remaining'
             ? paymentOption
@@ -204,21 +268,67 @@ export default async function vibeRoutes(
           return;
         }
 
+        const prisma = PrismaInstance.getInstance();
+        const listRow: any = await (prisma as any).companyList.findUnique({
+          where: { id: listId },
+          select: { id: true, name: true, companyId: true },
+        });
+        if (!listRow || listRow.companyId !== companyId) {
+          reply.status(404).send({ error: 'List not found' });
+          return;
+        }
+        const companyRow = await (prisma as any).company.findUnique({
+          where: { id: companyId },
+          select: { locale: true },
+        });
+        const refs = await vibe.buildInvoiceReferences(
+          listRow.name,
+          companyRow?.locale
+        );
+
+        // The dialog greys out options that are taken, but a second tab or
+        // a double click must not bill the customer twice either.
+        const existing = await findListInvoices({
+          listId,
+          companyId,
+          references: refs,
+        });
+        const blocking = blockingInvoice(existing, po);
+        if (blocking) {
+          reply.status(409).send({
+            error: `This list already has an invoice that covers this payment (${blocking.invoice_id || blocking.reference || blocking.id}).`,
+            existing,
+          });
+          return;
+        }
+
+        // The final instalment is the total minus the down payment as it was
+        // actually invoiced, so the two add up even if the price or the down
+        // payment changed in between.
+        const downPaymentExclVat = invoiceExclVat(existing.down);
+        if (po === 'remaining' && existing.down && downPaymentExclVat == null) {
+          reply.status(502).send({
+            error: 'Could not read the amount of the down payment invoice from MoneyBird',
+          });
+          return;
+        }
+
         const built = await vibe.buildInvoiceLineItems(
           companyId,
           listId,
-          t as 'onzevibe' | 'qrsong' | 'schneider',
-          po as 'full' | 'down' | 'remaining'
+          t,
+          po,
+          { downPaymentExclVat }
         );
         if (!built.success || !built.items || !built.company) {
-          reply
-            .status(400)
-            .send({ error: built.error || 'Could not build invoice items' });
+          reply.status(400).send({
+            error: built.error || 'Could not build invoice items',
+            code: built.code,
+          });
           return;
         }
 
         const company = built.company as any;
-        const list = built.list as any;
 
         // The quotation shows reverse charge (EU) or 0% export (world) for
         // non-domestic companies; without an explicit rate createInvoice
@@ -270,9 +380,8 @@ export default async function vibeRoutes(
           language: invoiceLocale,
         };
 
-        const customerKey = `qrhit-${company.id}`;
         const contact = await bookkeeping.findOrCreateContact(
-          customerKey,
+          companyCustomerKey(company.id),
           contactPayload
         );
         if (!contact?.id) {
@@ -282,7 +391,6 @@ export default async function vibeRoutes(
           return;
         }
 
-        const refs = await vibe.buildInvoiceReferences(list.name, invoiceLocale);
         const reference =
           po === 'down' ? refs.down : po === 'remaining' ? refs.remaining : refs.full;
 
@@ -300,6 +408,11 @@ export default async function vibeRoutes(
         const finalized =
           draft?.id != null ? await bookkeeping.finalizeInvoice(draft.id) : null;
         const invoice = finalized || draft;
+
+        // By id, so it is found again whatever happens to the list's name or
+        // the company's language. A draft whose finalize failed counts too:
+        // it exists in MoneyBird.
+        await recordListInvoice(listId, po, invoice);
 
         reply.send({
           success: true,
@@ -1601,9 +1714,15 @@ export default async function vibeRoutes(
         return;
       }
 
+      const stored = request.user.userGroups.includes('admin')
+        ? calculation
+        : keepStoredPricing(calculation, list.calculation);
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculation, ...extractCalculationMetrics(request.body) },
+        data: {
+          calculation: stored as string,
+          ...calculationMetrics(request.body, stored),
+        },
       });
 
       reply.send({ success: true, list: updated });
@@ -1633,7 +1752,10 @@ export default async function vibeRoutes(
 
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculationTromp, ...extractCalculationMetrics(request.body) },
+        data: {
+          calculationTromp,
+          ...calculationMetrics(request.body, calculationTromp),
+        },
       });
 
       reply.send({ success: true, list: updated });
@@ -1663,7 +1785,10 @@ export default async function vibeRoutes(
 
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculationSchneider, ...extractCalculationMetrics(request.body) },
+        data: {
+          calculationSchneider,
+          ...calculationMetrics(request.body, calculationSchneider),
+        },
       });
 
       reply.send({ success: true, list: updated });
@@ -1809,7 +1934,10 @@ export default async function vibeRoutes(
         let productDescription = '';
         let productDetails = '';
 
-        // Load company-wide discount from main calculation field
+        // The discount belongs to the list, like the rest of its price, and
+        // the invoice reads it from there. Tromp and Schneider calculations
+        // saved before it moved there have none of their own and keep the
+        // company-wide one they were quoted with.
         let companyDiscountPercent = 0;
         if (company.calculation) {
           try {
@@ -1819,6 +1947,10 @@ export default async function vibeRoutes(
             console.error('Error parsing main calculation for discount:', e);
           }
         }
+        const discountOf = (storedCalc: any): number =>
+          typeof storedCalc?.manualDiscountPercent === 'number'
+            ? storedCalc.manualDiscountPercent
+            : companyDiscountPercent;
 
         if (type === 'qrsong') {
           // Tromp calculation
@@ -1834,7 +1966,7 @@ export default async function vibeRoutes(
           if (trompSource) {
             try {
               const storedCalc = JSON.parse(trompSource);
-              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
+              calculation = { ...storedCalc, manualDiscountPercent: discountOf(storedCalc) };
             } catch (e) {
               console.error('Error parsing Tromp calculation:', e);
             }
@@ -1881,7 +2013,7 @@ export default async function vibeRoutes(
           if (schneiderSource) {
             try {
               const storedCalc = JSON.parse(schneiderSource);
-              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
+              calculation = { ...storedCalc, manualDiscountPercent: discountOf(storedCalc) };
             } catch (e) {
               console.error('Error parsing Schneider calculation:', e);
             }

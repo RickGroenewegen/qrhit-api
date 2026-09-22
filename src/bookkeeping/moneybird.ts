@@ -177,7 +177,8 @@ class Moneybird implements BookkeepingProvider {
   // --------- Contacts ---------
 
   public async findContactByCustomerId(
-    customerId: string
+    customerId: string,
+    options: { strict?: boolean } = {}
   ): Promise<any | null> {
     if (!customerId) return null;
     try {
@@ -196,6 +197,7 @@ class Moneybird implements BookkeepingProvider {
         this.info('no contact yet for customer_id ', customerId);
         return null;
       }
+      if (options.strict) throw err;
       return null;
     }
   }
@@ -514,6 +516,10 @@ class Moneybird implements BookkeepingProvider {
         // Invoice, BTW / USt. / VAT). Omitted means the administration
         // default, which is Dutch.
         ...(args.language ? { language: args.language } : {}),
+        // Every caller sends prices excl. VAT. Left out, the workflow's
+        // default decides, and a workflow set to incl. VAT books every
+        // invoice 21% short.
+        prices_are_incl_tax: false,
         details_attributes,
       },
     })) as BookkeepingInvoice;
@@ -569,8 +575,15 @@ class Moneybird implements BookkeepingProvider {
     }
   }
 
+  /**
+   * The invoice whose reference is exactly `reference`, optionally only when
+   * it belongs to `contactId`. Never the first result of a looser match: that
+   * used to report another customer's invoice (same list name) as already
+   * created.
+   */
   public async findInvoiceByReference(
-    reference: string
+    reference: string,
+    options: { contactId?: string | number; strict?: boolean } = {}
   ): Promise<BookkeepingInvoice | null> {
     if (!reference) return null;
     try {
@@ -580,7 +593,13 @@ class Moneybird implements BookkeepingProvider {
         `sales_invoices.json?filter=${encodeURIComponent(filter)}`
       );
       if (!Array.isArray(data) || data.length === 0) return null;
-      const match = data.find((d) => d?.reference === reference) || data[0];
+      const match = data.find(
+        (d) =>
+          d?.reference === reference &&
+          (options.contactId == null ||
+            String(d?.contact_id) === String(options.contactId))
+      );
+      if (!match) return null;
       const adminId = await this.getAdministrationId();
       if (match?.id) {
         match.url = `${MONEYBIRD_BASE}/${adminId}/sales_invoices/${match.id}`;
@@ -593,7 +612,29 @@ class Moneybird implements BookkeepingProvider {
         `find invoice by reference failed${status ? ' (' + status + ')' : ''}: `,
         err?.message
       );
+      // A caller deciding whether it may bill must not read an outage as
+      // "no invoice yet".
+      if (options.strict) throw err;
       return null;
+    }
+  }
+
+  /** A sales invoice by id; null when it no longer exists (deleted). */
+  public async getInvoice(
+    invoiceId: string | number
+  ): Promise<BookkeepingInvoice | null> {
+    try {
+      const data = await this.authedRequest<any>(
+        'GET',
+        `sales_invoices/${encodeURIComponent(String(invoiceId))}.json`
+      );
+      if (!data?.id) return null;
+      const adminId = await this.getAdministrationId();
+      data.url = `${MONEYBIRD_BASE}/${adminId}/sales_invoices/${data.id}`;
+      return data as BookkeepingInvoice;
+    } catch (err: any) {
+      if (err?.response?.status === 404) return null;
+      throw err;
     }
   }
 

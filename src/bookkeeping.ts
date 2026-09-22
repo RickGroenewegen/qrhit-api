@@ -140,10 +140,24 @@ class Bookkeeping {
     return this.provider.findLedgerAccountIdByCode(code);
   }
 
+  public async findContactByCustomerKey(
+    customerKey: string,
+    options: { strict?: boolean } = {}
+  ): Promise<BookkeepingContact | null> {
+    return this.provider.findContactByCustomerId(customerKey, options);
+  }
+
   public async findInvoiceByReference(
-    reference: string
+    reference: string,
+    options: { contactId?: string | number; strict?: boolean } = {}
   ): Promise<BookkeepingInvoice | null> {
-    return this.provider.findInvoiceByReference(reference);
+    return this.provider.findInvoiceByReference(reference, options);
+  }
+
+  public async getInvoice(
+    invoiceId: string | number
+  ): Promise<BookkeepingInvoice | null> {
+    return this.provider.getInvoice(invoiceId);
   }
 
   public async finalizeInvoice(

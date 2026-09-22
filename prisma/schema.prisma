@@ -1140,8 +1140,26 @@ model CompanyList {
   Payment                    Payment?                     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   CompanyListDeliveryAddress CompanyListDeliveryAddress[]
   CompanyListFile            CompanyListFile[]
+  CompanyListInvoice         CompanyListInvoice[]
 
   @@map("company_lists")
+}
+
+model CompanyListInvoice {
+  id            Int      @id @default(autoincrement())
+  companyListId Int
+  paymentOption String // 'full' | 'down' | 'remaining'
+  provider      String   @default("moneybird")
+  externalId    String // the provider's invoice id
+  invoiceNumber String?
+  reference     String?
+  totalExclVat  Float?
+  createdAt     DateTime @default(now())
+
+  CompanyList CompanyList @relation(fields: [companyListId], references: [id], onDelete: Cascade)
+
+  @@unique([companyListId, paymentOption])
+  @@map("company_list_invoices")
 }
 
 model CompanyListDeliveryAddress {
