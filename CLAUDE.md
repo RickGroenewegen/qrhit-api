@@ -817,7 +817,7 @@ The server routes have been refactored into logical modules for better maintaina
 - **Description**: Angular 18 application with SSR, multi-language support (12 languages), and Spotify integration
 - **Purpose**: Public-facing QR code generation service for Spotify playlists
 - **Development Server**: `npm start` (localhost:4200)
-- **Build Command**: `npm run build` (includes CloudFront invalidation)
+- **Build Command**: `npm run build` (builds into `dist/qrhit-build` and publishes into `dist/qrhit`; `deploy_frontend` then restarts and runs `npm run invalidate-cloudfront`, see "Deploys" in the frontend's CLAUDE.md)
 
 #### OnzeVibe Company Portal
 - **Location**: `/users/rick/sites/qrhit-vibe` (Angular 19 portal)

@@ -1601,10 +1601,29 @@ class Mollie {
       finalized: false,
     };
 
+    // Part three - finalized physical orders still on 'Created' with no
+    // printer order id and no approval timer. finalizeOrder marks an order
+    // finalized before it builds the PDFs and only sets the timer at the end,
+    // so a generation that stopped halfway leaves an order the hourly pass
+    // never picks up, and finalizing it again answers "already finalized".
+    const notScheduledFilter: Prisma.PaymentWhereInput = {
+      status: 'paid',
+      finalized: true,
+      printApiStatus: 'Created',
+      printApiOrderId: '',
+      printerHold: false,
+      canBeSentToPrinterAt: null,
+      PaymentHasPlaylist: {
+        some: {
+          type: 'physical',
+        },
+      },
+    };
+
     // `notSubmitted` is the old name of this flag, still sent by dashboards
     // loaded before the rename.
     const needsAttentionFilter: Prisma.PaymentWhereInput = {
-      OR: [notSentToPrinterFilter, notFinalizedFilter],
+      OR: [notSentToPrinterFilter, notFinalizedFilter, notScheduledFilter],
     };
     const needsAttentionClause =
       search.needsAttention === true || search.notSubmitted === true
@@ -1873,9 +1892,20 @@ class Mollie {
         (payment.sentToPrinter && !payment.printApiOrderId));
     const isNotFinalized = (payment: (typeof payments)[number]) =>
       payment.status === 'paid' && !payment.finalized;
+    const isNotScheduled = (payment: (typeof payments)[number]) =>
+      payment.status === 'paid' &&
+      payment.finalized &&
+      payment.printApiStatus === 'Created' &&
+      !payment.printApiOrderId &&
+      !payment.printerHold &&
+      payment.canBeSentToPrinterAt === null &&
+      payment.PaymentHasPlaylist.some((php) => php.type === 'physical');
 
     const attentionPayments = payments.filter(
-      (payment) => isNotSentToPrinter(payment) || isNotFinalized(payment)
+      (payment) =>
+        isNotSentToPrinter(payment) ||
+        isNotFinalized(payment) ||
+        isNotScheduled(payment)
     );
 
     const suggestionCounts =
@@ -1916,6 +1946,7 @@ class Mollie {
         | 'printer-error'
         | 'open-corrections'
         | 'not-finalized'
+        | 'not-scheduled'
         | 'not-sent' = 'not-sent';
       let printerError: string | null = null;
       if (payment.sentToPrinter && !payment.printApiOrderId) {
@@ -1928,6 +1959,13 @@ class Mollie {
       } else if (isNotFinalized(payment)) {
         // Generation never completed: no PDFs, nothing delivered
         reason = 'not-finalized';
+      } else if (
+        isNotScheduled(payment) &&
+        !payment.PaymentHasPlaylist.some((php) => php.userConfirmedPrinting)
+      ) {
+        // Approval makes an order eligible without a timer, so only an
+        // unapproved one is left with nothing that will ever send it
+        reason = 'not-scheduled';
       }
 
       return {
