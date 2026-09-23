@@ -44,7 +44,7 @@ Ne lui mets pas de malus. C’est une fête, pas un tournoi.
 
 Un paquet fixe cesse d’être un jeu quand tout le monde l’a appris. C’est le moment de [créer un autre paquet depuis une playlist différente](/[lang]/generate/playlist) : une autre décennie, un genre que personne à table n’écoute, ou une sélection faite avec des chansons proposées par chaque invité.
 
-L’appli gratuite est sur [iPhone et Android](/[lang]/download-app), et elle lit aussi les cartes d’autres jeux de cartes musicaux, donc un paquet que tu possèdes déjà peut se mélanger avec un nouveau.
+L’appli gratuite est sur [iPhone et Android](/[lang]/download-app), et elle lit aussi les cartes Hitster et une sélection d’autres cartes musicales, donc un paquet que tu possèdes déjà peut se mélanger avec un nouveau.
 
 ## FAQ
 

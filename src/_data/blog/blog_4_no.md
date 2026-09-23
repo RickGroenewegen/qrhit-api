@@ -34,7 +34,7 @@ Begge finnes i appen, og begge er verdt ett minutt før første runde heller enn
 
 ## Den leser andre kortstokker også
 
-Skanneren er ikke begrenset til kortene våre. Den leser Hitster-kort og andre musikkort med QR-kode, så en kortstokk du allerede eier kan spilles gjennom samme app, på den tjenesten du har koblet til. Det er faktisk nyttig hvis kortene dine kom med en app som bare støtter én tjeneste.
+Skanneren er ikke begrenset til kortene våre. Den leser Hitster-kort og utvalgte andre musikkort med QR-kode, så en kortstokk du allerede eier kan spilles gjennom samme app, på den tjenesten du har koblet til. Det er faktisk nyttig hvis kortene dine kom med en app som bare støtter én tjeneste.
 
 Appen er gratis på iPhone og Android: [last den ned her](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Ja, på iPhone og Android, uten at du trenger konto. Den er også den eneste del
 
 ### Fungerer den med kort jeg har kjøpt andre steder?
 
-Ja. Skanneren leser Hitster-kort og andre musikkort med QR-kode i tillegg til våre, og spiller dem gjennom den tjenesten du har koblet til.
+For Hitster-kort og utvalgte andre musikkort med QR-kode, ja. Skanneren spiller dem gjennom den tjenesten du har koblet til. Hvilke andre kort som støttes, bestemmer vi, og det kan endre seg.

@@ -44,7 +44,7 @@ Nie utrudniaj jej na siłę. To impreza, nie turniej.
 
 Stała talia przestaje być grą, kiedy wszyscy już ją znają. To moment, żeby [zbudować kolejną z innej playlisty](/[lang]/generate/playlist): inna dekada, gatunek, którego nikt przy stole nie słucha, albo talia z utworów zgłoszonych przez każdego gościa.
 
-Darmowa aplikacja jest na [iPhone’a i Androida](/[lang]/download-app), a czyta też karty z innych muzycznych gier karcianych, więc talia, którą już masz, miesza się z nową.
+Darmowa aplikacja jest na [iPhone’a i Androida](/[lang]/download-app), a czyta też karty Hitster i wybrane inne karty muzyczne, więc talia, którą już masz, miesza się z nową.
 
 ## FAQ
 

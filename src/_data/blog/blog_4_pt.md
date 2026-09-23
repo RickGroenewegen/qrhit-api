@@ -34,7 +34,7 @@ As duas opções ficam no app, e valem um minuto antes da primeira rodada, em ve
 
 ## Ele também lê outros baralhos
 
-O scanner não se limita às nossas cartas. Ele lê cartas do Hitster e outras cartas de música com QR, então um baralho que você já tem toca pelo mesmo app, no serviço que você conectou. Isso é realmente útil se as cartas que você tem vieram com um app que só aceita um serviço.
+O scanner não se limita às nossas cartas. Ele lê cartas do Hitster e outras cartas de música com QR selecionadas, então um baralho que você já tem toca pelo mesmo app, no serviço que você conectou. Isso é realmente útil se as cartas que você tem vieram com um app que só aceita um serviço.
 
 O app é grátis no iPhone e no Android: [baixe aqui](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Sim, no iPhone e no Android, sem precisar de conta. Ele também é a única part
 
 ### Funciona com cartas que comprei em outro lugar?
 
-Sim. O scanner lê cartas do Hitster e outras cartas de música com QR, além das nossas, e toca tudo pelo serviço que você conectou.
+Com cartas do Hitster e outras cartas de música com QR selecionadas, sim. O scanner toca tudo pelo serviço que você conectou. Quais outras cartas são aceitas é decisão nossa e pode mudar.

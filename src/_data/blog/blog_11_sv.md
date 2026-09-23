@@ -31,7 +31,7 @@ Appen hoppar över allt det där. Den läser kortet, skickar spåret till tjäns
 
 ## Den läser också korten du redan äger
 
-Samma skanner fungerar med Hitster-kort och andra musik-QR-kort, inte bara våra. Om du äger en kortlek från butik och inte har Spotify kan du spela den via Apple Music med gratisappen och aldrig köpa något från mig alls. Jag vill hellre att folk vet det än inte, och om du vill ha den längre versionen skrev jag om det separat: [spela dina Hitster-kort utan Spotify](/[lang]/hitster-without-spotify).
+Samma skanner fungerar med Hitster-kort och utvalda andra musik-QR-kort, inte bara våra. Om du äger en kortlek från butik och inte har Spotify kan du spela den via Apple Music med gratisappen och aldrig köpa något från mig alls. Jag vill hellre att folk vet det än inte, och om du vill ha den längre versionen skrev jag om det separat: [spela dina Hitster-kort utan Spotify](/[lang]/hitster-without-spotify).
 
 När kortleken slutar vara rolig för att alla har lärt sig den, då är det dags att [skapa en från din egen spellista](/[lang]/pricing).
 

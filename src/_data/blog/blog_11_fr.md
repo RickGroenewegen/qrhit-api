@@ -31,7 +31,7 @@ L’app évite tout ça. Elle résout la carte, envoie le morceau vers le servic
 
 ## Elle lit aussi les cartes que tu possèdes déjà
 
-Le même scanner fonctionne avec les cartes Hitster et d’autres cartes musique avec QR code, pas seulement les nôtres. Si tu as un jeu acheté en magasin et que tu n’as pas Spotify, tu peux y jouer avec Apple Music dans l’app gratuite, sans jamais rien m’acheter. Je préfère que les gens le sachent, et si tu veux la version longue, je l’ai écrite à part : [jouer à tes cartes Hitster sans Spotify](/[lang]/hitster-without-spotify).
+Le même scanner fonctionne avec les cartes Hitster et une sélection d’autres cartes musique avec QR code, pas seulement les nôtres. Si tu as un jeu acheté en magasin et que tu n’as pas Spotify, tu peux y jouer avec Apple Music dans l’app gratuite, sans jamais rien m’acheter. Je préfère que les gens le sachent, et si tu veux la version longue, je l’ai écrite à part : [jouer à tes cartes Hitster sans Spotify](/[lang]/hitster-without-spotify).
 
 Quand le jeu n’est plus aussi drôle parce que tout le monde le connaît par cœur, c’est le bon moment pour [en créer un depuis ta propre playlist](/[lang]/pricing).
 

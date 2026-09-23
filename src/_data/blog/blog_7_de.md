@@ -44,7 +44,7 @@ Bestrafe sie nicht mit Sonderregeln. Es ist eine Party, kein Turnier.
 
 Ein festes Deck hört auf, ein Spiel zu sein, sobald alle es gelernt haben. Das ist der Moment, [ein neues aus einer anderen Playlist zu bauen](/[lang]/generate/playlist): ein anderes Jahrzehnt, ein Genre, das niemand am Tisch hört, oder eins aus Songs, die jeder Gast vorgeschlagen hat.
 
-Die kostenlose App gibt es für [iPhone und Android](/[lang]/download-app), und sie liest auch Karten aus anderen Musikkartenspielen. Ein Deck, das du schon hast, lässt sich also mit einem neuen mischen.
+Die kostenlose App gibt es für [iPhone und Android](/[lang]/download-app), und sie liest auch Hitster-Karten und ausgewählte andere Musikkarten. Ein Deck, das du schon hast, lässt sich also mit einem neuen mischen.
 
 ## FAQ
 

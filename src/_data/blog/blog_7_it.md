@@ -44,7 +44,7 @@ Non penalizzarla. È una festa, non un torneo.
 
 Un mazzo fisso smette di essere un gioco quando tutti lo hanno imparato. Quello è il momento di [crearne un altro da una playlist diversa](/[lang]/generate/playlist): un altro decennio, un genere che nessuno al tavolo ascolta, oppure uno costruito con canzoni proposte da ogni ospite.
 
-L’app gratuita è su [iPhone e Android](/[lang]/download-app), e legge anche carte di altri giochi musicali, quindi un mazzo che hai già si mescola con uno nuovo.
+L’app gratuita è su [iPhone e Android](/[lang]/download-app), e legge anche le carte Hitster e alcune altre carte musicali selezionate, quindi un mazzo che hai già si mescola con uno nuovo.
 
 ## FAQ
 

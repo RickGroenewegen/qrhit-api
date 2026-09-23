@@ -38,7 +38,7 @@ Esto importa porque un juego de línea temporal solo se puede jugar si los años
 
 ## Si ya tienes cartas
 
-La app gratuita lee cartas de otros juegos de cartas musicales además de las nuestras, así que un mazo que ya tengas de tienda se puede jugar en cualquiera de estos servicios. Si compraste uno que solo admite Spotify y no tienes Spotify, [esta es la forma de evitarlo](/[lang]/hitster-without-spotify).
+La app gratuita lee cartas de Hitster y otras cartas musicales seleccionadas además de las nuestras, así que un mazo que ya tengas de tienda se puede jugar en cualquiera de estos servicios. Si compraste uno que solo admite Spotify y no tienes Spotify, [esta es la forma de evitarlo](/[lang]/hitster-without-spotify).
 
 Tienes todos los detalles en la [página de plataformas compatibles](/[lang]/supported-platforms), y la app es gratis en [iPhone y Android](/[lang]/download-app).
 

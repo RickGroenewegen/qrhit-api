@@ -34,7 +34,7 @@ Beides findest du in der App. Und beides ist die eine Minute vor der ersten Rund
 
 ## Es liest auch Hitster QR Codes und andere Decks
 
-Der Scanner ist nicht auf unsere Karten beschränkt. Er liest Hitster Karten und andere Musik QR Karten, also läuft ein Deck, das du schon besitzt, über dieselbe App und über den Dienst, den du verbunden hast. Das ist wirklich nützlich, wenn deine Karten mit einer App kamen, die nur einen einzigen Dienst unterstützt.
+Der Scanner ist nicht auf unsere Karten beschränkt. Er liest Hitster Karten und ausgewählte andere Musik QR Karten, also läuft ein Deck, das du schon besitzt, über dieselbe App und über den Dienst, den du verbunden hast. Das ist wirklich nützlich, wenn deine Karten mit einer App kamen, die nur einen einzigen Dienst unterstützt.
 
 Die App ist kostenlos für iPhone und Android: [hier herunterladen](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Ja, auf iPhone und Android, ohne dass du ein Konto brauchst. Sie ist auch der ei
 
 ### Funktioniert es mit Karten, die ich woanders gekauft habe?
 
-Ja. Der Scanner liest Hitster Karten und andere Musik QR Karten genauso wie unsere und spielt sie über den Dienst ab, den du verbunden hast.
+Bei Hitster Karten und ausgewählten anderen Musik QR Karten ja. Der Scanner spielt sie über den Dienst ab, den du verbunden hast. Welche anderen Karten unterstützt werden, entscheiden wir, und das kann sich ändern.

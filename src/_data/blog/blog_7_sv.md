@@ -44,7 +44,7 @@ Ge dem inget handikapp. Det är en fest, inte en turnering.
 
 En fast kortlek slutar vara ett spel när alla har lärt sig den. Då är det dags att [bygga en ny från en annan spellista](/[lang]/generate/playlist): ett annat årtionde, en genre som ingen vid bordet lyssnar på, eller en som är byggd av låtar som varje gäst har nominerat.
 
-Den gratis appen finns på [iPhone och Android](/[lang]/download-app), och den läser kort från andra musikspel också, så en kortlek du redan äger kan blandas med en ny.
+Den gratis appen finns på [iPhone och Android](/[lang]/download-app), och den läser Hitster-kort och utvalda andra musikkort också, så en kortlek du redan äger kan blandas med en ny.
 
 ## FAQ
 

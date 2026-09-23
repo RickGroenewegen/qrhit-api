@@ -38,7 +38,7 @@ Das ist wichtig, weil ein Zeitstrahlspiel nur spielbar ist, wenn die Jahre stimm
 
 ## Wenn du schon Karten hast
 
-Die kostenlose App liest Karten aus anderen Musik Kartenspielen genauso wie unsere eigenen. Ein gekauftes Deck, das du schon hast, läuft also mit jedem dieser Dienste. Wenn du eins gekauft hast, das nur Spotify unterstützt, und du kein Spotify hast, [so kommst du drum herum](/[lang]/hitster-without-spotify).
+Die kostenlose App liest Hitster Karten und ausgewählte andere Musikkarten genauso wie unsere eigenen. Ein gekauftes Deck, das du schon hast, läuft also mit jedem dieser Dienste. Wenn du eins gekauft hast, das nur Spotify unterstützt, und du kein Spotify hast, [so kommst du drum herum](/[lang]/hitster-without-spotify).
 
 Alle Details findest du auf der [Seite mit den unterstützten Plattformen](/[lang]/supported-platforms), und die App ist kostenlos für [iPhone und Android](/[lang]/download-app).
 

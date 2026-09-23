@@ -38,7 +38,7 @@ C’est important parce qu’un jeu de chronologie n’est jouable que si les an
 
 ## Si tu as déjà des cartes
 
-L’app gratuite lit les cartes d’autres jeux de cartes musicaux ainsi que les nôtres. Donc un paquet acheté en magasin que tu possèdes déjà peut jouer sur n’importe lequel de ces services. Si tu en as acheté un qui ne prend en charge que Spotify et que tu n’as pas Spotify, [voici comment le contourner](/[lang]/hitster-without-spotify).
+L’app gratuite lit les cartes Hitster et une sélection d’autres cartes musicales ainsi que les nôtres. Donc un paquet acheté en magasin que tu possèdes déjà peut jouer sur n’importe lequel de ces services. Si tu en as acheté un qui ne prend en charge que Spotify et que tu n’as pas Spotify, [voici comment le contourner](/[lang]/hitster-without-spotify).
 
 Tous les détails sont sur la [page des plateformes compatibles](/[lang]/supported-platforms), et l’app est gratuite sur [iPhone et Android](/[lang]/download-app).
 

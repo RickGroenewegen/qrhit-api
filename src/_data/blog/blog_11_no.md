@@ -31,7 +31,7 @@ Appen hopper over alt dette. Den leser kortet, sender låten til tjenesten du ha
 
 ## Den leser også kortene du allerede eier
 
-Den samme skanneren fungerer med Hitster-kort og andre musikkort med QR, ikke bare våre. Hvis du eier en kortstokk fra butikk og ikke har Spotify, kan du spille den gjennom Apple Music med gratisappen uten å kjøpe noe fra meg i det hele tatt. Jeg vil heller at folk vet det enn at de ikke gjør det, og hvis du vil ha den lengre versjonen, har jeg skrevet den separat: [spill Hitster-kortene dine uten Spotify](/[lang]/hitster-without-spotify).
+Den samme skanneren fungerer med Hitster-kort og utvalgte andre musikkort med QR, ikke bare våre. Hvis du eier en kortstokk fra butikk og ikke har Spotify, kan du spille den gjennom Apple Music med gratisappen uten å kjøpe noe fra meg i det hele tatt. Jeg vil heller at folk vet det enn at de ikke gjør det, og hvis du vil ha den lengre versjonen, har jeg skrevet den separat: [spill Hitster-kortene dine uten Spotify](/[lang]/hitster-without-spotify).
 
 Når kortstokken slutter å være morsom fordi alle har lært den, er det øyeblikket for å [lage en fra din egen spilleliste](/[lang]/pricing).
 

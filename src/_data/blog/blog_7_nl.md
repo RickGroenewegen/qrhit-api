@@ -44,7 +44,7 @@ Geef geen handicap. Het is een feestje, geen toernooi.
 
 Een vast deck stopt een spel te zijn zodra iedereen het kent. Dat is het moment om [een nieuwe te maken van een andere playlist](/[lang]/generate/playlist): een ander decennium, een genre waar niemand aan tafel naar luistert, of een deck met nummers die elke gast zelf heeft genomineerd.
 
-De gratis app staat op [iPhone en Android](/[lang]/download-app), en hij leest ook kaarten van andere muziekkaartspellen, dus een deck dat je al hebt kun je mengen met een nieuwe.
+De gratis app staat op [iPhone en Android](/[lang]/download-app), en hij leest ook Hitster-kaarten en een selectie van andere muziekkaarten, dus een deck dat je al hebt kun je mengen met een nieuwe.
 
 ## Veelgestelde vragen
 

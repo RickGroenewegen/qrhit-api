@@ -38,7 +38,7 @@ Det här spelar roll eftersom ett tidslinjespel bara går att spela om åren st�
 
 ## Om du redan har kort
 
-Den gratis appen läser kort från andra musikspel också, inte bara våra, så en kortlek du redan äger kan spelas på vilken som helst av de här tjänsterna. Om du köpte en som bara stöder Spotify och du inte har Spotify, [så här kommer du runt det](/[lang]/hitster-without-spotify).
+Den gratis appen läser Hitster-kort och utvalda andra musikkort också, inte bara våra, så en kortlek du redan äger kan spelas på vilken som helst av de här tjänsterna. Om du köpte en som bara stöder Spotify och du inte har Spotify, [så här kommer du runt det](/[lang]/hitster-without-spotify).
 
 Alla detaljer finns på sidan om [plattformar som stöds](/[lang]/supported-platforms), och appen är gratis på [iPhone och Android](/[lang]/download-app).
 

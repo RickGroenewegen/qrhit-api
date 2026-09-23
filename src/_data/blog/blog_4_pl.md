@@ -34,7 +34,7 @@ Oba ustawienia są w aplikacji i obu warto poświęcić minutę przed pierwszą 
 
 ## Czyta też inne talie
 
-Skaner nie jest ograniczony do naszych kart. Czyta karty Hitster i inne muzyczne karty QR, więc talia, którą już masz, działa w tej samej aplikacji, przez dowolny połączony serwis. To naprawdę przydatne, jeśli karty, które masz, przyszły z aplikacją obsługującą tylko jedną usługę.
+Skaner nie jest ograniczony do naszych kart. Czyta karty Hitster i wybrane inne muzyczne karty QR, więc talia, którą już masz, działa w tej samej aplikacji, przez dowolny połączony serwis. To naprawdę przydatne, jeśli karty, które masz, przyszły z aplikacją obsługującą tylko jedną usługę.
 
 Aplikacja jest darmowa na iPhone'a i Androida: [pobierz ją tutaj](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Tak, na iPhone'a i Androida, bez wymaganego konta. To też jedyna obowiązkowa c
 
 ### Czy działa z kartami kupionymi gdzie indziej?
 
-Tak. Skaner czyta karty Hitster i inne muzyczne karty QR, nie tylko nasze, i odtwarza je przez dowolny połączony serwis.
+W przypadku kart Hitster i wybranych innych muzycznych kart QR tak. Skaner odtwarza je przez połączony serwis. O tym, które inne karty są obsługiwane, decydujemy my i może się to zmienić.

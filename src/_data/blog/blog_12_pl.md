@@ -38,7 +38,7 @@ To ważne, bo gra na osi czasu ma sens tylko wtedy, kiedy lata są poprawne, a m
 
 ## Jeśli masz już karty
 
-Darmowa aplikacja czyta karty z innych muzycznych gier karcianych, nie tylko nasze, więc sklepowa talia, którą już masz, działa z każdym z tych serwisów. Jeśli kupiłeś talię, która obsługuje tylko Spotify, a nie masz Spotify, [to jest obejście](/[lang]/hitster-without-spotify).
+Darmowa aplikacja czyta karty Hitster i wybrane inne karty muzyczne, nie tylko nasze, więc sklepowa talia, którą już masz, działa z każdym z tych serwisów. Jeśli kupiłeś talię, która obsługuje tylko Spotify, a nie masz Spotify, [to jest obejście](/[lang]/hitster-without-spotify).
 
 Pełne szczegóły znajdziesz na [stronie obsługiwanych platform](/[lang]/supported-platforms), a aplikacja jest darmowa na [iPhone i Android](/[lang]/download-app).
 

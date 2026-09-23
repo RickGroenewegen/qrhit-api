@@ -281,5 +281,9 @@
   "suggestions.genreUnknown": "Diversen",
   "suggestions.noResults": "Geen playlists komen overeen met deze selectie.",
   "suggestions.footTitle": "Playlist-suggesties",
-  "suggestions.footNote": "Aantal nummers per {{date}}. Playlists worden regelmatig bijgewerkt."
+  "suggestions.footNote": "Aantal nummers per {{date}}. Playlists worden regelmatig bijgewerkt.",
+  "instructions.boxFormatsTitle": "Doosformaten",
+  "instructions.boxFormatCards": "{{count}} kaarten",
+  "instructions.boxFormatSize": "ca. {{size}}",
+  "instructions.boxFormatAlt": "Doos voor {{count}} kaarten"
 }

@@ -24,7 +24,7 @@ Tre ting gikk galt med den hjemmelagde versjonen, og å fikse dem var det som to
 
 ## Hva det ble til
 
-I dag kan én kortstokk spilles som [fire forskjellige spill](/[lang]/music-timeline) i stedet for ett, den fungerer med [fem strømmetjenester](/[lang]/supported-platforms), og appen leser kort fra andre musikkspill med kort, ikke bare våre. Bedrifter bestiller dem som [firmagaver med egen profil](/[lang]/business), noe jeg ærlig talt ikke så komme.
+I dag kan én kortstokk spilles som [fire forskjellige spill](/[lang]/music-timeline) i stedet for ett, den fungerer med [fem strømmetjenester](/[lang]/supported-platforms), og appen leser Hitster-kort og utvalgte andre musikkort, ikke bare våre. Bedrifter bestiller dem som [firmagaver med egen profil](/[lang]/business), noe jeg ærlig talt ikke så komme.
 
 Den minste delen er fortsatt den jeg er mest fornøyd med: appen viser deg ikke sangen. Alt annet er logistikk.
 

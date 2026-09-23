@@ -34,7 +34,7 @@ Entrambe sono nell'app, e vale la pena dedicarci un minuto prima del primo turno
 
 ## Legge anche altri mazzi
 
-Lo scanner non è limitato alle nostre carte. Legge carte Hitster e altre carte musicali con QR code, quindi un mazzo che hai già passa dalla stessa app, sul servizio che hai collegato. È davvero utile se le carte che hai sono arrivate con un'app che supporta un solo servizio.
+Lo scanner non è limitato alle nostre carte. Legge carte Hitster e una selezione di altre carte musicali con QR code, quindi un mazzo che hai già passa dalla stessa app, sul servizio che hai collegato. È davvero utile se le carte che hai sono arrivate con un'app che supporta un solo servizio.
 
 L'app è gratis su iPhone e Android: [scaricala qui](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Sì, su iPhone e Android, senza account richiesto. È anche l'unica parte obblig
 
 ### Funziona con carte che ho comprato altrove?
 
-Sì. Lo scanner legge carte Hitster e altre carte musicali con QR code oltre alle nostre, e le riproduce tramite il servizio che hai collegato.
+Per le carte Hitster e una selezione di altre carte musicali con QR code, sì. Lo scanner le riproduce tramite il servizio che hai collegato. Quali altre carte supporta lo decidiamo noi, e può cambiare.

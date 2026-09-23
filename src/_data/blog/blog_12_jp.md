@@ -38,7 +38,7 @@ QRSong!はSpotify、Apple Music、YouTube Music、Tidal、Deezerで使えます�
 
 ## すでにカードを持っているなら
 
-無料アプリは、QRSong!のカードだけでなく、他の音楽カードゲームのカードも読み取れます。だから、すでに持っている市販デッキも、これらのサービスで再生できます。Spotifyにしか対応していないデッキを買ったけれどSpotifyを持っていないなら、[Spotifyなしで使う方法](/[lang]/hitster-without-spotify)があります。
+無料アプリは、QRSong!のカードだけでなく、Hitsterのカードや一部の他の音楽カードも読み取れます。だから、すでに持っている市販デッキも、これらのサービスで再生できます。Spotifyにしか対応していないデッキを買ったけれどSpotifyを持っていないなら、[Spotifyなしで使う方法](/[lang]/hitster-without-spotify)があります。
 
 詳しくは[対応プラットフォームのページ](/[lang]/supported-platforms)にまとめています。アプリは[iPhoneとAndroid](/[lang]/download-app)で無料です。
 

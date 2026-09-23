@@ -34,7 +34,7 @@ Allebei zitten ze in de app, en allebei zijn ze die ene minuut vóór de eerste 
 
 ## Hij leest ook andere decks
 
-De scanner is niet beperkt tot onze kaarten. Hij leest Hitster kaarten en andere muziek QR kaarten, dus een deck dat je al hebt speelt via dezelfde app, op de dienst die jij hebt gekoppeld. Dat is echt handig als de kaarten die je hebt bij een app horen die maar één dienst ondersteunt.
+De scanner is niet beperkt tot onze kaarten. Hij leest Hitster kaarten en een selectie andere muziek QR kaarten, dus een deck dat je al hebt speelt via dezelfde app, op de dienst die jij hebt gekoppeld. Dat is echt handig als de kaarten die je hebt bij een app horen die maar één dienst ondersteunt.
 
 De app is gratis op iPhone en Android: [download hem hier](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Ja, op iPhone en Android, zonder account. Het is ook het enige onderdeel van de 
 
 ### Werkt het met kaarten die ik ergens anders heb gekocht?
 
-Ja. De scanner leest Hitster kaarten en andere muziek QR kaarten, net als die van ons, en speelt ze af via de dienst die jij hebt gekoppeld.
+Voor Hitster kaarten en een selectie andere muziek QR kaarten wel. De scanner speelt ze af via de dienst die jij hebt gekoppeld. Welke andere kaarten worden ondersteund, bepalen wij, en dat kan veranderen.

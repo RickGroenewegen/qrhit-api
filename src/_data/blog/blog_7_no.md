@@ -44,7 +44,7 @@ Ikke gi dem handikap. Det er en fest, ikke en turnering.
 
 En fast kortstokk slutter å være et spill når alle har lært den. Da er det tid for å [lage en ny fra en annen spilleliste](/[lang]/generate/playlist): et annet tiår, en sjanger ingen ved bordet hører på, eller en som er bygget av låter hver gjest har foreslått.
 
-Gratisappen finnes på [iPhone og Android](/[lang]/download-app), og den leser kort fra andre musikkkortspill også, så en kortstokk du allerede eier kan blandes med en ny.
+Gratisappen finnes på [iPhone og Android](/[lang]/download-app), og den leser Hitster-kort og utvalgte andre musikkort også, så en kortstokk du allerede eier kan blandes med en ny.
 
 ## FAQ
 

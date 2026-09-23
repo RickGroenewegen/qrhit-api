@@ -31,7 +31,7 @@ Aplikacja pomija to wszystko. Rozpoznaje kartę, wysyła utwór do połączonej 
 
 ## Czyta też karty, które już masz
 
-Ten sam skaner działa z kartami Hitster i innymi muzycznymi kartami QR, nie tylko z naszymi. Jeśli masz sklepową talię i nie masz Spotify, możesz grać przez Apple Music w darmowej aplikacji i nie kupować ode mnie absolutnie nic. Wolę, żeby ludzie o tym wiedzieli, niż żeby nie wiedzieli, a dłuższą wersję opisałem osobno: [granie kartami Hitster bez Spotify](/[lang]/hitster-without-spotify).
+Ten sam skaner działa z kartami Hitster i wybranymi innymi muzycznymi kartami QR, nie tylko z naszymi. Jeśli masz sklepową talię i nie masz Spotify, możesz grać przez Apple Music w darmowej aplikacji i nie kupować ode mnie absolutnie nic. Wolę, żeby ludzie o tym wiedzieli, niż żeby nie wiedzieli, a dłuższą wersję opisałem osobno: [granie kartami Hitster bez Spotify](/[lang]/hitster-without-spotify).
 
 Kiedy talia przestaje bawić, bo wszyscy już ją znają, to jest dobry moment, żeby [zrobić talię z własnej playlisty](/[lang]/pricing).
 

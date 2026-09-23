@@ -281,5 +281,9 @@
   "suggestions.genreUnknown": "Verschiedene",
   "suggestions.noResults": "Keine Playlists entsprechen dieser Auswahl.",
   "suggestions.footTitle": "Playlist-Vorschläge",
-  "suggestions.footNote": "Titelanzahl mit Stand vom {{date}}. Playlists werden regelmäßig aktualisiert."
+  "suggestions.footNote": "Titelanzahl mit Stand vom {{date}}. Playlists werden regelmäßig aktualisiert.",
+  "instructions.boxFormatsTitle": "Schachtelformate",
+  "instructions.boxFormatCards": "{{count}} Karten",
+  "instructions.boxFormatSize": "ca. {{size}}",
+  "instructions.boxFormatAlt": "Schachtel für {{count}} Karten"
 }

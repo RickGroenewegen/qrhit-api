@@ -31,7 +31,7 @@ O app pula tudo isso. Ele resolve o cartão, envia a faixa para o serviço que v
 
 ## Ele também lê os cartões que você já tem
 
-O mesmo scanner funciona com cartões Hitster e outros cartões QR de música, não só com os nossos. Se você tem um baralho de loja e não tem Spotify, pode jogar pelo Apple Music com o app grátis e nunca comprar nada de mim. Prefiro que as pessoas saibam disso. Se você quiser a versão mais longa, escrevi sobre ela separadamente: [jogar com seus cartões Hitster sem Spotify](/[lang]/hitster-without-spotify).
+O mesmo scanner funciona com cartões Hitster e alguns outros cartões QR de música selecionados, não só com os nossos. Se você tem um baralho de loja e não tem Spotify, pode jogar pelo Apple Music com o app grátis e nunca comprar nada de mim. Prefiro que as pessoas saibam disso. Se você quiser a versão mais longa, escrevi sobre ela separadamente: [jogar com seus cartões Hitster sem Spotify](/[lang]/hitster-without-spotify).
 
 Quando o baralho deixa de ser divertido porque todo mundo já aprendeu as músicas, esse é o momento de [criar um a partir da sua própria playlist](/[lang]/pricing).
 

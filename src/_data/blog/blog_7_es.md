@@ -44,7 +44,7 @@ No le pongas desventajas. Es una fiesta, no un torneo.
 
 Una baraja fija deja de ser un juego cuando todo el mundo se la ha aprendido. Ese es el momento de [crear otra desde una playlist distinta](/[lang]/generate/playlist): otra década, un género que nadie de la mesa escuche, o una hecha con canciones propuestas por cada invitado.
 
-La app gratis está en [iPhone y Android](/[lang]/download-app), y también lee cartas de otros juegos de cartas musicales, así que una baraja que ya tengas puede mezclarse con una nueva.
+La app gratis está en [iPhone y Android](/[lang]/download-app), y también lee cartas de Hitster y otras cartas musicales seleccionadas, así que una baraja que ya tengas puede mezclarse con una nueva.
 
 ## FAQ
 

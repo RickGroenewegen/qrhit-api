@@ -24,7 +24,7 @@ Tre saker gick fel med hemmaversionen, och att fixa dem var det som tog den frå
 
 ## Vad det blev
 
-I dag går en kortlek att spela som [fyra olika spel](/[lang]/music-timeline) i stället för ett, den fungerar med [fem streamingtjänster](/[lang]/supported-platforms), och appen läser kort från andra musikkortspel lika väl som våra. Företag beställer dem som [profilgåvor](/[lang]/business), vilket jag ärligt talat inte såg komma.
+I dag går en kortlek att spela som [fyra olika spel](/[lang]/music-timeline) i stället för ett, den fungerar med [fem streamingtjänster](/[lang]/supported-platforms), och appen läser Hitster-kort och utvalda andra musikkort lika väl som våra. Företag beställer dem som [profilgåvor](/[lang]/business), vilket jag ärligt talat inte såg komma.
 
 Den del jag fortfarande är mest nöjd med är den minsta: appen visar inte låten. Allt annat är logistik.
 

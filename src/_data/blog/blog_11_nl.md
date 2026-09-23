@@ -31,7 +31,7 @@ De app slaat dat allemaal over. Hij leest de kaart uit, stuurt de track naar de 
 
 ## Hij leest ook de kaarten die je al hebt
 
-Dezelfde scanner werkt met Hitster kaarten en andere muziek QR kaarten, niet alleen die van ons. Als je een deck uit de winkel hebt en geen Spotify gebruikt, kun je het met de gratis app via Apple Music spelen zonder ooit iets bij mij te kopen. Ik heb liever dat mensen dat weten dan niet, en als je de langere versie wilt, heb ik die apart opgeschreven: [je Hitster kaarten spelen zonder Spotify](/[lang]/hitster-without-spotify).
+Dezelfde scanner werkt met Hitster kaarten en een selectie andere muziek QR kaarten, niet alleen die van ons. Als je een deck uit de winkel hebt en geen Spotify gebruikt, kun je het met de gratis app via Apple Music spelen zonder ooit iets bij mij te kopen. Ik heb liever dat mensen dat weten dan niet, en als je de langere versie wilt, heb ik die apart opgeschreven: [je Hitster kaarten spelen zonder Spotify](/[lang]/hitster-without-spotify).
 
 Als een deck minder leuk wordt omdat iedereen het inmiddels kent, is dat het moment om [er een te maken van je eigen playlist](/[lang]/pricing).
 

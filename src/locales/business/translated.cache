@@ -1130,5 +1130,21 @@
   "suggestions.footNote": [
     "nl",
     "de"
+  ],
+  "instructions.boxFormatsTitle": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxFormatCards": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxFormatSize": [
+    "nl",
+    "de"
+  ],
+  "instructions.boxFormatAlt": [
+    "nl",
+    "de"
   ]
 }

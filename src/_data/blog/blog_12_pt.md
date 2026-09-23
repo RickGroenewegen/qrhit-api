@@ -38,7 +38,7 @@ Isso importa porque um jogo de linha do tempo só é jogável se os anos estiver
 
 ## Se você já tem cartas
 
-O app gratuito lê cartas de outros jogos de cartas musicais além das nossas, então um baralho físico que você já tem toca em qualquer um desses serviços. Se você comprou um que só funciona com Spotify e não tem Spotify, [este é o jeito de contornar isso](/[lang]/hitster-without-spotify).
+O app gratuito lê cartas Hitster e uma seleção de outras cartas musicais além das nossas, então um baralho físico que você já tem toca em qualquer um desses serviços. Se você comprou um que só funciona com Spotify e não tem Spotify, [este é o jeito de contornar isso](/[lang]/hitster-without-spotify).
 
 Os detalhes completos estão na [página de plataformas compatíveis](/[lang]/supported-platforms), e o app é grátis para [iPhone e Android](/[lang]/download-app).
 

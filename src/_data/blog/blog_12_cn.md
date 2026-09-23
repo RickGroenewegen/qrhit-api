@@ -38,7 +38,7 @@ QRSong! 支持 Spotify、Apple Music、YouTube Music、Tidal 和 Deezer。听起
 
 ## 如果你已经有卡牌
 
-这个免费 App 不只读取我们的卡牌，也能读取其他音乐卡牌游戏的卡牌，所以你手上已经有的零售牌组也可以在这些服务上播放。如果你买的是只支持 Spotify 的牌组，而你没有 Spotify，[可以这样绕过](/[lang]/hitster-without-spotify)。
+这个免费 App 不只读取我们的卡牌，也能读取 Hitster 卡牌和部分其他音乐卡牌，所以你手上已经有的零售牌组也可以在这些服务上播放。如果你买的是只支持 Spotify 的牌组，而你没有 Spotify，[可以这样绕过](/[lang]/hitster-without-spotify)。
 
 完整信息在[支持的平台页面](/[lang]/supported-platforms)，App 可在 [iPhone 和 Android](/[lang]/download-app) 免费下载。
 

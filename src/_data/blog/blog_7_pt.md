@@ -44,7 +44,7 @@ Não dê desvantagem para ela. É uma festa, não um torneio.
 
 Um baralho fixo deixa de ser um jogo quando todo mundo já aprendeu as respostas. Esse é o momento de [criar outro a partir de uma playlist diferente](/[lang]/generate/playlist): outra década, um gênero que ninguém na mesa escuta, ou um feito com músicas indicadas por cada convidado.
 
-O app gratuito está no [iPhone e Android](/[lang]/download-app), e também lê cartas de outros jogos de cartas musicais, então um baralho que você já tem pode se misturar com um novo.
+O app gratuito está no [iPhone e Android](/[lang]/download-app), e também lê cartas do Hitster e outras cartas musicais selecionadas, então um baralho que você já tem pode se misturar com um novo.
 
 ## FAQ
 

@@ -34,7 +34,7 @@ Les deux réglages sont dans l’appli, et les deux méritent une minute avant l
 
 ## Elle lit aussi d’autres jeux de cartes
 
-Le scanner ne se limite pas à nos cartes. Il lit les cartes Hitster et d’autres cartes musique QR code, donc un jeu que tu possèdes déjà peut passer par la même appli, sur le service que tu as connecté. C’est vraiment utile si les cartes que tu as sont liées à une appli qui ne prend en charge qu’un seul service.
+Le scanner ne se limite pas à nos cartes. Il lit les cartes Hitster et une sélection d’autres cartes musique QR code, donc un jeu que tu possèdes déjà peut passer par la même appli, sur le service que tu as connecté. C’est vraiment utile si les cartes que tu as sont liées à une appli qui ne prend en charge qu’un seul service.
 
 L’appli est gratuite sur iPhone et Android : [télécharge-la ici](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Oui, sur iPhone et Android, sans compte obligatoire. C’est aussi la seule part
 
 ### Est-ce que ça marche avec des cartes achetées ailleurs ?
 
-Oui. Le scanner lit les cartes Hitster et d’autres cartes musicales à QR code en plus des nôtres, puis les joue via le service que tu as connecté.
+Pour les cartes Hitster et une sélection d’autres cartes musicales à QR code, oui. Le scanner les joue via le service que tu as connecté. C’est nous qui choisissons les autres cartes prises en charge, et cette liste peut changer.

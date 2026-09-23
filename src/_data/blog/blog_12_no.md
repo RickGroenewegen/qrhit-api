@@ -38,7 +38,7 @@ Dette betyr noe fordi et tidslinjespill bare er spillbart hvis årene stemmer, o
 
 ## Hvis du allerede har kort
 
-Gratisappen leser kort fra andre musikkkortspill også, ikke bare våre, så en kortstokk du allerede eier fra butikk kan spilles på alle disse tjenestene. Hvis du kjøpte en som bare støtter Spotify og du ikke har Spotify, er [dette løsningen](/[lang]/hitster-without-spotify).
+Gratisappen leser Hitster-kort og utvalgte andre musikkort også, ikke bare våre, så en kortstokk du allerede eier fra butikk kan spilles på alle disse tjenestene. Hvis du kjøpte en som bare støtter Spotify og du ikke har Spotify, er [dette løsningen](/[lang]/hitster-without-spotify).
 
 Alle detaljene ligger på [siden for støttede plattformer](/[lang]/supported-platforms), og appen er gratis på [iPhone og Android](/[lang]/download-app).
 

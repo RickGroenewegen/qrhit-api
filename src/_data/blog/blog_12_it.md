@@ -38,7 +38,7 @@ Questo conta perché un gioco a timeline è giocabile solo se gli anni sono corr
 
 ## Se hai già delle carte
 
-L'app gratuita legge anche le carte di altri giochi musicali, oltre alle nostre, quindi un mazzo comprato in negozio che hai già funziona con tutti questi servizi. Se ne hai comprato uno che supporta solo Spotify e tu non hai Spotify, [questo è il modo per aggirare il problema](/[lang]/hitster-without-spotify).
+L'app gratuita legge anche le carte Hitster e una selezione di altre carte musicali, oltre alle nostre, quindi un mazzo comprato in negozio che hai già funziona con tutti questi servizi. Se ne hai comprato uno che supporta solo Spotify e tu non hai Spotify, [questo è il modo per aggirare il problema](/[lang]/hitster-without-spotify).
 
 Trovi tutti i dettagli nella [pagina delle piattaforme supportate](/[lang]/supported-platforms), e l'app è gratis su [iPhone e Android](/[lang]/download-app).
 

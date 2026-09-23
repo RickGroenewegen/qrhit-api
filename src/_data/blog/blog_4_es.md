@@ -34,7 +34,7 @@ Los dos ajustes están en la app, y los dos merecen un minuto antes de la primer
 
 ## También lee otros mazos
 
-El escáner no está limitado a nuestras cartas. Lee cartas de Hitster y otras cartas musicales con QR, así que un mazo que ya tienes se puede jugar con la misma app, en el servicio que hayas conectado. Es realmente útil si las cartas que tienes venían con una app que solo soporta un servicio.
+El escáner no está limitado a nuestras cartas. Lee cartas de Hitster y otras cartas musicales con QR seleccionadas, así que un mazo que ya tienes se puede jugar con la misma app, en el servicio que hayas conectado. Es realmente útil si las cartas que tienes venían con una app que solo soporta un servicio.
 
 La app es gratis en iPhone y Android: [descárgala aquí](/[lang]/download-app).
 
@@ -58,4 +58,4 @@ Sí, en iPhone y Android, y no hace falta crear una cuenta. También es la únic
 
 ### ¿Funciona con cartas que he comprado en otro sitio?
 
-Sí. El escáner lee cartas de Hitster y otras cartas musicales con QR además de las nuestras, y las reproduce con el servicio que hayas conectado.
+Con cartas de Hitster y otras cartas musicales con QR seleccionadas, sí. El escáner las reproduce con el servicio que hayas conectado. Qué otras cartas admite lo decidimos nosotros y puede cambiar.

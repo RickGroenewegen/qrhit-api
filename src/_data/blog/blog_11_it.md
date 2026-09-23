@@ -31,7 +31,7 @@ L'app salta tutto questo. Risolve la carta, manda il brano al servizio che hai c
 
 ## Legge anche le carte che hai già
 
-Lo stesso scanner funziona con le carte Hitster e con altre carte musicali con QR code, non solo con le nostre. Se hai un mazzo comprato in negozio e non hai Spotify, puoi giocarlo con Apple Music usando l'app gratuita e senza comprare niente da me. Preferisco che le persone lo sappiano, e se vuoi la versione più lunga l'ho scritta a parte: [giocare le tue carte Hitster senza Spotify](/[lang]/hitster-without-spotify).
+Lo stesso scanner funziona con le carte Hitster e con una selezione di altre carte musicali con QR code, non solo con le nostre. Se hai un mazzo comprato in negozio e non hai Spotify, puoi giocarlo con Apple Music usando l'app gratuita e senza comprare niente da me. Preferisco che le persone lo sappiano, e se vuoi la versione più lunga l'ho scritta a parte: [giocare le tue carte Hitster senza Spotify](/[lang]/hitster-without-spotify).
 
 Quando il mazzo smette di essere divertente perché tutti lo hanno imparato, quello è il momento di [crearne uno dalla tua playlist](/[lang]/pricing).
 

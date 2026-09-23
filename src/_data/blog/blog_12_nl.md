@@ -38,7 +38,7 @@ Dat is belangrijk, want een tijdlijnspel is alleen speelbaar als de jaartallen k
 
 ## Als je al kaarten hebt
 
-De gratis app leest ook kaarten van andere muziekkaartspellen, naast die van ons. Dus een retaildeck dat je al hebt, speelt via elk van deze diensten. Als je er eentje hebt gekocht die alleen Spotify ondersteunt en je hebt geen Spotify, dan is [dit de oplossing](/[lang]/hitster-without-spotify).
+De gratis app leest ook Hitster kaarten en een selectie andere muziekkaarten, naast die van ons. Dus een retaildeck dat je al hebt, speelt via elk van deze diensten. Als je er eentje hebt gekocht die alleen Spotify ondersteunt en je hebt geen Spotify, dan is [dit de oplossing](/[lang]/hitster-without-spotify).
 
 Alle details staan op de [pagina met ondersteunde platforms](/[lang]/supported-platforms), en de app is gratis voor [iPhone en Android](/[lang]/download-app).
 
