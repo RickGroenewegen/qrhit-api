@@ -2,8 +2,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { PostHog } from 'posthog-node';
-import { color, white } from 'console-log-colors';
-import Logger from './logger';
 
 // The frontend's PostHog project, so API and site errors land in one error
 // tracking list. Every exception carries `app`: `backend` here, `frontend`
@@ -39,7 +37,6 @@ export type ErrorTrackingService = 'api' | 'worker';
  */
 class ErrorTracking {
   private static instance: ErrorTracking;
-  private logger = new Logger();
   private client: PostHog | null = null;
   private service: ErrorTrackingService = 'api';
   private baseProperties: Record<string, unknown> = {};
@@ -80,9 +77,6 @@ class ErrorTracking {
     };
     this.hookConsoleError();
     this.hookUncaughtException();
-    this.logger.log(
-      color.blue.bold(`Error tracking enabled for ${white.bold(service)}`)
-    );
   }
 
   get enabled(): boolean {
