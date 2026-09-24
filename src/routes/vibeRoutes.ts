@@ -2561,8 +2561,6 @@ export default async function vibeRoutes(
             statusCode = 404;
           } else if (result.error === 'List does not belong to this company') {
             statusCode = 403;
-          } else if (result.error.includes('status is not "new"')) {
-            statusCode = 409;
           }
           reply.status(statusCode).send({ error: result.error });
           return;

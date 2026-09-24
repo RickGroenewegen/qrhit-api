@@ -300,30 +300,23 @@ describe('deleteCompanyList', () => {
       success: false,
       error: 'List does not belong to this company',
     });
-
-    h.prisma.companyList.findUnique.mockResolvedValueOnce({
-      id: 2,
-      companyId: 1,
-      status: 'production',
-    });
-    expect(await vibe.deleteCompanyList(1, 2)).toMatchObject({
-      success: false,
-      error: 'List cannot be deleted because its status is not "new"',
-    });
     expect(h.prisma.companyList.delete).not.toHaveBeenCalled();
   });
 
-  it('deletes a new list belonging to the company', async () => {
-    h.prisma.companyList.findUnique.mockResolvedValue({
-      id: 2,
-      companyId: 1,
-      name: 'L',
-      status: 'new',
+  // The admin no longer has list statuses, so none of them blocks a delete.
+  for (const status of ['new', 'production', 'submitted']) {
+    it(`deletes a list belonging to the company with status "${status}"`, async () => {
+      h.prisma.companyList.findUnique.mockResolvedValue({
+        id: 2,
+        companyId: 1,
+        name: 'L',
+        status,
+      });
+      h.prisma.companyList.delete.mockResolvedValue({});
+      expect(await vibe.deleteCompanyList(1, 2)).toEqual({ success: true });
+      expect(h.prisma.companyList.delete).toHaveBeenCalledWith({ where: { id: 2 } });
     });
-    h.prisma.companyList.delete.mockResolvedValue({});
-    expect(await vibe.deleteCompanyList(1, 2)).toEqual({ success: true });
-    expect(h.prisma.companyList.delete).toHaveBeenCalledWith({ where: { id: 2 } });
-  });
+  }
 });
 
 describe('getProductionLists', () => {

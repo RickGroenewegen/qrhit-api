@@ -444,21 +444,35 @@ describe('vibe portal routes', () => {
       });
     });
 
-    it('refuses to delete a list whose status is not "new"', async () => {
+    // The admin no longer has list statuses; a list in production deletes
+    // like any other. Uses a list of its own: the shared one is still needed.
+    it('deletes a list whatever its status', async () => {
+      const created = await app.inject({
+        method: 'POST',
+        url: `/vibe/companies/${companyId}/lists`,
+        headers,
+        payload: {
+          name: 'In productie',
+          description: 'x',
+          slug: 'lijst-in-productie',
+          numberOfCards: 50,
+          numberOfTracks: 3,
+        },
+      });
+      const tempId = created.json().listId;
       await prisma().companyList.update({
-        where: { id: listId },
+        where: { id: tempId },
         data: { status: 'production' },
       });
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}`,
+        url: `/vibe/companies/${companyId}/lists/${tempId}`,
         headers,
       });
-      expect(res.statusCode).toBe(409);
-      await prisma().companyList.update({
-        where: { id: listId },
-        data: { status: 'new' },
-      });
+      expect(res.statusCode).toBe(200);
+      expect(
+        await prisma().companyList.findUnique({ where: { id: tempId } })
+      ).toBeNull();
     });
 
     it('403s deleting a list through the wrong company', async () => {

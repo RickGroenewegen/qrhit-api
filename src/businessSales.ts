@@ -102,8 +102,9 @@ export function toBusinessSale(list: any): BusinessSale {
 }
 
 /**
- * Sold lists, optionally only those sold within [start, end]. Lists of test
- * companies are left out, like test orders.
+ * Sold lists, optionally only those sold within [start, end]. Every sold
+ * list counts, whatever its company's status: `Company.test` is the admin's
+ * "Lead" flag, not test data, and a lead that bought a list has sold one.
  */
 export async function getBusinessSales(range?: {
   start: Date;
@@ -114,7 +115,6 @@ export async function getBusinessSales(range?: {
     where: {
       sold: true,
       soldAt: range ? { gte: range.start, lte: range.end } : { not: null },
-      Company: { test: false },
     },
     select: {
       id: true,

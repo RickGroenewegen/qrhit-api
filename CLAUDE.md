@@ -481,7 +481,9 @@ tab (`PUT /vibe/companies/:companyId/lists/:listId/sold`, admin only;
 shows: `sellPrice` (ex VAT, after discount) as turnover, gross at the VAT its
 invoice carries (21% for a Dutch company, 0% for EU reverse charge and
 export), and `sellPrice - buyPrice` as profit (0, and not "known", while the
-buy price is empty). Test companies are left out. A list without a sell price
+buy price is empty). Every sold list counts: `Company.test` is not test data
+but a leftover "Lead" flag the admin can no longer change, and filtering on it
+hid a real €20k sale on the first deploy. A list without a sell price
 cannot be switched on. The day, month and country reports take
 `?segment=consumer|business|both` (default consumer, what they always
 showed); every row carries the `business*` fields, zero outside the segment.

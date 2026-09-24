@@ -1786,7 +1786,9 @@ class Vibe {
   }
 
   /**
-   * Delete a specific company list if its status is 'new'
+   * Delete a company list, whatever its status: the admin no longer uses
+   * list statuses. Everything under the list (votes, questions, files,
+   * delivery addresses, invoice records) cascades.
    * @param companyId The ID of the company the list belongs to
    * @param listId The ID of the list to delete
    * @returns Object with success status
@@ -1800,7 +1802,7 @@ class Vibe {
         return { success: false, error: 'Invalid company or list ID provided' };
       }
 
-      // Find the list to ensure it exists, belongs to the company, and has the correct status
+      // Find the list to ensure it exists and belongs to the company
       const list = await this.prisma.companyList.findUnique({
         where: { id: listId },
       });
@@ -1813,13 +1815,6 @@ class Vibe {
         return {
           success: false,
           error: 'List does not belong to this company',
-        };
-      }
-
-      if (list.status !== 'new') {
-        return {
-          success: false,
-          error: 'List cannot be deleted because its status is not "new"',
         };
       }
 

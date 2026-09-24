@@ -3238,7 +3238,7 @@ describe('getSalesReport: business segment', () => {
 
     expect(prismaMock.companyList.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { sold: true, soldAt: { not: null }, Company: { test: false } },
+        where: { sold: true, soldAt: { not: null } },
       })
     );
     expect(report.map((r: any) => r.period)).toEqual(['2026-09', '2026-08', '2026-06']);
@@ -3327,7 +3327,6 @@ describe('getPaymentsByMonth: business segment', () => {
         where: {
           sold: true,
           soldAt: { gte: start, lte: end },
-          Company: { test: false },
         },
       })
     );

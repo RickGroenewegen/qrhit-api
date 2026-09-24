@@ -115,7 +115,9 @@ describe('toBusinessSale', () => {
 });
 
 describe('getBusinessSales', () => {
-  it('reads sold lists of real companies, within the range when one is given', async () => {
+  // Company.test is the admin's "Lead" flag: a lead's sold list counts too
+  // (Kranen Kerstpakketten's Kramp list went missing on the first deploy).
+  it('reads every sold list, within the range when one is given, whatever the company status', async () => {
     prismaMock.companyList.findMany.mockResolvedValue([list()]);
     const start = new Date(2026, 8, 1);
     const end = new Date(2026, 9, 0, 23, 59, 59);
@@ -125,7 +127,7 @@ describe('getBusinessSales', () => {
     expect(sales).toHaveLength(1);
     expect(prismaMock.companyList.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { sold: true, soldAt: { gte: start, lte: end }, Company: { test: false } },
+        where: { sold: true, soldAt: { gte: start, lte: end } },
       })
     );
   });
