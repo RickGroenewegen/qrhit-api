@@ -715,5 +715,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "App-ontwerper",
   "mail.upgradeInvoicePurchaseExtraCards": "Extra kaarten",
   "mail.upgradeInvoicePurchaseGiftBox": "Cadeaudoos",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, ontwerp {{ number }}",
+  "design_alter.designsAffected": "Je kaarten wisselen tussen meerdere ontwerpen. Dit gaat over ontwerp {{ designs }}."
 }

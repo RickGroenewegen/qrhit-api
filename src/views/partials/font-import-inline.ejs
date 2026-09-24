@@ -45,5 +45,53 @@ if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
         }
     </style>`;
 }
+
+// Alternating card designs (src/cardDesigns.ts). The rules above set design
+// 1's font on every card. A card of design k (0-based, k >= 1) also carries
+// the class d<k>; when that design has another font, it is loaded here and
+// scoped to those cards. Nothing is added for a single design.
+let designFontStyles = '';
+const fontDeck = typeof designs !== 'undefined' && Array.isArray(designs) ? designs : [];
+const baseFont = php.selectedFont || 'Arial, sans-serif';
+const weightOf = (font) => (typeof getFontWeight === 'function' ? getFontWeight(font) : '');
+const loadedFonts = new Set([baseFont]);
+fontDeck.forEach((design, k) => {
+    const font = design.selectedFont || 'Arial, sans-serif';
+    if (k === 0 || font === baseFont) return;
+
+    let family = 'Arial, sans-serif';
+    if (font !== 'Arial, sans-serif') {
+        const name = font.split(',')[0].trim().replace(/["']/g, '');
+        family = `'${name}', ${font.split(',').slice(1).join(',')}, Arial, sans-serif`;
+        if (!loadedFonts.has(font)) {
+            loadedFonts.add(font);
+            const googleName = (typeof getGoogleFontName === 'function' ? getGoogleFontName(font) : name).replace(/ /g, '+');
+            const weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(font) : '400;700';
+            designFontStyles += `
+    <link href="https://fonts.googleapis.com/css2?family=${googleName}:wght@${weights}&display=swap" rel="stylesheet">`;
+        }
+    }
+
+    // Design 1's weight rule reaches every .text, so a design without a
+    // weight of its own has to set it back; the year stays bold.
+    const weight = weightOf(font);
+    const resetWeight = !weight && !!weightOf(baseFont);
+    const weightRule = weight ? `font-weight: ${weight} !important;` : resetWeight ? 'font-weight: normal !important;' : '';
+    const yearSelectors = resetWeight
+        ? `.d${k} .text.year, .d${k} .text[style*="font-weight:bold"]`
+        : `.d${k} .text.year`;
+    designFontStyles += `
+    <style>
+        .d${k} .text, .d${k} .text.artist, .d${k} .text.name {
+            font-family: ${family} !important;
+            ${weightRule}
+        }
+        ${yearSelectors} {
+            font-family: ${family} !important;
+            font-weight: bold !important;
+        }
+    </style>`;
+});
 %>
 <%- fontStyles %>
+<%- designFontStyles %>

@@ -31,7 +31,7 @@ export default class Copy {
       const originalPayment = await this.prisma.payment.findUnique({
         where: { paymentId: originalPaymentId },
         include: {
-          PaymentHasPlaylist: true,
+          PaymentHasPlaylist: { include: { extraDesigns: true } },
         },
       });
 
@@ -107,13 +107,23 @@ export default class Copy {
         const {
           id: phpId,
           paymentId: oldPaymentId,
+          extraDesigns = [],
           ...phpData
         } = php as any;
+
+        // Alternating designs 2..10 are rows of their own; copy them along
+        // so the duplicate prints the same deck.
+        const designRows = (extraDesigns as any[]).map(
+          ({ id, paymentHasPlaylistId, createdAt, updatedAt, ...design }) => design
+        );
 
         await this.prisma.paymentHasPlaylist.create({
           data: {
             ...phpData,
             paymentId: newPayment.id,
+            ...(designRows.length
+              ? { extraDesigns: { create: designRows } }
+              : {}),
           },
         });
       }

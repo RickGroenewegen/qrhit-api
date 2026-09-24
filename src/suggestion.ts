@@ -106,7 +106,16 @@ class Suggestion {
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0
           THEN 'true'
           ELSE 'false'
-        END as hasSuggestion
+        END as hasSuggestion,
+        (
+          SELECT COUNT(*)
+          FROM playlist_has_tracks pht2
+          WHERE pht2.playlistId = pht.playlistId
+          AND (
+            pht2.\`order\` < pht.\`order\`
+            OR (pht2.\`order\` = pht.\`order\` AND pht2.trackId < pht.trackId)
+          )
+        ) as cardIndex
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -121,7 +130,14 @@ class Suggestion {
       AND t.manuallyChecked = true
     `;
     return {
-      suggestions: tracks,
+      // cardIndex is the card's 0-based position in the whole deck, in
+      // data.getTracks() order (every track, not only the checked ones), so
+      // the page can show each card with its alternating design. COUNT(*)
+      // arrives as a BigInt.
+      suggestions: tracks.map((track) => ({
+        ...track,
+        cardIndex: Number(track.cardIndex),
+      })),
       metadata: {
         payment: {
           canBeSentToPrinterAt: payment?.canBeSentToPrinterAt ?? null,
@@ -987,7 +1003,11 @@ class Suggestion {
           // re-held and re-emailed.
           await this.prisma.payment.update({
             where: { id: paymentDbId },
-            data: { printerHold: false, printerHoldReason: null },
+            data: {
+              printerHold: false,
+              printerHoldReason: null,
+              printerHoldDetails: Prisma.DbNull,
+            },
           });
         }
 

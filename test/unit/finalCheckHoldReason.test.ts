@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { finalCheckHoldReason } from '../../src/finalCheckHoldReason';
+import { finalCheckHoldDetails, finalCheckHoldReason } from '../../src/finalCheckHoldReason';
 import type {
   FinalCheckFlaggedImage,
   FinalCheckResult,
@@ -16,6 +16,8 @@ function failure(overrides: Partial<Failure>): Failure {
     paymentHasPlaylistId: 1,
     playlistDbId: 2,
     playlistId: 'pl',
+    designCount: 1,
+    problems: [],
     ...overrides,
   };
 }
@@ -25,8 +27,34 @@ function flagged(...keys: FinalCheckFlaggedImage['key'][]) {
     key,
     filename: `${key}.png`,
     buffer: Buffer.from(''),
+    design: null,
   }));
 }
+
+describe('finalCheckHoldDetails', () => {
+  it('keeps the line, the design count and every problem for the dashboard', () => {
+    const problems = [
+      { check: 'unreadable' as const, design: 2, place: 'card-back' as const, message: 'dark on dark' },
+    ];
+    const details = finalCheckHoldDetails(
+      failure({
+        reason: 'unreadable',
+        paymentHasPlaylistId: 7,
+        designCount: 3,
+        problems,
+        details: 'Design 2 back: dark on dark',
+      })
+    );
+    expect(details).toMatchObject({
+      reason: 'unreadable',
+      paymentHasPlaylistId: 7,
+      designCount: 3,
+      problems,
+      details: 'Design 2 back: dark on dark',
+    });
+    expect(new Date(details.checkedAt).getTime()).not.toBeNaN();
+  });
+});
 
 describe('finalCheckHoldReason()', () => {
   it('passes the non-Hitster reasons through', () => {

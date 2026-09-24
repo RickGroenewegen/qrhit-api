@@ -14,6 +14,11 @@ import {
 import { getQrTotalModules } from '../qr';
 import GoogleFonts from '../googleFonts';
 import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
+import {
+  deckDesigns,
+  designIndexForCard,
+  getExtraDesigns,
+} from '../cardDesigns';
 import { maxCardsFor } from '../config/constants';
 
 import fs from 'fs/promises';
@@ -492,12 +497,27 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           );
         }
 
+        // Alternating card designs (src/cardDesigns.ts). Card numbers run over
+        // the whole deck, so a chunk that starts at startIndex continues the
+        // cycle instead of restarting it. One design is php[0] itself.
+        const designs = deckDesigns(
+          php[0],
+          await getExtraDesigns(php[0].paymentHasPlaylistId)
+        );
+        const cardDesignIndexes = tracks.map((_: any, index: number) =>
+          designIndexForCard(designs.length, startIndex + index)
+        );
+        const cardDesigns = cardDesignIndexes.map((k: number) => designs[k]);
+
         await reply.view(`pdf_${template}.ejs`, {
           subdir,
           payment,
           playlist,
           php: php[0],
           tracks,
+          designs,
+          cardDesigns,
+          cardDesignIndexes,
           user,
           eco,
           emptyPages,
@@ -507,7 +527,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           getYearFontSize,
           // Admin-chosen fonts outside fonts.ts get their weights from the
           // Google catalogue; the fixed list resolves as before.
-          getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelper(php[0].selectedFont),
+          getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelperForFonts(
+            designs.map((design: any) => design.selectedFont)
+          ),
           getGoogleFontName,
           getFontWeight,
           getQrTotalModules,

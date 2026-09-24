@@ -320,6 +320,8 @@ describe('sendToPrinter()', () => {
       paymentHasPlaylistId: 0,
       playlistDbId: 0,
       playlistId: '',
+      designCount: 1,
+      problems: [],
     });
 
     const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
@@ -330,7 +332,17 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
+      data: {
+        printerHold: true,
+        printerHoldReason: 'pdf-missing',
+        printerHoldDetails: expect.objectContaining({
+          reason: 'pdf-missing',
+          paymentHasPlaylistId: 0,
+          designCount: 1,
+          problems: [],
+          details: 'printer pdf 0 bytes',
+        }),
+      },
     });
     const push = outbound.calls('PushoverClient', 'sendMessage');
     expect(push[0].args[0]).toMatchObject({
@@ -348,25 +360,44 @@ describe('sendToPrinter()', () => {
     const flaggedImages = [
       {
         key: 'cardFront',
-        filename: 'card-front.png',
+        filename: 'card-front-design-3.png',
         buffer: Buffer.from('card-front-png'),
+        design: 3,
       },
+    ];
+    const problems = [
+      { check: 'hitster', design: 3, place: 'card-front', message: 'Hitster logo' },
+      { check: 'hitster', design: 2, place: 'card', message: 'the word "Hitster" is in the printed text' },
     ];
     h.finalCheck.runCheck.mockResolvedValue({
       ok: false,
       reason: 'hitster',
       userActionable: true,
-      details: 'looks like a Hitster clone',
+      details: 'Design 3 front: Hitster logo',
       paymentHasPlaylistId: 31,
       playlistDbId: 21,
       playlistId: 'pl1',
       flaggedImages,
       correctionTab: 'card',
+      designCount: 3,
+      problems,
     });
 
     const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
 
     expect(res.success).toBe(false);
+    // The dashboard gets every problem, on its line, design and side
+    expect(h.prisma.payment.update).toHaveBeenCalledWith({
+      where: { id: 11 },
+      data: expect.objectContaining({
+        printerHoldReason: 'hitster-card',
+        printerHoldDetails: expect.objectContaining({
+          paymentHasPlaylistId: 31,
+          designCount: 3,
+          problems,
+        }),
+      }),
+    });
     expect(h.data.resetJudgedStatus).toHaveBeenCalledWith(31);
     // second findFirst loads the payment incl. user for the mail
     expect(h.prisma.payment.findFirst).toHaveBeenCalledWith({
@@ -385,6 +416,8 @@ describe('sendToPrinter()', () => {
       'hitster',
       flaggedImages,
       'card',
+      // The designs the problems are on, in order
+      [2, 3],
     ]);
   });
 
@@ -398,6 +431,8 @@ describe('sendToPrinter()', () => {
       paymentHasPlaylistId: 31,
       playlistDbId: 21,
       playlistId: 'pl1',
+      designCount: 1,
+      problems: [],
     });
 
     const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
@@ -419,7 +454,15 @@ describe('sendToPrinter()', () => {
     });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 11 },
-      data: { printerHold: true, printerHoldReason: 'pdf-missing' },
+      data: {
+        printerHold: true,
+        printerHoldReason: 'pdf-missing',
+        printerHoldDetails: expect.objectContaining({
+          reason: 'pdf-missing',
+          problems: [],
+          details: 'finalCheck threw: parser exploded',
+        }),
+      },
     });
   });
 

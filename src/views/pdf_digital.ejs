@@ -164,28 +164,37 @@
     .card-container:nth-of-type(6n) {
         page-break-after: always;
     }
+<%- include('partials/card-design-css', { frontImage: '.front.{d} .background-image', back: '.back.{d}', backImage: '.back.{d} .background-image-back' }) %>
 </style>
 </head>
 <body>
+<%
+// Alternating card designs (src/cardDesigns.ts): the design of each card on
+// these pages, and the class that picks up its rules. With one design every
+// card gets php and no class, exactly as before.
+const designOfCard = (i) => (typeof cardDesigns !== 'undefined' ? cardDesigns[i] : php);
+const designClassOf = (i) => (typeof cardDesignIndexes !== 'undefined' && cardDesignIndexes[i] > 0 ? ' d' + cardDesignIndexes[i] : '');
+%>
 <div class="page">
-    <% let index = 0; %> 
+    <% let index = 0; %>
     <% tracks.forEach(function(track) { %>
+        <% const cd = designOfCard(index); %>
         <div class="card-container">
-            <div class="card front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
-                <% if (!eco && php.backgroundFrontType !== 'solid') { %>
-                    <% if (php.background && php.background.length) { %>
-                        <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.background %>" alt="Card Background">
+            <div class="card front<%= designClassOf(index) %>" style="<%= !eco && cd.backgroundFrontType === 'solid' ? (cd.useFrontGradient ? 'background: linear-gradient(' + (cd.gradientFrontDegrees || 180) + 'deg, ' + (cd.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (cd.gradientFrontPosition || 50) - 50) + '%, ' + (cd.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (cd.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (cd.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+                <% if (!eco && cd.backgroundFrontType !== 'solid') { %>
+                    <% if (cd.background && cd.background.length) { %>
+                        <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= cd.background %>" alt="Card Background">
                     <% } else { %>
                         <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/background_brand.png" alt="Card Background">
                     <% } %>
                 <% } %>
-                <% if (php.logo && php.logo.length) { %>
-                    <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+                <% if (cd.logo && cd.logo.length) { %>
+                    <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= cd.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
                 <% } %>
                 <%
                 // Determine QR background type - handle backward compatibility
-                let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
-                let qrBgColor = php.qrBackgroundColor || '#ffffff';
+                let qrBgType = cd.qrBackgroundType || (cd.hideCircle ? 'none' : 'square');
+                let qrBgColor = cd.qrBackgroundColor || '#ffffff';
                 %>
                 <% if (qrBgType === 'square') { %>
                     <!-- Square background for QR code using SVG -->
@@ -208,21 +217,21 @@
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <!-- Domain URL removed - always hidden -->
             </div>
-            <div class="card back" style="position: relative;">
-                <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
-                    <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+            <div class="card back<%= designClassOf(index) %>" style="position: relative;">
+                <% if (cd.backgroundBackType !== 'solid' && cd.backgroundBack && cd.backgroundBack.length) { %>
+                    <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= cd.backgroundBack %>" alt="Card Background">
                 <% } %>
-                <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
+                <div class="text" style="margin-top: 0mm;font-size:<%= cd.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;">
                     <%= track.artist %>
                     <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                     <% } %>
                 </div>
-                <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= getYearFontSize(php.selectedFont) %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div>
-                <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
+                <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= getYearFontSize(cd.selectedFont) %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div>
+                <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= cd.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;">
                     <%= track.name %>
                     <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraNameAttribute %></div>
+                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraNameAttribute %></div>
                     <% } %>
                 </div>
                 <!-- Domain URL removed from back side - always hidden -->

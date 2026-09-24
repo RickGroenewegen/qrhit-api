@@ -19,8 +19,14 @@ const holder = vi.hoisted(() => ({
   parseBoolean: undefined as any,
   prisma: {
     $queryRaw: undefined as any,
+    $transaction: undefined as any,
     playlist: { findFirst: undefined as any },
     paymentHasPlaylist: { update: undefined as any },
+    paymentHasPlaylistDesign: {
+      findMany: undefined as any,
+      deleteMany: undefined as any,
+      createMany: undefined as any,
+    },
   },
 }));
 
@@ -63,12 +69,21 @@ vi.mock('../../../src/prisma', () => ({
   default: {
     getInstance: () => ({
       $queryRaw: (...args: any[]) => holder.prisma.$queryRaw(...args),
+      $transaction: (...args: any[]) => holder.prisma.$transaction(...args),
       playlist: {
         findFirst: (...args: any[]) => holder.prisma.playlist.findFirst(...args),
       },
       paymentHasPlaylist: {
         update: (...args: any[]) =>
           holder.prisma.paymentHasPlaylist.update(...args),
+      },
+      paymentHasPlaylistDesign: {
+        findMany: (...args: any[]) =>
+          holder.prisma.paymentHasPlaylistDesign.findMany(...args),
+        deleteMany: (...args: any[]) =>
+          holder.prisma.paymentHasPlaylistDesign.deleteMany(...args),
+        createMany: (...args: any[]) =>
+          holder.prisma.paymentHasPlaylistDesign.createMany(...args),
       },
     }),
   },
@@ -111,8 +126,12 @@ beforeEach(() => {
   holder.generateRandomString.mockClear();
   holder.parseBoolean.mockClear();
   holder.prisma.$queryRaw = vi.fn();
+  holder.prisma.$transaction = vi.fn(async (operations: any[]) => operations);
   holder.prisma.playlist.findFirst = vi.fn();
   holder.prisma.paymentHasPlaylist.update = vi.fn();
+  holder.prisma.paymentHasPlaylistDesign.findMany = vi.fn(async () => []);
+  holder.prisma.paymentHasPlaylistDesign.deleteMany = vi.fn(() => 'deleteMany');
+  holder.prisma.paymentHasPlaylistDesign.createMany = vi.fn(() => 'createMany');
 });
 
 describe('construction', () => {
@@ -266,7 +285,7 @@ describe('uploadLogoImage', () => {
 });
 
 describe('getCardDesign', () => {
-  const designRow = {
+  const design = {
     background: 'bg.png',
     doubleSided: 1,
     eco: 0,
@@ -276,6 +295,9 @@ describe('getCardDesign', () => {
     numberOfTracks: 42,
     playlistId: 'pl1',
   };
+  // The query also selects the line id, to look up the alternating designs;
+  // it is not part of the response.
+  const designRow = { paymentHasPlaylistId: 7, ...design };
 
   it('returns the design row enriched with the first track id', async () => {
     holder.prisma.$queryRaw
@@ -286,7 +308,7 @@ describe('getCardDesign', () => {
 
     expect(result).toEqual({
       success: true,
-      data: { ...designRow, firstTrackId: 'track-123' },
+      data: { ...design, extraDesigns: [], firstTrackId: 'track-123' },
     });
     // Both queries are scoped by paymentId + userHash + playlistId.
     expect(holder.prisma.$queryRaw).toHaveBeenCalledTimes(2);
@@ -300,6 +322,30 @@ describe('getCardDesign', () => {
       'hash1',
       'pl1',
     ]);
+  });
+
+  it('returns the alternating designs 2..N of the line in position order', async () => {
+    holder.prisma.$queryRaw
+      .mockResolvedValueOnce([designRow])
+      .mockResolvedValueOnce([{ trackId: 'track-123' }]);
+    holder.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValueOnce([
+      { id: 90, paymentHasPlaylistId: 7, position: 2, background: 'two.png', qrColor: '#ff0000' },
+      { id: 91, paymentHasPlaylistId: 7, position: 3, background: 'three.png', qrColor: '#00ff00' },
+    ]);
+
+    const result = await designer.getCardDesign('pay1', 'hash1', 'pl1');
+
+    expect(holder.prisma.paymentHasPlaylistDesign.findMany).toHaveBeenCalledWith({
+      where: { paymentHasPlaylistId: 7 },
+      orderBy: { position: 'asc' },
+    });
+    const extras = result.data.extraDesigns;
+    expect(extras.map((d: any) => d.background)).toEqual(['two.png', 'three.png']);
+    expect(extras.map((d: any) => d.qrColor)).toEqual(['#ff0000', '#00ff00']);
+    // Only design columns go out: no row ids, no positions.
+    expect(extras[0]).not.toHaveProperty('id');
+    expect(extras[0]).not.toHaveProperty('position');
+    expect(extras[0]).not.toHaveProperty('paymentHasPlaylistId');
   });
 
   it('returns a null firstTrackId when the playlist has no tracks', async () => {
@@ -417,6 +463,67 @@ describe('updateCardDesign', () => {
     });
     expect(holder.parseBoolean).toHaveBeenCalledWith(true);
     expect(holder.parseBoolean).toHaveBeenCalledWith(undefined);
+  });
+
+  it('leaves the alternating designs alone when the body has none', async () => {
+    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
+    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
+
+    const ok = await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', design);
+
+    expect(ok).toBe(true);
+    expect(holder.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('replaces the alternating designs, sanitised and numbered from 2', async () => {
+    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
+    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
+
+    const ok = await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', {
+      ...design,
+      extraDesigns: [
+        { background: 'two.png', qrColor: '#ff0000', backgroundImage: 'https://x/two.png' },
+        { background: '../../etc/passwd', fontColor: 'red;}' },
+      ],
+    });
+
+    expect(ok).toBe(true);
+    expect(holder.prisma.paymentHasPlaylist.update.mock.calls[0][0].select).toEqual({ id: true });
+    expect(holder.prisma.paymentHasPlaylistDesign.deleteMany).toHaveBeenCalledWith({
+      where: { paymentHasPlaylistId: 12 },
+    });
+    const rows = holder.prisma.paymentHasPlaylistDesign.createMany.mock.calls[0][0].data;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      paymentHasPlaylistId: 12,
+      position: 2,
+      background: 'two.png',
+      qrColor: '#ff0000',
+    });
+    expect(rows[0]).not.toHaveProperty('backgroundImage');
+    // Unsafe values fall back to the column defaults.
+    expect(rows[1]).toMatchObject({
+      position: 3,
+      background: null,
+      fontColor: '#000000',
+    });
+    expect(holder.prisma.$transaction).toHaveBeenCalledWith(['deleteMany', 'createMany']);
+  });
+
+  it('goes back to one design on an empty list', async () => {
+    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
+    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
+
+    await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', {
+      ...design,
+      extraDesigns: [],
+    });
+
+    expect(holder.prisma.$transaction).toHaveBeenCalledWith(['deleteMany']);
+    expect(holder.prisma.paymentHasPlaylistDesign.createMany).not.toHaveBeenCalled();
   });
 
   it('returns false when the update throws', async () => {

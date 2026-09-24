@@ -711,5 +711,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "Projektant aplikacji",
   "mail.upgradeInvoicePurchaseExtraCards": "Dodatkowe karty",
   "mail.upgradeInvoicePurchaseGiftBox": "Pudełko prezentowe",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, wzór {{ number }}",
+  "design_alter.designsAffected": "Twoje karty korzystają z kilku wzorów na zmianę. To wzór {{ designs }}."
 }

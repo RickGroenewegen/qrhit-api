@@ -149,6 +149,20 @@ class GoogleFonts {
     return (font: string) => (font === selectedFont ? resolved : getGoogleFontWeights(font));
   }
 
+  /**
+   * weightsHelper for a deck with alternating designs, which can carry a font
+   * per design: every one of them is pre-resolved.
+   */
+  public async weightsHelperForFonts(
+    selectedFonts: (string | null | undefined)[]
+  ): Promise<(font: string) => string> {
+    const resolved = new Map<string, string>();
+    for (const font of new Set(selectedFonts)) {
+      if (font) resolved.set(font, await this.resolveWeights(font));
+    }
+    return (font: string) => resolved.get(font) ?? getGoogleFontWeights(font);
+  }
+
   private remember(list: GoogleFontFamily[]): void {
     this.memo = { list, expiresAt: Date.now() + CACHE_TTL_SECONDS * 1000 };
   }

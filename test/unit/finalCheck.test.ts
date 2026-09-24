@@ -90,6 +90,32 @@ vi.mock('fs', () => ({
   },
 }));
 
+// ─── sharp (cuts one card out of a rendered sheet page) ────────────────────
+const { sharpExtractMock } = vi.hoisted(() => ({ sharpExtractMock: vi.fn() }));
+vi.mock('sharp', () => ({
+  default: vi.fn(() => {
+    const chain: any = {
+      // A4 at pdf-parse scale 2: 210mm = 1190px
+      metadata: async () => ({ width: 1190 }),
+      extract: (region: any) => {
+        sharpExtractMock(region);
+        return chain;
+      },
+      png: () => chain,
+      toBuffer: async () => Buffer.from('card-png'),
+    };
+    return chain;
+  }),
+}));
+
+// pdf-parse screenshots: the pages asked for, each with its number
+const screenshotPages = async (params: any) => {
+  const numbers: number[] = params.partial ?? Array.from({ length: params.first ?? 2 }, (_, i) => i + 1);
+  return {
+    pages: numbers.map((n) => ({ pageNumber: n, data: Buffer.from(`page${n}-png`) })),
+  };
+};
+
 // ─── Logger ────────────────────────────────────────────────────────────────
 vi.mock('../../src/logger', () => ({
   default: class {
@@ -156,12 +182,8 @@ describe('FinalCheck.runCheck', () => {
     fsMkdirMock.mockResolvedValue(undefined);
     fsWriteFileMock.mockResolvedValue(undefined);
     fsRmMock.mockResolvedValue(undefined);
-    pdfParseMock.getScreenshot.mockResolvedValue({
-      pages: [
-        { data: Buffer.from('page1-png') },
-        { data: Buffer.from('page2-png') },
-      ],
-    });
+    sharpExtractMock.mockReset();
+    pdfParseMock.getScreenshot.mockImplementation(screenshotPages);
     pdfParseMock.getText.mockResolvedValue({
       pages: [{ text: 'Normal song title' }, { text: 'Artist name 2000' }],
     });
@@ -410,7 +432,10 @@ describe('FinalCheck.runCheck', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toBe('hitster');
-      expect(result.details).toContain('box inlay');
+      expect(result.details).toContain('Box inlay');
+      expect(result.problems).toEqual([
+        { check: 'hitster', design: null, place: 'box', message: 'the word "Hitster" is in the printed text' },
+      ]);
       expect(result.correctionTab).toBe('box');
     }
   });
@@ -448,13 +473,13 @@ describe('FinalCheck.runCheck', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('throws when pdfToPngPages returns < 2 pages (design gap: no graceful fallback)', async () => {
+  it('throws when the rasterizer returns fewer pages than asked (design gap: no graceful fallback)', async () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     pdfParseMock.getScreenshot
-      // Only 1 page returned from getScreenshot
-      .mockResolvedValueOnce({ pages: [{ data: Buffer.from('p1') }] });
+      // Only page 1 returned from getScreenshot
+      .mockResolvedValueOnce({ pages: [{ pageNumber: 1, data: Buffer.from('p1') }] });
 
-    // NOTE: suspected bug / design gap: when pdfToPngPages throws (e.g. < 2 pages)
+    // NOTE: suspected bug / design gap: when the rasterizer throws (e.g. a page missing)
     // the error propagates uncaught through checkOnePlaylist (try/finally, no catch)
     // and through runCheck (no catch) up to the caller. There is no graceful
     // failure result for this case.
@@ -522,6 +547,222 @@ describe('FinalCheck.runCheck', () => {
       expect.stringContaining('/printer/'),
       expect.any(Object)
     );
+  });
+
+  it('checks card 1 itself, not the how-to card in front of it', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ addHowToCard: true })]);
+
+    await fc.runCheck(makePayment());
+
+    const partials = pdfParseMock.getScreenshot.mock.calls.map((call: any[]) => call[0].partial);
+    expect(partials).toEqual([
+      [3, 4],
+      [3, 4],
+    ]);
+    expect((renderUrlToPdfBufferMock.mock.calls[0] as any[])[1].pageRanges).toBe('1-4');
+  });
+
+  it('pins a single-design problem to the card side, without a design number', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    askWithImagesMock.mockImplementation(async (prompt: string) => {
+      if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+      if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
+      return { readable: false, details: 'white on cream' };
+    });
+
+    const result = await fc.runCheck(makePayment());
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.designCount).toBe(1);
+      expect(result.problems).toEqual([
+        { check: 'unreadable', design: null, place: 'card-back', message: 'white on cream' },
+      ]);
+      expect(result.details).toBe('Card back: white on cream');
+    }
+  });
+
+  describe('alternating designs', () => {
+    // Pages 1-2 of a printer PDF are card 1 (design 1); card k is design k,
+    // on pages 2k-1 and 2k (two further when a how-to card comes first).
+    const partialCalls = () =>
+      pdfParseMock.getScreenshot.mock.calls
+        .map((call: any[]) => call[0].partial)
+        .filter(Boolean);
+
+    it('renders and checks the first card of every design', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ extraDesigns: [{ position: 2 }, { position: 3 }] }),
+      ]);
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(true);
+      // The live render runs to card 3 and keeps its six pages.
+      const [url, options] = renderUrlToPdfBufferMock.mock.calls[0] as any[];
+      expect(url).toContain('/printer/0/2/');
+      expect(options.pageRanges).toBe('1-6');
+      // Stored and live PDF: the pages of cards 1-3.
+      expect(partialCalls()).toEqual([
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+      ]);
+      const prompts = askWithImagesMock.mock.calls.map((call: any[]) => call[0]);
+      expect(prompts.filter((p: string) => p.includes('SAME OVERALL DESIGN'))).toHaveLength(6);
+      expect(prompts.filter((p: string) => p.includes('Hitster product'))).toHaveLength(6);
+      expect(prompts.filter((p: string) => p.includes('readable by a human'))).toHaveLength(3);
+      // The printed text of each design is scanned on its own pages.
+      expect(pdfParseMock.getText.mock.calls.map((call: any[]) => call[0].partial)).toEqual([
+        [1, 2],
+        [3, 4],
+        [5, 6],
+      ]);
+    });
+
+    it('skips a how-to card in front of the first card', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ addHowToCard: true, extraDesigns: [{ position: 2 }] }),
+      ]);
+
+      await fc.runCheck(makePayment());
+
+      expect(partialCalls()[0]).toEqual([3, 4, 5, 6]);
+      expect((renderUrlToPdfBufferMock.mock.calls[0] as any[])[1].pageRanges).toBe('1-6');
+    });
+
+    it('cuts each design out of a sheet, backs mirrored per row', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ subType: 'sheets', extraDesigns: [{ position: 2 }, { position: 3 }] }),
+      ]);
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(true);
+      const [url, options] = renderUrlToPdfBufferMock.mock.calls[0] as any[];
+      expect(url).toContain('/printer_sheets/0/11/');
+      expect(options.pageRanges).toBe('1-2');
+      expect(partialCalls()).toEqual([
+        [1, 2],
+        [1, 2],
+      ]);
+      // 1190px / 210mm: a card is 340px, the margin 85px. Card 1 front is in
+      // the first column and its back in the last; card 3 the other way round.
+      const cells = sharpExtractMock.mock.calls.slice(0, 6).map((call: any[]) => [call[0].left, call[0].top]);
+      expect(cells).toEqual([
+        [85, 85], // design 1 front
+        [765, 85], // design 1 back
+        [425, 85], // design 2 front
+        [425, 85], // design 2 back
+        [765, 85], // design 3 front
+        [85, 85], // design 3 back
+      ]);
+      expect(sharpExtractMock.mock.calls[0][0].width).toBe(340);
+      const prompts = askWithImagesMock.mock.calls.map((call: any[]) => call[0]);
+      expect(prompts.filter((p: string) => p.includes('readable by a human'))).toHaveLength(3);
+    });
+
+    it('checks a single-design sheet as whole pages, as before', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ subType: 'sheets' })]);
+
+      await fc.runCheck(makePayment());
+
+      expect(sharpExtractMock).not.toHaveBeenCalled();
+    });
+
+    it('reports every design that drifted, by number and side', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ extraDesigns: [{ position: 2 }, { position: 3 }] }),
+      ]);
+      askWithImagesMock.mockImplementation(async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) {
+          if (images[0].endsWith('pdf_page4.png')) return { match: false, reason: 'wrong background' };
+          if (images[0].endsWith('pdf_page5.png')) return { match: false, reason: 'logo missing' };
+          return { match: true, reason: 'ok' };
+        }
+        if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
+        return { readable: true, details: '' };
+      });
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe('design-mismatch');
+        expect(result.designCount).toBe(3);
+        expect(result.problems).toEqual([
+          { check: 'design-mismatch', design: 2, place: 'card-back', message: 'wrong background' },
+          { check: 'design-mismatch', design: 3, place: 'card-front', message: 'logo missing' },
+        ]);
+        expect(result.details).toBe('Design 2 back: wrong background | Design 3 front: logo missing');
+      }
+    });
+
+    it('attaches a Hitster hit on another design under its own name', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ extraDesigns: [{ position: 2 }] }),
+      ]);
+      askWithImagesMock.mockImplementation(async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+        if (prompt.includes('Hitster')) {
+          return images[images.length - 1].endsWith('pdf_page3.png')
+            ? { clean: false, evidence: 'Hitster logo' }
+            : { clean: true, evidence: '' };
+        }
+        return { readable: true, details: '' };
+      });
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe('hitster');
+        expect(result.flaggedImages?.map((i) => [i.key, i.filename, i.design])).toEqual([
+          ['cardFront', 'card-front-design-2.png', 2],
+        ]);
+        expect(result.details).toBe('Design 2 front: Hitster logo');
+      }
+    });
+
+    it('names the design whose printed text says Hitster', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ extraDesigns: [{ position: 2 }] }),
+      ]);
+      pdfParseMock.getText.mockImplementation(async (params: any) => ({
+        pages: [{ text: params.partial[0] === 3 ? 'Hitster edition' : 'Queen 1975' }],
+      }));
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.problems).toEqual([
+          { check: 'hitster', design: 2, place: 'card', message: 'the word "Hitster" is in the printed text' },
+        ]);
+        expect(result.correctionTab).toBe('card');
+      }
+    });
+
+    it('reports every unreadable design, not only the first', async () => {
+      prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+        makePhp({ extraDesigns: [{ position: 2 }, { position: 3 }] }),
+      ]);
+      askWithImagesMock.mockImplementation(async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+        if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
+        return images[0].endsWith('pdf_page3.png')
+          ? { readable: true, details: '' }
+          : { readable: false, details: 'dark on dark' };
+      });
+
+      const result = await fc.runCheck(makePayment());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe('unreadable');
+        expect(result.problems.map((p) => p.design)).toEqual([1, 3]);
+        expect(result.details).toBe('Design 1 back: dark on dark | Design 3 back: dark on dark');
+      }
+    });
   });
 });
 

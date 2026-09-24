@@ -34,6 +34,10 @@ export const h = {
       createMany: vi.fn(),
       update: vi.fn(),
     },
+    // Alternating card designs 2..10 (src/cardDesigns.ts)
+    paymentHasPlaylistDesign: {
+      findMany: vi.fn(),
+    },
     playlistHasTrack: {
       count: vi.fn(),
     },
@@ -141,6 +145,7 @@ export function resetGeneratorMocks(): void {
   h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([]);
   h.prisma.paymentHasPlaylistItem.createMany.mockResolvedValue({ count: 0 });
   h.prisma.paymentHasPlaylistItem.update.mockResolvedValue({});
+  h.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValue([]);
   h.prisma.playlistHasTrack.count.mockResolvedValue(0);
   h.prisma.playlist.update.mockResolvedValue({});
 

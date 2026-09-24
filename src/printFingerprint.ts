@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { CARD_DESIGN_COLUMNS } from './cardDesigns';
 
 /**
  * Fingerprint of everything that determines what a printed PDF looks like.
@@ -94,15 +95,28 @@ interface FingerprintTrack {
  * `tracks` must be passed in the order they are printed; a reordered deck is a
  * different deck. Values are normalised to strings so that a `0`/`false`/`null`
  * round trip through the database cannot change the hash on its own.
+ *
+ * `extraDesigns` are the alternating designs 2..10 (src/cardDesigns.ts), in
+ * position order. They only enter the hash when there are any, so a
+ * single-design line keeps the fingerprint it was generated with.
  */
 export function computePrintFingerprint(
   playlist: Record<string, any>,
-  tracks: FingerprintTrack[] = []
+  tracks: FingerprintTrack[] = [],
+  extraDesigns: Record<string, any>[] = []
 ): string {
-  const design = DESIGN_FIELDS.map((field) => {
-    const value = playlist?.[field];
-    return `${field}=${value === null || value === undefined ? '' : String(value)}`;
-  }).join('|');
+  const fieldsOf = (source: Record<string, any>, fields: readonly string[]) =>
+    fields
+      .map((field) => {
+        const value = source?.[field];
+        return `${field}=${value === null || value === undefined ? '' : String(value)}`;
+      })
+      .join('|');
+
+  let design = fieldsOf(playlist, DESIGN_FIELDS);
+  extraDesigns.forEach((extra, index) => {
+    design += `\ndesign${index + 2}:${fieldsOf(extra, CARD_DESIGN_COLUMNS)}`;
+  });
 
   const trackPart = tracks
     .map((track, index) =>

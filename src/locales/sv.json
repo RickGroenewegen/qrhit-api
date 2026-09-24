@@ -705,5 +705,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "Appdesigner",
   "mail.upgradeInvoicePurchaseExtraCards": "Extra kort",
   "mail.upgradeInvoicePurchaseGiftBox": "Presentask",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, design {{ number }}",
+  "design_alter.designsAffected": "Dina kort växlar mellan flera designer. Det här är design {{ designs }}."
 }

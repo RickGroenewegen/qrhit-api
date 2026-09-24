@@ -46,6 +46,9 @@ export interface CartItem {
   frontOpacity?: number; // Front background image opacity 0-100 (default 100% fully visible)
   backOpacity?: number; // Back background image opacity 0-100 (default 50%)
   design?: any; // Complete design object from localStorage (saved to database for new playlists)
+  // Designs 2..10 when the cards alternate designs, in card order; the fields
+  // above are design 1. Sanitised by src/cardDesigns.ts before storing.
+  extraDesigns?: Record<string, unknown>[];
   gamesEnabled?: boolean; // Whether games (bingo/quiz) are included (default: true for digital)
   // Box add-on
   boxEnabled?: boolean;

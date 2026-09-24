@@ -123,21 +123,30 @@
     .url-bottom {
         bottom: 5mm;
     }
+<%- include('partials/card-design-css', { frontBefore: '.card-front.{d}::before', back: '.card-back.{d}', backImage: '.card-back.{d} .background-image-back' }) %>
 </style>
 </head>
 <body>
 <% if (php.addHowToCard && startIndex === 0) { %>
   <%- include('partials/howto_card') %>
 <% } %>
+<%
+// Alternating card designs (src/cardDesigns.ts): the design of each card on
+// these pages, and the class that picks up its rules. With one design every
+// card gets php and no class, exactly as before.
+const designOfCard = (i) => (typeof cardDesigns !== 'undefined' ? cardDesigns[i] : php);
+const designClassOf = (i) => (typeof cardDesignIndexes !== 'undefined' && cardDesignIndexes[i] > 0 ? ' d' + cardDesignIndexes[i] : '');
+%>
 <% tracks.forEach((track, index) => { %>
-    <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
-        <% if (php.logo && php.logo.length) { %>
-            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+    <% const cd = designOfCard(index); %>
+    <div class="card-front<%= designClassOf(index) %>" style="<%= !eco && cd.backgroundFrontType === 'solid' ? (cd.useFrontGradient ? 'background: linear-gradient(' + (cd.gradientFrontDegrees || 180) + 'deg, ' + (cd.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (cd.gradientFrontPosition || 50) - 50) + '%, ' + (cd.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (cd.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (cd.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+        <% if (cd.logo && cd.logo.length) { %>
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= cd.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
         <% } %>
         <%
         // Determine QR background type - handle backward compatibility
-        let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
-        let qrBgColor = php.qrBackgroundColor || '#ffffff';
+        let qrBgType = cd.qrBackgroundType || (cd.hideCircle ? 'none' : 'square');
+        let qrBgColor = cd.qrBackgroundColor || '#ffffff';
         %>
         <% if (qrBgType === 'square') { %>
             <!-- Square background for QR code using SVG -->
@@ -158,28 +167,28 @@
         <!-- Domain URL removed - always hidden -->
     </div>
     <div style="page-break-after: always;"></div>
-    <div class="card-back" style="position: relative;">
-        <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
-            <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+    <div class="card-back<%= designClassOf(index) %>" style="position: relative;">
+        <% if (cd.backgroundBackType !== 'solid' && cd.backgroundBack && cd.backgroundBack.length) { %>
+            <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= cd.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text" style="font-size:<%= cd.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= cd.fontColor || '#000000' %>;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= getYearFontSize(php.selectedFont) %>;font-weight:bold;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text" style="margin-top: 3mm;font-size:<%= getYearFontSize(cd.selectedFont) %>;font-weight:bold;padding: 0 6mm;color:<%= cd.fontColor || '#000000' %>;"><%= track.year %></div>
+            <div class="text" style="margin-top: 3mm;font-size:<%= cd.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= cd.fontColor || '#000000' %>;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
                 <% } %>
             </div>
         </div>
         <!-- Domain URL removed from back side - always hidden -->
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 5mm; right: 5mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 5mm; right: 5mm; font-size: 8px; color: <%= cd.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>

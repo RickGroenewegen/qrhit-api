@@ -179,6 +179,46 @@ describe('Copy.duplicatePayment – PaymentHasPlaylist', () => {
     expect(calls[0][0].data).not.toHaveProperty('id');
   });
 
+  it('copies the alternating designs of a line along with it', async () => {
+    const phpRows = [
+      {
+        id: 10,
+        paymentId: 'old_id',
+        playlistId: 'pl1',
+        extraDesigns: [
+          {
+            id: 70,
+            paymentHasPlaylistId: 10,
+            position: 2,
+            background: 'two.png',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      },
+      { id: 11, paymentId: 'old_id', playlistId: 'pl2', extraDesigns: [] },
+    ];
+    prismaMock.payment.findUnique.mockResolvedValueOnce(makePayment('tr_d', '300', phpRows));
+    prismaMock.payment.findFirst.mockResolvedValueOnce({ orderId: '300' });
+    prismaMock.payment.create.mockResolvedValueOnce({ id: 104 });
+    prismaMock.paymentHasPlaylist.create.mockResolvedValue({});
+
+    await makeSvc().duplicatePayment('tr_d');
+
+    expect(prismaMock.payment.findUnique.mock.calls[0][0].include).toEqual({
+      PaymentHasPlaylist: { include: { extraDesigns: true } },
+    });
+    const [first, second] = prismaMock.paymentHasPlaylist.create.mock.calls.map(
+      (call: any[]) => call[0].data
+    );
+    // The rows are recreated under the new line, without their old ids.
+    expect(first.extraDesigns).toEqual({
+      create: [{ position: 2, background: 'two.png' }],
+    });
+    // A single-design line creates no design rows.
+    expect(second).not.toHaveProperty('extraDesigns');
+  });
+
   it('skips PHP creation when no PHP rows', async () => {
     prismaMock.payment.findUnique.mockResolvedValueOnce(makePayment('tr_z', '100'));
     prismaMock.payment.findFirst.mockResolvedValueOnce({ orderId: '100' });

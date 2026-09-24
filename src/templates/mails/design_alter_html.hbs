@@ -2,6 +2,9 @@
 <p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }} {{ fullname }},</p>
 <p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.intro }}</p>
 <p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ reasonText }}</p>
+{{#if designsAffected}}
+<p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;"><strong style="color: #0b2c31;">{{ designsAffected }}</strong></p>
+{{/if}}
 {{#if flaggedImages}}
 <p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ flaggedImagesIntro }}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">

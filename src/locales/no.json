@@ -692,5 +692,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "Appdesigner",
   "mail.upgradeInvoicePurchaseExtraCards": "Ekstra kort",
   "mail.upgradeInvoicePurchaseGiftBox": "Gaveeske",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, design {{ number }}",
+  "design_alter.designsAffected": "Kortene dine veksler mellom flere design. Dette er design {{ designs }}."
 }

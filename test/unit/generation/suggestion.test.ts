@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Prisma } from '@prisma/client';
 import { outbound } from '../../helpers/recording-mock';
 
 /**
@@ -200,12 +201,16 @@ describe('getUserSuggestions', () => {
       boxEnabled: true,
       boxQuantity: 3,
     });
-    const rows = [{ id: 1, name: 'Song', hasSuggestion: 'false' }];
+    // COUNT(*) comes back from MySQL as a BigInt
+    const rows = [{ id: 1, name: 'Song', hasSuggestion: 'false', cardIndex: BigInt(4) }];
     routeRaw([[SQL.userTracks, rows]]);
 
     const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
 
-    expect(res.suggestions).toEqual(rows);
+    // cardIndex: the card's position in the deck, for its alternating design
+    expect(res.suggestions).toEqual([
+      { id: 1, name: 'Song', hasSuggestion: 'false', cardIndex: 4 },
+    ]);
     expect(res.metadata).toEqual({
       payment: {
         canBeSentToPrinterAt: new Date('2026-06-13T10:00:00Z'),
@@ -913,7 +918,11 @@ describe('processCorrections', () => {
       // order can re-enter the pipeline.
       expect(h.prisma.payment.update).toHaveBeenCalledWith({
         where: { id: 10 },
-        data: { printerHold: false, printerHoldReason: null },
+        data: {
+          printerHold: false,
+          printerHoldReason: null,
+          printerHoldDetails: Prisma.DbNull,
+        },
       });
       expect(h.queueGenerate).toHaveBeenCalledWith(
         'pay_1',

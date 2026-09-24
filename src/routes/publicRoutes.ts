@@ -670,6 +670,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         gradientPosition,
         frontOpacity,
         backOpacity,
+        extraDesigns,
       } = request.body;
 
       const success = await designer.updateCardDesign(
@@ -708,6 +709,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           gradientPosition,
           frontOpacity,
           backOpacity,
+          extraDesigns,
         }
       );
 

@@ -1,0 +1,62 @@
+<%
+// Alternating card designs (src/cardDesigns.ts). The template's own rules
+// style every card with design 1. A card of design k (0-based, k >= 1) also
+// carries the class d<k>, and the rules below restyle it with its design. The
+// including template passes its selectors, with {d} standing for that class:
+//   frontBefore - front whose ::before paints the artwork (printer)
+//   frontImage  - front <img class="background-image">, opacity only (digital)
+//   back        - back side, colour or gradient
+//   backImage   - back <img class="background-image-back">, opacity
+// Nothing is emitted for a single design.
+const cssDeck = typeof designs !== 'undefined' && Array.isArray(designs) ? designs : [];
+const cssSelector = (pattern, k) => pattern.split('{d}').join('d' + k);
+%>
+<% cssDeck.forEach((d, k) => { if (k === 0) return; %>
+<% if (typeof frontBefore !== 'undefined') { %>
+    <%= cssSelector(frontBefore, k) %> {
+        background: none;
+        <% if (d.backgroundFrontType !== 'solid') { %>
+            <% if (d.background && d.background.length) { %>
+            background-image: url('<%= process.env['API_URI'] %>/public/background/<%= d.background %>');
+            <% } else { %>
+            background-image: url('<%= process.env['API_URI'] %>/assets/images/background_brand.png');
+            <% } %>
+            background-size: cover;
+            background-position: center;
+        <% } %>
+        opacity: <%= (d.frontOpacity !== undefined ? d.frontOpacity : 100) / 100 %>;
+    }
+<% } %>
+<% if (typeof frontImage !== 'undefined') { %>
+    <%= cssSelector(frontImage, k) %> {
+        opacity: <%= (d.frontOpacity !== undefined ? d.frontOpacity : 100) / 100 %>;
+    }
+<% } %>
+<% if (typeof back !== 'undefined') { %>
+    <%= cssSelector(back, k) %> {
+        background: none;
+        <% if (d.backgroundBackType === 'solid') { %>
+            <% if (d.useGradient) {
+                const firstStop = Math.max(0, d.gradientPosition - 50);
+                const secondStop = Math.min(100, d.gradientPosition + 50);
+                const bgColor = d.backgroundBackColor || '#ffffff';
+                const gradColor = d.gradientBackgroundColor || '#ffffff';
+                const degrees = d.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (d.backgroundBackColor) { %>
+            background-color: <%= d.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
+        <% } else { %>
+        background-color: transparent;
+        <% } %>
+    }
+<% } %>
+<% if (typeof backImage !== 'undefined') { %>
+    <%= cssSelector(backImage, k) %> {
+        opacity: <%= (d.backOpacity !== undefined ? d.backOpacity : 50) / 100 %>;
+    }
+<% } %>
+<% }); %>

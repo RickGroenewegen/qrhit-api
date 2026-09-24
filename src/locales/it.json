@@ -711,5 +711,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "Designer dell’app",
   "mail.upgradeInvoicePurchaseExtraCards": "Carte extra",
   "mail.upgradeInvoicePurchaseGiftBox": "Scatola regalo",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, design {{ number }}",
+  "design_alter.designsAffected": "Le tue carte alternano tra vari design. Questo è il design {{ designs }}."
 }

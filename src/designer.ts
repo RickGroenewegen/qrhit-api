@@ -6,6 +6,11 @@ import { color, white } from 'console-log-colors';
 import sharp from 'sharp';
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import PrismaInstance from './prisma';
+import {
+  getExtraDesigns,
+  replaceExtraDesigns,
+  sanitizeExtraDesigns,
+} from './cardDesigns';
 
 class Designer {
   private static instance: Designer;
@@ -447,6 +452,7 @@ class Designer {
       // Get card design data from PaymentHasPlaylist (ALL design fields)
       const cardDesign = await this.prisma.$queryRaw<any[]>`
         SELECT
+          php.id AS paymentHasPlaylistId,
           php.background,
           php.logo,
           php.emoji,
@@ -508,10 +514,18 @@ class Designer {
           LIMIT 1
         `;
 
+        const { paymentHasPlaylistId, ...design } = cardDesign[0];
+        // Designs 2..10 when the cards alternate designs; empty for one design.
+        const extraDesigns = await getExtraDesigns(
+          Number(paymentHasPlaylistId),
+          this.prisma
+        );
+
         return {
           success: true,
           data: {
-            ...cardDesign[0],
+            ...design,
+            extraDesigns,
             firstTrackId: firstTrack.length > 0 ? firstTrack[0].trackId : null,
           },
         };
@@ -568,6 +582,9 @@ class Designer {
       gradientPosition?: number;
       frontOpacity?: number;
       backOpacity?: number;
+      // Designs 2..10 (see src/cardDesigns.ts). Absent leaves them as they
+      // are; an empty array goes back to one design.
+      extraDesigns?: unknown;
     }
   ): Promise<boolean> {
     try {
@@ -607,7 +624,7 @@ class Designer {
       }
 
       // Update the specific PaymentHasPlaylist record with the new design
-      await this.prisma.paymentHasPlaylist.update({
+      const line = await this.prisma.paymentHasPlaylist.update({
         where: {
           paymentId_playlistId_type_subType: {
             paymentId: paymentDbId,
@@ -647,7 +664,16 @@ class Designer {
           frontOpacity: design.frontOpacity,
           backOpacity: design.backOpacity,
         },
+        select: { id: true },
       });
+
+      if (design.extraDesigns !== undefined) {
+        await replaceExtraDesigns(
+          line.id,
+          sanitizeExtraDesigns(design.extraDesigns),
+          this.prisma
+        );
+      }
 
       this.logger.log(
         color.green.bold(

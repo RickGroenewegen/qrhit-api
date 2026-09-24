@@ -149,4 +149,44 @@ describe('computePrintFingerprint', () => {
   it('handles an empty track list', () => {
     expect(computePrintFingerprint(playlist, [])).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  describe('alternating designs', () => {
+    const design2 = { background: 'bg2.webp', qrColor: '#ff0000', fontColor: '#ffffff' };
+
+    it('keeps the single-design hash when there are no extra designs', () => {
+      // Lines generated before alternating designs must not all read as stale.
+      expect(computePrintFingerprint(playlist, tracks, [])).toBe(
+        computePrintFingerprint(playlist, tracks)
+      );
+    });
+
+    it('changes when a design is added', () => {
+      expect(computePrintFingerprint(playlist, tracks, [design2])).not.toBe(
+        computePrintFingerprint(playlist, tracks)
+      );
+    });
+
+    it('changes when an extra design is edited', () => {
+      const base = computePrintFingerprint(playlist, tracks, [design2]);
+      expect(
+        computePrintFingerprint(playlist, tracks, [{ ...design2, background: 'bg3.webp' }])
+      ).not.toBe(base);
+      expect(
+        computePrintFingerprint(playlist, tracks, [{ ...design2, qrColor: '#00ff00' }])
+      ).not.toBe(base);
+    });
+
+    it('changes when the designs swap places', () => {
+      const design3 = { ...design2, background: 'bg3.webp' };
+      expect(computePrintFingerprint(playlist, tracks, [design2, design3])).not.toBe(
+        computePrintFingerprint(playlist, tracks, [design3, design2])
+      );
+    });
+
+    it('ignores row bookkeeping on an extra design', () => {
+      expect(
+        computePrintFingerprint(playlist, tracks, [{ ...design2, id: 1, updatedAt: new Date() }])
+      ).toBe(computePrintFingerprint(playlist, tracks, [{ ...design2, id: 2 }]));
+    });
+  });
 });

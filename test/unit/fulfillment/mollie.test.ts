@@ -778,6 +778,43 @@ describe('getPaymentUri', () => {
     });
   });
 
+  it('stores alternating designs 2..N as rows of the line, sanitised', async () => {
+    const params = makeParams({
+      cart: {
+        items: [
+          makeItem({
+            qrColor: '#111111',
+            extraDesigns: [
+              {
+                background: 'two.png',
+                qrColor: '#222222',
+                backgroundImage: 'https://api/public/background/two.png',
+              },
+              { background: '../escape.png', fontColor: 'red;}' },
+            ],
+          }),
+        ],
+      },
+    });
+
+    await mollie.getPaymentUri(params, IP);
+
+    const row = prismaMock.payment.create.mock.calls[0][0].data.PaymentHasPlaylist.create[0];
+    // Design 1 stays in the line's own columns.
+    expect(row.qrColor).toBe('#111111');
+    const designs = row.extraDesigns.create;
+    expect(designs).toHaveLength(2);
+    expect(designs[0]).toMatchObject({ position: 2, background: 'two.png', qrColor: '#222222' });
+    expect(designs[0]).not.toHaveProperty('backgroundImage');
+    expect(designs[1]).toMatchObject({ position: 3, background: null, fontColor: '#000000' });
+  });
+
+  it('writes no design rows for a single-design line', async () => {
+    await mollie.getPaymentUri(makeParams(), IP);
+    const row = prismaMock.payment.create.mock.calls[0][0].data.PaymentHasPlaylist.create[0];
+    expect(row).not.toHaveProperty('extraDesigns');
+  });
+
   it('normalises tinyint 1/0 design flags to booleans', async () => {
     // A cart item rebuilt from a stored design (dashboard reorder, designer
     // page) carries MySQL tinyint flags from the raw SQL readers. Prisma

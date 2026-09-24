@@ -216,6 +216,9 @@ model Payment {
   // Why finalCheck put the order on hold (see finalCheckHoldReason); null for
   // a hold an admin placed by hand
   printerHoldReason        String?              @db.VarChar(32)
+  // Everything that failed check found: the order line, and each problem on
+  // its design and side (FinalCheckHoldDetails); cleared with the reason
+  printerHoldDetails       Json?
   suggestionWarningSent   Boolean              @default(false)
   suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
@@ -791,6 +794,9 @@ model PaymentHasPlaylist {
   aiPrompt                 String?                  @db.VarChar(250) // Original user prompt if this playlist was AI-generated
   orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                    PaymentHasPlaylistItem[]
+  // Designs 2..10 when the cards alternate designs; design 1 is always the
+  // columns above. See src/cardDesigns.ts.
+  extraDesigns             PaymentHasPlaylistDesign[]
   bingoFiles               BingoFile[]
   quizzes                  Quiz[]
   appDesign                AppDesign?
@@ -816,6 +822,52 @@ model PaymentHasPlaylistItem {
   @@unique([paymentHasPlaylistId, index])
   @@index([paymentHasPlaylistId])
   @@map("payment_has_playlist_item")
+}
+
+// Alternating card designs: card 1 gets design 1 (the design columns on
+// payment_has_playlist), card 2 design 2 (position 2 here), and so on, starting
+// again after the last one. A single-design order has no rows here. The
+// columns mirror the design columns of PaymentHasPlaylist, with the same
+// defaults; src/cardDesigns.ts lists them (CARD_DESIGN_COLUMNS).
+model PaymentHasPlaylistDesign {
+  id                      Int                @id @default(autoincrement())
+  paymentHasPlaylistId    Int
+  paymentHasPlaylist      PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+  position                Int // 2..10
+  emoji                   String?
+  background              String?
+  logo                    String?
+  selectedFont            String?            @default("Arial, sans-serif")
+  selectedFontSize        String?            @default("16px")
+  hideCircle              Boolean            @default(false)
+  qrBackgroundType        String             @default("square")
+  qrColor                 String             @default("#000000")
+  qrBackgroundColor       String             @default("#ffffff")
+  qrLogo                  String?
+  qrLogoScale             Int                @default(25)
+  backgroundFrontType     String?            @default("image")
+  backgroundFrontColor    String?            @default("#ffffff")
+  useFrontGradient        Boolean            @default(false)
+  gradientFrontColor      String?            @default("#ffffff")
+  gradientFrontDegrees    Int                @default(180)
+  gradientFrontPosition   Int                @default(50)
+  frontOpacity            Int                @default(100)
+  backgroundBackType      String?            @default("image")
+  backgroundBack          String?
+  backgroundBackColor     String?            @default("#ffffff")
+  fontColor               String?            @default("#000000")
+  useGradient             Boolean            @default(false)
+  gradientBackgroundColor String?            @default("#ffffff")
+  gradientDegrees         Int                @default(180)
+  gradientPosition        Int                @default(50)
+  backOpacity             Int                @default(50)
+  sameAsFront             Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@unique([paymentHasPlaylistId, position])
+  @@index([paymentHasPlaylistId])
+  @@map("payment_has_playlist_designs")
 }
 
 model AISearch {

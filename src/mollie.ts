@@ -39,6 +39,11 @@ import UpgradeInvoices, { customerFromOrder } from './upgradeInvoice';
 import SpotifyProvider from './providers/SpotifyProvider';
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
+  CARD_DESIGN_SELECT,
+  extraDesignRows,
+  sanitizeExtraDesigns,
+} from './cardDesigns';
+import {
   isSupportedCurrency,
   SupportedCurrency,
 } from './data/currency-map';
@@ -1989,6 +1994,7 @@ class Mollie {
         fast: true,
         printerHold: true,
         printerHoldReason: true,
+        printerHoldDetails: true,
         email: true,
         fullname: true,
         locale: true,
@@ -2069,6 +2075,11 @@ class Mollie {
             // Opacity
             frontOpacity: true,
             backOpacity: true,
+            // Designs 2..10 when the cards alternate designs
+            extraDesigns: {
+              select: CARD_DESIGN_SELECT,
+              orderBy: { position: 'asc' },
+            },
             // Box
             boxEnabled: true,
             boxQuantity: true,
@@ -2766,6 +2777,13 @@ class Mollie {
             (itemPrice - itemPriceWithoutVAT).toFixed(2)
           );
 
+          // Designs 2..10 when the cards alternate designs; the flat fields
+          // below stay design 1 (see src/cardDesigns.ts).
+          const extraDesigns =
+            item.productType === 'cards'
+              ? sanitizeExtraDesigns(item.extraDesigns)
+              : [];
+
           return {
             playlistId: playlistDatabaseIds[index],
             orderTypeId: orderType.id,
@@ -2817,6 +2835,9 @@ class Mollie {
             frontOpacity:
               item.frontOpacity !== undefined ? item.frontOpacity : 100,
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
+            ...(extraDesigns.length
+              ? { extraDesigns: { create: extraDesignRows(extraDesigns) } }
+              : {}),
             // Bingo enabled flag and price
             gamesEnabled:
               item.productType === 'cards' &&

@@ -716,5 +716,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "App-Designer",
   "mail.upgradeInvoicePurchaseExtraCards": "Zusätzliche Karten",
   "mail.upgradeInvoicePurchaseGiftBox": "Geschenkbox",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}, Design {{ number }}",
+  "design_alter.designsAffected": "Deine Karten wechseln zwischen mehreren Designs. Hier geht es um Design {{ designs }}."
 }

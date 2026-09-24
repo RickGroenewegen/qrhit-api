@@ -514,6 +514,8 @@
 	"design_alter.imageCardBack": "Card back",
 	"design_alter.imageBoxFront": "Box inlay (front)",
 	"design_alter.imageBoxBack": "Box inlay (back)",
+	"design_alter.imageDesign": "{{ image }}, design {{ number }}",
+	"design_alter.designsAffected": "Your cards take turns between several designs. This is about design {{ designs }}.",
 	"design_alter.clickButton": "Click the button below to open your design and adjust it:",
 	"design_alter.buttonText": "Update my design",
 	"design_alter.buttonFallback": "If the button doesn't work, copy and paste this link into your browser:",

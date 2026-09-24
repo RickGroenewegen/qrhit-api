@@ -388,6 +388,57 @@ describe('generate()', () => {
     expect(h.qr.generateQR).toHaveBeenCalledTimes(2);
   });
 
+  it('colours each QR code with the design of its card (alternating designs)', async () => {
+    const { mollie } = arrange(
+      {},
+      { qrColor: '#111111', numberOfTracks: 3, paymentHasPlaylistNumberOfTracks: 3 }
+    );
+    h.data.getTracks.mockResolvedValue([
+      { id: 1, trackId: 't1', paymentHasPlaylistId: 31 },
+      { id: 2, trackId: 't2', paymentHasPlaylistId: 31 },
+      { id: 3, trackId: 't3', paymentHasPlaylistId: 31 },
+    ]);
+    h.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValue([
+      { position: 2, qrColor: '#222222' },
+    ]);
+
+    await gen.generate('pay_1', '9.9.9.9', '', mollie);
+
+    expect(h.prisma.paymentHasPlaylistDesign.findMany).toHaveBeenCalledWith({
+      where: { paymentHasPlaylistId: 31 },
+      orderBy: { position: 'asc' },
+    });
+    const colours = Object.fromEntries(
+      h.qr.generateQRLambda.mock.calls.map((call: any[]) => [
+        call[1].split('/').pop(),
+        call[2],
+      ])
+    );
+    // Card 1 design 1, card 2 design 2, card 3 design 1 again.
+    expect(colours).toEqual({
+      't1.png': '#111111',
+      't2.png': '#222222',
+      't3.png': '#111111',
+    });
+  });
+
+  it('colours QR codes per design on the serial development path too', async () => {
+    const { mollie } = arrange({}, { qrColor: '#111111' });
+    h.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValue([
+      { position: 2, qrColor: '#222222' },
+    ]);
+    process.env['ENVIRONMENT'] = 'development';
+    try {
+      await gen.generate('pay_1', '1.1.1.1', '', mollie);
+    } finally {
+      process.env['ENVIRONMENT'] = 'test';
+    }
+    expect(h.qr.generateQR.mock.calls.map((call: any[]) => call[2])).toEqual([
+      '#111111',
+      '#222222',
+    ]);
+  });
+
   it('refreshPlaylists still refetches and stores tracks (refresh flag only logs)', async () => {
     const { mollie } = arrange();
 
@@ -619,6 +670,28 @@ describe('finalizeOrder()', () => {
     );
     expect(printerUpdates).toHaveLength(0);
     expect(h.cache.releaseLock).toHaveBeenCalledWith('finalizeOrder:pay_1');
+  });
+
+  it('fingerprints the alternating designs along with design 1', async () => {
+    const storedFingerprint = async () => {
+      const mollie = makeMollie(makePayment());
+      h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist()]);
+      h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([{ id: 41, index: 1 }]);
+      h.prisma.paymentHasPlaylist.update.mockClear();
+      await gen.finalizeOrder('pay_1', mollie);
+      return h.prisma.paymentHasPlaylist.update.mock.calls.find(
+        (call: any[]) => call[0].data.pdfFingerprint
+      )[0].data.pdfFingerprint;
+    };
+
+    const single = await storedFingerprint();
+    h.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValue([
+      { position: 2, background: 'two.png' },
+    ]);
+    const alternating = await storedFingerprint();
+
+    // Otherwise a corrected design 2 would ship the stale printer PDF.
+    expect(alternating).not.toBe(single);
   });
 
   it('links bingo-enabled digital orders to My Account in the mail', async () => {

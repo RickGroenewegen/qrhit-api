@@ -481,11 +481,13 @@ describe('account & verification mails', () => {
           key: 'cardFront',
           filename: 'card-front.png',
           buffer: Buffer.from('cardfront-png'),
+          design: null,
         },
         {
           key: 'boxFront',
           filename: 'box-front.png',
           buffer: Buffer.from('boxfront-png'),
+          design: null,
         },
       ]
     );
@@ -501,6 +503,32 @@ describe('account & verification mails', () => {
     expect(raw).toContain('Content-ID: <flag1>');
     expect(raw).toContain('filename="card-front.png"');
     expect(raw).toContain('filename="box-front.png"');
+  });
+
+  it('sendDesignAlterMail names the alternating design a flagged page and the problem belong to', async () => {
+    await mail.sendDesignAlterMail(
+      'designer@example.com',
+      'Des',
+      'en',
+      'pay_1',
+      'uhash',
+      'pl_1',
+      'hitster',
+      [
+        {
+          key: 'cardBack',
+          filename: 'card-back-design-2.png',
+          buffer: Buffer.from('cardback-png'),
+          design: 2,
+        },
+      ],
+      'card',
+      [2, 4]
+    );
+    const raw = lastRaw();
+    expect(raw).toContain('Card back, design 2');
+    expect(raw).toContain('This is about design 2, 4.');
+    expect(raw).toContain('filename="card-back-design-2.png"');
   });
 
   it('sendDesignAlterMail (hitster) without flagged images omits the image block', async () => {

@@ -707,5 +707,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "アプリデザイナー",
   "mail.upgradeInvoicePurchaseExtraCards": "追加カード",
   "mail.upgradeInvoicePurchaseGiftBox": "ギフトボックス",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}、デザイン{{ number }}",
+  "design_alter.designsAffected": "カードには複数のデザインが順番に使われます。これはデザイン{{ designs }}です。"
 }

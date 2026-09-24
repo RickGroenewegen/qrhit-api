@@ -1,6 +1,7 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import { PDFParse } from 'pdf-parse';
+import sharp from 'sharp';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
@@ -22,6 +23,49 @@ export interface FinalCheckFlaggedImage {
   // the rendered page PNG, kept in-memory so the mail layer is self-contained
   // (the temp render dir is deleted before the mail is built)
   buffer: Buffer;
+  // Which of the deck's alternating designs it shows (1-based, see
+  // src/cardDesigns.ts); null for a single-design deck and the box inlay.
+  design: number | null;
+}
+
+export type FinalCheckPlace =
+  | 'card-front'
+  | 'card-back'
+  | 'card'
+  | 'box-front'
+  | 'box-back'
+  | 'box';
+
+/**
+ * One thing the check found, pinned to the design and side it is on. `design`
+ * is the 1-based number of one of the deck's alternating designs; null when
+ * the deck has a single design, for the box inlay, and for a text hit on a
+ * sheet (whose page holds every design). Stored with the hold
+ * (Payment.printerHoldDetails) so the dashboard can show it per design.
+ */
+export interface FinalCheckProblem {
+  check: Exclude<FinalCheckFailureReason, 'pdf-missing'>;
+  design: number | null;
+  place: FinalCheckPlace;
+  message: string;
+}
+
+const PLACE_LABELS: Record<FinalCheckPlace, string> = {
+  'card-front': 'Card front',
+  'card-back': 'Card back',
+  card: 'Card',
+  'box-front': 'Box inlay front',
+  'box-back': 'Box inlay back',
+  box: 'Box inlay',
+};
+
+/** "Design 2 back: <message>" or "Card back: <message>" for Pushover, logs and details. */
+export function describeFinalCheckProblem(problem: FinalCheckProblem): string {
+  const side = problem.place.split('-')[1];
+  const where = problem.design
+    ? `Design ${problem.design}${side ? ` ${side}` : ''}`
+    : PLACE_LABELS[problem.place];
+  return `${where}: ${problem.message}`;
 }
 
 // Which tab of the user-suggestions correction page the customer should land
@@ -46,7 +90,24 @@ export type FinalCheckResult =
       // editor. When both the card and the box are at fault we send the user
       // to the card tab — the card is the primary product.
       correctionTab?: FinalCheckCorrectionTab;
+      // How many alternating designs the deck has, and every problem the
+      // failing check found, each pinned to its design and side.
+      designCount: number;
+      problems: FinalCheckProblem[];
     };
+
+/** One design's front and back, as page images. */
+interface DesignSides {
+  // 1-based design number; null for a single-design deck
+  design: number | null;
+  front: string;
+  back: string;
+}
+
+// The printer_sheets layout (views/pdf_printer_sheets.ejs): an A4 page with
+// 15mm margins holding rows of three 60mm cards; the back page mirrors every
+// row for duplex printing.
+const SHEET = { widthMm: 210, marginMm: 15, cardMm: 60, perRow: 3, perPage: 12 };
 
 // Both flagged → 'card'. The card is the primary product, and the tab bar
 // keeps the box one click away.
@@ -84,7 +145,10 @@ class FinalCheck {
   }): Promise<FinalCheckResult> {
     const phps = await this.prisma.paymentHasPlaylist.findMany({
       where: { paymentId: payment.id, type: 'physical' },
-      include: { playlist: true },
+      include: {
+        playlist: true,
+        extraDesigns: { select: { position: true }, orderBy: { position: 'asc' } },
+      },
     });
 
     if (phps.length === 0) {
@@ -113,10 +177,15 @@ class FinalCheck {
     payment: { id: number; paymentId: string; qrSubDir: string | null },
     php: any
   ): Promise<FinalCheckResult> {
+    // Alternating card designs (src/cardDesigns.ts): card k has design
+    // k % designCount, so the first card of every design is checked.
+    const designCount = 1 + (php.extraDesigns?.length ?? 0);
     const failBase = {
       paymentHasPlaylistId: php.id,
       playlistDbId: php.playlist.id,
       playlistId: php.playlist.playlistId,
+      designCount,
+      problems: [] as FinalCheckProblem[],
     };
 
     const filename = php.filename;
@@ -161,23 +230,31 @@ class FinalCheck {
         })`
       );
 
+      const isSheets = (php.subType || 'none') === 'sheets';
+      // A printer PDF opens with the how-to card when there is one; sheets
+      // never carry it.
+      const firstCardPage = !isSheets && php.addHowToCard ? 3 : 1;
+
       this.logVision(
         payment.paymentId,
         php.id,
-        'rendering PDF pages 1-2 → PNG'
+        `rendering the first card of ${designCount} design(s) → PNG`
       );
-      const [pdfPage1, pdfPage2] = await this.pdfToPngPages(
+      const pdfSides = await this.designSides(
         pdfPath,
         tmpDir,
-        'pdf'
+        'pdf',
+        isSheets,
+        designCount,
+        firstCardPage
       );
-
-      const isSheets = (php.subType || 'none') === 'sheets';
 
       const liveBuffer = await this.renderLivePdf(
         payment,
         php,
-        isSheets
+        isSheets,
+        designCount,
+        firstCardPage
       ).catch((e) => {
         this.logger.log(
           color.yellow.bold(
@@ -189,20 +266,24 @@ class FinalCheck {
         return null as Buffer | null;
       });
 
-      let livePage1: string | null = null;
-      let livePage2: string | null = null;
+      let liveSides: DesignSides[] | null = null;
 
       if (liveBuffer) {
         this.logVision(
           payment.paymentId,
           php.id,
-          `live re-render OK (${liveBuffer.length} bytes), rasterizing pages 1-2`
+          `live re-render OK (${liveBuffer.length} bytes), rasterizing ${designCount} design(s)`
         );
         const livePdfPath = path.join(tmpDir, `live.pdf`);
         await fs.writeFile(livePdfPath, liveBuffer);
-        const [p1, p2] = await this.pdfToPngPages(livePdfPath, tmpDir, 'live');
-        livePage1 = p1;
-        livePage2 = p2;
+        liveSides = await this.designSides(
+          livePdfPath,
+          tmpDir,
+          'live',
+          isSheets,
+          designCount,
+          firstCardPage
+        );
       } else {
         this.logVision(
           payment.paymentId,
@@ -211,8 +292,8 @@ class FinalCheck {
         );
       }
 
-      if (livePage1 && livePage2) {
-        const designPrompt = `You are verifying that a printed PDF page broadly reflects the user's intended card design. Image A is one page from the PDF stored on disk. Image B is a freshly-rendered version of the same page from the live design route.
+      if (liveSides) {
+        const designPrompt =`You are verifying that a printed PDF page broadly reflects the user's intended card design. Image A is one page from the PDF stored on disk. Image B is a freshly-rendered version of the same page from the live design route.
 
 Decide whether the two images show the SAME OVERALL DESIGN. Be lenient — we only want to catch cases where the user's actual visual design has clearly drifted (wrong background, wrong artwork, wrong layout, wrong fonts, missing major elements, wrong colors, broken/blank rendering).
 
@@ -227,40 +308,34 @@ Only set match=false when a HUMAN looking at the two images would say "those are
 
 Reply STRICTLY as JSON: {"match": true|false, "reason": "string"}`;
 
-        this.logVision(payment.paymentId, php.id, 'design-match page 1 → asking GPT');
-        const r1 = await this.chatgpt.askWithImages(designPrompt, [
-          pdfPage1,
-          livePage1,
-        ]);
-        this.logVision(
-          payment.paymentId,
-          php.id,
-          `design-match page 1 → match=${r1?.match} ${r1?.reason ? `reason="${r1.reason}"` : ''}`
-        );
+        const mismatches: FinalCheckProblem[] = [];
+        for (const [index, stored] of pdfSides.entries()) {
+          const live = liveSides[index];
+          for (const side of ['front', 'back'] as const) {
+            const label = `design-match ${this.sideLabel(stored.design, side)}`;
+            this.logVision(payment.paymentId, php.id, `${label} → asking GPT`);
+            const r = await this.chatgpt.askWithImages(designPrompt, [
+              stored[side],
+              live[side],
+            ]);
+            this.logVision(
+              payment.paymentId,
+              php.id,
+              `${label} → match=${r?.match} ${r?.reason ? `reason="${r.reason}"` : ''}`
+            );
+            if (r?.match === false) {
+              mismatches.push({
+                check: 'design-mismatch',
+                design: stored.design,
+                place: side === 'front' ? 'card-front' : 'card-back',
+                message: r.reason || 'mismatch',
+              });
+            }
+          }
+        }
 
-        this.logVision(payment.paymentId, php.id, 'design-match page 2 → asking GPT');
-        const r2 = await this.chatgpt.askWithImages(designPrompt, [
-          pdfPage2,
-          livePage2,
-        ]);
-        this.logVision(
-          payment.paymentId,
-          php.id,
-          `design-match page 2 → match=${r2?.match} ${r2?.reason ? `reason="${r2.reason}"` : ''}`
-        );
-
-        if (r1?.match === false || r2?.match === false) {
-          return {
-            ok: false,
-            reason: 'design-mismatch',
-            userActionable: false,
-            details: `Page 1: ${
-              r1?.match === false ? r1.reason || 'mismatch' : 'ok'
-            } | Page 2: ${
-              r2?.match === false ? r2.reason || 'mismatch' : 'ok'
-            }`,
-            ...failBase,
-          };
+        if (mismatches.length) {
+          return this.failure('design-mismatch', false, mismatches, failBase);
         }
       }
 
@@ -303,10 +378,20 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
         path: string;
         filename: string;
         label: string;
-      }[] = [
-        { key: 'cardFront', path: pdfPage1, filename: 'card-front.png', label: 'card front' },
-        { key: 'cardBack', path: pdfPage2, filename: 'card-back.png', label: 'card back' },
-      ];
+        design: number | null;
+        place: FinalCheckPlace;
+      }[] = pdfSides.flatMap((sides) =>
+        (['front', 'back'] as const).map((side) => ({
+          key: side === 'front' ? ('cardFront' as const) : ('cardBack' as const),
+          path: sides[side],
+          filename: sides.design
+            ? `card-${side}-design-${sides.design}.png`
+            : `card-${side}.png`,
+          label: this.sideLabel(sides.design, side),
+          design: sides.design,
+          place: side === 'front' ? ('card-front' as const) : ('card-back' as const),
+        }))
+      );
 
       if (boxPdfPath) {
         try {
@@ -321,12 +406,16 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
             path: boxPage1,
             filename: 'box-front.png',
             label: 'box inlay front',
+            design: null,
+            place: 'box-front',
           });
           hitsterPages.push({
             key: 'boxBack',
             path: boxPage2,
             filename: 'box-back.png',
             label: 'box inlay back',
+            design: null,
+            place: 'box-back',
           });
         } catch (e) {
           this.logVision(
@@ -340,7 +429,7 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
       }
 
       const flaggedImages: FinalCheckFlaggedImage[] = [];
-      const flaggedDetails: string[] = [];
+      const hitsterProblems: FinalCheckProblem[] = [];
       for (const page of hitsterPages) {
         this.logVision(
           payment.paymentId,
@@ -363,41 +452,66 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
             key: page.key,
             filename: page.filename,
             buffer: await fs.readFile(page.path),
+            design: page.design,
           });
-          flaggedDetails.push(
-            `${page.label}: ${verdict.evidence || 'Hitster-like elements detected'}`
-          );
+          hitsterProblems.push({
+            check: 'hitster',
+            design: page.design,
+            place: page.place,
+            message: verdict.evidence || 'Hitster-like elements detected',
+          });
         }
       }
 
       if (flaggedImages.length > 0) {
         return {
-          ok: false,
-          reason: 'hitster',
-          userActionable: true,
-          details: `Visual: ${flaggedDetails.join(' | ')}`,
+          ...this.failure('hitster', true, hitsterProblems, failBase),
           flaggedImages,
           correctionTab: correctionTabForFlaggedKeys(
             flaggedImages.map((i) => i.key)
           ),
-          ...failBase,
         };
       }
 
-      for (const target of [
-        { label: 'card', path: pdfPath, tab: 'card' as const },
+      // The printed text. A printer PDF has pages of its own per design, so a
+      // hit names the design; a sheet page holds every design at once.
+      const textTargets: {
+        label: string;
+        path: string;
+        pages: number[];
+        design: number | null;
+        place: FinalCheckPlace;
+        tab: FinalCheckCorrectionTab;
+      }[] = [
+        ...(isSheets
+          ? [{ label: 'card', path: pdfPath, pages: [1, 2], design: null, place: 'card' as const, tab: 'card' as const }]
+          : pdfSides.map((sides, index) => {
+              const front = firstCardPage + 2 * index;
+              return {
+                label: this.sideLabel(sides.design, null),
+                path: pdfPath,
+                pages: [front, front + 1],
+                design: sides.design,
+                place: 'card' as const,
+                tab: 'card' as const,
+              };
+            })),
         ...(boxPdfPath
-          ? [{ label: 'box inlay', path: boxPdfPath, tab: 'box' as const }]
+          ? [{ label: 'box inlay', path: boxPdfPath, pages: [1, 2], design: null, place: 'box' as const, tab: 'box' as const }]
           : []),
-      ]) {
+      ];
+      const textProblems: FinalCheckProblem[] = [];
+      let textTab: FinalCheckCorrectionTab | null = null;
+      for (const target of textTargets) {
         try {
           this.logVision(
             payment.paymentId,
             php.id,
-            `Hitster textual scan (${target.label}) → extracting PDF text (pages 1-2)`
+            `Hitster textual scan (${target.label}) → extracting PDF text (pages ${target.pages.join(', ')})`
           );
           const { matched, chars } = await this.pdfContainsHitsterText(
-            target.path
+            target.path,
+            target.pages
           );
           this.logVision(
             payment.paymentId,
@@ -405,14 +519,14 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
             `Hitster textual scan (${target.label}) → matched=${matched} (${chars} chars scanned)`
           );
           if (matched) {
-            return {
-              ok: false,
-              reason: 'hitster',
-              userActionable: true,
-              details: `The word "Hitster" was found in the printed text of the ${target.label}.`,
-              correctionTab: target.tab,
-              ...failBase,
-            };
+            textProblems.push({
+              check: 'hitster',
+              design: target.design,
+              place: target.place,
+              message: 'the word "Hitster" is in the printed text',
+            });
+            // The card is the primary product: it wins the correction tab.
+            textTab = textTab === 'card' ? 'card' : target.tab;
           }
         } catch (e) {
           this.logger.log(
@@ -425,7 +539,14 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
         }
       }
 
-      const readabilityPrompt = `You are checking whether the artist / title / year text on a printed music-trivia card is readable by a human at arm's length.
+      if (textProblems.length > 0) {
+        return {
+          ...this.failure('hitster', true, textProblems, failBase),
+          correctionTab: textTab ?? 'card',
+        };
+      }
+
+      const readabilityPrompt =`You are checking whether the artist / title / year text on a printed music-trivia card is readable by a human at arm's length.
 
 You will receive two images. Each image is one page of a PDF. Depending on the product type, a page may show:
   (a) ONE single card filling the page, or
@@ -450,32 +571,37 @@ If even ONE card on the page has unreadable artist/title/year text due to poor c
 
 Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
 
-      this.logVision(
-        payment.paymentId,
-        php.id,
-        'readability/contrast → asking GPT (pages 1+2)'
-      );
-      const readResult = await this.chatgpt.askWithImages(readabilityPrompt, [
-        pdfPage1,
-        pdfPage2,
-      ]);
-      this.logVision(
-        payment.paymentId,
-        php.id,
-        `readability/contrast → readable=${readResult?.readable} ${
-          readResult?.details ? `details="${readResult.details}"` : ''
-        }`
-      );
-      if (readResult && readResult.readable === false) {
-        return {
-          ok: false,
-          reason: 'unreadable',
-          userActionable: false,
-          details:
-            readResult.details ||
-            'Artist/title/year text has insufficient contrast against its background.',
-          ...failBase,
-        };
+      // The artist, title and year are on the back, so that is where a
+      // problem is pinned.
+      const unreadable: FinalCheckProblem[] = [];
+      for (const sides of pdfSides) {
+        const label = `readability/contrast ${this.sideLabel(sides.design, null)}`;
+        this.logVision(payment.paymentId, php.id, `${label} → asking GPT`);
+        const readResult = await this.chatgpt.askWithImages(readabilityPrompt, [
+          sides.front,
+          sides.back,
+        ]);
+        this.logVision(
+          payment.paymentId,
+          php.id,
+          `${label} → readable=${readResult?.readable} ${
+            readResult?.details ? `details="${readResult.details}"` : ''
+          }`
+        );
+        if (readResult && readResult.readable === false) {
+          unreadable.push({
+            check: 'unreadable',
+            design: sides.design,
+            place: 'card-back',
+            message:
+              readResult.details ||
+              'Artist/title/year text has insufficient contrast against its background.',
+          });
+        }
+      }
+
+      if (unreadable.length) {
+        return this.failure('unreadable', false, unreadable, failBase);
       }
 
       this.logVision(payment.paymentId, php.id, 'all checks passed ✓');
@@ -483,6 +609,118 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
     } finally {
       await cleanup();
     }
+  }
+
+  /** A failed check with its problems, described one by one in `details`. */
+  private failure(
+    reason: FinalCheckProblem['check'],
+    userActionable: boolean,
+    problems: FinalCheckProblem[],
+    failBase: {
+      paymentHasPlaylistId: number;
+      playlistDbId: number;
+      playlistId: string;
+      designCount: number;
+    }
+  ): Extract<FinalCheckResult, { ok: false }> {
+    return {
+      ok: false,
+      reason,
+      userActionable,
+      details: problems.map(describeFinalCheckProblem).join(' | '),
+      ...failBase,
+      problems,
+    };
+  }
+
+  /** "design 2 back" / "card back" / "design 2" / "card", for the logs. */
+  private sideLabel(design: number | null, side: 'front' | 'back' | null): string {
+    const what = design ? `design ${design}` : 'card';
+    return side ? `${what} ${side}` : what;
+  }
+
+  /**
+   * The front and back of the first card of every design, as PNGs.
+   *
+   * A printer PDF has one card per page pair: design d is on the pages of
+   * card d (after the how-to card, when there is one). A sheet holds twelve
+   * cards per page, fronts on page 1 and backs on page 2, so a deck with
+   * several designs gets each design's card cut out of the sheet; a
+   * single-design sheet is checked as the whole page, as it always was.
+   */
+  private async designSides(
+    pdfPath: string,
+    saveDir: string,
+    prefix: string,
+    isSheets: boolean,
+    designCount: number,
+    firstCardPage: number
+  ): Promise<DesignSides[]> {
+    const numberOf = (index: number) => (designCount > 1 ? index + 1 : null);
+
+    if (isSheets) {
+      const [front, back] = await this.pdfToPngPageList(pdfPath, saveDir, prefix, [1, 2]);
+      if (designCount === 1) {
+        return [{ design: null, front, back }];
+      }
+      const sides: DesignSides[] = [];
+      for (let card = 0; card < Math.min(designCount, SHEET.perPage); card++) {
+        const row = Math.floor(card / SHEET.perRow);
+        const column = card % SHEET.perRow;
+        sides.push({
+          design: numberOf(card),
+          front: await this.cropSheetCard(front, row, column, `${prefix}_design${card + 1}_front.png`),
+          // The back page mirrors each row for duplex printing
+          back: await this.cropSheetCard(
+            back,
+            row,
+            SHEET.perRow - 1 - column,
+            `${prefix}_design${card + 1}_back.png`
+          ),
+        });
+      }
+      return sides;
+    }
+
+    const pages = Array.from({ length: designCount }, (_, index) => firstCardPage + 2 * index);
+    const images = await this.pdfToPngPageList(
+      pdfPath,
+      saveDir,
+      prefix,
+      pages.flatMap((front) => [front, front + 1])
+    );
+    return pages.map((_, index) => ({
+      design: numberOf(index),
+      front: images[2 * index],
+      back: images[2 * index + 1],
+    }));
+  }
+
+  /** One 60mm card cut out of a rendered sheet page (see SHEET). */
+  private async cropSheetCard(
+    pagePng: string,
+    row: number,
+    column: number,
+    filename: string
+  ): Promise<string> {
+    const page = await fs.readFile(pagePng);
+    const { width } = await sharp(page).metadata();
+    const pxPerMm = (width || 0) / SHEET.widthMm;
+    const size = Math.floor(SHEET.cardMm * pxPerMm);
+    const out = path.join(path.dirname(pagePng), filename);
+    await fs.writeFile(
+      out,
+      await sharp(page)
+        .extract({
+          left: Math.round((SHEET.marginMm + column * SHEET.cardMm) * pxPerMm),
+          top: Math.round((SHEET.marginMm + row * SHEET.cardMm) * pxPerMm),
+          width: size,
+          height: size,
+        })
+        .png()
+        .toBuffer()
+    );
+    return out;
   }
 
   private async pdfToPngPages(
@@ -517,13 +755,51 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
     }
   }
 
+  /** pdfToPngPages for any list of (1-based) pages, in the order asked. */
+  private async pdfToPngPageList(
+    pdfPath: string,
+    saveDir: string,
+    prefix: string,
+    pageNumbers: number[]
+  ): Promise<string[]> {
+    const buf = await fs.readFile(pdfPath);
+    const parser = new PDFParse({ data: new Uint8Array(buf) });
+    try {
+      const result = await parser.getScreenshot({
+        partial: pageNumbers,
+        scale: 2.0,
+        imageBuffer: true,
+        imageDataUrl: false,
+      });
+      const pages = result.pages || [];
+      const files: string[] = [];
+      for (const pageNumber of pageNumbers) {
+        const page = pages.find((p) => p.pageNumber === pageNumber);
+        if (!page?.data) {
+          throw new Error(
+            `pdf-parse getScreenshot returned no usable data for page ${pageNumber}`
+          );
+        }
+        const file = path.join(saveDir, `${prefix}_page${pageNumber}.png`);
+        await fs.writeFile(file, Buffer.from(page.data as Uint8Array));
+        files.push(file);
+      }
+      return files;
+    } finally {
+      try {
+        await parser.destroy();
+      } catch {}
+    }
+  }
+
   private async pdfContainsHitsterText(
-    pdfPath: string
+    pdfPath: string,
+    pages: number[]
   ): Promise<{ matched: boolean; chars: number }> {
     const buf = await fs.readFile(pdfPath);
     const parser = new PDFParse({ data: new Uint8Array(buf) });
     try {
-      const parsed = await parser.getText({ first: 2 });
+      const parsed = await parser.getText({ partial: pages });
       const text = parsed.pages?.map((p) => p.text).join(' ') || '';
       return { matched: /hitster/i.test(text), chars: text.length };
     } finally {
@@ -533,14 +809,22 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
     }
   }
 
+  /**
+   * The first pages of the order as the live design route draws them now.
+   * A printer render runs to the first card of the last design (past the
+   * how-to card, when there is one), so every design has pages to compare
+   * against; a sheet holds them all on its first two pages.
+   */
   private async renderLivePdf(
     payment: { paymentId: string; qrSubDir: string | null },
     php: any,
-    isSheets: boolean
+    isSheets: boolean,
+    designCount: number = 1,
+    firstCardPage: number = 1
   ): Promise<Buffer> {
     const template = isSheets ? 'printer_sheets' : 'printer';
     const startIndex = 0;
-    const endIndex = isSheets ? 11 : 0;
+    const endIndex = isSheets ? 11 : designCount - 1;
     const subdir = await resolveQrSubDir(payment.qrSubDir, php.id);
     const ecoInt = php.eco ? 1 : 0;
     const itemIndex = 0;
@@ -552,7 +836,7 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
       marginRight: 0,
       marginBottom: 0,
       marginLeft: 0,
-      pageRanges: '1-2',
+      pageRanges: isSheets ? '1-2' : `1-${firstCardPage + 2 * designCount - 1}`,
     };
 
     if (isSheets) {

@@ -293,6 +293,10 @@ export async function getTracks(
   // Note: COALESCE(NULLIF(tei.column, ''), tracks.column) is used for string fields
   // to handle cases where extra info might be an empty string instead of NULL.
   // For numeric fields like year, COALESCE(tei.year, tracks.year) is sufficient.
+  // The trackId tie-break in the ORDER BY matters: playlists stored without an
+  // order have 0 on every row, and alternating card designs
+  // (src/cardDesigns.ts) number the cards in this order in separate queries
+  // (QR codes, each PDF chunk, the corrections page), which all have to agree.
   const tracks = await deps.prisma.$queryRaw`
       SELECT
           tracks.id,
@@ -315,7 +319,7 @@ export async function getTracks(
       INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
       LEFT JOIN trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
       WHERE playlist_has_tracks.playlistId = ${playlistId}
-      ORDER BY playlist_has_tracks.order ASC`;
+      ORDER BY playlist_has_tracks.order ASC, playlist_has_tracks.trackId ASC`;
 
   if (paymentHasPlaylistId) {
     for (const track of tracks as any[]) {

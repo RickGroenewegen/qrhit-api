@@ -706,5 +706,7 @@
   "mail.upgradeInvoicePurchaseAppDesign": "应用设计师",
   "mail.upgradeInvoicePurchaseExtraCards": "额外卡片",
   "mail.upgradeInvoicePurchaseGiftBox": "礼盒",
-  "mail.upgradeInvoicePurchaseQRGames": "QRGames"
+  "mail.upgradeInvoicePurchaseQRGames": "QRGames",
+  "design_alter.imageDesign": "{{ image }}，设计 {{ number }}",
+  "design_alter.designsAffected": "你的卡片会轮换使用多种设计。这是设计 {{ designs }}。"
 }

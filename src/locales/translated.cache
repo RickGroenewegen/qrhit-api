@@ -9930,5 +9930,31 @@
     "cn",
     "sv",
     "no"
+  ],
+  "design_alter.imageDesign": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.designsAffected": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
   ]
 }

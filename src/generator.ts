@@ -36,9 +36,10 @@ import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
-import { finalCheckHoldReason } from './finalCheckHoldReason';
+import { finalCheckHoldDetails, finalCheckHoldReason } from './finalCheckHoldReason';
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 import { computePrintFingerprint } from './printFingerprint';
+import { deckDesigns, designIndexForCard, getExtraDesigns } from './cardDesigns';
 
 class Generator {
   private static instance: Generator;
@@ -439,6 +440,9 @@ class Generator {
       data: {
         printerHold: true,
         printerHoldReason: finalCheckHoldReason(check),
+        // What the dashboard shows under the hold: every problem, on which
+        // order line, design and side.
+        printerHoldDetails: finalCheckHoldDetails(check) as any,
       },
     });
 
@@ -486,7 +490,14 @@ class Generator {
         check.playlistId,
         check.reason === 'hitster' ? 'hitster' : 'inappropriate',
         check.flaggedImages,
-        check.correctionTab
+        check.correctionTab,
+        [
+          ...new Set(
+            check.problems
+              .map((problem) => problem.design)
+              .filter((design): design is number => design !== null)
+          ),
+        ].sort((a, b) => a - b)
       );
     }
   }
@@ -959,48 +970,29 @@ class Generator {
     )}`;
     await this.utils.createDir(outputDir);
 
-    // A centre logo is drawn into the QR bitmap rather than overlaid by the
-    // templates, so every template gets it and nothing can misalign - see
-    // src/qr-logo.ts.
-    // resolveLogoPath rejects anything that is not a plain filename inside the
-    // logo directory, so a crafted qrLogo cannot make sharp read elsewhere.
-    const qrLogoPath = resolveLogoPath(
-      process.env['PUBLIC_DIR'] as string,
-      playlist.qrLogo
+    // Alternating designs: card i takes design i % n, QR colour and centre
+    // logo included. dbTracks is in deck order (data.getTracks), the same
+    // order the PDF route numbers its cards in. One design is the row itself.
+    const designs = deckDesigns(
+      playlist,
+      await getExtraDesigns(playlist.paymentHasPlaylistId, this.prisma)
     );
-    if (playlist.qrLogo && !qrLogoPath) {
-      this.logger.log(
-        color.yellow.bold(
-          `Ignoring invalid QR logo filename ${color.white.bold(
-            playlist.qrLogo
-          )}`
-        )
-      );
-    }
-    const qrLogoOptions = qrLogoPath
-      ? {
-          logoPath: qrLogoPath,
-          scale: clampScale(playlist.qrLogoScale),
-          // The logo has to read as QR "light": the shape colour when there is
-          // one, white when the QR sits directly on the card.
-          backingColor:
-            (playlist.qrBackgroundType || 'square') === 'none'
-              ? '#ffffff'
-              : playlist.qrBackgroundColor || '#ffffff',
-        }
-      : null;
-    const drawLogo = async (outputPath: string, link: string) => {
-      if (!qrLogoOptions) return;
-      await applyQrLogo(outputPath, link, qrLogoOptions, this.logger);
+    const qrLogoOptions = designs.map((design) => this.qrLogoOptionsFor(design));
+    const designOf = (index: number) =>
+      designIndexForCard(designs.length, index);
+    const drawLogo = async (outputPath: string, link: string, index: number) => {
+      const options = qrLogoOptions[designOf(index)];
+      if (!options) return;
+      await applyQrLogo(outputPath, link, options, this.logger);
     };
 
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
-      for (const track of dbTracks) {
+      for (const [index, track] of dbTracks.entries()) {
         const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
         const outputPath = `${outputDir}/${track.trackId}.png`;
-        await this.qr.generateQR(link, outputPath, playlist.qrColor);
-        await drawLogo(outputPath, link);
+        await this.qr.generateQR(link, outputPath, designs[designOf(index)].qrColor);
+        await drawLogo(outputPath, link, index);
       }
     } else {
       // Use new method in parallel batches of 25
@@ -1008,15 +1000,58 @@ class Generator {
       for (let i = 0; i < dbTracks.length; i += batchSize) {
         const batch = dbTracks.slice(i, i + batchSize);
         await Promise.all(
-          batch.map(async (track: any) => {
+          batch.map(async (track: any, offset: number) => {
+            const index = i + offset;
             const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
             const outputPath = `${outputDir}/${track.trackId}.png`;
-            await this.qr.generateQRLambda(link, outputPath, playlist.qrColor);
-            await drawLogo(outputPath, link);
+            await this.qr.generateQRLambda(
+              link,
+              outputPath,
+              designs[designOf(index)].qrColor
+            );
+            await drawLogo(outputPath, link, index);
           })
         );
       }
     }
+  }
+
+  /**
+   * Options for drawing a design's centre logo into its QR codes, or null when
+   * the design has none.
+   *
+   * A centre logo is drawn into the QR bitmap rather than overlaid by the
+   * templates, so every template gets it and nothing can misalign - see
+   * src/qr-logo.ts. resolveLogoPath rejects anything that is not a plain
+   * filename inside the logo directory, so a crafted qrLogo cannot make sharp
+   * read elsewhere.
+   */
+  private qrLogoOptionsFor(design: any) {
+    const qrLogoPath = resolveLogoPath(
+      process.env['PUBLIC_DIR'] as string,
+      design.qrLogo
+    );
+    if (design.qrLogo && !qrLogoPath) {
+      this.logger.log(
+        color.yellow.bold(
+          `Ignoring invalid QR logo filename ${color.white.bold(
+            design.qrLogo
+          )}`
+        )
+      );
+    }
+    return qrLogoPath
+      ? {
+          logoPath: qrLogoPath,
+          scale: clampScale(design.qrLogoScale),
+          // The logo has to read as QR "light": the shape colour when there is
+          // one, white when the QR sits directly on the card.
+          backingColor:
+            (design.qrBackgroundType || 'square') === 'none'
+              ? '#ffffff'
+              : design.qrBackgroundColor || '#ffffff',
+        }
+      : null;
   }
 
   public async finalizeOrder(
@@ -1534,7 +1569,11 @@ class Generator {
       0,
       playlist.paymentHasPlaylistId
     );
-    return computePrintFingerprint(playlist, tracks || []);
+    const extraDesigns = await getExtraDesigns(
+      playlist.paymentHasPlaylistId,
+      this.prisma
+    );
+    return computePrintFingerprint(playlist, tracks || [], extraDesigns);
   }
 
   /**
@@ -1829,6 +1868,8 @@ class Generator {
             paymentHasPlaylistId: 0,
             playlistDbId: 0,
             playlistId: '',
+            designCount: 1,
+            problems: [],
           };
         }
 

@@ -1,4 +1,32 @@
-import type { FinalCheckResult } from './finalCheck';
+import type { FinalCheckProblem, FinalCheckResult } from './finalCheck';
+
+/**
+ * What Payment.printerHoldDetails holds next to the short reason code: the
+ * order line the check stopped on, how many designs it alternates, and every
+ * problem pinned to its design and side. The dashboard lists them under the
+ * hold pill and marks the designs in the line's design overview.
+ */
+export interface FinalCheckHoldDetails {
+  reason: Extract<FinalCheckResult, { ok: false }>['reason'];
+  paymentHasPlaylistId: number;
+  designCount: number;
+  problems: FinalCheckProblem[];
+  details: string;
+  checkedAt: string;
+}
+
+export function finalCheckHoldDetails(
+  check: Extract<FinalCheckResult, { ok: false }>
+): FinalCheckHoldDetails {
+  return {
+    reason: check.reason,
+    paymentHasPlaylistId: check.paymentHasPlaylistId,
+    designCount: check.designCount,
+    problems: check.problems,
+    details: check.details,
+    checkedAt: new Date().toISOString(),
+  };
+}
 
 // Short code stored in Payment.printerHoldReason when a failed finalCheck puts
 // the order on hold; the admin dashboard turns it into a status pill. Kept out

@@ -198,7 +198,10 @@ class Mail {
     playlistId: string,
     reason: 'inappropriate' | 'hitster',
     flaggedImages?: FinalCheckFlaggedImage[],
-    correctionTab?: FinalCheckCorrectionTab
+    correctionTab?: FinalCheckCorrectionTab,
+    // The alternating designs (1-based) the problem is on; empty for a
+    // single-design deck
+    designs: number[] = []
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -238,16 +241,35 @@ class Mail {
 
     // Build the template view-model + matching inline cids for each flagged
     // image (cid 'flag0', 'flag1', …).
+    // "{{ image }}" style placeholders in a design_alter translation
+    const fill = (text: string, values: Record<string, string>) =>
+      text.replace(/{{\s*(\w+)\s*}}/g, (match, name) => values[name] ?? match);
+
     const flaggedImageData = (flaggedImages || []).map((img, index) => {
       const labelKey = `image${img.key.charAt(0).toUpperCase()}${img.key.slice(
         1
       )}`;
+      const image =
+        translations?.[labelKey] || imageLabelFallback[img.key] || img.key;
       return {
-        name:
-          translations?.[labelKey] || imageLabelFallback[img.key] || img.key,
+        // With alternating designs, name the design the image belongs to
+        name: img.design
+          ? fill(translations?.['imageDesign'] || '{{ image }}, design {{ number }}', {
+              image,
+              number: String(img.design),
+            })
+          : image,
         cid: `flag${index}`,
       };
     });
+
+    const designsAffected = designs.length
+      ? fill(
+          translations?.['designsAffected'] ||
+            'Your cards take turns between several designs. This is about design {{ designs }}.',
+          { designs: designs.join(', ') }
+        )
+      : '';
 
     const mailParams = {
       fullname: fullname || email.split('@')[0],
@@ -256,6 +278,7 @@ class Mail {
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
+      designsAffected,
       flaggedImages: flaggedImageData,
       flaggedImagesIntro:
         flaggedImageData.length > 0
