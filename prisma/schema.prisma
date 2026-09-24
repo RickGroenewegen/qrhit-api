@@ -1098,6 +1098,10 @@ model CompanyList {
   numberOfBoxes           Int       @default(0)
   buyPrice                Float?
   sellPrice               Float?
+  // Sold lists count as business sales in the financial reports, on the
+  // day of soldAt (stored at 12:00 UTC). See src/businessSales.ts.
+  sold                    Boolean   @default(false)
+  soldAt                  DateTime?
   startAt                 DateTime?
   endAt                   DateTime?
   votingBackground        String?

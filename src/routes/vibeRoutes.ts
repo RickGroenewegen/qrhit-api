@@ -34,6 +34,7 @@ import {
   invoiceExclVat,
   recordListInvoice,
 } from '../listInvoices';
+import { markListSold } from '../businessSales';
 import { ZipArchive } from 'archiver';
 import * as fsPromises from 'fs/promises';
 import * as pathModule from 'path';
@@ -923,6 +924,39 @@ export default async function vibeRoutes(
       });
 
       reply.send({ success: true, list: updated });
+    }
+  );
+
+  // The Lists tab's "Sold" toggle: a sold list counts as a business sale in
+  // the financial reports (src/businessSales.ts). Body: { sold, soldAt? },
+  // soldAt as YYYY-MM-DD. Admin only, it moves the books.
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/sold',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const body = request.body || {};
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+      if (typeof body.sold !== 'boolean') {
+        reply.status(400).send({ error: 'sold must be true or false' });
+        return;
+      }
+      if (body.soldAt != null && typeof body.soldAt !== 'string') {
+        reply.status(400).send({ error: 'Invalid sold date' });
+        return;
+      }
+
+      const result = await markListSold(companyId, listId, body.sold, body.soldAt);
+      if (!result.success) {
+        reply.status(result.status).send({ error: result.error });
+        return;
+      }
+      reply.send(result);
     }
   );
 

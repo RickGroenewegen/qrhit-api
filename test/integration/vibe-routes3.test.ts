@@ -381,6 +381,88 @@ describe('vibe portal routes — wave 3 coverage', () => {
   });
 
   // ====================================================================
+  // PUT /vibe/companies/:companyId/lists/:listId/sold
+  // ====================================================================
+
+  describe('PUT /vibe/companies/:companyId/lists/:listId/sold', () => {
+    const url = () => `/vibe/companies/${companyId}/lists/${secondListId}/sold`;
+
+    it('400 when sold is not a boolean', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: url(),
+        headers: adminHeaders,
+        payload: { sold: 'yes' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('404 for a list of another company', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/vibe/companies/999999/lists/${secondListId}/sold`,
+        headers: adminHeaders,
+        payload: { sold: true },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('400 while the list has no sell price', async () => {
+      await prisma().companyList.update({
+        where: { id: secondListId },
+        data: { sellPrice: null },
+      });
+      const res = await app.inject({
+        method: 'PUT',
+        url: url(),
+        headers: adminHeaders,
+        payload: { sold: true },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('200 marks it sold on the given day, and off again', async () => {
+      await prisma().companyList.update({
+        where: { id: secondListId },
+        data: { sellPrice: 1250, buyPrice: 800 },
+      });
+
+      const on = await app.inject({
+        method: 'PUT',
+        url: url(),
+        headers: adminHeaders,
+        payload: { sold: true, soldAt: '2026-09-14' },
+      });
+      expect(on.statusCode).toBe(200);
+      expect(on.json()).toMatchObject({
+        success: true,
+        sold: true,
+        soldAt: '2026-09-14T12:00:00.000Z',
+      });
+      const stored = await prisma().companyList.findUnique({ where: { id: secondListId } });
+      expect(stored?.sold).toBe(true);
+
+      const off = await app.inject({
+        method: 'PUT',
+        url: url(),
+        headers: adminHeaders,
+        payload: { sold: false },
+      });
+      expect(off.json()).toMatchObject({ success: true, sold: false, soldAt: null });
+    });
+
+    it('403 for a non-admin', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: url(),
+        headers: plainUserHeaders,
+        payload: { sold: true },
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ====================================================================
   // DELIVERY ADDRESSES CRUD
   // ====================================================================
 

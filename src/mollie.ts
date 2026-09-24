@@ -42,6 +42,16 @@ import {
   isSupportedCurrency,
   SupportedCurrency,
 } from './data/currency-map';
+import {
+  BusinessFigures,
+  SalesSegment,
+  businessPeriodKey,
+  emptyBusinessFigures,
+  getBusinessSales,
+  groupBusinessSales,
+  includesBusiness,
+  includesConsumer,
+} from './businessSales';
 
 interface ExtraTracksInvoiceContext {
   paymentHasPlaylistId: number;
@@ -49,6 +59,48 @@ interface ExtraTracksInvoiceContext {
   originalPaymentId: string;
   extraTracks: number;
   extraBoxes: number;
+}
+
+// A day or month report period with business sales and no consumer ones.
+function emptyConsumerSalesRow(period: string) {
+  return {
+    period,
+    numberOfSales: 0,
+    totalPrice: 0,
+    totalPriceWithoutTax: 0,
+    boxAmount: 0,
+    totalRefunded: 0,
+    gamesAmount: 0,
+    gamesTotal: 0,
+    gamesExVat: 0,
+    appDesignAmount: 0,
+    appDesignTotal: 0,
+    appDesignExVat: 0,
+    totalProfit: 0,
+    profitAssignedCount: 0,
+  };
+}
+
+// A country report row with business sales and no consumer ones.
+function emptyConsumerCountryRow(country: string) {
+  return {
+    country,
+    numberOfSales: 0,
+    totalPrice: 0,
+    totalPriceWithoutTax: 0,
+    totalRefunded: 0,
+    taxRate: null,
+    totalPlaylists: 0,
+    boxAmount: 0,
+    gamesAmount: 0,
+    gamesTotal: 0,
+    gamesExVat: 0,
+    appDesignAmount: 0,
+    appDesignTotal: 0,
+    appDesignExVat: 0,
+    totalProfit: 0,
+    profitAssignedCount: 0,
+  };
 }
 
 class Mollie {
@@ -159,7 +211,35 @@ class Mollie {
     return dailyReport.sort((a, b) => b.day.localeCompare(a.day));
   }
 
-  public async getSalesReport(groupBy: 'day' | 'month', filter: string = 'all'): Promise<any> {
+  /**
+   * The day and month reports. `segment` adds the company lists marked as
+   * sold (businessSales.ts) as business* fields, or shows only those; the
+   * product filter narrows the consumer orders only. Every row carries both
+   * sets of fields, zero where the segment leaves them out.
+   */
+  public async getSalesReport(
+    groupBy: 'day' | 'month',
+    filter: string = 'all',
+    segment: SalesSegment = 'consumer'
+  ): Promise<any[]> {
+    const consumerRows: any[] = includesConsumer(segment)
+      ? await this.getConsumerSalesReport(groupBy, filter)
+      : [];
+    const businessMap = includesBusiness(segment)
+      ? groupBusinessSales(await getBusinessSales(), businessPeriodKey(groupBy))
+      : new Map<string, BusinessFigures>();
+
+    const consumerMap = new Map(consumerRows.map((r) => [r.period, r]));
+    const periods = [...new Set([...consumerMap.keys(), ...businessMap.keys()])]
+      .sort((a, b) => String(b).localeCompare(String(a)));
+
+    return periods.map((period) => ({
+      ...(consumerMap.get(period) || emptyConsumerSalesRow(period)),
+      ...(businessMap.get(period) || emptyBusinessFigures()),
+    }));
+  }
+
+  private async getConsumerSalesReport(groupBy: 'day' | 'month', filter: string = 'all'): Promise<any[]> {
     const ignoreEmails = process.env['ENVIRONMENT'] === 'production'
       ? ['west14@gmail.com', 'info@rickgroenewegen.nl']
       : [];
@@ -429,39 +509,97 @@ class Mollie {
 
   /**
    * All-time totals for the dashboard's Finance card: the same figures the
-   * day and month reports add up, so the card and the reports agree.
-   * Turnover is the reports' "Combined €" (playlists, games upgrades and
-   * account App Designer, gross, refunds netted); profit is their "Profit €"
-   * (ex-VAT profit of the orders whose print cost is known, plus games
-   * upgrades and App Designer ex-VAT). profitAssignedCount / numberOfSales
-   * is the share of orders that profit covers.
+   * day and month reports add up in the "Both" segment, so the card and the
+   * reports agree. Consumer turnover is the reports' "Combined €"
+   * (playlists, games upgrades and account App Designer, gross, refunds
+   * netted) and consumer profit their "Profit €" (ex-VAT profit of the
+   * orders whose print cost is known, plus games upgrades and App Designer
+   * ex-VAT). Business is the sold company lists. `turnover` and `profit` are
+   * the two together. profitAssignedCount / numberOfSales is the share of
+   * consumer orders that profit covers.
    */
   public async getSalesTotals(): Promise<{
     turnover: number;
     profit: number;
     numberOfSales: number;
     profitAssignedCount: number;
+    consumer: { turnover: number; profit: number };
+    business: {
+      turnover: number;
+      profit: number;
+      numberOfLists: number;
+      profitKnownCount: number;
+    };
   }> {
-    const rows: any[] = await this.getSalesReport('month', 'all');
-    const totals = { turnover: 0, profit: 0, numberOfSales: 0, profitAssignedCount: 0 };
+    const rows: any[] = await this.getSalesReport('month', 'all', 'both');
+    const consumer = { turnover: 0, profit: 0 };
+    const business = { turnover: 0, profit: 0, numberOfLists: 0, profitKnownCount: 0 };
+    let numberOfSales = 0;
+    let profitAssignedCount = 0;
     for (const r of rows) {
-      totals.turnover += (r.totalPrice || 0) + (r.gamesTotal || 0) + (r.appDesignTotal || 0);
-      totals.profit += (r.totalProfit || 0) + (r.gamesExVat || 0) + (r.appDesignExVat || 0);
-      totals.numberOfSales += r.numberOfSales || 0;
-      totals.profitAssignedCount += r.profitAssignedCount || 0;
+      consumer.turnover += (r.totalPrice || 0) + (r.gamesTotal || 0) + (r.appDesignTotal || 0);
+      consumer.profit += (r.totalProfit || 0) + (r.gamesExVat || 0) + (r.appDesignExVat || 0);
+      numberOfSales += r.numberOfSales || 0;
+      profitAssignedCount += r.profitAssignedCount || 0;
+      business.turnover += r.businessTotal || 0;
+      business.profit += r.businessProfit || 0;
+      business.numberOfLists += r.businessAmount || 0;
+      business.profitKnownCount += r.businessProfitKnownCount || 0;
     }
     return {
-      turnover: round2(totals.turnover),
-      profit: round2(totals.profit),
-      numberOfSales: totals.numberOfSales,
-      profitAssignedCount: totals.profitAssignedCount,
+      turnover: round2(consumer.turnover + business.turnover),
+      profit: round2(consumer.profit + business.profit),
+      numberOfSales,
+      profitAssignedCount,
+      consumer: { turnover: round2(consumer.turnover), profit: round2(consumer.profit) },
+      business: {
+        ...business,
+        turnover: round2(business.turnover),
+        profit: round2(business.profit),
+      },
     };
   }
 
+  /**
+   * The country report. Business sales (sold company lists) are keyed by the
+   * company's country and join a consumer row of the same country whatever
+   * its case; the rest get a row of their own. Sorted by consumer plus
+   * business turnover.
+   */
   public async getPaymentsByMonth(
     startDate: Date,
+    endDate: Date,
+    segment: SalesSegment = 'consumer'
+  ): Promise<any[]> {
+    const rows: any[] = includesConsumer(segment)
+      ? await this.getConsumerPaymentsByMonth(startDate, endDate)
+      : [];
+    const withBusiness = rows.map((r) => ({ ...r, ...emptyBusinessFigures() }));
+
+    if (includesBusiness(segment)) {
+      const sales = await getBusinessSales({ start: startDate, end: endDate });
+      const byCountry = groupBusinessSales(sales, (s) => s.country);
+      for (const [country, figures] of byCountry) {
+        const row = withBusiness.find(
+          (r) => String(r.country).toUpperCase() === country
+        );
+        if (row) {
+          Object.assign(row, figures);
+        } else {
+          withBusiness.push({ ...emptyConsumerCountryRow(country), ...figures });
+        }
+      }
+    }
+
+    return withBusiness.sort(
+      (a, b) => b.totalPrice + b.businessTotal - (a.totalPrice + a.businessTotal)
+    );
+  }
+
+  private async getConsumerPaymentsByMonth(
+    startDate: Date,
     endDate: Date
-  ): Promise<any> {
+  ): Promise<any[]> {
     let ignoreEmails: string[] = [];
 
     if (process.env['ENVIRONMENT'] == 'production') {

@@ -72,6 +72,7 @@ const prismaMock = vi.hoisted(() => ({
   user: { update: vi.fn() },
   gamesPurchase: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
   appDesignPurchase: { groupBy: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+  companyList: { findMany: vi.fn() },
   $queryRawUnsafe: vi.fn(),
 }));
 vi.mock('../../../src/prisma', () => ({
@@ -304,6 +305,7 @@ function applyDefaults(): void {
   prismaMock.appDesignPurchase.groupBy.mockResolvedValue([]);
   prismaMock.appDesignPurchase.findMany.mockResolvedValue([]);
   prismaMock.appDesignPurchase.findUnique.mockResolvedValue(null);
+  prismaMock.companyList.findMany.mockResolvedValue([]);
   prismaMock.$queryRawUnsafe.mockResolvedValue([]);
   upgradeInvoicesMock.issue.mockResolvedValue(undefined);
 
@@ -2823,7 +2825,15 @@ describe('getSalesReport: App Designer', () => {
       appDesignExVat: 7.44,
       totalProfit: 0,
       profitAssignedCount: 0,
+      businessAmount: 0,
+      businessBoxes: 0,
+      businessTotal: 0,
+      businessExVat: 0,
+      businessProfit: 0,
+      businessProfitKnownCount: 0,
     });
+    // The consumer segment never reads the sold company lists.
+    expect(prismaMock.companyList.findMany).not.toHaveBeenCalled();
 
     const appDesignSql = prismaMock.$queryRawUnsafe.mock.calls
       .map((c: any[]) => c[0] as string)
@@ -3126,6 +3136,235 @@ describe('getSalesTotals', () => {
       profit: 136.45, // 80 + 30 + 4.13 + 14.88 + 7.44
       numberOfSales: 14,
       profitAssignedCount: 12,
+      consumer: { turnover: 250 + 100 + 5 + 18 + 9, profit: 136.45 },
+      business: { turnover: 0, profit: 0, numberOfLists: 0, profitKnownCount: 0 },
     });
+  });
+
+  it('adds the sold company lists and reports the two segments apart', async () => {
+    mockSalesReportQueries({
+      payments: [
+        {
+          period: '2026-09',
+          numberOfSales: 10n,
+          totalPrice: '250',
+          totalPriceWithoutTax: '206.61',
+          totalRefunded: '0',
+          totalProfit: '80',
+          profitAssignedCount: 10n,
+        },
+      ],
+    });
+    prismaMock.companyList.findMany.mockResolvedValue([
+      soldList({ id: 1 }),
+      soldList({ id: 2, buyPrice: null, soldAt: new Date('2026-05-02T12:00:00.000Z') }),
+    ]);
+
+    const totals = await mollie.getSalesTotals();
+
+    expect(totals).toEqual({
+      // 250 consumer + 1210 + 1210 (NL, 21%)
+      turnover: 2670,
+      // 80 consumer + 400 (list 2 has no buy price, so no profit yet)
+      profit: 480,
+      numberOfSales: 10,
+      profitAssignedCount: 10,
+      consumer: { turnover: 250, profit: 80 },
+      business: { turnover: 2420, profit: 400, numberOfLists: 2, profitKnownCount: 1 },
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Business sales: company lists marked as sold, in the day, month and
+// country reports (the segment toggle) and in the Finance card.
+// ---------------------------------------------------------------------------
+
+/** A sold company list as getBusinessSales selects it. */
+function soldList(over: Record<string, any> = {}) {
+  return {
+    id: 1,
+    soldAt: new Date('2026-09-14T12:00:00.000Z'),
+    sellPrice: 1000,
+    buyPrice: 600,
+    numberOfBoxes: 50,
+    printer: 'schneider',
+    calculationTromp: null,
+    calculationSchneider: null,
+    Company: { countrycode: 'NL' },
+    ...over,
+  };
+}
+
+describe('getSalesReport: business segment', () => {
+  const consumerMonths = [
+    {
+      period: '2026-09',
+      numberOfSales: 10n,
+      totalPrice: '250',
+      totalPriceWithoutTax: '206.61',
+      totalRefunded: '0',
+      totalProfit: '80',
+      profitAssignedCount: 10n,
+    },
+    {
+      period: '2026-08',
+      numberOfSales: 4n,
+      totalPrice: '100',
+      totalPriceWithoutTax: '82.64',
+      totalRefunded: '0',
+      totalProfit: '30',
+      profitAssignedCount: 4n,
+    },
+  ];
+
+  it('both: merges sold lists into the consumer periods and adds periods of their own', async () => {
+    mockSalesReportQueries({ payments: consumerMonths });
+    prismaMock.companyList.findMany.mockResolvedValue([
+      soldList({ id: 1 }),
+      // A German company: reverse charge, so gross is the sell price.
+      soldList({
+        id: 2,
+        sellPrice: 500,
+        buyPrice: null,
+        numberOfBoxes: 0,
+        calculationSchneider: JSON.stringify({ quantity: 20 }),
+        soldAt: new Date('2026-06-01T12:00:00.000Z'),
+        Company: { countrycode: 'Germany' },
+      }),
+    ]);
+
+    const report = await mollie.getSalesReport('month', 'all', 'both');
+
+    expect(prismaMock.companyList.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sold: true, soldAt: { not: null }, Company: { test: false } },
+      })
+    );
+    expect(report.map((r: any) => r.period)).toEqual(['2026-09', '2026-08', '2026-06']);
+    expect(report[0]).toMatchObject({
+      numberOfSales: 10,
+      totalPrice: 250,
+      totalProfit: 80,
+      businessAmount: 1,
+      businessBoxes: 50,
+      businessTotal: 1210,
+      businessExVat: 1000,
+      businessProfit: 400,
+      businessProfitKnownCount: 1,
+    });
+    expect(report[1]).toMatchObject({ numberOfSales: 4, businessAmount: 0, businessTotal: 0 });
+    expect(report[2]).toMatchObject({
+      numberOfSales: 0,
+      totalPrice: 0,
+      totalProfit: 0,
+      businessAmount: 1,
+      // Boxes from the calculator JSON of a list saved before numberOfBoxes.
+      businessBoxes: 20,
+      businessTotal: 500,
+      businessExVat: 500,
+      businessProfit: 0,
+      businessProfitKnownCount: 0,
+    });
+  });
+
+  it('business: only the sold lists, without querying the orders or applying the product filter', async () => {
+    mockSalesReportQueries({ payments: consumerMonths });
+    prismaMock.companyList.findMany.mockResolvedValue([soldList()]);
+
+    const report = await mollie.getSalesReport('month', 'digital', 'business');
+
+    expect(prismaMock.$queryRawUnsafe).not.toHaveBeenCalled();
+    expect(report).toHaveLength(1);
+    expect(report[0]).toMatchObject({
+      period: '2026-09',
+      numberOfSales: 0,
+      totalPrice: 0,
+      businessAmount: 1,
+      businessTotal: 1210,
+    });
+  });
+
+  it('dates a sold list by its sold day in the day report', async () => {
+    prismaMock.companyList.findMany.mockResolvedValue([soldList()]);
+
+    const report = await mollie.getSalesReport('day', 'all', 'business');
+
+    expect(report.map((r: any) => r.period)).toEqual(['2026-09-14']);
+  });
+});
+
+describe('getPaymentsByMonth: business segment', () => {
+  const start = new Date(2026, 8, 1);
+  const end = new Date(2026, 9, 0, 23, 59, 59);
+
+  beforeEach(() => {
+    prismaMock.payment.groupBy.mockResolvedValue([
+      {
+        countrycode: 'NL',
+        _count: { _all: 2 },
+        _sum: { totalPrice: 50, totalPriceWithoutTax: 41.32 },
+        _max: { taxRate: 21 },
+      },
+      {
+        countrycode: 'DE',
+        _count: { _all: 3 },
+        _sum: { totalPrice: 90, totalPriceWithoutTax: 75.63 },
+        _max: { taxRate: 19 },
+      },
+    ]);
+    prismaMock.companyList.findMany.mockResolvedValue([
+      soldList({ id: 1, Company: { countrycode: 'nl' } }),
+      soldList({ id: 2, sellPrice: 300, buyPrice: 200, Company: { countrycode: 'BE' } }),
+    ]);
+  });
+
+  it('both: keys sold lists by the company country and sorts by the combined turnover', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end, 'both');
+
+    expect(prismaMock.companyList.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          sold: true,
+          soldAt: { gte: start, lte: end },
+          Company: { test: false },
+        },
+      })
+    );
+    expect(report.map((r: any) => r.country)).toEqual(['NL', 'BE', 'DE']);
+    expect(report[0]).toMatchObject({
+      numberOfSales: 2,
+      totalPrice: 50,
+      taxRate: 21,
+      businessAmount: 1,
+      businessTotal: 1210,
+      businessProfit: 400,
+    });
+    // Belgium only has the business sale: a row of its own, 0% VAT.
+    expect(report[1]).toMatchObject({
+      numberOfSales: 0,
+      totalPrice: 0,
+      taxRate: null,
+      businessAmount: 1,
+      businessTotal: 300,
+      businessProfit: 100,
+    });
+    expect(report[2]).toMatchObject({ country: 'DE', totalPrice: 90, businessAmount: 0 });
+  });
+
+  it('consumer: unchanged, with zero business figures', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end);
+
+    expect(prismaMock.companyList.findMany).not.toHaveBeenCalled();
+    expect(report.map((r: any) => r.country)).toEqual(['DE', 'NL']);
+    expect(report[0]).toMatchObject({ businessAmount: 0, businessTotal: 0 });
+  });
+
+  it('business: no order queries, only the sold lists', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end, 'business');
+
+    expect(prismaMock.payment.groupBy).not.toHaveBeenCalled();
+    expect(report.map((r: any) => r.country)).toEqual(['NL', 'BE']);
+    expect(report[0]).toMatchObject({ numberOfSales: 0, businessTotal: 1210 });
   });
 });

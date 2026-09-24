@@ -47,6 +47,7 @@ import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProvider
 import CalendarService from '../calendarService';
 import Settings from '../settings';
 import SeoDescriptions from '../seoDescriptions';
+import { parseSalesSegment } from '../businessSales';
 import {
   PRINTER_TYPES,
   SPOTIFY_REFRESH_TOKEN_TTL_DAYS,
@@ -2317,7 +2318,11 @@ export default async function adminRoutes(
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0, 23, 59, 59);
 
-      const report = await mollie.getPaymentsByMonth(startDate, endDate);
+      const report = await mollie.getPaymentsByMonth(
+        startDate,
+        endDate,
+        parseSalesSegment(request.query?.segment)
+      );
 
       reply.send({
         success: true,
@@ -2597,7 +2602,11 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const filter = request.query?.filter || 'all';
-      const report = await mollie.getSalesReport('day', filter);
+      const report = await mollie.getSalesReport(
+        'day',
+        filter,
+        parseSalesSegment(request.query?.segment)
+      );
       reply.send({
         success: true,
         data: report,
@@ -2611,7 +2620,11 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const filter = request.query?.filter || 'all';
-      const report = await mollie.getSalesReport('month', filter);
+      const report = await mollie.getSalesReport(
+        'month',
+        filter,
+        parseSalesSegment(request.query?.segment)
+      );
       reply.send({
         success: true,
         data: report,

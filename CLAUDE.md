@@ -474,6 +474,23 @@ OSS report add the games shares to `totalPriceWithoutTax` and `totalVAT` the
 way they do App Designer's; a (zone, country, rate) with only a games upgrade
 gets a row. Initial games rows (free with an order) are counted, never summed.
 
+**Business sales** are company lists switched to "Sold" on a company's Lists
+tab (`PUT /vibe/companies/:companyId/lists/:listId/sold`, admin only;
+`company_lists.sold` + `soldAt`, stored at 12:00 UTC of the picked day).
+`src/businessSales.ts` reads them. A sold list adds what the Lists table
+shows: `sellPrice` (ex VAT, after discount) as turnover, gross at the VAT its
+invoice carries (21% for a Dutch company, 0% for EU reverse charge and
+export), and `sellPrice - buyPrice` as profit (0, and not "known", while the
+buy price is empty). Test companies are left out. A list without a sell price
+cannot be switched on. The day, month and country reports take
+`?segment=consumer|business|both` (default consumer, what they always
+showed); every row carries the `business*` fields, zero outside the segment.
+The country report keys business sales by `Company.countrycode`, and the
+product filter applies to consumer orders only. The Finance card always
+shows both: `turnover`/`profit` are the sum, `consumer` and `business` the
+split. The tax and OSS reports stay consumer only; business VAT is on the
+MoneyBird invoices.
+
 **Upgrades paid after the order are booked in full when their webhook
 lands** (`bookUpgradeOnPayment`): gross into `totalPrice`, the split into
 `totalPriceWithoutTax` and `productVATPrice`, and ex-VAT minus the boxes'
