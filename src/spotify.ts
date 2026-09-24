@@ -37,6 +37,7 @@ import {
   jumboCardCacheKey,
   musicMatchCardCacheKey,
 } from './externalCardCacheKey';
+import { productPageDesign } from './data/productPageDesign';
 
 // Spotify Cache Key Prefixes
 export const CACHE_KEY_PLAYLIST = 'playlist2_';
@@ -585,6 +586,7 @@ class Spotify {
                 id: true, slug: true, image: true,
                 name: true, design: true, customImage: true,
                 createdAt: true, promotionalShareDesign: true,
+                featuredDesignHidden: true,
                 decadePercentage0: true, decadePercentage1900: true,
                 decadePercentage1950: true, decadePercentage1960: true,
                 decadePercentage1970: true, decadePercentage1980: true,
@@ -603,14 +605,9 @@ class Spotify {
               if (dbPlaylist) {
                 const dbPlaylistAny = dbPlaylist as any;
                 playlistName = dbPlaylistAny.name || playlistName;
-                // The stored design is the one the customer ordered with and
-                // can carry personal photos or messages. They (or an admin)
-                // can keep it off the product page; visitors then get the
-                // default design.
-                playlistDesign =
-                  dbPlaylistAny.promotionalShareDesign === false
-                    ? null
-                    : dbPlaylistAny.design || null;
+                // The customer's design, unless they or an admin kept it off
+                // the product page; visitors then get the standard design.
+                playlistDesign = productPageDesign(dbPlaylistAny);
                 customImage = dbPlaylistAny.customImage || null;
                 createdAt = dbPlaylistAny.createdAt
                   ? new Date(dbPlaylistAny.createdAt).toISOString()

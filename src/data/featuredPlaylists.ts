@@ -547,6 +547,25 @@ export async function getAllFeaturedPlaylists(deps: DataDeps): Promise<any[]> {
   }
 }
 
+/**
+ * The card design of a row, for the Featured page to draw next to the "Own
+ * design" switch: what the customer answered on the form (`shareDesign`),
+ * the admin's veto (`designHidden`) and the design itself, so a bad or
+ * personal one is seen before it reaches the product page.
+ */
+function designFields(p: {
+  design: unknown;
+  promotionalShareDesign: boolean;
+  featuredDesignHidden: boolean;
+}) {
+  return {
+    hasDesign: !!p.design,
+    shareDesign: p.promotionalShareDesign,
+    designHidden: p.featuredDesignHidden,
+    design: p.design ?? null,
+  };
+}
+
 export async function searchFeaturedPlaylists(
   deps: DataDeps,
   searchTerm: string = '',
@@ -593,6 +612,7 @@ export async function searchFeaturedPlaylists(
         promotionalLocale: true,
         promotionalUserId: true,
         promotionalShareDesign: true,
+        featuredDesignHidden: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -617,10 +637,7 @@ export async function searchFeaturedPlaylists(
           locale: p.promotionalLocale,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
-          // Whether there is a card design on the row at all, and whether
-          // the product page may show it. The design itself stays here.
-          hasDesign: !!p.design,
-          shareDesign: p.promotionalShareDesign,
+          ...designFields(p),
         };
       })
     );
@@ -668,6 +685,7 @@ export async function searchFeaturedPlaylists(
           customImage: true,
           design: true,
           promotionalShareDesign: true,
+          featuredDesignHidden: true,
           featuredHidden: true,
           featuredLocale: true,
           unfeaturedAt: true,
@@ -754,8 +772,7 @@ export async function searchFeaturedPlaylists(
           purchaseCount,
           baseEvents: baseEventsMap.get(p.id) || [],
           baseEventsTagged: p.baseEventsTagged,
-          hasDesign: !!p.design,
-          shareDesign: p.promotionalShareDesign,
+          ...designFields(p),
         };
       })
     );
@@ -976,34 +993,34 @@ export async function updateFeaturedHidden(
 }
 
 /**
- * Admin override of the customer's choice on the featured playlist form:
- * whether the product page may show the card design stored on the row. The
- * design is never deleted, so switching it back on restores it. The product
- * page lookup is cached forever, hence the cache clear.
+ * The admin's veto on showing the customer's card design on the product page
+ * (see productPageDesign.ts). It never touches the customer's own answer, and
+ * the design is never deleted, so switching it back on restores it. The
+ * product page lookup is cached forever, hence the cache clear.
  */
-export async function updateShareDesign(
+export async function updateDesignHidden(
   deps: DataDeps,
   playlistId: string,
-  shareDesign: boolean
+  hidden: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await deps.prisma.playlist.update({
       where: { playlistId },
-      data: { promotionalShareDesign: shareDesign },
+      data: { featuredDesignHidden: hidden },
     });
 
     await clearPlaylistCache(deps, playlistId);
 
     deps.logger.log(
       color.blue.bold(
-        `Card design of ${color.white.bold(playlistId)} is now ${color.white.bold(shareDesign ? 'shown' : 'hidden')} on its product page`
+        `Card design of ${color.white.bold(playlistId)} is now ${color.white.bold(hidden ? 'hidden from' : 'allowed on')} its product page`
       )
     );
 
     return { success: true };
   } catch (error: any) {
     deps.logger.log(
-      color.red.bold(`Error updating design sharing: ${error.message}`)
+      color.red.bold(`Error updating the design veto: ${error.message}`)
     );
     return { success: false, error: error.message };
   }

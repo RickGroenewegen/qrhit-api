@@ -35,7 +35,7 @@ import {
   updatePlaylistFeatured,
   updateFeaturedHidden,
   updateFeaturedLocale,
-  updateShareDesign,
+  updateDesignHidden,
   unfeaturePlaylist,
   refeaturePlaylist,
   updatePromotionalPlaylist,
@@ -477,6 +477,7 @@ describe('searchFeaturedPlaylists', () => {
           // The customer's own card design, which they chose not to show.
           design: { backgroundImage: 'wedding.png' },
           promotionalShareDesign: false,
+          featuredDesignHidden: false,
         },
       ])
       .mockResolvedValueOnce([]);
@@ -497,10 +498,12 @@ describe('searchFeaturedPlaylists', () => {
         locale: 'nl',
         userEmail: 'u@x',
         userDisplayName: 'U',
-        // The admin sees that there is a design and what was chosen, never
-        // the design itself.
+        // The admin sees the design itself, to judge it before accepting,
+        // next to the customer's answer and their own veto.
         hasDesign: true,
         shareDesign: false,
+        designHidden: false,
+        design: { backgroundImage: 'wedding.png' },
       },
     ]);
   });
@@ -766,18 +769,27 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     expect(h.createSiteMap).toHaveBeenCalledWith(deps);
   });
 
-  it('updateShareDesign stores the admin override and drops the cached product page', async () => {
+  it('updateDesignHidden stores the admin veto and drops the cached product page', async () => {
     const { deps, prisma } = makeDeps();
 
-    const res = await updateShareDesign(deps, 'pl1', false);
+    const res = await updateDesignHidden(deps, 'pl1', true);
 
     expect(res).toEqual({ success: true });
-    // The design itself is left in place, so it can be switched back on.
+    // Its own column: the customer's answer and the design stay as they are,
+    // so the design can be switched back on.
     expect(prisma.playlist.update).toHaveBeenCalledWith({
       where: { playlistId: 'pl1' },
-      data: { promotionalShareDesign: false },
+      data: { featuredDesignHidden: true },
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
+  });
+
+  it('updateDesignHidden reports errors instead of throwing', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.update.mockRejectedValue(new Error('nope'));
+
+    expect(await updateDesignHidden(deps, 'pl1', false)).toEqual({ success: false, error: 'nope' });
+    expect(h.clearPlaylistCache).not.toHaveBeenCalled();
   });
 
   it('both report errors instead of throwing', async () => {

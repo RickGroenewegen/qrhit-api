@@ -573,8 +573,8 @@ class Data {
     return featuredPlaylistsModule.updateFeaturedLocale(this.deps, playlistId, featuredLocale);
   }
 
-  public async updateShareDesign(playlistId: string, shareDesign: boolean) {
-    return featuredPlaylistsModule.updateShareDesign(this.deps, playlistId, shareDesign);
+  public async updateDesignHidden(playlistId: string, hidden: boolean) {
+    return featuredPlaylistsModule.updateDesignHidden(this.deps, playlistId, hidden);
   }
 
   public async getProductPageLocale(slug: string) {

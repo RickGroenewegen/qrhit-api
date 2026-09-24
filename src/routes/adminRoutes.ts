@@ -1237,25 +1237,25 @@ export default async function adminRoutes(
     }
   );
 
-  // Show or hide the customer's own card design on the product page. The
-  // customer chooses on the featured playlist form; this is the admin
-  // override for a design that turns out to carry personal photos or text.
+  // The "Own design" switch on the Featured page: the admin's veto on the
+  // customer's card design, for one that is ugly or carries personal photos
+  // or text. The customer's own answer on the form is left as it is.
   fastify.post(
-    '/admin/playlist/:playlistId/share-design',
+    '/admin/playlist/:playlistId/design-hidden',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { playlistId } = request.params;
-      const { shareDesign } = request.body;
+      const { hidden } = request.body;
 
-      if (!playlistId || typeof shareDesign !== 'boolean') {
+      if (!playlistId || typeof hidden !== 'boolean') {
         reply.status(400).send({
           success: false,
-          error: 'Playlist ID and shareDesign (boolean) are required',
+          error: 'Playlist ID and hidden (boolean) are required',
         });
         return;
       }
 
-      const result = await data.updateShareDesign(playlistId, shareDesign);
+      const result = await data.updateDesignHidden(playlistId, hidden);
 
       if (result.success) {
         reply.send({ success: true });

@@ -694,15 +694,21 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   playlist (checkout sends it along, `data/playlists.ts` stores it on
   creation). Once that playlist is featured, its product page shows every
   visitor that design, which can carry personal photos or messages.
-  `promotionalShareDesign` gates it: `spotify.getPlaylist` returns
-  `design: null` when it is false. The customer chooses on the featured
-  playlist form (own design is preselected; the API only shares on an
-  explicit `true`), the form previews both options from the design and a
-  sample track that `getPromotionalSetup` returns to the verified owner, and
-  an admin can flip it per row on the Featured page
-  (`POST /admin/playlist/:playlistId/share-design`). The design is never
-  deleted. The column defaults to true so curated lists and older
-  submissions keep what they show today.
+  Two columns gate it, and `productPageDesign()` (`data/productPageDesign.ts`)
+  is where `spotify.getPlaylist` combines them into `design` or `null`:
+  - `promotionalShareDesign` is the customer's answer on the featured
+    playlist form (own design is preselected; the API only shares on an
+    explicit `true`). The form previews both options from the design and a
+    sample track that `getPromotionalSetup` returns to the verified owner.
+    Defaults to true so curated lists and older submissions keep what they
+    show today.
+  - `featuredDesignHidden` is the admin's veto, the "Own design" switch on
+    the Featured page (`POST /admin/playlist/:playlistId/design-hidden`),
+    which draws each row's front and back from the design the search
+    returns. A column of its own, because `savePromotionalSetup` writes the
+    customer's answer on every save and would switch a vetoed design back
+    on; an admin also cannot show a design the customer kept private.
+  The design is never deleted.
 - `GET /product-cover/:slug.jpg` (`src/playlistArtwork.ts`) serves a 640x640
   JPEG of the cover from our own domain, built from the admin upload or the
   live Spotify file and cached under `public/product_covers/` keyed on the

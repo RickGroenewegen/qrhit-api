@@ -454,6 +454,11 @@ model Playlist {
   // true so curated lists and submissions from before the question existed
   // keep what they show today.
   promotionalShareDesign Boolean              @default(true)
+  // The admin's veto on the same question, set from the Featured page when a
+  // design is ugly or personal. Separate from the customer's answer so that
+  // re-saving the featured playlist form cannot switch a vetoed design back
+  // on, and an admin never shows a design the customer kept to themselves.
+  featuredDesignHidden   Boolean              @default(false)
   tracks                 PlaylistHasTrack[]
   Payment                PaymentHasPlaylist[]
   UserSuggestion         UserSuggestion[]
