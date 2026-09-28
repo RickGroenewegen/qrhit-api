@@ -84,6 +84,48 @@ export async function sanitizeTitleOrArtist(
   return sanitizedText;
 }
 
+const TRACK_LINK_FIELDS = [
+  'spotifyLink',
+  'deezerLink',
+  'youtubeMusicLink',
+  'appleMusicLink',
+  'amazonMusicLink',
+  'tidalLink',
+] as const;
+type TrackLinkField = (typeof TRACK_LINK_FIELDS)[number];
+type TrackLinks = Partial<Record<TrackLinkField, string | null>>;
+
+const TRACK_LINK_SELECT = {
+  spotifyLink: true,
+  deezerLink: true,
+  youtubeMusicLink: true,
+  appleMusicLink: true,
+  amazonMusicLink: true,
+  tidalLink: true,
+} as const;
+
+/**
+ * The links a track takes over from a matched track: only the services it has
+ * no link for yet. A track imported from Apple Music, Deezer, Tidal or YouTube
+ * Music already holds the link from the customer's own playlist, and the
+ * matched track's link for that service can be another release, another
+ * storefront's, or one the service has removed since. Copying every link over
+ * replaced working Apple Music links with dead ones (September 2026).
+ */
+export function linksToCopy(
+  target: TrackLinks | null,
+  source: TrackLinks
+): Partial<Record<TrackLinkField, string>> {
+  const links: Partial<Record<TrackLinkField, string>> = {};
+  for (const field of TRACK_LINK_FIELDS) {
+    const value = source[field];
+    if (!target?.[field] && value) {
+      links[field] = value;
+    }
+  }
+  return links;
+}
+
 export async function findAndUpdateTrackByISRC(
   deps: DataDeps,
   isrc: string,
@@ -117,10 +159,10 @@ export async function findAndUpdateTrackByISRC(
     });
 
     if (existingTrackByISRC) {
-      // Check if target track has empty spotifyLink
+      // The target's own links win, see linksToCopy
       const targetTrack = await deps.prisma.track.findUnique({
         where: { id: trackId },
-        select: { spotifyLink: true },
+        select: TRACK_LINK_SELECT,
       });
 
       await deps.prisma.track.update({
@@ -131,14 +173,7 @@ export async function findAndUpdateTrackByISRC(
           certainty: existingTrackByISRC.certainty,
           reasoning: existingTrackByISRC.reasoning,
           manuallyChecked: true,
-          spotifyLink: !targetTrack?.spotifyLink
-            ? existingTrackByISRC.spotifyLink
-            : undefined,
-          deezerLink: existingTrackByISRC.deezerLink,
-          youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
-          appleMusicLink: existingTrackByISRC.appleMusicLink,
-          amazonMusicLink: existingTrackByISRC.amazonMusicLink,
-          tidalLink: existingTrackByISRC.tidalLink,
+          ...linksToCopy(targetTrack, existingTrackByISRC),
           musicFetchLastAttempt: existingTrackByISRC.musicFetchLastAttempt,
           musicFetchAttempts: existingTrackByISRC.musicFetchAttempts,
         },
@@ -150,7 +185,7 @@ export async function findAndUpdateTrackByISRC(
   // If no ISRC or no ISRC match, try finding tracks with matching artist and title
   const currentTrack = await deps.prisma.track.findUnique({
     where: { id: trackId },
-    select: { artist: true, name: true, spotifyLink: true },
+    select: { artist: true, name: true, ...TRACK_LINK_SELECT },
   });
 
   if (currentTrack) {
@@ -201,14 +236,7 @@ export async function findAndUpdateTrackByISRC(
             certainty: matchedTrack.certainty,
             reasoning: matchedTrack.reasoning,
             manuallyChecked: true,
-            spotifyLink: !currentTrack.spotifyLink
-              ? matchedTrack.spotifyLink
-              : undefined,
-            deezerLink: matchedTrack.deezerLink,
-            youtubeMusicLink: matchedTrack.youtubeMusicLink,
-            appleMusicLink: matchedTrack.appleMusicLink,
-            amazonMusicLink: matchedTrack.amazonMusicLink,
-            tidalLink: matchedTrack.tidalLink,
+            ...linksToCopy(currentTrack, matchedTrack),
             musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
             musicFetchAttempts: matchedTrack.musicFetchAttempts,
           },
@@ -248,14 +276,7 @@ export async function findAndUpdateTrackByISRC(
               certainty: matchedTrack.certainty,
               reasoning: matchedTrack.reasoning,
               manuallyChecked: true,
-              spotifyLink: !currentTrack.spotifyLink
-                ? matchedTrack.spotifyLink
-                : undefined,
-              deezerLink: matchedTrack.deezerLink,
-              youtubeMusicLink: matchedTrack.youtubeMusicLink,
-              appleMusicLink: matchedTrack.appleMusicLink,
-              amazonMusicLink: matchedTrack.amazonMusicLink,
-              tidalLink: matchedTrack.tidalLink,
+              ...linksToCopy(currentTrack, matchedTrack),
               musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
               musicFetchAttempts: matchedTrack.musicFetchAttempts,
             },
