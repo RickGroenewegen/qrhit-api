@@ -862,7 +862,7 @@ describe('admin routes — extended coverage', () => {
   // =================== DB FLUSH HOSTS ===================
 
   describe('POST /admin/db/flush-hosts', () => {
-    it('executes FLUSH HOSTS successfully', async () => {
+    it('empties the host cache successfully', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/admin/db/flush-hosts',

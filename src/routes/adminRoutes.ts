@@ -6014,7 +6014,9 @@ export default async function adminRoutes(
 
   // ============ DATABASE MAINTENANCE ============
 
-  // Flush blocked hosts (unblocks IPs blocked by too many connection errors)
+  // Flush blocked hosts (unblocks IPs blocked by too many connection errors).
+  // Emptying the host cache is what FLUSH HOSTS did; that statement was
+  // deprecated in MySQL 8.0.23 and removed in 8.4, this works on both.
   fastify.post(
     '/admin/db/flush-hosts',
     getAuthHandler(['admin']),
@@ -6022,8 +6024,10 @@ export default async function adminRoutes(
       try {
         const PrismaInstance = (await import('../prisma')).default;
         const prisma = PrismaInstance.getInstance();
-        await prisma.$executeRawUnsafe('FLUSH HOSTS');
-        reply.send({ success: true, message: 'FLUSH HOSTS executed successfully' });
+        await prisma.$executeRawUnsafe(
+          'TRUNCATE TABLE performance_schema.host_cache'
+        );
+        reply.send({ success: true, message: 'Host cache flushed' });
       } catch (error: any) {
         reply.status(500).send({
           success: false,
