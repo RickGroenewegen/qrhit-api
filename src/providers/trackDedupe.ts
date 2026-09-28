@@ -11,7 +11,9 @@ import { ProviderTrackData, ProviderTracksResult } from '../interfaces/IMusicPro
  * The rule mirrors spotify.ts exactly:
  *   - filter OFF (allowDuplicates = false): collapse on `artist|||title`,
  *     lowercased and trimmed, so "live"/"remaster"/"remix" versions of one song
- *     yield a single card.
+ *     yield a single card. Also on the ISRC: one recording listed under two
+ *     spellings ("… (Track Masters Remix featuring …)" and "… [Track Masters
+ *     Remix]") is the same song, whatever the titles say.
  *   - filter ON (allowDuplicates = true): still collapse on the provider track
  *     id, because the SAME track listed twice in a playlist is never something
  *     the customer wants two cards of. "Keep duplicates" means "keep different
@@ -30,6 +32,7 @@ export function applyDuplicateFilter(
 ): ProviderTracksResult {
   const kept: ProviderTrackData[] = [];
   const firstPosition = new Map<string, number>();
+  const firstIsrcPosition = new Map<string, number>();
 
   // Preserve anything the provider already reported as skipped (unavailable
   // tracks, podcasts, local files) and add our duplicates to it.
@@ -46,8 +49,9 @@ export function applyDuplicateFilter(
     const artist = (track.artist || '').toLowerCase().trim();
     const name = (track.name || '').toLowerCase().trim();
     const key = allowDuplicates ? track.id : `${artist}|||${name}`;
+    const isrc = allowDuplicates ? '' : (track.isrc || '').trim().toUpperCase();
 
-    const seenAt = firstPosition.get(key);
+    const seenAt = firstPosition.get(key) ?? (isrc ? firstIsrcPosition.get(isrc) : undefined);
     if (seenAt !== undefined) {
       summary.duplicates++;
       details.push({
@@ -61,6 +65,7 @@ export function applyDuplicateFilter(
     }
 
     firstPosition.set(key, position);
+    if (isrc) firstIsrcPosition.set(isrc, position);
     kept.push(track);
   });
 

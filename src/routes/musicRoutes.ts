@@ -656,7 +656,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       // Resolve Apple Music link to the playlist's storefront if stored
       const storefront = await appleStorefront.getStorefront(Number(request.params.php));
       if (am && storefront) {
-        am = await appleMusicProvider.resolveSongToStorefront(am, storefront);
+        am = await appleMusicProvider.resolveSongToStorefront(am, storefront, result.data.isrc);
       }
     }
     // Ensure link is never null/empty so older app versions don't discard the response

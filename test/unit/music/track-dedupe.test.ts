@@ -102,4 +102,39 @@ describe('applyDuplicateFilter', () => {
     expect(out.tracks).toEqual([]);
     expect(out.total).toBe(0);
   });
+
+  it('collapses one recording listed under two spellings (same ISRC)', () => {
+    const out = applyDuplicateFilter(
+      result([
+        { ...track('a', 'Jennifer Lopez', 'Jenny from the Block (Track Masters Remix featuring Styles & Jadakiss)'), isrc: 'USSM10212454' },
+        { ...track('b', 'Scatman John', 'Scatman'), isrc: 'DEA619500010' },
+        { ...track('c', 'Jennifer Lopez', 'Jenny from the Block [Track Masters Remix]'), isrc: ' ussm10212454 ' },
+      ]),
+      false
+    );
+
+    expect(out.tracks.map((t) => t.id)).toEqual(['a', 'b']);
+    expect(out.skipped?.details[0]).toMatchObject({ position: 3, reason: 'duplicate', duplicateOf: 1 });
+  });
+
+  it('keeps same-ISRC spellings when the customer opted to keep duplicates', () => {
+    const out = applyDuplicateFilter(
+      result([
+        { ...track('a', 'Jennifer Lopez', 'Jenny from the Block (Remix)'), isrc: 'USSM10212454' },
+        { ...track('c', 'Jennifer Lopez', 'Jenny from the Block [Remix]'), isrc: 'USSM10212454' },
+      ]),
+      true
+    );
+
+    expect(out.tracks.map((t) => t.id)).toEqual(['a', 'c']);
+  });
+
+  it('does not match tracks that have no ISRC', () => {
+    const out = applyDuplicateFilter(
+      result([track('a', 'Artist', 'One'), track('b', 'Artist', 'Two')]),
+      false
+    );
+
+    expect(out.tracks.map((t) => t.id)).toEqual(['a', 'b']);
+  });
 });

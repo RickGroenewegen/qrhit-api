@@ -496,30 +496,35 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('returns the link unchanged when the storefront already matches', async () => {
+  it('keeps a link in the matching storefront when Apple can stream it there', async () => {
     const p = newProvider();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/album/x/1?i=12345', playParams: { id: '12345' } } }] })
+    );
     const link = 'https://music.apple.com/de/song/track/12345';
+
     expect(await p.resolveSongToStorefront(link, 'de')).toBe(link);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/de/songs/12345');
+    expect(h.cacheSet).toHaveBeenCalledWith('am_sf2:12345:de', link, 86400);
   });
 
   it('resolves via direct catalog ID lookup and caches for a day', async () => {
     const p = newProvider();
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/999' } }] })
+      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/999', playParams: { id: '999' } } }] })
     );
 
     const resolved = await p.resolveSongToStorefront('https://music.apple.com/us/song/track/12345', 'de');
 
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/de/songs/12345');
     expect(resolved).toBe('https://music.apple.com/de/song/track/999');
-    expect(h.cacheSet).toHaveBeenCalledWith('am_sf:12345:de', resolved, 86400);
+    expect(h.cacheSet).toHaveBeenCalledWith('am_sf2:12345:de', resolved, 86400);
   });
 
   it('resolves storefront-less /song/{id} links printed on summary cards', async () => {
     const p = newProvider();
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/12345' } }] })
+      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/12345', playParams: { id: '12345' } } }] })
     );
 
     const resolved = await p.resolveSongToStorefront('https://music.apple.com/song/12345', 'de');
@@ -531,7 +536,7 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
   it('uses the ?i= album query parameter as the song ID', async () => {
     const p = newProvider();
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/1' } }] })
+      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/1', playParams: { id: '1' } } }] })
     );
     await p.resolveSongToStorefront('https://music.apple.com/us/album/great-album/555?i=999', 'de');
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/de/songs/999');
@@ -539,7 +544,7 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
 
   it('returns the cached resolution without fetching', async () => {
     const p = newProvider();
-    h.store.set('am_sf:12345:de', 'https://music.apple.com/de/song/cached/1');
+    h.store.set('am_sf2:12345:de', 'https://music.apple.com/de/song/cached/1');
     const resolved = await p.resolveSongToStorefront('https://music.apple.com/us/song/track/12345', 'de');
     expect(resolved).toBe('https://music.apple.com/de/song/cached/1');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -554,7 +559,7 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
       .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { isrc: 'GBUM71029604' } }] }))
       // 3. ISRC filter search in target storefront yields the URL
       .mockResolvedValueOnce(
-        jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/via-isrc/2' } }] })
+        jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/via-isrc/2', playParams: { id: '2' } } }] })
       );
 
     const resolved = await p.resolveSongToStorefront('https://music.apple.com/us/song/track/12345', 'de');
@@ -573,6 +578,68 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
     fetchMock.mockResolvedValue(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }));
     const link = 'https://music.apple.com/us/song/track/12345';
     expect(await p.resolveSongToStorefront(link, 'de')).toBe(link);
+  });
+
+  it('skips a match the storefront cannot stream and finds a streamable version by ISRC', async () => {
+    const p = newProvider();
+    fetchMock
+      // 1. the id exists in de but has no playParams (not streamable there)
+      .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/album/pizza/1192367748?i=1192368129' } }] }))
+      // 2. Apple gives the ISRC from the link's storefront
+      .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { isrc: 'DEF241607703' } }] }))
+      // 3. the ISRC search lists a streamable version
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/album/pizza/1167124263?i=1167124719', playParams: { id: '1167124719' } } }] })
+      );
+
+    const resolved = await p.resolveSongToStorefront(
+      'https://music.apple.com/us/album/pizza/1192367748?i=1192368129&app=music',
+      'de'
+    );
+
+    expect(resolved).toBe('https://music.apple.com/de/album/pizza/1167124263?i=1167124719');
+  });
+
+  it('uses the ISRC we store when Apple no longer knows the id, and picks a streamable hit', async () => {
+    const p = newProvider();
+    fetchMock
+      // 1. the id was removed from the catalog
+      .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }))
+      // 2. the ISRC search: the first hit cannot be streamed, the second can
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            { attributes: { url: 'https://music.apple.com/de/album/a/1?i=10' } },
+            { attributes: { url: 'https://music.apple.com/de/album/coco-jamboo-radio-version/1877135723?i=1877135727', playParams: { id: '1877135727' } } },
+          ],
+        })
+      );
+
+    const resolved = await p.resolveSongToStorefront(
+      'https://music.apple.com/de/album/coco-jamboo-radio-version/1800147587?i=1800147833',
+      'de',
+      'DEA629660430'
+    );
+
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      'https://api.music.apple.com/v1/catalog/de/songs/1800147833',
+      'https://api.music.apple.com/v1/catalog/de/songs?filter[isrc]=DEA629660430',
+    ]);
+    expect(resolved).toBe('https://music.apple.com/de/album/coco-jamboo-radio-version/1877135723?i=1877135727');
+    expect(h.cacheSet).toHaveBeenCalledWith('am_sf2:1800147833:de', resolved, 86400);
+  });
+
+  it('remembers a miss for an hour so a dead link is not looked up on every scan', async () => {
+    const p = newProvider();
+    fetchMock.mockResolvedValue(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }));
+    const link = 'https://music.apple.com/us/song/track/12345';
+
+    expect(await p.resolveSongToStorefront(link, 'de')).toBe(link);
+    expect(h.cacheSet).toHaveBeenCalledWith('am_sf_miss:12345:de:-', '1', 3600);
+
+    fetchMock.mockClear();
+    expect(await p.resolveSongToStorefront(link, 'de')).toBe(link);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
