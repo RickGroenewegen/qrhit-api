@@ -222,12 +222,17 @@
         {
             "slug": "multiple-designs",
             "title": "Can I have multiple card designs within a single playlist order?",
-            "description": "No, each order uses a single card design. If you'd like multiple designs, split your Spotify playlist into separate playlists and place a separate order for each playlist/design combination.",
+            "description": "Yes. In the card designer, choose 'Alternate designs' and give one deck up to 10 different designs (never more designs than the deck has cards). The designs take turns in the order of your playlist: card 1 gets design 1, card 2 gets design 2, and so on, starting again with design 1 after the last one. With 3 designs, cards 1, 4 and 7 get design 1, cards 2, 5 and 8 design 2, and cards 3, 6 and 9 design 3. Every design can have its own background image or colour, logo, font, QR code colours and back side. A new design starts as a copy of the one on screen, so you only change what should differ. Eco mode and double-sided printing apply to the whole deck. Alternating designs cost nothing extra and work for printed cards, printed sheets and digital PDFs alike. You can also add or change designs after ordering, in the correction form during the review of your order. To go back to a single design, choose 'Use one design for all cards'.",
             "tags": [
                 "multiple",
                 "designs",
                 "one playlist",
-                "different"
+                "different",
+                "alternating designs",
+                "alternate designs",
+                "different design per card",
+                "mix designs",
+                "several backgrounds"
             ]
         },
         {
@@ -430,7 +435,7 @@
         {
             "slug": "customize-cards",
             "title": "Can I customize my cards?",
-            "description": "Yes! You can design your own cards by uploading a custom background image and/or logo. You can choose fonts, and customize QR code colors and backgrounds. You can see a preview of your design before finalizing.",
+            "description": "Yes! You can design your own cards by uploading a custom background image and/or logo. You can choose fonts, and customize QR code colors and backgrounds. You can see a preview of your design before finalizing. You can even give one deck up to 10 designs that take turns, card 1 design 1, card 2 design 2 and so on (see 'Can I have multiple card designs within a single playlist order?').",
             "tags": [
                 "customize",
                 "design",
