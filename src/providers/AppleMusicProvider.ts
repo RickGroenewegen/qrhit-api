@@ -718,12 +718,20 @@ class AppleMusicProvider implements IMusicProvider {
   }
 
   /**
-   * Resolve an Apple Music song link to the correct URL for a given storefront.
-   * Song IDs differ across storefronts, so we look up the song by its ID
-   * in the target storefront via the Apple Music API.
-   * Returns the original link if resolution fails or storefront matches.
+   * Resolve an Apple Music song link to a song that can be streamed in the
+   * given storefront. Returns the original link when nothing better is found.
+   *
+   * Apple removes catalog ids (a label re-issues an album) and lists songs a
+   * storefront cannot stream (no `playParams`), so a link is only kept when
+   * Apple says it streams there, even when the storefront already matches.
+   * Otherwise the song is found again by ISRC. The caller passes the ISRC we
+   * store when it has one: a removed id no longer tells Apple's API its ISRC.
    */
-  async resolveSongToStorefront(appleMusicLink: string, storefront: string): Promise<string> {
+  async resolveSongToStorefront(
+    appleMusicLink: string,
+    storefront: string,
+    knownIsrc?: string | null
+  ): Promise<string> {
     // Extract storefront and song ID from the link
     // Formats:
     //   .../{cc}/song/{name}/{id}
@@ -739,51 +747,60 @@ class AppleMusicProvider implements IMusicProvider {
     const iParam = appleMusicLink.match(/[?&]i=(\d+)/);
     const songId = iParam ? iParam[1] : pathId;
 
-    // Storefront-less links always need resolving, even for the same storefront:
-    // the app needs a URL it can parse a song id out of
-    if (linkStorefront && linkStorefront === storefront) return appleMusicLink;
-
-    // Check cache
-    const cacheKey = `am_sf:${songId}:${storefront}`;
+    // am_sf2: the entries of the resolver before playParams was checked can
+    // point at songs a storefront cannot stream.
+    const cacheKey = `am_sf2:${songId}:${storefront}`;
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    // Step 1: Try the song ID directly in the target storefront (IDs are global catalog IDs)
-    const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront);
+    // A miss is remembered for an hour so a dead link costs Apple calls once,
+    // not on every scan. Keyed on the ISRC too: a later call that brings one
+    // may still succeed.
+    const missKey = `am_sf_miss:${songId}:${storefront}:${knownIsrc || '-'}`;
+    if (await this.cache.get(missKey)) return appleMusicLink;
 
-    if (directResult.success && directResult.data?.data?.[0]?.attributes?.url) {
-      const resolvedUrl = directResult.data.data[0].attributes.url;
-      this.logger.log(
-        color.green.bold(
-          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
-        )
-      );
+    // Step 1: the song id itself, if the target storefront can stream it
+    // (catalog ids are mostly global)
+    const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront);
+    const direct = directResult.data?.data?.[0]?.attributes;
+
+    if (directResult.success && direct?.url && direct.playParams) {
+      // A link already in this storefront (and parseable) is kept as it is
+      const resolvedUrl = linkStorefront === storefront ? appleMusicLink : direct.url;
+      if (resolvedUrl !== appleMusicLink) {
+        this.logger.log(
+          color.green.bold(
+            `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
+          )
+        );
+      }
       await this.cache.set(cacheKey, resolvedUrl, 86400);
       return resolvedUrl;
     }
 
-    // Step 2: Fetch song from original storefront to get ISRC
-    const originalResult = await this.apiRequest<any>(`/songs/${songId}`, originalStorefront);
-    const isrc = originalResult.data?.data?.[0]?.attributes?.isrc;
-
+    // Step 2: the ISRC. Ours when the caller has it, otherwise Apple's for
+    // this id (the link's storefront, then the default one).
+    let isrc = knownIsrc || null;
     if (!isrc) {
-      // The URL's storefront might be wrong — try the default storefront as last resort
+      const originalResult = await this.apiRequest<any>(`/songs/${songId}`, originalStorefront);
+      isrc = originalResult.data?.data?.[0]?.attributes?.isrc || null;
+    }
+    if (!isrc && originalStorefront !== DEFAULT_STOREFRONT) {
       const fallbackResult = await this.apiRequest<any>(`/songs/${songId}`, DEFAULT_STOREFRONT);
-      const fallbackIsrc = fallbackResult.data?.data?.[0]?.attributes?.isrc;
+      isrc = fallbackResult.data?.data?.[0]?.attributes?.isrc || null;
+    }
 
-      if (!fallbackIsrc) {
-        this.logger.log(
-          color.yellow.bold(
-            `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not found in any storefront`
-          )
-        );
-        return appleMusicLink;
-      }
-
-      // Found via fallback, search by ISRC in target storefront
-      const isrcResult = await this.apiRequest<any>(`/songs?filter[isrc]=${fallbackIsrc}`, storefront);
-      if (isrcResult.success && isrcResult.data?.data?.[0]?.attributes?.url) {
-        const resolvedUrl = isrcResult.data.data[0].attributes.url;
+    // Step 3: the first version of that recording the storefront can stream
+    if (isrc) {
+      const isrcResult = await this.apiRequest<any>(
+        `/songs?filter[isrc]=${encodeURIComponent(isrc)}`,
+        storefront
+      );
+      const streamable = (isrcResult.data?.data || []).find(
+        (song: any) => song.attributes?.url && song.attributes?.playParams
+      );
+      if (isrcResult.success && streamable) {
+        const resolvedUrl = streamable.attributes.url;
         this.logger.log(
           color.green.bold(
             `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
@@ -792,35 +809,16 @@ class AppleMusicProvider implements IMusicProvider {
         await this.cache.set(cacheKey, resolvedUrl, 86400);
         return resolvedUrl;
       }
-
-      this.logger.log(
-        color.yellow.bold(
-          `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not available in ${color.white.bold(storefront)}`
-        )
-      );
-      return appleMusicLink;
     }
 
-    // Step 3: Look up the song by ISRC in the target storefront
-    const isrcResult = await this.apiRequest<any>(`/songs?filter[isrc]=${isrc}`, storefront);
-
-    if (isrcResult.success && isrcResult.data?.data?.[0]?.attributes?.url) {
-      const resolvedUrl = isrcResult.data.data[0].attributes.url;
-      this.logger.log(
-        color.green.bold(
-          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
-        )
-      );
-      await this.cache.set(cacheKey, resolvedUrl, 86400);
-      return resolvedUrl;
-    }
-
-    // Fallback: return original link
     this.logger.log(
       color.yellow.bold(
-        `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not available in ${color.white.bold(storefront)}`
+        `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} ${
+          isrc ? `(ISRC ${color.white.bold(isrc)}) ` : ''
+        }cannot be streamed in ${color.white.bold(storefront)}`
       )
     );
+    await this.cache.set(missKey, '1', 3600);
     return appleMusicLink;
   }
 

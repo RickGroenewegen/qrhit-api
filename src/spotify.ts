@@ -997,6 +997,9 @@ class Spotify {
         // added twice is still collapsed (it would otherwise be silently dropped further
         // down by the uniqueTrackIds filter, without showing up in the skip summary).
         const duplicateFirstPosition: Map<string, number> = new Map();
+        // The same recording under two spellings (same ISRC) is a duplicate too,
+        // as in trackDedupe.ts.
+        const duplicateFirstIsrcPosition: Map<string, number> = new Map();
 
         // Pre-scan to collect skipped tracks info
         trackItems.forEach((item: any, index: number) => {
@@ -1042,12 +1045,18 @@ class Spotify {
                 const duplicateKey = allowDuplicates
                   ? item.track.id
                   : `${artist.toLowerCase().trim()}|||${name.toLowerCase().trim()}`;
-                if (duplicateFirstPosition.has(duplicateKey)) {
-                  const firstPosition = duplicateFirstPosition.get(duplicateKey)!;
+                const isrc: string = allowDuplicates
+                  ? ''
+                  : (item.track.external_ids?.isrc || '').trim().toUpperCase();
+                const firstPosition =
+                  duplicateFirstPosition.get(duplicateKey) ??
+                  (isrc ? duplicateFirstIsrcPosition.get(isrc) : undefined);
+                if (firstPosition !== undefined) {
                   skipSummary.duplicates++;
                   skippedDetails.push({ position, reason: 'duplicate', name, artist, duplicateOf: firstPosition });
                 } else {
                   duplicateFirstPosition.set(duplicateKey, position);
+                  if (isrc) duplicateFirstIsrcPosition.set(isrc, position);
                 }
               }
             }

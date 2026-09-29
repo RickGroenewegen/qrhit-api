@@ -109,8 +109,16 @@ poll cannot see orders placed on the other API.
 
 - `PRINTENBIND_API_URL` / `PRINTENBIND_API_KEY`: development must point at
   `https://sandbox.printenbind.nl/api/rest` with the sandbox token; production
-  uses `https://www.printenbind.nl/api/rest`. The live token also works on
-  the REST endpoint.
+  uses `https://www.printenbind.nl/api/rest`. Production needs the REST
+  token, not the older live token. The older one authenticates on REST and
+  prices plain cards, but any article with `accessory_item: box_qrsong`
+  gets a bare `500 Server Error`: until 2026-09-29 every gift-box cart fell
+  back to the stored shipping rates. To see which token a machine resolves
+  to, and what Print&Bind answers for a given cart, run
+  `node _scripts/pb-quote-check.mjs [--box] [--country DE]` there; it prints
+  a sha256 fingerprint of the key, never the key. The API reads `.env` at
+  start, so a changed key needs a restart. Whether v1 accepts the REST
+  token is untested; a switch back to v1 may need the older token.
 - `POST /orders` places (checks out) the order immediately; there is no
   separate finish step. `processOrderRequest` therefore refuses to place
   orders on the live host unless `ENVIRONMENT=production` and runs

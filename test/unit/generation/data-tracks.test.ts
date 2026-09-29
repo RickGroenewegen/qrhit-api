@@ -43,6 +43,7 @@ vi.mock('../../../src/providers/MusicProviderFactory', () => ({
 import {
   sanitizeTitleOrArtist,
   findAndUpdateTrackByISRC,
+  linksToCopy,
   getTracks,
   getTrackById,
   updateTrack,
@@ -282,6 +283,72 @@ describe('findAndUpdateTrackByISRC', () => {
     prisma.track.findUnique.mockResolvedValue(null);
     const res = await findAndUpdateTrackByISRC(deps, '', 7);
     expect(res).toEqual({ wasUpdated: false, method: '' });
+  });
+
+  it("keeps an imported track's own Apple Music link on an ISRC match", async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.track.findFirst.mockResolvedValue({
+      id: 50,
+      year: 1996,
+      yearSource: 'database',
+      certainty: 90,
+      reasoning: 'r',
+      ...linkSet,
+      appleMusicLink: 'https://music.apple.com/us/album/x/1800147587?i=1800147833',
+    });
+    prisma.track.findUnique.mockResolvedValue({
+      spotifyLink: null,
+      appleMusicLink: 'https://music.apple.com/de/album/x/1877135723?i=1877135727',
+    });
+
+    await findAndUpdateTrackByISRC(deps, 'ISRC1', 7);
+
+    const data = prisma.track.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('appleMusicLink');
+    expect(data.spotifyLink).toBe('sp');
+    expect(data.deezerLink).toBe('dz');
+  });
+
+  it('never clears a link because the matched track has none', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.track.findUnique
+      .mockResolvedValueOnce({
+        artist: 'K.I.Z',
+        name: 'Hurra die Welt geht unter',
+        appleMusicLink: 'https://music.apple.com/de/song/1440839314',
+      })
+      .mockResolvedValueOnce({
+        year: 2015,
+        yearSource: 'database',
+        certainty: 90,
+        reasoning: 'r',
+        ...linkSet,
+      });
+    prisma.$queryRaw.mockResolvedValue([{ id: 60, year: 2015 }]);
+
+    await findAndUpdateTrackByISRC(deps, '', 7);
+
+    const data = prisma.track.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('appleMusicLink');
+    expect(data).not.toHaveProperty('tidalLink');
+  });
+});
+
+describe('linksToCopy', () => {
+  it('fills only the services the target has no link for', () => {
+    expect(
+      linksToCopy(
+        { spotifyLink: 'own-sp', appleMusicLink: '', deezerLink: null },
+        { spotifyLink: 'sp', appleMusicLink: 'am', deezerLink: 'dz', tidalLink: null }
+      )
+    ).toEqual({ appleMusicLink: 'am', deezerLink: 'dz' });
+  });
+
+  it('copies everything the source has when the target is missing', () => {
+    expect(linksToCopy(null, { spotifyLink: 'sp', tidalLink: 'td' })).toEqual({
+      spotifyLink: 'sp',
+      tidalLink: 'td',
+    });
   });
 });
 

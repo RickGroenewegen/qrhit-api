@@ -1400,7 +1400,7 @@ describe('admin routes — wave 3 coverage', () => {
   // ====================================================================
 
   describe('POST /admin/db/flush-hosts', () => {
-    it('runs FLUSH HOSTS and succeeds', async () => {
+    it('empties the host cache and succeeds', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/admin/db/flush-hosts',

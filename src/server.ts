@@ -457,17 +457,23 @@ class Server {
     });
 
     await this.fastify.setErrorHandler((error, request, reply) => {
-      // A 4xx (validation, bad body) is the caller's mistake, not ours. The
-      // route pattern, not the URL: paths carry ids and download hashes.
-      const status = (error as { statusCode?: number }).statusCode;
-      if (status && status < 500) {
+      // A 4xx (validation, bad body, @fastify/static refusing a `..` or `//`
+      // path) is the caller's mistake, not ours: answer with its own status
+      // and log one line, not a stack trace.
+      const { statusCode: status, message } = error as {
+        statusCode?: number;
+        message?: string;
+      };
+      if (status && status >= 400 && status < 500) {
         ErrorTracking.getInstance().ignore(error);
-      } else {
-        ErrorTracking.getInstance().capture(error, {
-          method: request.method,
-          route: request.routeOptions?.url ?? null,
-        });
+        console.warn(`${status} ${request.method} ${request.url}: ${message}`);
+        return reply.status(status).send({ error: message });
       }
+      // The route pattern, not the URL: paths carry ids and download hashes.
+      ErrorTracking.getInstance().capture(error, {
+        method: request.method,
+        route: request.routeOptions?.url ?? null,
+      });
       console.error(error);
       reply.status(500).send({ error: 'Internal Server Error' });
     });

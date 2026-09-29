@@ -197,6 +197,7 @@ export async function prefillLinkCache(deps: DataDeps): Promise<void> {
       amazonMusicLink: true,
       deezerLink: true,
       tidalLink: true,
+      isrc: true,
     },
     where: {
       spotifyLink: {
@@ -216,6 +217,8 @@ export async function prefillLinkCache(deps: DataDeps): Promise<void> {
         amazonMusicLink: track.amazonMusicLink,
         deezerLink: track.deezerLink,
         tidalLink: track.tidalLink,
+        // For the Apple Music storefront resolver, see /qrlink2
+        isrc: track.isrc,
       };
       await deps.cache.set(
         `${TRACK_LINKS_CACHE_PREFIX}:${track.id}`,
@@ -298,7 +301,7 @@ export async function getLink(
     data = JSON.parse(cachedData);
   } else {
     const linkQuery: any[] = await deps.prisma.$queryRaw`
-      SELECT spotifyLink, youtubeLink, youtubeMusicLink, appleMusicLink, amazonMusicLink, deezerLink, tidalLink
+      SELECT spotifyLink, youtubeLink, youtubeMusicLink, appleMusicLink, amazonMusicLink, deezerLink, tidalLink, isrc
       FROM tracks
       WHERE id = ${trackId}`;
 
@@ -311,6 +314,7 @@ export async function getLink(
         amazonMusicLink: linkQuery[0].amazonMusicLink,
         deezerLink: linkQuery[0].deezerLink,
         tidalLink: linkQuery[0].tidalLink,
+        isrc: linkQuery[0].isrc,
       };
 
       if (data.link) {

@@ -21,7 +21,7 @@ import {
   fontsForId,
   appDesignLineError,
 } from '../../src/appDesign';
-import { resolveLineTheme } from '../../src/apptheme';
+import { applyPhpAliases, resolveLineTheme } from '../../src/apptheme';
 
 describe('appDesignLineError (who may design an order line)', () => {
   const line = (over: { userId?: number; status?: string; type?: string | null } = {}) => ({
@@ -310,5 +310,31 @@ describe('resolveLineTheme (which theme a scanned card gets)', () => {
       s: '',
       n: '',
     });
+  });
+});
+
+describe('applyPhpAliases (cards printed with a deleted order line)', () => {
+  const own = { s: 'cplaylist00-3', n: 'Flower', st: 'spotify' };
+
+  it("serves the printed id with the live line's theme", () => {
+    const themes = new Map([[8499, own]]);
+    applyPhpAliases(themes, [[8497, 8499]]);
+    expect(themes.get(8497)).toEqual(own);
+  });
+
+  it('leaves an id that is still a real line alone', () => {
+    const real = { s: '', n: '', st: 'apple_music' };
+    const themes = new Map([
+      [8497, real],
+      [8499, own],
+    ]);
+    applyPhpAliases(themes, [[8497, 8499]]);
+    expect(themes.get(8497)).toBe(real);
+  });
+
+  it('adds nothing when the live line is not loaded', () => {
+    const themes = new Map<number, typeof own>();
+    applyPhpAliases(themes, [[8497, 8499]]);
+    expect(themes.has(8497)).toBe(false);
   });
 });

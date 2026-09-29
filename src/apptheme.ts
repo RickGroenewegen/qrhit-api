@@ -151,6 +151,7 @@ class AppTheme {
           st: themeRow.serviceType || 'spotify',
         });
       }
+      applyPhpAliases(this.appThemes, PHP_ALIASES);
 
       // Only log on main/primary server
       if (shouldLog) {
@@ -265,6 +266,35 @@ class AppTheme {
    */
   public getAllThemes(): Map<number, { s: string; n: string; st: string }> {
     return new Map(this.appThemes);
+  }
+}
+
+/**
+ * Cards printed before c2b92dd0 (2026-08-03) can carry the id of an order line
+ * from an abandoned checkout for the same playlist: the generator took any of
+ * the customer's lines for it. The 01:00 cleanup of expired payments deleted
+ * those lines later, so such a card still plays but gets no theme. Pairs of
+ * [id printed on the card, the customer's live line], found by decoding a card.
+ */
+export const PHP_ALIASES: ReadonlyArray<readonly [number, number]> = [
+  [8497, 8499], // user 780, Von Rock'n'Roll und Flower-Power bis Disco Fever
+  [5427, 5429], // user 780, Big Mix
+  [2660, 2662], // user 780, Best of Rock
+];
+
+/**
+ * Serve each printed id with its live line's theme. An id that is still a real
+ * line keeps its own entry.
+ */
+export function applyPhpAliases<T>(
+  themes: Map<number, T>,
+  aliases: ReadonlyArray<readonly [number, number]>
+): void {
+  for (const [printedId, liveId] of aliases) {
+    const live = themes.get(liveId);
+    if (live && !themes.has(printedId)) {
+      themes.set(printedId, live);
+    }
   }
 }
 

@@ -2035,6 +2035,8 @@ class Mollie {
             blocked: true,
             allowDuplicates: true,
             userConfirmedPrinting: true,
+            // The "Played" pill: stamped by review.ts at the first card scan
+            firstScannedAt: true,
             suggestionsPending: true,
             playlistId: true,
             orderType: {
