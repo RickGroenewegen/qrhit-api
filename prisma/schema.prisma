@@ -713,6 +713,10 @@ model PaymentHasPlaylist {
   eligableForPrinter       Boolean                  @default(false)
   eligableForPrinterAt     DateTime?
   userConfirmedPrinting    Boolean                  @default(false)
+  // The first card scan seen for this line, stamped by the hourly playback
+  // pass in review.ts from the Redis scan list. Null until then; the
+  // dashboard shows the line as "Played" once it is set.
+  firstScannedAt           DateTime?
   blocked                  Boolean                  @default(false)
   // When true the artist+title duplicate filter is skipped for this playlist, so
   // different versions of the same song each get their own card. Set by the

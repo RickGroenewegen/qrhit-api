@@ -8,6 +8,7 @@ class Cache {
   private static instance: Cache;
   private client: Redis;
   private version: string = '1.0.0';
+  private databaseScope: string = Cache.databaseScope();
 
   private constructor() {
     const redisUrl = process.env['REDIS_URL'];
@@ -59,6 +60,29 @@ class Cache {
     ).version;
   }
 
+  /**
+   * Outside production every key also names the database the process is
+   * connected to (`1.0.28:qrhit_dev:<key>`), so a local API that is switched
+   * between databases never serves one database's cached rows while
+   * connected to the other: the featured list once came from `qrhit` into a
+   * dev API on `qrhit_dev` this way. Production keeps `<version>:<key>`.
+   */
+  private static databaseScope(): string {
+    if (process.env['ENVIRONMENT'] === 'production') {
+      return '';
+    }
+    try {
+      const database = new URL(process.env['DATABASE_URL'] || '').pathname.slice(1);
+      return database ? `${database}:` : '';
+    } catch {
+      return '';
+    }
+  }
+
+  private prefixed(key: string): string {
+    return `${this.version}:${this.databaseScope}${key}`;
+  }
+
   public async executeCommand(command: string, ...args: any[]): Promise<any> {
     try {
       // @ts-ignore: Dynamic command execution
@@ -74,7 +98,7 @@ class Cache {
     value: string,
     expireInSeconds?: number
   ): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     if (expireInSeconds) {
       await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
     } else {
@@ -83,7 +107,7 @@ class Cache {
   }
 
   async get(key: string, never: boolean = true): Promise<string | null> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     if (process.env['ENVIRONMENT'] === 'development' && never) {
      //cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
@@ -96,7 +120,7 @@ class Cache {
   }
 
   async del(key: string): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('del', cacheKey);
   }
 
@@ -109,7 +133,7 @@ class Cache {
     score: number,
     member: string
   ): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('zadd', cacheKey, score, member);
   }
 
@@ -117,7 +141,7 @@ class Cache {
    * Removes one member from a sorted set, whatever its score.
    */
   async removeFromSortedSet(key: string, member: string): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('zrem', cacheKey, member);
   }
 
@@ -125,7 +149,7 @@ class Cache {
    * Removes all members of a sorted set whose score is <= maxScore.
    */
   async pruneSortedSet(key: string, maxScore: number): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('zremrangebyscore', cacheKey, '-inf', maxScore);
   }
 
@@ -136,7 +160,7 @@ class Cache {
   async getSortedSetWithScores(
     key: string
   ): Promise<{ member: string; score: number }[]> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     const flat: string[] = await this.executeCommand(
       'zrange',
       cacheKey,
@@ -157,7 +181,7 @@ class Cache {
    * the counter behaves as a fixed-window rate limiter.
    */
   async increment(key: string, expireInSeconds?: number): Promise<number> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     const count = await this.executeCommand('incr', cacheKey);
     if (count === 1 && expireInSeconds) {
       await this.executeCommand('expire', cacheKey, expireInSeconds);
@@ -166,7 +190,7 @@ class Cache {
   }
 
   async delPattern(pattern: string): Promise<void> {
-    let cachePattern = `${this.version}:${pattern}`;
+    let cachePattern = this.prefixed(pattern);
     const keys = await this.executeCommand('keys', cachePattern);
     if (keys && keys.length > 0) {
       await this.executeCommand('del', ...keys);
@@ -174,7 +198,7 @@ class Cache {
   }
 
   async delPatternNonBlocking(pattern: string): Promise<number> {
-    let cachePattern = `${this.version}:${pattern}`;
+    let cachePattern = this.prefixed(pattern);
     let cursor = '0';
     let deletedCount = 0;
 
@@ -198,7 +222,7 @@ class Cache {
    * between the two commands.
    */
   async setArray(key: string, values: string[]): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     const results = await this.client
       .multi()
       .del(cacheKey)
@@ -212,7 +236,7 @@ class Cache {
   }
 
   async getArray(key: string): Promise<string[]> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     return await this.executeCommand('smembers', cacheKey);
   }
 
@@ -225,7 +249,7 @@ class Cache {
     key: string,
     value: string
   ): Promise<{ exists: boolean; member: boolean }> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     const results = await this.client
       .multi()
       .exists(cacheKey)
@@ -246,18 +270,18 @@ class Cache {
   }
 
   async valueExistsInArray(key: string, value: string): Promise<boolean> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     const exists = await this.executeCommand('sismember', cacheKey, value);
     return exists === 1;
   }
 
   async addValueToArray(key: string, value: string): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('sadd', cacheKey, value);
   }
 
   async addValuesToArray(key: string, values: string[]): Promise<void> {
-    let cacheKey = `${this.version}:${key}`;
+    let cacheKey = this.prefixed(key);
     await this.executeCommand('sadd', cacheKey, ...values);
   }
 

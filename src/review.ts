@@ -170,7 +170,11 @@ class Review {
       }
 
       // Parse playback data and extract php IDs
-      const playbackData: Array<{ php: number; trackId: number }> = [];
+      const playbackData: Array<{
+        php: number;
+        trackId: number;
+        timestamp: string | null;
+      }> = [];
       for (const ipInfoJson of ipInfoList) {
         try {
           const ipInfo = JSON.parse(ipInfoJson);
@@ -178,6 +182,7 @@ class Review {
             playbackData.push({
               php: parseInt(ipInfo.php),
               trackId: parseInt(ipInfo.trackId),
+              timestamp: ipInfo.timestamp ?? null,
             });
           }
         } catch (e) {
@@ -199,6 +204,8 @@ class Review {
         select: {
           id: true,
           paymentId: true,
+          playlistId: true,
+          firstScannedAt: true,
           payment: {
             select: {
               id: true,
@@ -278,6 +285,8 @@ class Review {
         );
       }
 
+      await this.stampFirstScans(phpRecords, playbackData);
+
       return {
         success: true,
         data: updatedPayments,
@@ -292,6 +301,66 @@ class Review {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  /**
+   * Stamp `firstScannedAt` on order lines that show up in the scan list for
+   * the first time, with the earliest scan the list still holds. A line only
+   * counts when one of its scans is a card of that line's playlist: the
+   * `php` in a /qrlink2 URL is just a number the caller sends. The update is
+   * conditional on the column still being empty, so a stamp is never moved.
+   * Failures are logged and never block the review marking above.
+   */
+  private async stampFirstScans(
+    phpRecords: Array<{
+      id: number;
+      playlistId: number;
+      firstScannedAt: Date | null;
+    }>,
+    playbackData: Array<{
+      php: number;
+      trackId: number;
+      timestamp: string | null;
+    }>
+  ): Promise<number> {
+    let stamped = 0;
+    for (const php of phpRecords) {
+      if (php.firstScannedAt) continue;
+      try {
+        const scans = playbackData.filter((p) => p.php === php.id);
+        const trackIds = [...new Set(scans.map((s) => s.trackId))];
+        const ownCard = await this.prisma.playlistHasTrack.findFirst({
+          where: { playlistId: php.playlistId, trackId: { in: trackIds } },
+          select: { trackId: true },
+        });
+        if (!ownCard) continue;
+
+        const times = scans
+          .map((s) => (s.timestamp ? Date.parse(s.timestamp) : NaN))
+          .filter((t) => !isNaN(t));
+        const firstScannedAt = times.length
+          ? new Date(Math.min(...times))
+          : new Date();
+
+        const result = await this.prisma.paymentHasPlaylist.updateMany({
+          where: { id: php.id, firstScannedAt: null },
+          data: { firstScannedAt },
+        });
+        stamped += result.count;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(`Error stamping first scan for php ${white.bold(php.id)}: `) +
+            color.white.bold(error instanceof Error ? error.message : String(error))
+        );
+      }
+    }
+
+    if (stamped > 0) {
+      this.logger.log(
+        color.blue.bold(`Marked ${white.bold(stamped)} playlists as played`)
+      );
+    }
+    return stamped;
   }
 
   public async processReviewEmails() {

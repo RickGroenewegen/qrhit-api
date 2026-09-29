@@ -382,16 +382,17 @@ describe('lookupIp', () => {
       JSON.stringify(data),
       86400
     );
-    expect(cacheMock.executeCommand).toHaveBeenCalledWith(
+    // The scan log belongs to logLink; a lookup must not push to or trim it
+    expect(cacheMock.executeCommand).not.toHaveBeenCalledWith(
       'lpush',
       'ipInfoList',
-      JSON.stringify(data)
+      expect.anything()
     );
-    expect(cacheMock.executeCommand).toHaveBeenCalledWith(
+    expect(cacheMock.executeCommand).not.toHaveBeenCalledWith(
       'ltrim',
       'ipInfoList',
-      0,
-      99
+      expect.anything(),
+      expect.anything()
     );
   });
 

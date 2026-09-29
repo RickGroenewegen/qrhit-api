@@ -519,10 +519,11 @@ class Utils {
 
       await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache individual IP info for 1 day
 
-      // Store the IP info in a list and maintain only the last 100 entries
-      const ipInfoListKey = 'ipInfoList';
-      await cache.executeCommand('lpush', ipInfoListKey, JSON.stringify(data));
-      await cache.executeCommand('ltrim', ipInfoListKey, 0, 99); // Keep only the last 100 entries
+      // Not pushed to `ipInfoList`: that list is the scan log (logLink in
+      // data/musicLinks.ts keeps the last 1000 scans), which the play map,
+      // the review eligibility and the first-scan stamp read. Pushing the
+      // bare lookup here trimmed it to 100 on every uncached IP, checkout
+      // lookups included.
       return data;
     } catch (error) {
       console.error(`Error looking up IP ${ip}:`, error);
