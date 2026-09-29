@@ -288,12 +288,5 @@
   "instructions.boxFormatAlt": "Schachtel für {{count}} Karten",
   "invoice_lines.licenseFee": "QRSong!-Lizenzgebühr pro Set mit {{cards}} Karten ({{list}}) – Nutzung der QRSong!-App und garantiert funktionierende Songlinks",
   "quotation.licenseProduct": "QRSong!-Lizenz",
-  "quotation.licenseProductDetails": "Pro Set mit {{cards}} Karten ({{list}}): Nutzung der QRSong!-App und garantiert funktionierende Songlinks",
-  "quotation.piLicenseIncluded": "Leistungsumfang der Lizenz",
-  "quotation.piLicenseSets": "Nutzung der QRSong!-App für {{quantity}} Sets mit je {{cards}} Karten",
-  "quotation.piLicenseLinks": "Die Garantie, dass die Songlinks weiterhin funktionieren, auch wenn ein Streaminglink nicht mehr funktioniert",
-  "quotation.piLicensePdf": "Eine druckfertige PDF-Datei der Karten innerhalb von etwa zwei Arbeitstagen, erstellt anhand der von Ihnen bereitgestellten Spotify-Playlist und Gestaltung",
-  "quotation.piLicenseYours": "Ihre Aufgaben",
-  "quotation.piLicenseYours1": "Die Kundenbetreuung, die Gestaltung, der Druck und die Lieferung",
-  "quotation.piLicenseYours2": "Bereitstellung der Playlist, der Schriftart, der Farben und der Kartengestaltung gemäß unseren Vorgaben"
+  "quotation.licenseProductDetails": "Pro Set mit {{cards}} Karten ({{list}}): Nutzung der QRSong!-App und garantiert funktionierende Songlinks"
 }

@@ -622,9 +622,9 @@
             <% } %>
         </div>
 
-        <%# A license quotation goes to Tromp, a partner: no signature, no down
-            payment and no terms and conditions, which are written for a client
-            ordering boxes. %>
+        <%# A license quotation goes to Tromp, a partner, and is one page: no
+            signature, no down payment, no product information and no terms and
+            conditions, which are all written for a client ordering boxes. %>
         <% const isLicense = typeof license !== 'undefined' && !!license; %>
         <% if (!isLicense) { %>
         <!-- Signature Section -->
@@ -649,20 +649,12 @@
         </div>
         <% } %>
 
+        <% if (!isLicense) { %>
         <!-- Notes Section (Page 2) -->
         <div class="notes-section">
             <h2 class="section-title"><%= t('productInfoTitle') %></h2>
             <div class="notes-content">
-                <% if (isLicense) { %>
-                    <strong><%= t('piLicenseIncluded') %></strong><br>
-                    • <%= t('piLicenseSets', { quantity: license.quantity, cards: license.cards }) %><br>
-                    • <%= t('piLicenseLinks') %><br>
-                    • <%= t('piLicensePdf') %><br><br>
-
-                    <strong><%= t('piLicenseYours') %></strong><br>
-                    • <%= t('piLicenseYours1') %><br>
-                    • <%= t('piLicenseYours2') %>
-                <% } else if (productType === 'schneider') { %>
+                <% if (productType === 'schneider') { %>
                     <%
                         const cardCount = calculation.cardCount || 48;
                         const totalCards = calculationResult.quantity * cardCount;
@@ -716,7 +708,6 @@
             </div>
         </div>
 
-        <% if (!isLicense) { %>
         <%- include('partials/quotation_terms', { brandName: 'QRSong!' }) %>
         <% } %>
 

@@ -595,9 +595,10 @@ so no invoice matched the quotation or the Sell column.
   `shared/tromp-license-fee.util.ts` in the frontend) and the snapshot
   carries `trompSold` and `licenseCards`. The quotation and the invoice
   then name the license instead of a box (`invoice_lines.licenseFee`,
-  `quotation.licenseProduct*`, `quotation.piLicense*`), and the quotation
-  leaves out the signature block, the down payment notice and the terms and
-  conditions, which are written for a client ordering boxes. Nothing else is
+  `quotation.licenseProduct*`), and the quotation is a single page: it
+  leaves out the signature block, the down payment notice, the product
+  information page and the terms and conditions, which are all written for
+  a client ordering boxes. Nothing else is
   special: such a list is kept under the Tromp company, so the quotation,
   the invoice, the VAT and the MoneyBird contact are Tromp's like any
   company's. Its buy price is 0, Tromp prints on its own account.

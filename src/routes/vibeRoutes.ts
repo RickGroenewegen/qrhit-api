@@ -1903,9 +1903,10 @@ export default async function vibeRoutes(
         let productDescription = '';
         let productDetails = '';
         // Set when Tromp sold the list: the quotation is then for our
-        // license fee per set, not for boxes. The list lives under the Tromp
-        // company, so it is addressed to Tromp like any company's.
-        let license: { quantity: number; cards: number; list: string } | null = null;
+        // license fee per set, not for boxes, on a single page. The list lives
+        // under the Tromp company, so it is addressed to Tromp like any
+        // company's.
+        let license: { cards: number; list: string } | null = null;
 
         // The discount belongs to the list, like the rest of its price, and
         // the invoice reads it from there. Tromp and Schneider calculations
@@ -1965,7 +1966,6 @@ export default async function vibeRoutes(
             : null;
           if (listCalc && licensePricing?.trompSold) {
             license = {
-              quantity: licensePricing.quantity,
               cards: licensePricing.licenseCards || 200,
               list: listCalc.name,
             };
