@@ -285,5 +285,15 @@
   "instructions.boxFormatsTitle": "Doosformaten",
   "instructions.boxFormatCards": "{{count}} kaarten",
   "instructions.boxFormatSize": "ca. {{size}}",
-  "instructions.boxFormatAlt": "Doos voor {{count}} kaarten"
+  "instructions.boxFormatAlt": "Doos voor {{count}} kaarten",
+  "invoice_lines.licenseFee": "QRSong!-licentiekosten per set van {{cards}} kaarten ({{list}}) - gebruik van de QRSong!-app en gegarandeerd werkende songlinks",
+  "quotation.licenseProduct": "QRSong!-licentie",
+  "quotation.licenseProductDetails": "Per set van {{cards}} kaarten ({{list}}): gebruik van de QRSong!-app en gegarandeerd werkende songlinks",
+  "quotation.piLicenseIncluded": "Wat de licentie omvat",
+  "quotation.piLicenseSets": "Gebruik van de QRSong!-app voor {{quantity}} sets van {{cards}} kaarten",
+  "quotation.piLicenseLinks": "De garantie dat de songlinks blijven werken, ook als een streaminglink niet meer werkt",
+  "quotation.piLicensePdf": "Een drukklaar pdf-bestand van de kaarten binnen circa twee werkdagen, gemaakt op basis van de door u aangeleverde Spotify-playlist en het ontwerp",
+  "quotation.piLicenseYours": "Waar u voor zorgt",
+  "quotation.piLicenseYours1": "Het contact met de klant, het ontwerp, het drukwerk en de levering",
+  "quotation.piLicenseYours2": "Aanlevering van de playlist, het lettertype, de kleuren en het kaartontwerp volgens onze specificaties"
 }

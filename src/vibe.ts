@@ -4243,6 +4243,10 @@ class Vibe {
    *   - 'down': one line, 30% of the total
    *   - 'remaining': one line, the total minus `downPaymentExclVat` (the
    *     down payment actually invoiced), or minus 30% when there is none
+   *
+   * A Tromp list whose snapshot says Tromp sold it (`trompSold`) bills our
+   * license fee per set instead of a box. Such a list lives under the Tromp
+   * company, so the invoice goes to Tromp like any company's.
    */
   public async buildInvoiceLineItems(
     companyId: number,
@@ -4312,9 +4316,15 @@ class Vibe {
         e.key ? tExtra(e.key, e.keyVars) : e.name;
 
       // The product line names what the quotation names; the numbers all
-      // come from the snapshot.
+      // come from the snapshot. A license fee names the list, which is how
+      // Tromp tells its orders apart.
       let productDescription: string;
-      if (type === 'qrsong') {
+      if (type === 'qrsong' && pricing.trompSold) {
+        productDescription = t('licenseFee', {
+          list: list.name,
+          cards: pricing.licenseCards || 200,
+        });
+      } else if (type === 'qrsong') {
         productDescription =
           calc.printingType === 'luxe'
             ? t('luxeBox')

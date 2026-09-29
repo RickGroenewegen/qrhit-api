@@ -488,6 +488,61 @@ describe('buildInvoiceLineItems', () => {
     expect(res.amounts).toEqual({ full: 11565, down: 3469.5, remaining: 8095.5 });
   });
 
+  it('Tromp sold the list: bills the license fee per set, naming the list', async () => {
+    // 250 sets of 100 cards at the €2.28 tier, the voting portal and the
+    // custom app at their usual one-off prices. The list lives under the
+    // Tromp company, which the invoice goes to like any company's.
+    listWith(
+      'calculationTromp',
+      {
+        quantity: 250,
+        printingType: 'eigen',
+        trompSold: true,
+        pricing: snapshot({
+          quantity: 250,
+          unitPrice: 2.28,
+          votingPortalFee: 500,
+          discountPercent: 0,
+          trompSold: true,
+          licenseCards: 100,
+        }),
+      },
+      'Bird muziekspel'
+    );
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Tromp Print & Packaging', locale: 'nl' });
+
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
+    expect(res.success).toBe(true);
+    expect(res.items).toHaveLength(3);
+    expect(res.items![0]).toEqual({
+      description:
+        'QRSong!-licentiekosten per set van 100 kaarten (Bird muziekspel) - gebruik van de QRSong!-app en gegarandeerd werkende songlinks',
+      amount: '250',
+      price: '2.28',
+    });
+    expect(res.items![1]).toEqual({
+      description: 'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
+      amount: '1',
+      price: '350.00',
+    });
+    expect(res.items![2]).toEqual({
+      description: 'Voting Portal - eenmalige kosten, gebruik stemportaal',
+      amount: '1',
+      price: '500.00',
+    });
+    expect(res.totals!.total).toBe(1420); // 570 + 350 + 500
+  });
+
+  it('a Schneider snapshot never bills a license, flag or not', async () => {
+    listWith('calculationSchneider', {
+      cardCount: 48,
+      pricing: snapshot({ trompSold: true, licenseCards: 100 }),
+    });
+    h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    expect(res.items![0].description).toBe('QRSong! Box - 48 kaarten');
+  });
+
   it('the lines add up to the total MoneyBird will show', async () => {
     listWith('calculationSchneider', {
       cardCount: 48,

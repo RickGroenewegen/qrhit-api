@@ -589,6 +589,18 @@ so no invoice matched the quotation or the Sell column.
   rounding. The save endpoints set `sellPrice` from it (excl. VAT, after
   discount), and `buildInvoiceLineItems` builds the lines from it. A list
   without a snapshot cannot be invoiced; opening its calculator saves one.
+- **Tromp license fee.** When Tromp finds the client and handles the sale,
+  the design and the printing, "Tromp sold this" in the Tromp calculator
+  prices the list at our license fee per set (the table is
+  `shared/tromp-license-fee.util.ts` in the frontend) and the snapshot
+  carries `trompSold` and `licenseCards`. The quotation and the invoice
+  then name the license instead of a box (`invoice_lines.licenseFee`,
+  `quotation.licenseProduct*`, `quotation.piLicense*`), and the quotation
+  leaves out the signature block, the down payment notice and the terms and
+  conditions, which are written for a client ordering boxes. Nothing else is
+  special: such a list is kept under the Tromp company, so the quotation,
+  the invoice, the VAT and the MoneyBird contact are Tromp's like any
+  company's. Its buy price is 0, Tromp prints on its own account.
 - The discount belongs to the list. Tromp and Schneider used to write it to
   `company.calculation` (company-wide), where the quotation read it and the
   invoice did not. Lists saved before the move still fall back to the

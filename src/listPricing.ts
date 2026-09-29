@@ -34,6 +34,16 @@ export interface ListPricing {
   customAppFee: number;
   votingPortalFee: number;
   discountPercent: number;
+  /**
+   * Tromp found the client and did the sale, the design and the printing.
+   * `unitPrice` is then our license fee per set, and the quotation and the
+   * invoice name the license instead of a box. Such a list is kept under
+   * the Tromp company, so both go to Tromp like any company's. Only Tromp
+   * lists carry it.
+   */
+  trompSold?: boolean;
+  /** Cards per set the license fee was priced for (50, 100 or 200). */
+  licenseCards?: number;
 }
 
 export interface ListPricingTotals {
@@ -107,6 +117,7 @@ export function parseListPricing(raw: unknown): ListPricing | null {
 
   const fee = (v: unknown) => Math.max(0, round2(money(v) ?? 0));
   const discount = money(r['discountPercent']) ?? 0;
+  const licenseCards = money(r['licenseCards']);
 
   return {
     quantity,
@@ -115,6 +126,14 @@ export function parseListPricing(raw: unknown): ListPricing | null {
     customAppFee: fee(r['customAppFee']),
     votingPortalFee: fee(r['votingPortalFee']),
     discountPercent: Math.min(100, Math.max(0, discount)),
+    ...(r['trompSold'] === true
+      ? {
+          trompSold: true,
+          ...(licenseCards !== null && Number.isInteger(licenseCards) && licenseCards > 0
+            ? { licenseCards }
+            : {}),
+        }
+      : {}),
   };
 }
 

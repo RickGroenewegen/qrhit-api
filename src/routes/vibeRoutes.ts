@@ -1874,6 +1874,7 @@ export default async function vibeRoutes(
         // Lists are priced by Tromp or Schneider; an OnzeVibe quotation comes
         // from the OnzeVibe portal and is company-level.
         let listCalc: {
+          name: string;
           calculationTromp: string | null;
           calculationSchneider: string | null;
         } | null = null;
@@ -1884,6 +1885,7 @@ export default async function vibeRoutes(
               where: { id: listIdParam },
               select: {
                 companyId: true,
+                name: true,
                 calculationTromp: true,
                 calculationSchneider: true,
               },
@@ -1900,6 +1902,10 @@ export default async function vibeRoutes(
         let calculationResult: any = {};
         let productDescription = '';
         let productDetails = '';
+        // Set when Tromp sold the list: the quotation is then for our
+        // license fee per set, not for boxes. The list lives under the Tromp
+        // company, so it is addressed to Tromp like any company's.
+        let license: { quantity: number; cards: number; list: string } | null = null;
 
         // The discount belongs to the list, like the rest of its price, and
         // the invoice reads it from there. Tromp and Schneider calculations
@@ -1954,8 +1960,25 @@ export default async function vibeRoutes(
             calculationResult = pricingResult.calculation;
           }
 
+          const licensePricing = listCalc
+            ? listPricingFromCalculation(listCalc.calculationTromp)
+            : null;
+          if (listCalc && licensePricing?.trompSold) {
+            license = {
+              quantity: licensePricing.quantity,
+              cards: licensePricing.licenseCards || 200,
+              list: listCalc.name,
+            };
+          }
+
           // Set product description for Tromp
-          if (calculation.printingType === 'luxe') {
+          if (license) {
+            productDescription = quotationT('licenseProduct');
+            productDetails = quotationT('licenseProductDetails', {
+              cards: license.cards,
+              list: license.list,
+            });
+          } else if (calculation.printingType === 'luxe') {
             productDescription = quotationT('productLuxeBox');
             productDetails = quotationT('productLuxeBoxDetails');
           } else if (calculation.printingType === 'klein') {
@@ -2125,6 +2148,7 @@ export default async function vibeRoutes(
           productDescription,
           productDetails,
           productType: type,
+          license,
           vatContext,
           companyCountryName,
         });

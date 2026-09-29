@@ -622,6 +622,11 @@
             <% } %>
         </div>
 
+        <%# A license quotation goes to Tromp, a partner: no signature, no down
+            payment and no terms and conditions, which are written for a client
+            ordering boxes. %>
+        <% const isLicense = typeof license !== 'undefined' && !!license; %>
+        <% if (!isLicense) { %>
         <!-- Signature Section -->
         <div style="margin-top: 12px;">
             <div style="font-size: 10px; color: #3d6d74; margin-bottom: 6px; line-height: 1.4;">
@@ -632,7 +637,9 @@
                 <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
             </div>
         </div>
+        <% } %>
 
+        <% if (!isLicense) { %>
         <!-- Deposit Notice -->
         <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #dce9ea; border-left: 4px solid #18565e; border-radius: 4px;">
             <strong style="color: #18565e; font-size: 12px;"><%= t('depositTitle') %></strong>
@@ -640,12 +647,22 @@
                 <%= t('depositText') %>
             </p>
         </div>
+        <% } %>
 
         <!-- Notes Section (Page 2) -->
         <div class="notes-section">
             <h2 class="section-title"><%= t('productInfoTitle') %></h2>
             <div class="notes-content">
-                <% if (productType === 'schneider') { %>
+                <% if (isLicense) { %>
+                    <strong><%= t('piLicenseIncluded') %></strong><br>
+                    • <%= t('piLicenseSets', { quantity: license.quantity, cards: license.cards }) %><br>
+                    • <%= t('piLicenseLinks') %><br>
+                    • <%= t('piLicensePdf') %><br><br>
+
+                    <strong><%= t('piLicenseYours') %></strong><br>
+                    • <%= t('piLicenseYours1') %><br>
+                    • <%= t('piLicenseYours2') %>
+                <% } else if (productType === 'schneider') { %>
                     <%
                         const cardCount = calculation.cardCount || 48;
                         const totalCards = calculationResult.quantity * cardCount;
@@ -699,7 +716,9 @@
             </div>
         </div>
 
+        <% if (!isLicense) { %>
         <%- include('partials/quotation_terms', { brandName: 'QRSong!' }) %>
+        <% } %>
 
         <!-- Footer -->
         <div class="footer">

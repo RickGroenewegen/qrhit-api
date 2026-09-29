@@ -82,6 +82,21 @@ describe('parseListPricing', () => {
     expect(p!.extras).toEqual([{ key: 'cuttingDie', name: 'Stansvorm', price: 425 }]);
   });
 
+  it('keeps "Tromp sold this" and its card count, and nothing else', () => {
+    expect(parseListPricing({ ...base, trompSold: true, licenseCards: 100 })).toEqual({
+      ...base,
+      trompSold: true,
+      licenseCards: 100,
+    });
+    expect(parseListPricing({ ...base, trompSold: true, licenseCards: 'x' })).toEqual({
+      ...base,
+      trompSold: true,
+    });
+    // Only an explicit true: a stray value must not turn a box into a license.
+    expect(parseListPricing({ ...base, trompSold: 'true', licenseCards: 100 })).toEqual(base);
+    expect(parseListPricing({ ...base, trompSold: false })).toEqual(base);
+  });
+
   it('clamps the discount to 0-100% and fees to zero or more', () => {
     expect(parseListPricing({ ...base, discountPercent: 140 })!.discountPercent).toBe(100);
     expect(parseListPricing({ ...base, discountPercent: -5 })!.discountPercent).toBe(0);
