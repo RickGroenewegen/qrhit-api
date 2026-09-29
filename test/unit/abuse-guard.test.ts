@@ -56,6 +56,7 @@ const ENV_KEYS = [
   'QRLINK_DECOY_IPS',
   'QRLINK_SEQ_STREAK',
   'QRLINK_SEQ_MAX_STEP',
+  'QRLINK_SEQ_MAX_SECONDS',
   'QRLINK_SEQ_WINDOW_SECONDS',
 ];
 
@@ -76,6 +77,21 @@ function withSequenceStore() {
     store.set(key, value);
   });
   return store;
+}
+
+/**
+ * A clock the sequence detector reads, moved by hand between requests, so a
+ * run can be fed at scraper speed or at the speed a person scans cards.
+ */
+let clockSpy: { mockRestore: () => void } | undefined;
+function withClock(start = 1_790_000_000_000) {
+  let now = start;
+  clockSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  return {
+    tick(ms: number) {
+      now += ms;
+    },
+  };
 }
 const savedEnv: Record<string, string | undefined> = {};
 
@@ -103,6 +119,8 @@ afterEach(() => {
     if (savedEnv[k] === undefined) delete process.env[k];
     else process.env[k] = savedEnv[k];
   }
+  clockSpy?.mockRestore();
+  clockSpy = undefined;
   vi.useRealTimers();
 });
 
@@ -302,27 +320,102 @@ describe('decoy', () => {
 });
 
 describe('sequential-id detection', () => {
-  it('bans an IP walking the ids upwards below the rate limit', async () => {
-    process.env['QRLINK_SEQ_STREAK'] = '10';
+  it('bans 25 ascending ids at scraper speed, below the rate limit', async () => {
+    const clock = withClock();
     const guard = freshGuard();
     await flush();
     withSequenceStore();
     cacheMock.increment.mockResolvedValue(1); // never trips the rate limiter
 
-    // Nine ascending ids are still allowed.
-    for (let id = 392322; id < 392331; id++) {
+    // The September 2026 scraper: one id a second. 24 are still allowed.
+    for (let id = 392322; id < 392346; id++) {
       expect(await guard.check('1.2.3.4', 'ua', id)).toEqual({ allowed: true });
+      clock.tick(1000);
     }
-    // The tenth completes the run.
-    expect(await guard.check('1.2.3.4', 'ua', 392331)).toEqual({
+    // The 25th completes a run of 25 inside 60 seconds.
+    expect(await guard.check('1.2.3.4', 'ua', 392346)).toEqual({
       allowed: false,
       reason: 'enumeration',
     });
     expect(guard.isBanned('1.2.3.4')).toBe(true);
+    expect(blockedIpMock.logBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'enumeration',
+        detail: expect.stringContaining('25 ascending requests in 24s'),
+      })
+    );
+  });
+
+  it('lets a long ascending run through at the pace a person scans cards', async () => {
+    const clock = withClock();
+    const guard = freshGuard();
+    await flush();
+    withSequenceStore();
+    cacheMock.increment.mockResolvedValue(1);
+
+    // A customer scanning their own brand-new, contiguous block in printed
+    // order: a card every 5 seconds is already quick while each one plays.
+    for (let id = 5000; id < 5040; id++) {
+      expect(await guard.check('7.7.7.7', 'ua', id)).toEqual({ allowed: true });
+      clock.tick(5000);
+    }
+    expect(guard.isBanned('7.7.7.7')).toBe(false);
+  });
+
+  it('catches a run that starts slowly and then speeds up', async () => {
+    const clock = withClock();
+    const guard = freshGuard();
+    await flush();
+    withSequenceStore();
+    cacheMock.increment.mockResolvedValue(1);
+
+    // Ten ids at a human pace, then the same run carries on at one a second.
+    // The window slides, so the slow start does not shield the fast part.
+    let id = 800;
+    for (let i = 0; i < 10; i++) {
+      expect(await guard.check('8.8.8.8', 'ua', id++)).toEqual({ allowed: true });
+      clock.tick(10_000);
+    }
+    let verdict = { allowed: true } as Awaited<ReturnType<AbuseGuard['check']>>;
+    for (let i = 0; i < 25 && verdict.allowed; i++) {
+      verdict = await guard.check('8.8.8.8', 'ua', id++);
+      clock.tick(1000);
+    }
+    expect(verdict).toEqual({ allowed: false, reason: 'enumeration' });
+    expect(guard.isBanned('8.8.8.8')).toBe(true);
+  });
+
+  it('honours QRLINK_SEQ_MAX_SECONDS', async () => {
+    process.env['QRLINK_SEQ_STREAK'] = '3';
+    process.env['QRLINK_SEQ_MAX_SECONDS'] = '5';
+    const clock = withClock();
+    const guard = freshGuard();
+    await flush();
+    withSequenceStore();
+    cacheMock.increment.mockResolvedValue(1);
+
+    // Three ids over 6 seconds: one second too slow.
+    for (const id of [10, 11, 12]) {
+      expect((await guard.check('6.6.6.6', 'ua', id)).allowed).toBe(true);
+      clock.tick(3000);
+    }
+    expect(guard.isBanned('6.6.6.6')).toBe(false);
+  });
+
+  it('reads a counter stored before the run kept its times', async () => {
+    const guard = freshGuard();
+    await flush();
+    const store = withSequenceStore();
+    cacheMock.increment.mockResolvedValue(1);
+    // `<id>:<run>` from the previous deploy, already well past 25.
+    store.set('qrlink_seq:5.5.5.5', '100:40');
+
+    expect(await guard.check('5.5.5.5', 'ua', 101)).toEqual({ allowed: true });
+    expect(store.get('qrlink_seq:5.5.5.5')).toMatch(/^101:41:\d+$/);
   });
 
   it('does not accumulate on scattered ids from a real deck', async () => {
-    process.env['QRLINK_SEQ_STREAK'] = '10';
+    process.env['QRLINK_SEQ_STREAK'] = '3';
     const guard = freshGuard();
     await flush();
     withSequenceStore();

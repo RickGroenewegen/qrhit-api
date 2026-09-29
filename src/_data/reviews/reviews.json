@@ -1,37 +1,37 @@
 {
   "version": 2,
   "trustpilot": {
-    "fetchedAt": "2026-09-17T11:25:15.490Z",
+    "fetchedAt": "2026-09-29T14:23:46.859Z",
     "profileUrl": "https://www.trustpilot.com/review/qrsong.io",
     "trustScore": 4.7,
     "stars": 4.5,
-    "reviewCount": 39,
-    "reviewsLast12Months": 28,
+    "reviewCount": 41,
+    "reviewsLast12Months": 29,
     "distribution": {
       "1": 0,
       "2": 0,
       "3": 0,
       "4": 2,
-      "5": 37
+      "5": 39
     },
     "languages": {
-      "de": 11,
+      "de": 12,
       "en": 11,
       "es": 1,
-      "nl": 15,
+      "nl": 16,
       "sv": 1
     }
   },
   "appstore": {
-    "fetchedAt": "2026-09-17T11:47:24.091Z",
+    "fetchedAt": "2026-09-29T14:25:51.185Z",
     "appId": "6727011939",
     "url": "https://apps.apple.com/app/id6727011939",
-    "average": 4.653844153846154,
-    "count": 130,
+    "average": 4.664179701492538,
+    "count": 134,
     "storefronts": {
       "ar": {
-        "average": 1,
-        "count": 1
+        "average": 3,
+        "count": 2
       },
       "at": {
         "average": 5,
@@ -59,11 +59,11 @@
       },
       "co": {
         "average": 5,
-        "count": 6
+        "count": 7
       },
       "de": {
-        "average": 4.63157,
-        "count": 38
+        "average": 4.65,
+        "count": 40
       },
       "dk": {
         "average": 5,
@@ -124,31 +124,257 @@
     }
   },
   "googleplay": {
-    "fetchedAt": "2026-09-17T11:38:09.239Z",
+    "fetchedAt": "2026-09-29T14:23:46.859Z",
     "packageName": "nl.rickgroenewegen.qrsong",
     "url": "https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong",
     "country": "nl",
     "average": 4.428571,
-    "count": 59,
+    "count": 61,
     "distribution": {
       "1": 8,
       "2": 0,
       "3": 0,
       "4": 0,
-      "5": 50
+      "5": 52
     },
     "countries": {
       "nl": {
         "average": 4.428571,
-        "count": 59
+        "count": 61
       },
       "de": {
-        "average": 4.347826,
-        "count": 59
+        "average": 4.2083335,
+        "count": 61
       }
     }
   },
   "reviews": [
+    {
+      "id": "trustpilot:6abb6772ba18ed2da005ef0d",
+      "source": "trustpilot",
+      "rating": 5,
+      "language": "de",
+      "locale": "de",
+      "author": "Anna",
+      "country": "DE",
+      "authorImage": null,
+      "authorReviewCount": 1,
+      "verified": false,
+      "appVersion": null,
+      "publishedAt": "2026-09-29T09:23:30.000Z",
+      "experiencedAt": "2026-09-03T00:00:00.000Z",
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "Endlich ein seriöser Anbieter - top Quali!",
+        "text": "Wir haben 300 Karten inkl. 2 Geschenkboxen zum 50. Geburtstag verschenkt und es war der Hammer! ✨ Wir sind leider fast auf einen anderen dubiosen Anbieter reingefallen und waren sehr froh, dass bei QR Song! alles reibungslos geklappt hat. 🫶🏻 Das Preis-Leistungs-Verhältnis passt und die Qualität der Karten ist super… man merkt, dass da Herzblut drin steckt."
+      },
+      "sourceHash": "5d396cdf923561a6e1a37cb77ce3f2f3c31bb947",
+      "translations": {
+        "de": {
+          "title": "Endlich ein seriöser Anbieter - top Quali!",
+          "text": "Wir haben 300 Karten inkl. 2 Geschenkboxen zum 50. Geburtstag verschenkt und es war der Hammer! ✨ Wir sind leider fast auf einen anderen dubiosen Anbieter reingefallen und waren sehr froh, dass bei QR Song! alles reibungslos geklappt hat. 🫶🏻 Das Preis-Leistungs-Verhältnis passt und die Qualität der Karten ist super… man merkt, dass da Herzblut drin steckt."
+        },
+        "en": {
+          "title": "Finally a reputable provider, top quality!",
+          "text": "We gave 300 cards including 2 gift boxes for a 50th birthday and it was amazing! ✨ Unfortunately, we almost fell for another dodgy provider and were very glad that everything went smoothly with QR Song! 🫶🏻 The value for money is right and the quality of the cards is great… you can tell that a lot of passion goes into it."
+        },
+        "nl": {
+          "title": "Eindelijk een betrouwbare aanbieder, topkwaliteit!",
+          "text": "We hebben 300 kaarten inclusief 2 geschenkdozen cadeau gedaan voor een 50e verjaardag en het was geweldig! ✨ We waren helaas bijna in zee gegaan met een andere dubieuze aanbieder en waren heel blij dat bij QR Song! alles vlekkeloos verliep. 🫶🏻 De prijs-kwaliteitverhouding is goed en de kwaliteit van de kaarten is super… je merkt dat er veel passie in zit."
+        },
+        "fr": {
+          "title": "Enfin un prestataire sérieux, qualité au top !",
+          "text": "Nous avons offert 300 cartes avec 2 coffrets cadeaux pour un 50e anniversaire et c’était génial ! ✨ Malheureusement, nous avons failli nous faire avoir par un autre prestataire douteux et nous étions très contents que tout se soit déroulé sans problème avec QR Song! 🫶🏻 Le rapport qualité-prix est bon et la qualité des cartes est super… on sent que c’est fait avec passion."
+        },
+        "es": {
+          "title": "Por fin un proveedor serio, ¡calidad excelente!",
+          "text": "Regalamos 300 tarjetas con 2 cajas de regalo por un 50 cumpleaños y ¡fue una pasada! ✨ Por desgracia, casi caemos en las redes de otro proveedor dudoso y nos alegramos mucho de que con QR Song! todo saliera sin problemas. 🫶🏻 La relación calidad-precio está bien y la calidad de las tarjetas es estupenda… se nota que está hecho con mucha pasión."
+        },
+        "it": {
+          "title": "Finalmente un fornitore serio, qualità top!",
+          "text": "Abbiamo regalato 300 carte con 2 confezioni regalo per un 50° compleanno ed è stato fantastico! ✨ Purtroppo abbiamo rischiato di cascare nella trappola di un altro fornitore poco affidabile e siamo stati felicissimi che con QR Song! sia andato tutto liscio. 🫶🏻 Il rapporto qualità-prezzo è giusto e la qualità delle carte è ottima… si vede che ci mettono il cuore."
+        },
+        "pt": {
+          "title": "Finalmente um fornecedor sério, qualidade excelente!",
+          "text": "Oferecemos 300 cartas, incluindo 2 caixas de presente, num 50.º aniversário e foi incrível! ✨ Infelizmente, quase caímos na conversa de outro fornecedor duvidoso e ficámos muito felizes por ter corrido tudo sem problemas com a QR Song! 🫶🏻 A relação qualidade-preço é boa e a qualidade das cartas é ótima… nota-se que há muita paixão por trás."
+        },
+        "pl": {
+          "title": "Wreszcie rzetelny dostawca, jakość na najwyższym poziomie!",
+          "text": "Podarowaliśmy 300 kart wraz z 2 pudełkami prezentowymi na 50. urodziny i było rewelacyjnie! ✨ Niestety prawie daliśmy się nabrać innemu podejrzanemu dostawcy i bardzo się cieszyliśmy, że z QR Song! wszystko przebiegło bezproblemowo. 🫶🏻 Stosunek jakości do ceny jest odpowiedni, a jakość kart jest świetna… widać, że wkładają w to całe serce."
+        },
+        "jp": {
+          "title": "ようやく見つけた信頼できる業者、品質も最高！",
+          "text": "50歳の誕生日に、ギフトボックス2個付きのカード300枚をプレゼントしましたが、最高でした！ ✨ 残念ながら、危うく別の怪しい業者に引っかかるところだったので、QR Song!ではすべてスムーズにいって本当に安心しました。🫶🏻 コストパフォーマンスもよく、カードの品質も素晴らしいです…情熱を込めて作られているのが伝わります。"
+        },
+        "cn": {
+          "title": "终于找到一家靠谱的商家，质量一流！",
+          "text": "我们送了300张卡片，包括2个礼盒，作为50岁生日礼物，效果简直太棒了！✨ 很遗憾，我们差点上了另一家可疑商家的当，所以特别庆幸在QR Song!这里一切都很顺利。🫶🏻 性价比合理，卡片质量也非常好……能感觉到他们是真的投入了心血。"
+        },
+        "sv": {
+          "title": "Äntligen en seriös leverantör, toppkvalitet!",
+          "text": "Vi gav bort 300 kort inklusive 2 presentaskar till en 50-årsdag och det var helt fantastiskt! ✨ Tyvärr höll vi nästan på att gå på en annan skum leverantör och var väldigt glada över att allt gick smidigt med QR Song! 🫶🏻 Man får valuta för pengarna och kvaliteten på korten är super… man märker att det ligger mycket passion bakom."
+        },
+        "no": {
+          "title": "Endelig en seriøs leverandør, topp kvalitet!",
+          "text": "Vi ga bort 300 kort inkludert 2 gaveesker til en 50-årsdag, og det var helt fantastisk! ✨ Dessverre holdt vi nesten på å gå i fella til en annen tvilsom leverandør, og vi var veldig glade for at alt gikk knirkefritt med QR Song! 🫶🏻 Forholdet mellom pris og kvalitet er bra, og kvaliteten på kortene er super… man merker at det er lagt mye hjerte i det."
+        }
+      },
+      "translatedFrom": "5d396cdf923561a6e1a37cb77ce3f2f3c31bb947",
+      "hidden": false,
+      "landingPage": true
+    },
+    {
+      "id": "googleplay:35acf2fa-59d6-4513-80f8-40c8ef5c2a70",
+      "source": "googleplay",
+      "rating": 1,
+      "language": "de",
+      "locale": "de",
+      "author": "Kira-Johanna Selke",
+      "country": "",
+      "authorImage": null,
+      "authorReviewCount": 1,
+      "verified": false,
+      "appVersion": "2.0.0",
+      "publishedAt": "2026-09-24T14:49:01.000Z",
+      "experiencedAt": null,
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "",
+        "text": "Eigentlich eine gute App. Aber jetzt konnten wir während des Spielens plötzlich nicht mehr weitermachen. Seid dem habe ich alles gemacht und versucht. Aber die App erkennt das Lied zwar noch, bleibt aber auf der Scannen-Seite und spielt kein Lied mehr ab. Daher ist sie jetzt nutzlos. Schade"
+      },
+      "sourceHash": "a04f474d4e2f6f6d1b8700ef4d448e81810827c1",
+      "translations": {
+        "en": {
+          "title": "",
+          "text": "Actually a good app. But now, while playing, we suddenly couldn't continue. Since then I've done and tried everything. The app still recognises the song, but stays on the scanning page and no longer plays any songs. So now it's useless. Shame"
+        },
+        "nl": {
+          "title": "",
+          "text": "Eigenlijk een goede app. Maar nu konden we tijdens het spelen ineens niet meer verder. Sindsdien heb ik alles gedaan en geprobeerd. De app herkent het liedje nog wel, maar blijft op de scanpagina staan en speelt geen liedje meer af. Daardoor is hij nu nutteloos. Jammer"
+        },
+        "de": {
+          "title": "",
+          "text": "Eigentlich eine gute App. Aber jetzt konnten wir während des Spielens plötzlich nicht mehr weitermachen. Seid dem habe ich alles gemacht und versucht. Aber die App erkennt das Lied zwar noch, bleibt aber auf der Scannen-Seite und spielt kein Lied mehr ab. Daher ist sie jetzt nutzlos. Schade"
+        },
+        "fr": {
+          "title": "",
+          "text": "En fait, c'est une bonne appli. Mais maintenant, pendant qu'on jouait, on n'a soudainement plus pu continuer. Depuis, j'ai tout fait et tout essayé. L'appli reconnaît encore la chanson, mais reste sur la page de scan et ne joue plus aucune chanson. Elle est donc maintenant inutilisable. Dommage"
+        },
+        "es": {
+          "title": "",
+          "text": "En realidad es una buena app. Pero ahora, mientras jugábamos, de repente no pudimos continuar. Desde entonces he hecho y probado de todo. La app sigue reconociendo la canción, pero se queda en la página de escaneo y ya no reproduce ninguna canción. Así que ahora es inútil. Una pena"
+        },
+        "it": {
+          "title": "",
+          "text": "In realtà è una buona app. Ma ora, mentre giocavamo, all'improvviso non siamo più riusciti a continuare. Da allora ho fatto e provato di tutto. L'app riconosce ancora la canzone, ma rimane sulla pagina di scansione e non riproduce più nessuna canzone. Quindi ora è inutile. Peccato"
+        },
+        "pt": {
+          "title": "",
+          "text": "Na verdade, é uma boa app. Mas agora, enquanto jogávamos, de repente deixámos de conseguir continuar. Desde então, fiz e tentei de tudo. A app ainda reconhece a música, mas fica na página de leitura e já não reproduz nenhuma música. Por isso, agora é inútil. É pena"
+        },
+        "pl": {
+          "title": "",
+          "text": "Właściwie to dobra aplikacja. Ale teraz podczas gry nagle nie mogliśmy kontynuować. Od tamtej pory zrobiłem i wypróbowałem wszystko. Aplikacja nadal rozpoznaje utwór, ale pozostaje na stronie skanowania i nie odtwarza już żadnego utworu. Dlatego jest teraz bezużyteczna. Szkoda"
+        },
+        "jp": {
+          "title": "",
+          "text": "基本的には良いアプリです。でも今回、プレイ中に突然先へ進めなくなりました。それ以来、あらゆることを試しました。アプリは曲を認識するものの、スキャン画面のままで、曲が再生されなくなりました。なので今は使い物になりません。残念です"
+        },
+        "cn": {
+          "title": "",
+          "text": "其实是个不错的应用。但这次我们玩的时候突然无法继续了。从那以后，我什么方法都试过了。应用仍然能识别歌曲，但一直停留在扫描页面，不再播放歌曲。所以现在完全没用了。可惜"
+        },
+        "sv": {
+          "title": "",
+          "text": "Egentligen en bra app. Men nu kunde vi plötsligt inte fortsätta medan vi spelade. Sedan dess har jag gjort och provat allt. Appen känner fortfarande igen låten, men stannar kvar på skanningssidan och spelar inte längre upp någon låt. Därför är den nu värdelös. Synd"
+        },
+        "no": {
+          "title": "",
+          "text": "Egentlig en god app. Men nå kunne vi plutselig ikke fortsette mens vi spilte. Siden da har jeg gjort og prøvd alt. Appen gjenkjenner fortsatt sangen, men blir værende på skannesiden og spiller ikke lenger av noen sang. Derfor er den nå ubrukelig. Synd"
+        }
+      },
+      "translatedFrom": "a04f474d4e2f6f6d1b8700ef4d448e81810827c1",
+      "hidden": true,
+      "landingPage": false,
+      "note": "auto-hidden on import: 1 stars"
+    },
+    {
+      "id": "trustpilot:6aafd34a33c8cf775faedf13",
+      "source": "trustpilot",
+      "rating": 5,
+      "language": "nl",
+      "locale": "nl",
+      "author": "kv",
+      "country": "BE",
+      "authorImage": null,
+      "authorReviewCount": 6,
+      "verified": false,
+      "appVersion": null,
+      "publishedAt": "2026-09-20T14:36:26.000Z",
+      "experiencedAt": "2026-08-09T00:00:00.000Z",
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "Voor top zomeravondjes met het gezin",
+        "text": "Onze zomeravondjes met het gezin werden een stuk leuker dankzij ons persoonlijk Hitster spel. Net zo makkelijk te spelen. De druk en levering liep heel vlot. Heel tevreden met deze ervaring;"
+      },
+      "sourceHash": "be76a40cefc9e6b1f65e3ebfd3de122364dbb6eb",
+      "translations": {
+        "nl": {
+          "title": "Voor top zomeravondjes met het gezin",
+          "text": "Onze zomeravondjes met het gezin werden een stuk leuker dankzij ons persoonlijk Hitster spel. Net zo makkelijk te spelen. De druk en levering liep heel vlot. Heel tevreden met deze ervaring;"
+        },
+        "en": {
+          "title": "For great summer evenings with the family",
+          "text": "Our summer evenings with the family became a lot more fun thanks to our personalised Hitster game. Just as easy to play. The printing and delivery went very smoothly. Very happy with this experience;"
+        },
+        "de": {
+          "title": "Für tolle Sommerabende mit der Familie",
+          "text": "Unsere Sommerabende mit der Familie wurden dank unseres personalisierten Hitster-Spiels noch viel schöner. Genauso einfach zu spielen. Druck und Lieferung liefen sehr reibungslos. Sehr zufrieden mit dieser Erfahrung;"
+        },
+        "fr": {
+          "title": "Pour de super soirées d'été en famille",
+          "text": "Nos soirées d'été en famille sont devenues bien plus amusantes grâce à notre jeu Hitster personnalisé. Tout aussi facile à jouer. L'impression et la livraison se sont déroulées sans problème. Très satisfaits de cette expérience ;"
+        },
+        "es": {
+          "title": "Para unas noches de verano geniales en familia",
+          "text": "Nuestras noches de verano en familia se volvieron mucho más divertidas gracias a nuestro juego Hitster personalizado. Igual de fácil de jugar. La impresión y la entrega fueron muy fluidas. Muy contentos con esta experiencia;"
+        },
+        "it": {
+          "title": "Per delle fantastiche serate estive in famiglia",
+          "text": "Le nostre serate estive in famiglia sono diventate molto più divertenti grazie al nostro gioco Hitster personalizzato. Altrettanto facile da giocare. La stampa e la consegna sono andate molto bene. Molto soddisfatti di questa esperienza;"
+        },
+        "pt": {
+          "title": "Para ótimas noites de verão em família",
+          "text": "As nossas noites de verão em família ficaram muito mais divertidas graças ao nosso jogo Hitster personalizado. Igualmente fácil de jogar. A impressão e a entrega decorreram muito bem. Muito satisfeitos com esta experiência;"
+        },
+        "pl": {
+          "title": "Na świetne letnie wieczory z rodziną",
+          "text": "Nasze letnie wieczory z rodziną stały się o wiele przyjemniejsze dzięki naszej spersonalizowanej grze Hitster. Gra się w nią równie łatwo. Druk i dostawa przebiegły bardzo sprawnie. Jesteśmy bardzo zadowoleni z tego doświadczenia;"
+        },
+        "jp": {
+          "title": "家族で過ごす最高の夏の夜に",
+          "text": "自分たちだけのHitsterゲームのおかげで、家族で過ごす夏の夜がずっと楽しくなりました。同じように簡単に遊べます。印刷と配送もとてもスムーズでした。この体験にとても満足しています；"
+        },
+        "cn": {
+          "title": "适合和家人共度美好夏夜",
+          "text": "有了我们个性化定制的Hitster游戏，和家人一起度过的夏夜变得有趣多了。玩起来一样简单。印刷和配送都非常顺利。对这次体验非常满意；"
+        },
+        "sv": {
+          "title": "För härliga sommarkvällar med familjen",
+          "text": "Våra sommarkvällar med familjen blev mycket roligare tack vare vårt personliga Hitster-spel. Lika enkelt att spela. Tryck och leverans gick mycket smidigt. Väldigt nöjda med den här upplevelsen;"
+        },
+        "no": {
+          "title": "For flotte sommerkvelder med familien",
+          "text": "Sommerkveldene våre med familien ble mye morsommere takket være vårt personlige Hitster-spill. Like enkelt å spille. Trykking og levering gikk veldig smidig. Veldig fornøyde med denne opplevelsen;"
+        }
+      },
+      "translatedFrom": "be76a40cefc9e6b1f65e3ebfd3de122364dbb6eb",
+      "hidden": false,
+      "landingPage": true
+    },
     {
       "id": "googleplay:45058a33-a851-4f4b-b9b8-ac396623278f",
       "source": "googleplay",
@@ -249,7 +475,7 @@
       "translations": {
         "en": {
           "title": "Really great!",
-          "text": "Such a fun game, honestly, highly recommended! Even children can make their own list, also fun for the holidays! I play it almost every weekend now, such a great idea!"
+          "text": "Such a fun game, honestly, highly recommended! Even children can make their own list, also fun for the holidays! I play it almost every weekend now, such a fun idea!"
         },
         "nl": {
           "title": "Echt top joh!",
@@ -257,43 +483,43 @@
         },
         "de": {
           "title": "Echt super!",
-          "text": "Wirklich ein sehr schönes Spiel, ehrlich, absolut empfehlenswert! Sogar Kinder können ihre eigene Liste erstellen, auch toll für die Ferien! Ich spiele es jetzt fast jedes Wochenende, wirklich eine tolle Idee!"
+          "text": "Echt ein sehr schönes Spiel, ehrlich, wirklich zu empfehlen! Sogar Kinder können ihre eigene Liste erstellen, auch toll für die Ferien! Ich spiele es jetzt fast jedes Wochenende, echt eine sehr schöne Idee!"
         },
         "fr": {
-          "title": "Vraiment génial !",
-          "text": "Un jeu vraiment très sympa, franchement, je le recommande ! Même les enfants peuvent créer leur propre liste, sympa aussi pour les vacances ! J'y joue maintenant presque tous les week-ends, c'est vraiment une super idée !"
+          "title": "Vraiment top !",
+          "text": "Vraiment un jeu super sympa, honnêtement, je le recommande vivement ! Même les enfants peuvent créer leur propre liste, sympa aussi pour les vacances ! J’y joue maintenant presque tous les week-ends, vraiment une super idée !"
         },
         "es": {
           "title": "¡De verdad, genial!",
-          "text": "Un juego muy divertido, sinceramente, ¡muy recomendable! Incluso los niños pueden crear su propia lista, ¡también es divertido para las vacaciones! Ahora juego casi todos los fines de semana, ¡es una idea genial!"
+          "text": "Un juego muy divertido, sinceramente, ¡muy recomendable! Hasta los niños pueden hacer su propia lista, ¡también es divertido para las vacaciones! Ahora juego casi todos los fines de semana, ¡la idea está genial!"
         },
         "it": {
           "title": "Davvero fantastico!",
-          "text": "Un gioco davvero molto divertente, sinceramente, lo consiglio! Anche i bambini possono creare la propria lista, divertente anche per le vacanze! Ora ci gioco quasi ogni fine settimana, davvero una bellissima idea!"
+          "text": "Un gioco davvero molto divertente, sinceramente, consigliatissimo! Anche i bambini possono creare la propria lista, bello anche per le vacanze! Ormai ci gioco quasi ogni fine settimana, davvero un’idea molto carina!"
         },
         "pt": {
-          "title": "Muito bom mesmo!",
-          "text": "Um jogo mesmo muito divertido, sinceramente, recomendo! Até as crianças podem criar a sua própria lista, também é divertido para as férias! Agora jogo quase todos os fins de semana, foi mesmo muito bem pensado!"
+          "title": "Mesmo fantástico!",
+          "text": "Um jogo mesmo muito divertido, sinceramente, recomendo bastante! Até as crianças podem criar a sua própria lista, também é divertido para as férias! Agora jogo quase todos os fins de semana, uma ideia mesmo muito gira!"
         },
         "pl": {
           "title": "Naprawdę super!",
-          "text": "Naprawdę bardzo fajna gra, szczerze, zdecydowanie polecam! Nawet dzieci mogą stworzyć własną listę, fajne też na wakacje! Gram teraz prawie w każdy weekend, naprawdę świetnie to wymyślono!"
+          "text": "Naprawdę bardzo fajna gra, szczerze mówiąc, zdecydowanie polecam! Nawet dzieci mogą stworzyć własną listę, fajna też na wakacje! Gram teraz prawie w każdy weekend, naprawdę świetny pomysł!"
         },
         "jp": {
           "title": "本当に最高！",
-          "text": "本当にすごく楽しいゲームで、正直おすすめです！子どもでも自分のリストを作れるし、休暇にもぴったり！今ではほぼ毎週末遊んでいて、本当にすごくいいアイデアです！"
+          "text": "本当にすごく楽しいゲームで、正直かなりおすすめ！子どもでも自分のリストを作れるし、休暇にもぴったり！今ではほぼ毎週末遊んでいて、本当にすごくいいアイデア！"
         },
         "cn": {
           "title": "真的太棒了！",
-          "text": "真的是一款非常好玩的游戏，说实话，很推荐！就连孩子也可以制作自己的歌单，假期里玩也很有趣！我现在几乎每个周末都玩，真的很有创意！"
+          "text": "真的是一款非常好玩的游戏，说实话，很值得推荐！连孩子们也能制作自己的歌单，假期里玩也很有趣！我现在几乎每个周末都玩，真的是个很棒的创意！"
         },
         "sv": {
           "title": "Verkligen toppen!",
-          "text": "Ett riktigt roligt spel, helt ärligt, rekommenderas verkligen! Till och med barn kan skapa sin egen lista, kul även på semestern! Jag spelar det nu nästan varje helg, verkligen en jätterolig idé!"
+          "text": "Ett riktigt roligt spel, helt ärligt, rekommenderas verkligen! Till och med barn kan göra sin egen lista, också kul på semestern! Jag spelar det nästan varje helg nu, verkligen en jätterolig idé!"
         },
         "no": {
-          "title": "Skikkelig bra!",
-          "text": "Et skikkelig morsomt spill, helt ærlig, anbefales virkelig! Selv barn kan lage sin egen liste, også gøy i ferien! Jeg spiller det nå nesten hver helg, skikkelig morsomt konsept!"
+          "title": "Skikkelig topp!",
+          "text": "Et skikkelig morsomt spill, helt ærlig, anbefales virkelig! Selv barn kan lage sin egen liste, også gøy i ferien! Jeg spiller det nesten hver helg nå, skikkelig morsomt påfunn!"
         }
       },
       "translatedFrom": "fde68263ac87344bc23b5c089d04168a9d603e76",
@@ -2287,7 +2513,7 @@
       "translations": {
         "en": {
           "title": "Great! Just a shame that not all QR codes are recognised",
-          "text": "Great app: easy to use and looks good too. It's just a shame that it has considerably more trouble with some QR codes than the built-in reader in the Camera app. Codes with an image in the middle and on a dark background are barely recognised, if at all."
+          "text": "Great app: easy to use and looks good too. It's just a shame that it has considerably more trouble with some QR codes than the built-in reader in the Camera app. Codes with an image in the centre and on a dark background are hardly recognised, if at all."
         },
         "nl": {
           "title": "Top! Alleen jammer dat niet alle QR codes worden herkend",
@@ -2302,36 +2528,36 @@
           "text": "Super appli : simple à utiliser et en plus, elle est jolie. Dommage qu'elle ait nettement plus de mal avec certains codes QR que le lecteur intégré à l'appli Appareil photo. Les codes avec une image au milieu et sur un fond sombre ne sont quasiment pas reconnus, voire pas du tout."
         },
         "es": {
-          "title": "¡Genial! Es una pena que no reconozca todos los códigos QR",
-          "text": "Una app estupenda: fácil de usar y además tiene buen aspecto. Es una pena que tenga bastantes más dificultades con algunos códigos QR que el lector integrado de la app Cámara. Los códigos con una imagen en el centro y sobre un fondo oscuro apenas se reconocen o no se reconocen en absoluto."
+          "title": "¡Genial! Lástima que no reconozca todos los códigos QR",
+          "text": "Una app estupenda: fácil de usar y además tiene buen aspecto. Es una pena que le cueste bastante más reconocer algunos códigos QR que al lector integrado en la app Cámara. Los códigos con una imagen en el centro y sobre un fondo oscuro apenas se reconocen o no se reconocen en absoluto."
         },
         "it": {
           "title": "Ottima! Peccato solo che non riconosca tutti i codici QR",
-          "text": "App fantastica: semplice da usare e anche bella da vedere. Peccato solo che faccia molta più fatica con alcuni codici QR rispetto al lettore integrato nell'app Fotocamera. I codici con un'immagine al centro e su uno sfondo scuro non vengono riconosciuti o vengono riconosciuti a malapena."
+          "text": "App fantastica: semplice da usare e anche bella da vedere. Peccato solo che faccia decisamente più fatica con alcuni codici QR rispetto al lettore integrato nell'app Fotocamera. I codici con un'immagine al centro e su uno sfondo scuro vengono riconosciuti a malapena o per niente."
         },
         "pt": {
-          "title": "Ótima! Só é pena que nem todos os códigos QR sejam reconhecidos",
-          "text": "Aplicação fantástica: simples de usar e também tem bom aspeto. Só é pena que tenha consideravelmente mais dificuldade com alguns códigos QR do que o leitor integrado na aplicação Câmara. Os códigos com uma imagem no meio e sobre um fundo escuro não são reconhecidos ou são muito mal reconhecidos."
+          "title": "Ótima! Só é pena não reconhecer todos os códigos QR",
+          "text": "Uma ótima app: simples de usar e ainda por cima tem bom aspeto. Só é pena ter bastante mais dificuldade com alguns códigos QR do que o leitor integrado na app Câmara. Códigos com uma imagem no centro e sobre um fundo escuro quase não são reconhecidos, ou não são de todo."
         },
         "pl": {
           "title": "Super! Szkoda tylko, że nie wszystkie kody QR są rozpoznawane",
-          "text": "Świetna aplikacja: prosta w obsłudze i do tego dobrze wygląda. Szkoda tylko, że z niektórymi kodami QR radzi sobie wyraźnie gorzej niż wbudowany czytnik w aplikacji Aparat. Kody z obrazkiem pośrodku i na ciemnym tle są ledwo rozpoznawane albo wcale."
+          "text": "Świetna aplikacja: prosta w obsłudze, a do tego dobrze wygląda. Szkoda tylko, że z niektórymi kodami QR radzi sobie znacznie gorzej niż wbudowany czytnik w aplikacji Aparat. Kody z obrazkiem pośrodku i na ciemnym tle są rozpoznawane słabo albo wcale."
         },
         "jp": {
           "title": "最高！ただ、すべてのQRコードを認識できないのが残念",
-          "text": "素晴らしいアプリです。使い方が簡単で、見た目もいいです。ただ、一部のQRコードでは、カメラアプリ内蔵のリーダーより明らかに読み取りに苦労するのが残念です。中央に画像があり、背景が暗いコードは、ほとんど認識されないか、まったく認識されません。"
+          "text": "素晴らしいアプリです。使い方が簡単で、見た目もいいです。ただ、QRコードによっては、カメラアプリ内蔵のリーダーよりも明らかに読み取りに苦労するのが残念です。中央に画像があり、背景が暗いコードは、ほとんど、またはまったく認識されません。"
         },
         "cn": {
           "title": "很棒！只是可惜并非所有二维码都能识别",
-          "text": "很棒的应用：使用简单，外观也很好看。只是可惜，它识别某些二维码时明显比相机应用内置的读取器更费劲。中间有图片、背景较暗的二维码几乎无法识别，甚至完全无法识别。"
+          "text": "很棒的应用：使用简单，而且界面也很好看。只是可惜，对于某些二维码，它明显比相机应用内置的扫码器更难识别。中间有图片且背景较暗的二维码几乎无法识别，甚至完全无法识别。"
         },
         "sv": {
           "title": "Toppen! Bara synd att inte alla QR-koder känns igen",
-          "text": "Fantastisk app: enkel att använda och ser dessutom bra ut. Bara synd att den har betydligt svårare med vissa QR-koder än den inbyggda läsaren i kameraappen. Koder med en bild i mitten och på en mörk bakgrund känns knappt igen eller inte alls."
+          "text": "Fantastisk app: enkel att använda och ser dessutom bra ut. Bara synd att den har betydligt svårare för vissa QR-koder än den inbyggda läsaren i Kamera-appen. Koder med en bild i mitten och mot en mörk bakgrund känns knappt igen eller inte alls."
         },
         "no": {
-          "title": "Topp! Bare synd at ikke alle QR-koder blir gjenkjent",
-          "text": "Flott app: enkel å bruke og ser også bra ut. Bare synd at den har betydelig større problemer med enkelte QR-koder enn den innebygde leseren i Kamera-appen. Koder med et bilde i midten og på mørk bakgrunn blir knapt eller ikke gjenkjent i det hele tatt."
+          "title": "Topp! Bare synd at ikke alle QR-koder gjenkjennes",
+          "text": "Flott app: enkel å bruke og ser dessuten bra ut. Bare synd at den har betydelig større problemer med enkelte QR-koder enn den innebygde leseren i Kamera-appen. Koder med et bilde i midten og på en mørk bakgrunn blir knapt eller ikke gjenkjent i det hele tatt."
         }
       },
       "translatedFrom": "0bdde290270da7ffb476df148e74b82c1735f957",

@@ -853,7 +853,7 @@ Four layers, in order, all env-tunable:
 | decoy (wrong track, not a block) | `2a06:98c0:3600::103` | `QRLINK_DECOY_IPS` |
 | scraper user-agents | `Hitify-QRSong-Sync` | `QRLINK_BLOCKED_USER_AGENTS` |
 | rate limit | 30 per 60s | `QRLINK_RATE_MAX`, `QRLINK_RATE_WINDOW_SECONDS` |
-| sequential track ids | a run of 10, steps of ≤5, within an hour | `QRLINK_SEQ_STREAK`, `QRLINK_SEQ_MAX_STEP`, `QRLINK_SEQ_WINDOW_SECONDS` |
+| sequential track ids | 25 ascending, steps of ≤5, inside 60s | `QRLINK_SEQ_STREAK`, `QRLINK_SEQ_MAX_STEP`, `QRLINK_SEQ_MAX_SECONDS`, `QRLINK_SEQ_WINDOW_SECONDS` |
 
 A ban lasts 7 days (`QRLINK_BAN_SECONDS`) and is enforced on **every** API
 route by `ipPlugin`, not just these two, minus the checkout paths in
@@ -885,8 +885,16 @@ Things here that cost something to learn:
   so a playlist reuses the existing row for any track already known and a real
   deck holds ids scattered across the whole range. The exception is a playlist
   of entirely unknown tracks, which gets one contiguous block; that customer
-  scanning their deck in printed order is the one false positive, and the
-  whitelist is the answer to it.
+  scanning their deck in printed order used to be the one false positive. So
+  since 2026-09-29 a run has to be long (25) **and** faster than anyone scans
+  cards: the last 25 ascending ids inside 60 seconds, a card every 2.4 s while
+  each scan plays a song. The September scraper did ~1 req/s. The window
+  slides (the Redis value keeps the run's last 25 request times), so a run
+  that starts slowly and then speeds up is still caught. The price: a scraper
+  slower than one id per ~2.5 s now gets through this layer (and the 30/min
+  rate limit), which at that pace is still ~35,000 ids a day. If one shows
+  up, lower `QRLINK_SEQ_STREAK` or raise `QRLINK_SEQ_MAX_SECONDS` in `.env`;
+  the whitelist remains the answer for a customer caught anyway.
 - **A failed Redis write used to un-ban silently.** `ban()` writes the mirror
   first and persists after; `refreshBannedIps()` rebuilds the mirror from
   Redis wholesale every 20s. A failed `zadd` therefore vanished within 20

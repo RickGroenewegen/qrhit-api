@@ -16,8 +16,8 @@ import Logger from './logger';
  *  3. Per-IP rate limiting  - a fixed-window counter in Redis; an IP that
  *     exceeds the threshold is a scraper enumerating track ids and gets
  *     banned.
- *  4. Sequential-id detection - an IP whose track ids climb monotonically is
- *     walking the database by id, which no card scanner ever does. This is
+ *  4. Sequential-id detection - an IP whose track ids climb monotonically,
+ *     faster than anyone scans cards, is walking the database by id. This is
  *     the layer that catches a scraper that throttles below the rate limit.
  *
  * Enforcement (runs on EVERY request, see ipPlugin):
@@ -68,6 +68,7 @@ class AbuseGuard {
   private readonly decoyIps: Set<string>;
   private readonly seqStreak: number;
   private readonly seqMaxStep: number;
+  private readonly seqMaxSeconds: number;
   private readonly seqWindowSeconds: number;
 
   // In-memory mirror of the Redis ban set (ip -> expiry epoch ms) for
@@ -157,9 +158,14 @@ class AbuseGuard {
     // ones. A real deck therefore holds ids scattered across the whole range,
     // and even scanning it in printed order does not climb. The exception is a
     // playlist of tracks we have never seen, which does get one contiguous
-    // block: 10 consecutive ascending steps of at most 5 is the compromise.
-    this.seqStreak = this.envInt('QRLINK_SEQ_STREAK', 10);
+    // block. So the run has to be long (25 ascending steps of at most 5) AND
+    // fast: those 25 requests inside 60 seconds, a card every 2.4 seconds,
+    // which nobody keeps up while each scan plays a song. The September 2026
+    // scraper did about one a second. A customer scanning their own new block
+    // in order at playing speed never trips it.
+    this.seqStreak = this.envInt('QRLINK_SEQ_STREAK', 25);
     this.seqMaxStep = this.envInt('QRLINK_SEQ_MAX_STEP', 5);
+    this.seqMaxSeconds = this.envInt('QRLINK_SEQ_MAX_SECONDS', 60);
     this.seqWindowSeconds = this.envInt('QRLINK_SEQ_WINDOW_SECONDS', 3600);
 
     // Prime the in-memory mirror and keep it in sync across cluster workers.
@@ -479,40 +485,60 @@ class AbuseGuard {
   }
 
   /**
-   * Per-IP ascending-run counter over requested track ids, kept in Redis so it
+   * Per-IP ascending-run tracker over requested track ids, kept in Redis so it
    * survives the cluster spreading an IP's requests over several workers.
    *
-   * Returns the current run length. A step that is not a small forward move
-   * (a repeat, a jump backwards, or a gap wider than `seqMaxStep`) restarts
-   * the run at 1, so ordinary scanning never accumulates.
+   * A step that is not a small forward move (a repeat, a jump backwards, or a
+   * gap wider than `seqMaxStep`) restarts the run at 1, so ordinary scanning
+   * never accumulates. The run also keeps the times of its last `seqStreak`
+   * requests (`<id>:<run>:<t1,t2,…>`, epoch ms), so `spanMs` is how long the
+   * latest `seqStreak` ascending ids took, or null while the run is shorter.
+   * It is a sliding window: a run that started slowly and then speeds up is
+   * still caught. A value from before the times were stored reads as a run
+   * with no times yet.
    */
   private async trackSequence(
     clientIp: string,
     trackId?: number | string
-  ): Promise<number> {
+  ): Promise<{ streak: number; spanMs: number | null }> {
     const id = this.parseId(trackId);
     if (id === undefined) {
-      return 0;
+      return { streak: 0, spanMs: null };
     }
 
     const key = `${this.SEQ_PREFIX}:${clientIp}`;
     const previous = await this.cache.get(key);
+    const now = Date.now();
     let streak = 1;
+    let times: number[] = [];
 
     if (previous) {
-      const [lastRaw, streakRaw] = previous.split(':');
+      const [lastRaw, streakRaw, timesRaw] = previous.split(':');
       const lastId = parseInt(lastRaw, 10);
       const lastStreak = parseInt(streakRaw, 10);
       if (Number.isFinite(lastId) && Number.isFinite(lastStreak)) {
         const step = id - lastId;
         if (step > 0 && step <= this.seqMaxStep) {
           streak = lastStreak + 1;
+          times = (timesRaw || '')
+            .split(',')
+            .filter(Boolean)
+            .map(Number)
+            .filter(Number.isFinite);
         }
       }
     }
 
-    await this.cache.set(key, `${id}:${streak}`, this.seqWindowSeconds);
-    return streak;
+    times = [...times, now].slice(-this.seqStreak);
+    await this.cache.set(
+      key,
+      `${id}:${streak}:${times.join(',')}`,
+      this.seqWindowSeconds
+    );
+    return {
+      streak,
+      spanMs: times.length >= this.seqStreak ? now - times[0] : null,
+    };
   }
 
   /**
@@ -672,12 +698,14 @@ class AbuseGuard {
         return { allowed: false, reason: 'rate-limit' };
       }
 
-      // Layer 4: walking the ids upwards, however slowly.
-      const streak = await this.trackSequence(clientIp, trackId);
-      if (streak >= this.seqStreak) {
+      // Layer 4: walking the ids upwards faster than anyone scans cards.
+      const run = await this.trackSequence(clientIp, trackId);
+      if (run.spanMs !== null && run.spanMs <= this.seqMaxSeconds * 1000) {
         await this.ban(
           clientIp,
-          `sequential track ids: ${streak} ascending requests, ${scanned}`,
+          `sequential track ids: ${this.seqStreak} ascending requests in ${Math.round(
+            run.spanMs / 1000
+          )}s (run of ${run.streak}), ${scanned}`,
           'enumeration',
           context
         );
