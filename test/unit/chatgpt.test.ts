@@ -497,6 +497,56 @@ describe('ChatGPT.translateText', () => {
   });
 });
 
+describe('ChatGPT.translateLiterally', () => {
+  it('returns nothing for empty input without calling OpenAI', async () => {
+    expect(await gpt.translateLiterally('', 'P', ['nl'])).toEqual({
+      sourceLocale: null,
+      translations: {},
+    });
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('names the language it detected and returns the translations', async () => {
+    createMock.mockResolvedValueOnce(
+      toolCallResponse('translateLiterally', {
+        sourceLanguage: 'nl',
+        translations: { en: ' Hello there ', nl: 'Hallo daar', xx: 'dropped' },
+      })
+    );
+    expect(await gpt.translateLiterally('Hallo daar', 'Symphony!', ['en', 'nl'])).toEqual({
+      sourceLocale: 'nl',
+      translations: { en: 'Hello there', nl: 'Hallo daar' },
+    });
+    const payload = createMock.mock.calls[0][0];
+    expect(payload.response_format.json_schema.name).toBe('translateLiterally');
+    expect(
+      payload.response_format.json_schema.schema.properties.sourceLanguage.enum
+    ).toEqual(['en', 'nl', 'other']);
+    expect(payload.messages[1].content).toContain('"Symphony!"');
+    expect(payload.messages[1].content).toContain('Hallo daar');
+  });
+
+  it('reads "other" (or anything unknown) as no source locale', async () => {
+    createMock.mockResolvedValueOnce(
+      toolCallResponse('translateLiterally', {
+        sourceLanguage: 'other',
+        translations: { en: 'Hi', nl: 'Hoi' },
+      })
+    );
+    const result = await gpt.translateLiterally('Hej', 'P', ['en', 'nl']);
+    expect(result.sourceLocale).toBeNull();
+    expect(result.translations).toEqual({ en: 'Hi', nl: 'Hoi' });
+  });
+
+  it('returns nothing on a malformed response', async () => {
+    createMock.mockResolvedValueOnce(toolCallResponse('translateLiterally', null, '}'));
+    expect(await gpt.translateLiterally('Hallo', 'P', ['nl'])).toEqual({
+      sourceLocale: null,
+      translations: {},
+    });
+  });
+});
+
 describe('ChatGPT.translateMessage', () => {
   it('returns the translated subject and message', async () => {
     createMock.mockResolvedValueOnce(

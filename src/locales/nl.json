@@ -379,7 +379,7 @@
   "mail.housenumber": "Huisnummer",
   "mail.invoiceHousenumber": "Factuur huisnummer",
   "mail.finalizedMailSubject": "We nodigen je uit om de afspeellijst '{{ playlist }}' te bekijken",
-  "mail.youCanReview": "Goed nieuws! Je playlist is beoordeeld door ons team. We nodigen je uit om je playlist ook te beoordelen. Je bestelling wordt automatisch verwerkt en verzonden na 36 uur. Als je geen wijzigingen wilt maken, kun je ook vragen om de bestelling direct te laten printen en verzenden.",
+  "mail.youCanReview": "Goed nieuws! Ons team heeft je playlist gecontroleerd. Nu is het jouw beurt: vóór we printen kun je elke kaart bekijken en precies maken zoals jij wilt.",
   "mail.reviewOrder": "Bekijk je bestelling",
   "countdown.createYourOwn": "Maak je eigen QR Muziekkaarten!",
   "countdown.visit": "Bezoek onze website",
@@ -717,5 +717,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Cadeaudoos",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, ontwerp {{ number }}",
-  "design_alter.designsAffected": "Je kaarten wisselen tussen meerdere ontwerpen. Dit gaat over ontwerp {{ designs }}."
+  "design_alter.designsAffected": "Je kaarten wisselen tussen meerdere ontwerpen. Dit gaat over ontwerp {{ designs }}.",
+  "mail.reviewOwnTitle": "Maak de kaarten helemaal van jou",
+  "mail.reviewCorrectTitle": "Pas alles aan",
+  "mail.reviewCorrectBody": "Klopt de artiest, titel of het jaar niet helemaal? Je kunt het zelf aanpassen.",
+  "mail.reviewExtraTitle": "Voeg je eigen regels toe",
+  "mail.reviewExtraBody": "Onder de artiest en de titel kun je een korte regel in een kleiner lettertype toevoegen. Denk aan het land, de film waarin het nummer voorkomt of een persoonlijk bericht.",
+  "mail.reviewExampleArtistExtra": "Verenigd Koninkrijk",
+  "mail.reviewExampleTitleExtra": "Weet je deze nog? 😏",
+  "mail.reviewExampleCaption": "Voorbeeld: de kleine regels voeg je zelf toe",
+  "mail.reviewAutoShip": "Ziet alles er al goed uit? Dan hoef je niet te wachten: op dezelfde pagina kun je je bestelling direct laten printen en verzenden. Doe je niets, dan printen en verzenden we die automatisch na 36 uur."
 }

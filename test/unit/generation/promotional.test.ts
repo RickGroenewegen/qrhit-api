@@ -42,6 +42,7 @@ const h = vi.hoisted(() => {
     },
     getLiveUsage: vi.fn(async () => ({ amountUsed: 4, useCount: 1 })),
     translateText: vi.fn(),
+    translateLiterally: vi.fn(),
     seoGenerate: vi.fn(async () => ({ description: 'SEO copy' })),
     clearPlaylistCache: vi.fn(async () => undefined),
     calcDecades: vi.fn(async () => undefined),
@@ -69,6 +70,7 @@ vi.mock('../../../src/logger', () => ({
 vi.mock('../../../src/chatgpt', () => ({
   ChatGPT: class {
     translateText = h.translateText;
+    translateLiterally = h.translateLiterally;
   },
 }));
 vi.mock('../../../src/translation', () => ({
@@ -143,6 +145,7 @@ beforeEach(() => {
   outbound.reset();
   resetPrisma();
   h.translateText.mockReset();
+  h.translateLiterally.mockReset();
   h.seoGenerate.mockReset();
   h.seoGenerate.mockResolvedValue({ description: 'SEO copy' });
   h.clearPlaylistCache.mockClear();
@@ -951,6 +954,71 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
     expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
   });
+
+  it('translates a kept description word for word instead of having one written', async () => {
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      ...PLAYLIST,
+      promotionalDescription: 'Een prachtige hitster lijst',
+      preserveDescription: true,
+    });
+    h.translateLiterally.mockResolvedValue({
+      sourceLocale: 'nl',
+      translations: { en: 'A beautiful hitster list', nl: 'model output, not used' },
+    });
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.seoGenerate).not.toHaveBeenCalled();
+    // Brand-sanitized, and told the final (sanitized) name to leave alone.
+    expect(h.translateLiterally).toHaveBeenCalledWith(
+      'Een prachtige QRSong! lijst',
+      'QRSong! Hits',
+      ['en', 'nl']
+    );
+    // The language it is written in gets the customer's text itself.
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(2);
+    expect(h.prisma.playlist.update.mock.calls[1][0]).toEqual({
+      where: { playlistId: 'pl_1' },
+      data: {
+        seoDescriptionGenerated: false,
+        markedForMerchantCenter: true,
+        description_en: 'A beautiful QRSong! list',
+        description_nl: 'Een prachtige QRSong! lijst',
+      },
+    });
+    expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1');
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
+  });
+
+  it('has a description written when the kept one is empty', async () => {
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      ...PLAYLIST,
+      promotionalDescription: '  ',
+      preserveDescription: true,
+    });
+
+    await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(h.translateLiterally).not.toHaveBeenCalled();
+    expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
+  });
+
+  it('keeps the approval when the word-for-word translation fails, and writes no SEO copy over it', async () => {
+    h.prisma.playlist.findUnique.mockResolvedValue({
+      ...PLAYLIST,
+      preserveDescription: true,
+    });
+    h.translateLiterally.mockRejectedValue(new Error('openai down'));
+
+    const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.seoGenerate).not.toHaveBeenCalled();
+    expect(h.translateText).not.toHaveBeenCalled();
+    expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
+    expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
+  });
 });
 
 describe('Promotional.translateDescription', () => {
@@ -1001,6 +1069,84 @@ describe('Promotional.translateDescription', () => {
       },
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1');
+  });
+
+  describe('a kept description', () => {
+    const KEPT = {
+      id: 2,
+      name: 'Symphony!',
+      promotionalDescription: 'Over 500 orchestral works',
+      description_en: 'SEO copy from before',
+      preserveDescription: true,
+    };
+
+    it('is translated word for word from the customer text, not from description_en', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({ ...KEPT });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: 'en',
+        translations: { en: 'model output, not used', nl: 'Meer dan 500 orkestwerken' },
+      });
+
+      const res = await promotional.translateDescription('pl_1');
+
+      expect(res).toEqual({ success: true, literal: { sourceLocale: 'en' } });
+      expect(h.translateText).not.toHaveBeenCalled();
+      expect(h.translateLiterally).toHaveBeenCalledWith(
+        'Over 500 orchestral works',
+        'Symphony!',
+        ['en', 'nl']
+      );
+      expect(h.prisma.playlist.update).toHaveBeenCalledWith({
+        where: { playlistId: 'pl_1' },
+        data: {
+          seoDescriptionGenerated: false,
+          markedForMerchantCenter: true,
+          description_en: 'Over 500 orchestral works',
+          description_nl: 'Meer dan 500 orkestwerken',
+        },
+      });
+      expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1');
+    });
+
+    it('gives a locale the model skipped the English, also when the text is in none of our languages', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({ ...KEPT });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: null,
+        translations: { en: 'Over 500 orchestral works' },
+      });
+
+      const res = await promotional.translateDescription('pl_1');
+
+      expect(res).toEqual({ success: true, literal: { sourceLocale: null } });
+      const data = h.prisma.playlist.update.mock.calls[0][0].data;
+      expect(data.description_en).toBe('Over 500 orchestral works');
+      expect(data.description_nl).toBe('Over 500 orchestral works');
+    });
+
+    it('writes nothing when the model returns nothing', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({ ...KEPT });
+      h.translateLiterally.mockResolvedValue({ sourceLocale: null, translations: {} });
+
+      expect(await promotional.translateDescription('pl_1')).toEqual({
+        success: false,
+        error: 'The model returned no translation',
+      });
+      expect(h.prisma.playlist.update).not.toHaveBeenCalled();
+    });
+
+    it('errors when there is no customer text to keep', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...KEPT,
+        promotionalDescription: null,
+        description_en: '',
+      });
+
+      expect(await promotional.translateDescription('pl_1')).toEqual({
+        success: false,
+        error: 'No description to translate',
+      });
+      expect(h.translateLiterally).not.toHaveBeenCalled();
+    });
   });
 });
 

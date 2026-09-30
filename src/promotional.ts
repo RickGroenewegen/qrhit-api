@@ -713,6 +713,61 @@ class Promotional {
   }
 
   /**
+   * The translation for a kept description (playlists.preserveDescription):
+   * word for word into every locale, and the language the text is written in
+   * gets the text itself. Also marks the row as not SEO-written, which is
+   * what it now is. Throws when the model returns nothing, so nothing is
+   * written.
+   */
+  private async translateLiterallyToAllLocales(
+    playlistId: string,
+    playlistName: string,
+    description: string
+  ): Promise<{ data: Record<string, unknown>; sourceLocale: string | null }> {
+    const original = this.sanitizeBrandName(description.trim());
+
+    this.logger.log(
+      color.blue.bold(
+        `Translating the kept description of ${color.white.bold(playlistId)} word for word`
+      )
+    );
+
+    const allLocales = this.translation.allLocales;
+    const { sourceLocale, translations } = await this.chatgpt.translateLiterally(
+      original,
+      playlistName,
+      allLocales
+    );
+    if (!sourceLocale && Object.keys(translations).length === 0) {
+      throw new Error('The model returned no translation');
+    }
+
+    // A locale the model skipped gets the English text, as on the SEO path.
+    const english =
+      sourceLocale === 'en' ? original : translations['en'] || original;
+    const data: Record<string, unknown> = {
+      seoDescriptionGenerated: false,
+      markedForMerchantCenter: true,
+    };
+    for (const locale of allLocales) {
+      data[`description_${locale}`] =
+        locale === sourceLocale
+          ? original
+          : this.sanitizeBrandName(translations[locale] || english);
+    }
+
+    this.logger.log(
+      color.green.bold(
+        `Kept description of ${color.white.bold(playlistId)} is ${color.white.bold(
+          sourceLocale ?? 'in another language'
+        )}, translated into ${color.white.bold(String(allLocales.length))} locales`
+      )
+    );
+
+    return { data, sourceLocale };
+  }
+
+  /**
    * Send email notification when promotional playlist is sold
    */
   private async sendPromotionalSaleEmail(
@@ -878,6 +933,7 @@ class Promotional {
           promotionalDescription: true,
           promotionalLocale: true,
           promotionalUserId: true,
+          preserveDescription: true,
         },
       });
 
@@ -971,30 +1027,52 @@ class Promotional {
       // fallback when the writer fails, so the page is never left without a
       // description, and the row keeps seoDescriptionGenerated = false so the
       // bulk action picks it up later.
-      try {
-        await SeoDescriptions.getInstance().generateForPlaylist(playlistId);
-      } catch (error: any) {
-        this.logger.log(
-          color.yellow.bold(
-            `SEO description for ${color.white.bold(playlistId)} failed (${error.message}), storing the customer's text instead`
-          )
-        );
-        if (description.trim()) {
-          try {
-            const translationData = await this.translateToAllLocales(playlistId, description);
-            await this.prisma.playlist.update({
-              where: { playlistId },
-              data: translationData,
-            });
-            await Data.getInstance().clearPlaylistCache(playlistId);
-          } catch (fallbackError: any) {
-            // The approval itself has gone through; a description can be
-            // written later by the bulk action, so this is not a failure.
-            this.logger.log(
-              color.red.bold(
-                `Fallback translation for ${color.white.bold(playlistId)} failed too: ${fallbackError.message}`
-              )
-            );
+      //
+      // Unless an admin switched on "Keep this description" before approving:
+      // then the customer's text is the product page copy, word for word.
+      if (playlist.preserveDescription && description.trim()) {
+        try {
+          const { data } = await this.translateLiterallyToAllLocales(
+            playlistId,
+            updateData.name ?? playlist.name,
+            description
+          );
+          await this.prisma.playlist.update({ where: { playlistId }, data });
+          await Data.getInstance().clearPlaylistCache(playlistId);
+        } catch (error: any) {
+          // The approval has gone through; "Translate description" retries.
+          this.logger.log(
+            color.red.bold(
+              `Translating the kept description of ${color.white.bold(playlistId)} failed: ${error.message}`
+            )
+          );
+        }
+      } else {
+        try {
+          await SeoDescriptions.getInstance().generateForPlaylist(playlistId);
+        } catch (error: any) {
+          this.logger.log(
+            color.yellow.bold(
+              `SEO description for ${color.white.bold(playlistId)} failed (${error.message}), storing the customer's text instead`
+            )
+          );
+          if (description.trim()) {
+            try {
+              const translationData = await this.translateToAllLocales(playlistId, description);
+              await this.prisma.playlist.update({
+                where: { playlistId },
+                data: translationData,
+              });
+              await Data.getInstance().clearPlaylistCache(playlistId);
+            } catch (fallbackError: any) {
+              // The approval itself has gone through; a description can be
+              // written later by the bulk action, so this is not a failure.
+              this.logger.log(
+                color.red.bold(
+                  `Fallback translation for ${color.white.bold(playlistId)} failed too: ${fallbackError.message}`
+                )
+              );
+            }
           }
         }
       }
@@ -1046,6 +1124,8 @@ class Promotional {
   ): Promise<{
     success: boolean;
     error?: string;
+    /** Set when the kept description was translated word for word. */
+    literal?: { sourceLocale: string | null };
   }> {
     try {
       // Get playlist with description fields
@@ -1056,11 +1136,30 @@ class Promotional {
           name: true,
           promotionalDescription: true,
           description_en: true,
+          preserveDescription: true,
         },
       });
 
       if (!playlist) {
         return { success: false, error: 'Playlist not found' };
+      }
+
+      // A kept description is the customer's text as it stands on the Edit
+      // form (promotionalDescription). description_en is a translation of it
+      // by now, and translating that again would drift from the original.
+      if (playlist.preserveDescription) {
+        const original = playlist.promotionalDescription || playlist.description_en || '';
+        if (!original.trim()) {
+          return { success: false, error: 'No description to translate' };
+        }
+        const { data, sourceLocale } = await this.translateLiterallyToAllLocales(
+          playlistId,
+          playlist.name,
+          original
+        );
+        await this.prisma.playlist.update({ where: { playlistId }, data });
+        await Data.getInstance().clearPlaylistCache(playlistId);
+        return { success: true, literal: { sourceLocale } };
       }
 
       // Use the English description as source (this is what gets edited in admin)

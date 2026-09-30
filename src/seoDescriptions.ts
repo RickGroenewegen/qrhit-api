@@ -23,6 +23,15 @@ const BULK_LOCK_KEY = 'seoDescriptions:bulk';
 /** Refreshed after every playlist, so a dead worker frees the run soon. */
 const BULK_LOCK_TTL_SECONDS = 15 * 60;
 const BULK_STATUS_TTL_SECONDS = 7 * 24 * 3600;
+/**
+ * What the bulk run visits: featured rows without SEO copy, minus those whose
+ * description an admin chose to keep (playlists.preserveDescription).
+ */
+const BULK_WHERE = {
+  featured: true,
+  seoDescriptionGenerated: false,
+  preserveDescription: false,
+};
 
 export interface SeoBulkStatus {
   running: boolean;
@@ -243,9 +252,13 @@ class SeoDescriptions {
       otherLocales
     );
 
+    // Approval and the bulk run never get here for a kept description, so a
+    // kept one only arrives from the admin's own "Write SEO description",
+    // which is the admin choosing the SEO copy over the customer's text.
     const updateData: Record<string, unknown> = {
       description_en: english,
       seoDescriptionGenerated: true,
+      preserveDescription: false,
       markedForMerchantCenter: true,
     };
     const missing: string[] = [];
@@ -330,9 +343,7 @@ class SeoDescriptions {
    * description. What the bulk action shows before it is started.
    */
   public async countPending(): Promise<number> {
-    return this.prisma.playlist.count({
-      where: { featured: true, seoDescriptionGenerated: false },
-    });
+    return this.prisma.playlist.count({ where: BULK_WHERE });
   }
 
   /**
@@ -350,7 +361,7 @@ class SeoDescriptions {
     }
 
     const pending = (await this.prisma.playlist.findMany({
-      where: { featured: true, seoDescriptionGenerated: false },
+      where: BULK_WHERE,
       select: { playlistId: true, slug: true },
       orderBy: { id: 'asc' },
     })) as Array<{ playlistId: string; slug: string }>;

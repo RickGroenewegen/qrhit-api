@@ -374,7 +374,7 @@
   "mail.housenumber": "Numer domu",
   "mail.invoiceHousenumber": "Numer domu na fakturze",
   "mail.finalizedMailSubject": "Zapraszamy do przejrzenia playlisty '{{ playlist }}'",
-  "mail.youCanReview": "Świetne wieści! Twoja playlista została oceniona przez nasz zespół. Chcielibyśmy zaprosić Cię do jej oceny. Twoje zamówienie zostanie automatycznie przetworzone i wysłane po 36 godzinach. Jeśli nie chcesz wprowadzać zmian, możesz również poprosić o natychmiastowe wydrukowanie i wysłanie zamówienia.",
+  "mail.youCanReview": "Świetna wiadomość! Nasz zespół sprawdził Twoją playlistę. Teraz Twoja kolej: przed drukiem możesz przejrzeć każdą kartę i ustawić ją dokładnie tak, jak chcesz.",
   "mail.reviewOrder": "Przejrzyj swoje zamówienie",
   "countdown.createYourOwn": "Stwórz własne karty muzyczne QR!",
   "countdown.visit": "Odwiedź naszą stronę",
@@ -713,5 +713,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Pudełko prezentowe",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, wzór {{ number }}",
-  "design_alter.designsAffected": "Twoje karty korzystają z kilku wzorów na zmianę. To wzór {{ designs }}."
+  "design_alter.designsAffected": "Twoje karty korzystają z kilku wzorów na zmianę. To wzór {{ designs }}.",
+  "mail.reviewOwnTitle": "Spersonalizuj swoje karty",
+  "mail.reviewCorrectTitle": "Popraw, co chcesz",
+  "mail.reviewCorrectBody": "Artysta, tytuł lub rok się nie zgadza? Możesz to zmienić.",
+  "mail.reviewExtraTitle": "Dodaj własne linie",
+  "mail.reviewExtraBody": "Pod wykonawcą i tytułem możesz dodać krótką linię mniejszą czcionką, np. kraj, film, z którego pochodzi utwór, lub osobistą wiadomość.",
+  "mail.reviewExampleArtistExtra": "Wielka Brytania",
+  "mail.reviewExampleTitleExtra": "Pamiętasz ten kawałek? 😏",
+  "mail.reviewExampleCaption": "Przykład: małe linie dodajesz samodzielnie",
+  "mail.reviewAutoShip": "Wszystko już wygląda dobrze? Nie musisz czekać: na tej samej stronie możesz od razu zlecić druk i wysyłkę. Jeśli nic nie zrobisz, automatycznie wydrukujemy i wyślemy zamówienie po 36 godzinach."
 }

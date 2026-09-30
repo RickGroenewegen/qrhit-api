@@ -608,6 +608,109 @@ ${text}`,
     }
   }
 
+  /**
+   * Translate a customer's playlist description word for word, for a
+   * featured playlist whose description is kept (playlists.preserveDescription).
+   *
+   * The opposite of translateSeoDescription: nothing is rewritten, shortened
+   * or tuned for search. The same call names the language the text is
+   * written in (`sourceLocale`, null when it is none of `locales`), so the
+   * caller can store the original there unchanged; whatever the model returns
+   * for that locale is not meant to be used.
+   */
+  public async translateLiterally(
+    text: string,
+    playlistName: string,
+    locales: string[]
+  ): Promise<{ sourceLocale: string | null; translations: Record<string, string> }> {
+    if (!text || locales.length === 0) return { sourceLocale: null, translations: {} };
+
+    const result = await this.openai.chat.completions.create({
+      model: LLM_MODEL_STANDARD,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional translator. You translate faithfully and completely, the way a careful human translator would, and never rewrite or improve the text.`,
+        },
+        {
+          role: 'user',
+          content: `The text below is the description a curator wrote for their playlist "${playlistName}". It is kept exactly because it is good, so translate it literally.
+
+First decide which of these languages it is written in: ${locales
+            .map((l) => `${this.translation.getLanguageName(l)} (key "${l}")`)
+            .join(', ')}. Answer "other" when it is none of them.
+
+Then translate it into each of those languages.
+- Keep every sentence, fact, name and nuance, in the same order and the same tone. Do not shorten, summarise, add, explain or optimise anything for search engines.
+- Keep the playlist name "${playlistName}", the names of people, artists, composers and bands, and song titles exactly as written, in the same script.
+- Keep the paragraphs, line breaks and emojis where they are.
+- For the language the text is already written in, return the text unchanged.
+
+Text:
+${text}`,
+        },
+      ],
+      reasoning_effort: 'none',
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'translateLiterally',
+          schema: {
+            type: 'object',
+            properties: {
+              sourceLanguage: {
+                type: 'string',
+                enum: [...locales, 'other'],
+                description: 'The key of the language the text is written in, or "other"',
+              },
+              translations: {
+                type: 'object',
+                properties: Object.fromEntries(
+                  locales.map((locale) => [
+                    locale,
+                    {
+                      type: 'string',
+                      description: `The text in ${this.translation.getLanguageName(locale)}`,
+                    },
+                  ])
+                ),
+                required: locales,
+              },
+            },
+            required: ['sourceLanguage', 'translations'],
+          },
+        },
+      },
+    });
+
+    const content = result?.choices[0]?.message?.content;
+    if (!content) return { sourceLocale: null, translations: {} };
+    try {
+      const parsed = JSON.parse(content) as {
+        sourceLanguage?: unknown;
+        translations?: Record<string, unknown>;
+      };
+      const sourceLocale =
+        typeof parsed.sourceLanguage === 'string' && locales.includes(parsed.sourceLanguage)
+          ? parsed.sourceLanguage
+          : null;
+      const translations: Record<string, string> = {};
+      for (const locale of locales) {
+        const value = parsed.translations?.[locale];
+        if (typeof value === 'string' && value.trim()) {
+          translations[locale] = value.trim();
+        }
+      }
+      return { sourceLocale, translations };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error parsing literal translations: ${error}`)
+      );
+      this.logger.log(color.red.bold(`Raw response: ${content}`));
+      return { sourceLocale: null, translations: {} };
+    }
+  }
+
   public async determineGenre(
     playlistName: string,
     tracks: Array<{ artist: string; name: string }>,

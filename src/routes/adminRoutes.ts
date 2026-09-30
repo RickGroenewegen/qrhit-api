@@ -1065,7 +1065,7 @@ export default async function adminRoutes(
       const result = await promotional.translateDescription(playlistId);
 
       if (result.success) {
-        reply.send({ success: true });
+        reply.send({ success: true, literal: result.literal });
       } else {
         reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
           success: false,
@@ -1108,13 +1108,13 @@ export default async function adminRoutes(
     }
   );
 
-  // Edit promotional playlist (name, description, locale, slug)
+  // Edit promotional playlist (name, description, locale, slug, keep description)
   fastify.post(
     '/admin/promotional/:playlistId/edit',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { playlistId } = request.params;
-      const { name, description, featuredLocale, slug } = request.body;
+      const { name, description, featuredLocale, slug, preserveDescription } = request.body;
 
       if (!playlistId) {
         reply.status(400).send({
@@ -1129,6 +1129,8 @@ export default async function adminRoutes(
         description,
         featuredLocale: featuredLocale || null,
         slug,
+        preserveDescription:
+          typeof preserveDescription === 'boolean' ? preserveDescription : undefined,
       });
 
       if (result.success) {

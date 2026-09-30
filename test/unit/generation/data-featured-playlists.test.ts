@@ -864,6 +864,72 @@ describe('updatePromotionalPlaylist', () => {
     expect(deps.cache.del).toHaveBeenCalledWith('productPageLocales_old-slug');
   });
 
+  it('leaves the English page copy alone when the description was not changed', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'old',
+      promotionalDescription: 'New desc',
+      preserveDescription: false,
+    });
+
+    await updatePromotionalPlaylist(deps, 'pl1', payload);
+
+    const data = prisma.playlist.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('description_en');
+    expect(data.promotionalDescription).toBe('New desc');
+    // Not sent, not touched.
+    expect(data).not.toHaveProperty('preserveDescription');
+  });
+
+  it('counts a curated list without customer text (null) as unchanged when the form sends ""', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'old',
+      promotionalDescription: null,
+      preserveDescription: false,
+    });
+
+    await updatePromotionalPlaylist(deps, 'pl1', { ...payload, description: '' });
+
+    expect(prisma.playlist.update.mock.calls[0][0].data).not.toHaveProperty(
+      'description_en'
+    );
+  });
+
+  it('stores the keep switch, and a kept description never goes onto the page untranslated', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'old',
+      promotionalDescription: 'Old desc',
+      preserveDescription: false,
+    });
+
+    await updatePromotionalPlaylist(deps, 'pl1', {
+      ...payload,
+      preserveDescription: true,
+    });
+
+    const data = prisma.playlist.update.mock.calls[0][0].data;
+    expect(data.preserveDescription).toBe(true);
+    expect(data.promotionalDescription).toBe('New desc');
+    expect(data).not.toHaveProperty('description_en');
+  });
+
+  it('an already kept description stays off the page when the form does not send the switch', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      slug: 'old',
+      promotionalDescription: 'Old desc',
+      preserveDescription: true,
+    });
+
+    await updatePromotionalPlaylist(deps, 'pl1', payload);
+
+    expect(prisma.playlist.update.mock.calls[0][0].data).not.toHaveProperty(
+      'description_en'
+    );
+  });
+
   it('a whitespace-only slug is ignored (no duplicate check, no slug update)', async () => {
     const { deps, prisma } = makeDeps();
     prisma.playlist.findUnique.mockResolvedValue({ slug: 'old' });

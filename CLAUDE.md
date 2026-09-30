@@ -694,6 +694,17 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   the poll and a dead worker frees the run within 15 minutes.
   `POST /admin/playlist/:playlistId/seo-description` rewrites one playlist
   regardless of the flag.
+- **"Keep this description"** (`preserveDescription`, a switch in the Edit
+  modal on the Featured page) is for a customer text that beats anything the
+  writer makes of it (playlist 2650, "Symphony!", is the example). While it
+  is on, approval and "Translate description" skip the writer:
+  `ChatGPT.translateLiterally` names the language `promotionalDescription` is
+  written in and translates it word for word, and that locale gets the text
+  itself. The bulk action skips the row; "Write SEO description" on it
+  switches keeping off. The Edit form's description is always
+  `promotionalDescription`, so saving it never touches the page copy of a
+  kept row, and otherwise only when the text was actually changed (a new
+  name or slug used to put the raw customer text over the English SEO copy).
 
 ## Product page locale, cover and design
 

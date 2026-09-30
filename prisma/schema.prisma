@@ -491,6 +491,14 @@ model Playlist {
   // which only visits featured rows where this is still false.
   seoDescriptionGenerated Boolean @default(false)
 
+  // The admin's "Keep this description" switch on the Featured page, for a
+  // customer text that is better than anything the SEO writer makes of it.
+  // While true, approval and "Translate description" translate
+  // promotionalDescription word for word (the language it is written in gets
+  // it unchanged) and the SEO bulk action skips the row. Writing an SEO
+  // description for the row by hand switches it off again.
+  preserveDescription Boolean @default(false)
+
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
 

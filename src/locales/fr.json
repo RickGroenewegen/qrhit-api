@@ -379,7 +379,7 @@
   "mail.housenumber": "Numéro de maison",
   "mail.invoiceHousenumber": "Numéro de maison de facturation",
   "mail.finalizedMailSubject": "Nous t'invitons à revoir la playlist '{{ playlist }}'",
-  "mail.youCanReview": "Bonne nouvelle ! Votre playlist a été examinée par notre équipe. Nous vous invitons à examiner votre playlist également. Votre commande sera traitée et expédiée automatiquement après 36 heures. Si vous ne souhaitez pas apporter de modifications, vous pouvez également demander à ce que la commande soit imprimée et expédiée immédiatement.",
+  "mail.youCanReview": "Bonne nouvelle ! Notre équipe a vérifié ta playlist. À toi de jouer : avant l’impression, tu peux vérifier chaque carte et la personnaliser comme tu veux.",
   "mail.reviewOrder": "Revois ta commande",
   "countdown.createYourOwn": "Créez vos propres cartes QR Musique!",
   "countdown.visit": "Visitez notre site",
@@ -718,5 +718,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Coffret cadeau",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, design {{ number }}",
-  "design_alter.designsAffected": "Tes cartes alternent entre plusieurs designs. Ici, c’est le design {{ designs }}."
+  "design_alter.designsAffected": "Tes cartes alternent entre plusieurs designs. Ici, c’est le design {{ designs }}.",
+  "mail.reviewOwnTitle": "Personnalise tes cartes",
+  "mail.reviewCorrectTitle": "Corrige ce qu’il faut",
+  "mail.reviewCorrectBody": "L’artiste, le titre ou l’année ne sont pas tout à fait justes ? Tu peux les modifier.",
+  "mail.reviewExtraTitle": "Ajoute tes propres lignes",
+  "mail.reviewExtraBody": "Sous l’artiste et le titre, tu peux ajouter une courte ligne en petits caractères : le pays, le film dont vient la chanson ou un message personnel.",
+  "mail.reviewExampleArtistExtra": "Royaume-Uni",
+  "mail.reviewExampleTitleExtra": "Tu te souviens de celle-ci ? 😏",
+  "mail.reviewExampleCaption": "Exemple : tu ajoutes les petites lignes",
+  "mail.reviewAutoShip": "Tout est déjà parfait ? Pas besoin d’attendre : sur la même page, tu peux lancer immédiatement l’impression et l’expédition. Sinon, nous le ferons automatiquement après 36 heures."
 }

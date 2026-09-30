@@ -613,6 +613,7 @@ export async function searchFeaturedPlaylists(
         promotionalUserId: true,
         promotionalShareDesign: true,
         featuredDesignHidden: true,
+        preserveDescription: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -634,6 +635,7 @@ export async function searchFeaturedPlaylists(
           image: p.image,
           customImage: p.customImage,
           description: p.promotionalDescription || '',
+          preserveDescription: p.preserveDescription,
           locale: p.promotionalLocale,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
@@ -695,6 +697,7 @@ export async function searchFeaturedPlaylists(
           promotionalDescription: true,
           promotionalUserId: true,
           baseEventsTagged: true,
+          preserveDescription: true,
         },
         orderBy: { [safeColumn]: safeDirection },
         skip: offset,
@@ -763,6 +766,7 @@ export async function searchFeaturedPlaylists(
           image: p.image,
           customImage: p.customImage,
           description: p.promotionalDescription || '',
+          preserveDescription: p.preserveDescription,
           featuredHidden: p.featuredHidden,
           featuredLocale: p.featuredLocale,
           unfeaturedAt: p.unfeaturedAt,
@@ -1123,17 +1127,21 @@ export async function updatePromotionalPlaylist(
     description: string;
     featuredLocale: string | null;
     slug?: string;
+    /** The "Keep this description" switch; left alone when undefined. */
+    preserveDescription?: boolean;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const updateData: Record<string, any> = {
       name: data.name,
       promotionalTitle: data.name,
-      description_en: data.description,
       promotionalDescription: data.description,
       featuredLocale: data.featuredLocale,
       markedForMerchantCenter: true,
     };
+    if (data.preserveDescription !== undefined) {
+      updateData.preserveDescription = data.preserveDescription;
+    }
 
     // Handle slug update with duplicate check
     if (data.slug !== undefined && data.slug !== null) {
@@ -1162,8 +1170,20 @@ export async function updatePromotionalPlaylist(
     // Get old slug before update for cache clearing
     const oldPlaylist = await deps.prisma.playlist.findUnique({
       where: { playlistId },
-      select: { slug: true },
+      select: { slug: true, promotionalDescription: true, preserveDescription: true },
     });
+
+    // The form's description is the customer's text, the input for
+    // "Translate description". It goes straight onto the English product page
+    // only when the admin changed it, and not at all for a kept description,
+    // which reaches every locale through its word-for-word translation. Saving
+    // a new name or slug used to replace the English SEO copy (or a
+    // translated kept description) with the customer's raw text.
+    const preserve = data.preserveDescription ?? oldPlaylist?.preserveDescription ?? false;
+    // A curated list has no customer text (null); the form sends ''.
+    if (!preserve && data.description !== (oldPlaylist?.promotionalDescription ?? '')) {
+      updateData.description_en = data.description;
+    }
 
     await deps.prisma.playlist.update({
       where: { playlistId },

@@ -37,7 +37,7 @@
   "mail.sendToPrinterMailSubject": "Din spellista '{{ playlist }}' är på väg att produceras!",
   "mail.printingStarted": "Goda nyheter! Dina QR-musikkort för '{{ playlist }}' ska produceras. De skickas snart till dig.",
   "mail.orderShipped": "Goda nyheter! Din QRSong-beställning har skickats.",
-  "mail.youCanReview": "Grymma nyheter! Din spellista har granskats av vårt team. Nu har även du möjlighet att granska din spellista också. Din beställning behandlas och skickas automatiskt efter 36 timmar. Om du inte vill ändra något kan du också be oss skriva ut & skicka beställningen direkt.",
+  "mail.youCanReview": "Goda nyheter! Vårt team har granskat din spellista. Nu är det din tur: innan vi trycker kan du gå igenom varje kort och få det precis som du vill.",
   "mail.reviewOrder": "Granska din beställning",
   "mail.trackOrder": "Spåra din beställning",
   "mail.thankYou": "Vi hoppas du får massor av musiknöje! Har du fler frågor, maila oss gärna: info@qrsong.io",
@@ -707,5 +707,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Presentask",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, design {{ number }}",
-  "design_alter.designsAffected": "Dina kort växlar mellan flera designer. Det här är design {{ designs }}."
+  "design_alter.designsAffected": "Dina kort växlar mellan flera designer. Det här är design {{ designs }}.",
+  "mail.reviewOwnTitle": "Gör korten personliga",
+  "mail.reviewCorrectTitle": "Rätta det som behövs",
+  "mail.reviewCorrectBody": "Är artist, titel eller årtal inte helt rätt? Du kan ändra det själv.",
+  "mail.reviewExtraTitle": "Lägg till egna rader",
+  "mail.reviewExtraBody": "Under artisten och titeln kan du lägga till en kort rad i mindre text, till exempel landet, filmen som låten är med i eller ett personligt meddelande.",
+  "mail.reviewExampleArtistExtra": "Storbritannien",
+  "mail.reviewExampleTitleExtra": "Minns du den här? 😏",
+  "mail.reviewExampleCaption": "Exempel: de små raderna lägger du till",
+  "mail.reviewAutoShip": "Ser allt bra ut redan? Då behöver du inte vänta: på samma sida kan du få beställningen tryckt och skickad direkt. Om du inte gör något trycker och skickar vi den automatiskt efter 36 timmar."
 }

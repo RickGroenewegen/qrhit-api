@@ -185,6 +185,9 @@ describe('SeoDescriptions.generateForPlaylist', () => {
     const written = prisma.playlist.update.mock.calls[0][0];
     expect(written.where).toEqual({ id: 7 });
     expect(written.data.seoDescriptionGenerated).toBe(true);
+    // Only the admin's own "Write SEO description" reaches a kept row; that
+    // choice switches keeping off.
+    expect(written.data.preserveDescription).toBe(false);
     expect(written.data.markedForMerchantCenter).toBe(true);
     expect(written.data.description_en).toBe(result.description);
     expect(written.data.description_nl).toBe('nl: vertaald');
@@ -275,15 +278,26 @@ describe('SeoDescriptions bulk run', () => {
     expect(prisma.playlist.findMany).not.toHaveBeenCalled();
   });
 
-  it('only visits featured playlists without an SEO description', async () => {
+  it('only visits featured playlists without an SEO description or a kept one', async () => {
     prisma.playlist.findMany.mockResolvedValue([]);
     const result = await SeoDescriptions.getInstance().startBulkRun();
     expect(result).toEqual({ started: true, total: 0 });
     expect(prisma.playlist.findMany.mock.calls[0][0].where).toEqual({
       featured: true,
       seoDescriptionGenerated: false,
+      preserveDescription: false,
     });
     expect(cache.releaseLock).toHaveBeenCalled();
+  });
+
+  it('counts pending playlists the same way', async () => {
+    prisma.playlist.count.mockResolvedValue(4);
+    expect(await SeoDescriptions.getInstance().countPending()).toBe(4);
+    expect(prisma.playlist.count.mock.calls[0][0].where).toEqual({
+      featured: true,
+      seoDescriptionGenerated: false,
+      preserveDescription: false,
+    });
   });
 
   it('reports an empty status when nothing has run', async () => {

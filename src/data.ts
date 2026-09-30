@@ -583,7 +583,13 @@ class Data {
 
   public async updatePromotionalPlaylist(
     playlistId: string,
-    data: { name: string; description: string; featuredLocale: string | null; slug?: string }
+    data: {
+      name: string;
+      description: string;
+      featuredLocale: string | null;
+      slug?: string;
+      preserveDescription?: boolean;
+    }
   ) {
     return featuredPlaylistsModule.updatePromotionalPlaylist(this.deps, playlistId, data);
   }

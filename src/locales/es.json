@@ -378,7 +378,7 @@
   "mail.housenumber": "Número de casa",
   "mail.invoiceHousenumber": "Número de casa de factura",
   "mail.finalizedMailSubject": "Te invitamos a revisar la lista '{{ playlist }}'",
-  "mail.youCanReview": "¡Buenas noticias! Tu lista de reproducción ha sido revisada por nuestro equipo. Nos gustaría invitarte a revisar tu lista también. Tu pedido se procesará y enviará automáticamente después de 36 horas. Si no deseas hacer cambios, también puedes solicitar que el pedido se imprima y envíe de inmediato.",
+  "mail.youCanReview": "¡Buenas noticias! Nuestro equipo ha revisado tu playlist. Ahora te toca: antes de imprimir, puedes revisar cada carta y dejarla justo como quieras.",
   "mail.reviewOrder": "Revisa tu pedido",
   "countdown.createYourOwn": "¡Crea tus propias tarjetas QR de música!",
   "countdown.visit": "Visita nuestro sitio web",
@@ -717,5 +717,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Caja de regalo",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, diseño {{ number }}",
-  "design_alter.designsAffected": "Tus tarjetas alternan entre varios diseños. Este es el diseño {{ designs }}."
+  "design_alter.designsAffected": "Tus tarjetas alternan entre varios diseños. Este es el diseño {{ designs }}.",
+  "mail.reviewOwnTitle": "Personaliza tus cartas",
+  "mail.reviewCorrectTitle": "Corrige lo que quieras",
+  "mail.reviewCorrectBody": "¿El artista, el título o el año no son correctos? Puedes cambiarlos tú.",
+  "mail.reviewExtraTitle": "Añade tus propias líneas",
+  "mail.reviewExtraBody": "Debajo del artista y del título puedes añadir una línea corta en letra pequeña: el país, la película de la canción o un mensaje personal.",
+  "mail.reviewExampleArtistExtra": "Reino Unido",
+  "mail.reviewExampleTitleExtra": "¿Te acuerdas de esta? 😏",
+  "mail.reviewExampleCaption": "Ejemplo: tú añades las líneas pequeñas",
+  "mail.reviewAutoShip": "¿Ya está todo bien? No tienes que esperar: en la misma página puedes imprimir y enviar tu pedido de inmediato. Si no haces nada, lo haremos automáticamente tras 36 horas."
 }

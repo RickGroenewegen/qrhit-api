@@ -379,7 +379,7 @@
   "mail.housenumber": "Hausnummer",
   "mail.invoiceHousenumber": "Rechnungs-Hausnummer",
   "mail.finalizedMailSubject": "Wir laden dich ein, die Playlist '{{ playlist }}' zu überprüfen",
-  "mail.youCanReview": "Tolle Neuigkeiten! Deine Playlist wurde von unserem Team überprüft. Wir laden dich ein, deine Playlist ebenfalls zu überprüfen. Deine Bestellung wird automatisch nach 36 Stunden bearbeitet und versendet. Wenn du keine Änderungen vornehmen möchtest, kannst du auch darum bitten, die Bestellung sofort zu drucken und zu versenden.",
+  "mail.youCanReview": "Gute Nachrichten! Unser Team hat deine Playlist geprüft. Jetzt bist du dran: Bevor wir drucken, kannst du jede Karte prüfen und genau so gestalten, wie du willst.",
   "mail.reviewOrder": "Überprüfe deine Bestellung",
   "countdown.createYourOwn": "Erstelle deine eigenen QR-Musikkarten!",
   "countdown.visit": "Besuche unsere Website",
@@ -718,5 +718,14 @@
   "mail.upgradeInvoicePurchaseGiftBox": "Geschenkbox",
   "mail.upgradeInvoicePurchaseQRGames": "QRGames",
   "design_alter.imageDesign": "{{ image }}, Design {{ number }}",
-  "design_alter.designsAffected": "Deine Karten wechseln zwischen mehreren Designs. Hier geht es um Design {{ designs }}."
+  "design_alter.designsAffected": "Deine Karten wechseln zwischen mehreren Designs. Hier geht es um Design {{ designs }}.",
+  "mail.reviewOwnTitle": "Mach die Karten zu deinen",
+  "mail.reviewCorrectTitle": "Korrigiere alles",
+  "mail.reviewCorrectBody": "Künstler, Titel oder Jahr nicht ganz richtig? Du kannst es selbst ändern.",
+  "mail.reviewExtraTitle": "Füge eigene Zeilen hinzu",
+  "mail.reviewExtraBody": "Unter Künstler und Titel kannst du eine kurze Zeile in kleinerer Schrift hinzufügen, etwa das Land, den Film zum Song oder eine persönliche Nachricht.",
+  "mail.reviewExampleArtistExtra": "Vereinigtes Königreich",
+  "mail.reviewExampleTitleExtra": "Erinnerst du dich daran? 😏",
+  "mail.reviewExampleCaption": "Beispiel: Die kleinen Zeilen fügst du hinzu",
+  "mail.reviewAutoShip": "Sieht schon alles gut aus? Dann musst du nicht warten: Auf derselben Seite kannst du deine Bestellung sofort drucken und versenden lassen. Wenn du nichts tust, erledigen wir das automatisch nach 36 Stunden."
 }
