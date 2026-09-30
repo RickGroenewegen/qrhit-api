@@ -378,7 +378,7 @@
   "mail.weHopeYouHaveFun2": "Wir hoffen, du hast viel musikalischen Spaß! Wenn du weitere Fragen hast, schreib uns über das Kontaktformular auf unserer Website.",
   "mail.housenumber": "Hausnummer",
   "mail.invoiceHousenumber": "Rechnungs-Hausnummer",
-  "mail.finalizedMailSubject": "Wir laden dich ein, die Playlist '{{ playlist }}' zu überprüfen",
+  "mail.finalizedMailSubject": "Prüfe deine Karten für „{{ playlist }}“, bevor wir sie drucken",
   "mail.youCanReview": "Gute Nachrichten! Unser Team hat deine Playlist geprüft. Jetzt bist du dran: Bevor wir drucken, kannst du jede Karte prüfen und genau so gestalten, wie du willst.",
   "mail.reviewOrder": "Überprüfe deine Bestellung",
   "countdown.createYourOwn": "Erstelle deine eigenen QR-Musikkarten!",
@@ -727,5 +727,6 @@
   "mail.reviewExampleArtistExtra": "Vereinigtes Königreich",
   "mail.reviewExampleTitleExtra": "Erinnerst du dich daran? 😏",
   "mail.reviewExampleCaption": "Beispiel: Die kleinen Zeilen fügst du hinzu",
-  "mail.reviewAutoShip": "Sieht schon alles gut aus? Dann musst du nicht warten: Auf derselben Seite kannst du deine Bestellung sofort drucken und versenden lassen. Wenn du nichts tust, erledigen wir das automatisch nach 36 Stunden."
+  "mail.reviewAutoShip": "Sieht schon alles gut aus? Dann musst du nicht warten: Auf derselben Seite kannst du deine Bestellung sofort drucken und versenden lassen. Wenn du nichts tust, erledigen wir das automatisch nach 36 Stunden.",
+  "mail.finalizedPreheader": "Korrigiere Künstler, Titel oder Jahr und füge eigene Zeilen hinzu. Nach 36 Stunden drucken wir automatisch."
 }

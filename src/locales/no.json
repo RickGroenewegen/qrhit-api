@@ -33,7 +33,7 @@
   "mail.email": "E-post",
   "mail.cards": "kort",
   "mail.trackingMailSubject": "Din QRSong-bestilling {{ orderId }} er sendt!",
-  "mail.finalizedMailSubject": "Vi inviterer deg til å sjekke spillelisten '{{ playlist }}'",
+  "mail.finalizedMailSubject": "Sjekk kortene dine for «{{ playlist }}» før vi trykker dem",
   "mail.sendToPrinterMailSubject": "Spillelisten din '{{ playlist }}' er klar for produksjon!",
   "mail.printingStarted": "Gode nyheter! QR-musikkortene dine for '{{ playlist }}' er klare for produksjon. Kortene sendes til deg snart.",
   "mail.orderShipped": "Gode nyheter! QRSong-bestillingen din er sendt.",
@@ -703,5 +703,6 @@
   "mail.reviewExampleArtistExtra": "Storbritannia",
   "mail.reviewExampleTitleExtra": "Husker du denne? 😏",
   "mail.reviewExampleCaption": "Eksempel: de små linjene legger du til",
-  "mail.reviewAutoShip": "Ser alt bra ut allerede? Da trenger du ikke vente: på samme side kan du få bestillingen trykket og sendt med én gang. Hvis du ikke gjør noe, trykker og sender vi den automatisk etter 36 timer."
+  "mail.reviewAutoShip": "Ser alt bra ut allerede? Da trenger du ikke vente: på samme side kan du få bestillingen trykket og sendt med én gang. Hvis du ikke gjør noe, trykker og sender vi den automatisk etter 36 timer.",
+  "mail.finalizedPreheader": "Rett artist, tittel eller år, og legg til egne linjer. Vi trykker automatisk etter 36 timer."
 }

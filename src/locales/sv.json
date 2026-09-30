@@ -33,7 +33,7 @@
   "mail.email": "E-post",
   "mail.cards": "kort",
   "mail.trackingMailSubject": "Din QRSong-beställning {{ orderId }} har skickats!",
-  "mail.finalizedMailSubject": "Nu har du möjlighet dig att granska spellistan '{{ playlist }}'",
+  "mail.finalizedMailSubject": "Kolla dina kort för '{{ playlist }}' innan vi trycker dem",
   "mail.sendToPrinterMailSubject": "Din spellista '{{ playlist }}' är på väg att produceras!",
   "mail.printingStarted": "Goda nyheter! Dina QR-musikkort för '{{ playlist }}' ska produceras. De skickas snart till dig.",
   "mail.orderShipped": "Goda nyheter! Din QRSong-beställning har skickats.",
@@ -716,5 +716,6 @@
   "mail.reviewExampleArtistExtra": "Storbritannien",
   "mail.reviewExampleTitleExtra": "Minns du den här? 😏",
   "mail.reviewExampleCaption": "Exempel: de små raderna lägger du till",
-  "mail.reviewAutoShip": "Ser allt bra ut redan? Då behöver du inte vänta: på samma sida kan du få beställningen tryckt och skickad direkt. Om du inte gör något trycker och skickar vi den automatiskt efter 36 timmar."
+  "mail.reviewAutoShip": "Ser allt bra ut redan? Då behöver du inte vänta: på samma sida kan du få beställningen tryckt och skickad direkt. Om du inte gör något trycker och skickar vi den automatiskt efter 36 timmar.",
+  "mail.finalizedPreheader": "Rätta artist, titel eller år och lägg till egna rader. Vi trycker automatiskt efter 36 timmar."
 }

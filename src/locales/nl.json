@@ -378,7 +378,7 @@
   "mail.weHopeYouHaveFun2": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons via het contactformulier op onze website.",
   "mail.housenumber": "Huisnummer",
   "mail.invoiceHousenumber": "Factuur huisnummer",
-  "mail.finalizedMailSubject": "We nodigen je uit om de afspeellijst '{{ playlist }}' te bekijken",
+  "mail.finalizedMailSubject": "Controleer je kaarten voor '{{ playlist }}' voordat we ze printen",
   "mail.youCanReview": "Goed nieuws! Ons team heeft je playlist gecontroleerd. Nu is het jouw beurt: vóór we printen kun je elke kaart bekijken en precies maken zoals jij wilt.",
   "mail.reviewOrder": "Bekijk je bestelling",
   "countdown.createYourOwn": "Maak je eigen QR Muziekkaarten!",
@@ -726,5 +726,6 @@
   "mail.reviewExampleArtistExtra": "Verenigd Koninkrijk",
   "mail.reviewExampleTitleExtra": "Weet je deze nog? 😏",
   "mail.reviewExampleCaption": "Voorbeeld: de kleine regels voeg je zelf toe",
-  "mail.reviewAutoShip": "Ziet alles er al goed uit? Dan hoef je niet te wachten: op dezelfde pagina kun je je bestelling direct laten printen en verzenden. Doe je niets, dan printen en verzenden we die automatisch na 36 uur."
+  "mail.reviewAutoShip": "Ziet alles er al goed uit? Dan hoef je niet te wachten: op dezelfde pagina kun je je bestelling direct laten printen en verzenden. Doe je niets, dan printen en verzenden we die automatisch na 36 uur.",
+  "mail.finalizedPreheader": "Pas de artiest, titel of het jaar aan en voeg je eigen regels toe. Na 36 uur printen we automatisch."
 }

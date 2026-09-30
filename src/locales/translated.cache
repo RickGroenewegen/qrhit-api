@@ -5463,21 +5463,6 @@
     "sv",
     "no"
   ],
-  "mail.finalizedMailSubject": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv",
-    "no"
-  ],
   "mail.reviewOrder": [
     "nl",
     "de",
@@ -10060,6 +10045,32 @@
     "no"
   ],
   "mail.reviewExampleCaption": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "mail.finalizedMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "mail.finalizedPreheader": [
     "nl",
     "de",
     "fr",
