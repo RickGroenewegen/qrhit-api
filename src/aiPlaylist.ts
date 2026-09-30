@@ -11,6 +11,7 @@ import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
 import { LLM_MODEL_FAST } from './llmModels';
+import { ArtistBalance, ArtistIntent, NO_ARTIST_INTENT } from './aiPlaylistBalance';
 
 // Redis cache key prefix for AI-prompt → spotifyPlaylistId lookup.
 // Lives only between AI playlist creation and the eventual PaymentHasPlaylist
@@ -32,6 +33,14 @@ const AI_PLAYLIST_PROGRESS_TTL_SECONDS = 30 * 60; // 30 min
 
 export const aiPlaylistProgressKey = (jobId: string) =>
   `${AI_PLAYLIST_PROGRESS_KEY}:${jobId}`;
+
+// What a job was asked (prompt and locale), written by the route before it
+// answers. The progress page's featured-playlist suggestions read it, so
+// they do not depend on how far the background run has come.
+export const AI_PLAYLIST_JOB_KEY = 'aiPlaylistJob';
+
+export const aiPlaylistJobKey = (jobId: string) =>
+  `${AI_PLAYLIST_JOB_KEY}:${jobId}`;
 
 export interface AIPlaylistSnapshot {
   jobId: string;
@@ -65,6 +74,9 @@ const MODEL = LLM_MODEL_FAST;
 const REASONING_EFFORT = 'none' as const;
 const KEYWORD_LIMIT = 100;
 const PER_KEYWORD_LIMIT = 50;
+// An artist the customer asked for by name is searched this deep at most, so
+// a playlist of one artist is not cut off at PER_KEYWORD_LIMIT songs.
+const REQUESTED_ARTIST_LIMIT = 500;
 const CURATION_BATCH_SIZE = 100;
 
 interface CandidateTrack {
@@ -81,6 +93,11 @@ type KeywordTarget = 'any' | 'artist' | 'title';
 interface SearchKeyword {
   value: string;
   target: KeywordTarget;
+  /**
+   * Set for an artist the customer named: how many songs to fetch instead of
+   * PER_KEYWORD_LIMIT, with that artist's own songs ahead of lookalike names.
+   */
+  limit?: number;
 }
 
 interface AIPlaylistJobData {
@@ -324,13 +341,14 @@ class AIPlaylistGenerator {
         )
       );
       const stepT1 = Date.now();
-      const { keywords, startYear, endYear, title } = await this.thinkKeywords(
-        jobId,
-        prompt,
-        locale,
-        cost
-      );
+      const { keywords, startYear, endYear, title, intent } =
+        await this.thinkKeywords(jobId, prompt, locale, cost);
       resolvedTitle = title;
+      this.deepenRequestedArtists(keywords, intent, trackCount);
+      // Only the named artists: similar artists from an expansion round are
+      // exactly what the customer did not ask for.
+      const onlyNamedArtists =
+        intent.onlyRequested && intent.requestedArtists.length > 0;
       this.logger.log(
         color.green.bold(
           `[AI] ${white.bold(jobId)} step 1/4 done in ${white.bold(
@@ -369,6 +387,7 @@ class AIPlaylistGenerator {
       const tried = new Set(keywords.map((k) => k.value.toLowerCase()));
       let expansionRounds = 0;
       while (
+        !onlyNamedArtists &&
         candidates.length < targetPool &&
         expansionRounds < 3 &&
         tried.size < KEYWORD_LIMIT * 4
@@ -466,7 +485,8 @@ class AIPlaylistGenerator {
         trackCount,
         startYear,
         endYear,
-        cost
+        cost,
+        intent
       );
       this.logger.log(
         color.green.bold(
@@ -696,6 +716,7 @@ class AIPlaylistGenerator {
     startYear: number | null;
     endYear: number | null;
     title: string;
+    intent: ArtistIntent;
   }> {
     this.broadcastProgress(jobId, {
       stage: 'thinking_keywords',
@@ -711,9 +732,9 @@ class AIPlaylistGenerator {
         {
           role: 'system',
           content:
-            'You analyze a user-supplied music theme and return: (1) up to 50 search keywords, and (2) an optional release-or-composition-year range if the user mentioned a specific time period.\n\nKEYWORD RULES — CRITICAL:\nThe keywords are used to run SQL `LIKE %keyword%` against ONLY two columns: `artist` (the performing artist name) and `name` (the song title). They are NOT used against any genre, mood, decade, or tag column. Therefore:\n  • DO return concrete artist or band names that fit the theme (e.g. "Marco Borsato", "2 Unlimited", "Vengaboys", "BZN").\n  • DO return distinctive words or phrases likely to appear in a relevant SONG TITLE (e.g. "love", "summer", "Christmas", "tonight" — only when the user theme clearly implies them, like a christmas or summer playlist).\n  • DO NOT return genre or sub-genre names ("Eurodance", "synthpop", "house", "happy hardcore", "R&B", "pop", "rock", "nederpop"). These will not match anything.\n  • DO NOT return moods, descriptors, or marketing tags ("nostalgia", "party", "upbeat", "club", "catchy", "radio hits", "hit singles", "mainstream", "Top 40", "boy bands", "girl groups").\n  • DO NOT return decade words or era labels ("90s", "1990s", "nineties") — the year range below already covers that.\n  • DO NOT return country/language tags ("Dutch artists", "Holland", "NL", "Nederlandse hits") — instead return artists from that country.\nUse the theme (genre/era/mood/country) internally to pick which artists belong in the list; do not echo the descriptors as keywords.\n\nCOLUMN INTENT — IMPORTANT:\nYou return three keyword buckets: `keywords` (search both columns), `artistKeywords` (search artist only), `titleKeywords` (search song title only). Choose the right bucket:\n  • When the user explicitly says a word should be IN THE TITLE only ("songs with `soul` in the title", "tracks called `love`", "anything with `night` in the name") → put it in `titleKeywords`. Putting it in `keywords` would also match every artist whose name contains it — the opposite of what the user asked.\n  • When the user clearly wants songs BY an artist or in that artist\'s style and the artist\'s name could ambiguously appear in unrelated song titles → prefer `artistKeywords`.\n  • When the user explicitly says a word should match EITHER the title OR the artist ("songs that mention `love` anywhere", "anything with `soul` in the title or the artist name") → put it in `keywords` (both columns). This is also the right bucket for broad themes where you don\'t need to narrow scope.\n\nLOCALE BIAS — IMPORTANT:\n' +
+            'You analyze a user-supplied music theme and return: (1) up to 50 search keywords, and (2) an optional release-or-composition-year range if the user mentioned a specific time period.\n\nKEYWORD RULES — CRITICAL:\nThe keywords are used to run SQL `LIKE %keyword%` against ONLY two columns: `artist` (the performing artist name) and `name` (the song title). They are NOT used against any genre, mood, decade, or tag column. Therefore:\n  • DO return concrete artist or band names that fit the theme (e.g. "Guus Meeuwis", "2 Unlimited", "Vengaboys", "BZN").\n  • DO return distinctive words or phrases likely to appear in a relevant SONG TITLE (e.g. "love", "summer", "Christmas", "tonight" — only when the user theme clearly implies them, like a christmas or summer playlist).\n  • DO NOT return genre or sub-genre names ("Eurodance", "synthpop", "house", "happy hardcore", "R&B", "pop", "rock", "nederpop"). These will not match anything.\n  • DO NOT return moods, descriptors, or marketing tags ("nostalgia", "party", "upbeat", "club", "catchy", "radio hits", "hit singles", "mainstream", "Top 40", "boy bands", "girl groups").\n  • DO NOT return decade words or era labels ("90s", "1990s", "nineties") — the year range below already covers that.\n  • DO NOT return country/language tags ("Dutch artists", "Holland", "NL", "Nederlandse hits") — instead return artists from that country.\nUse the theme (genre/era/mood/country) internally to pick which artists belong in the list; do not echo the descriptors as keywords.\n\nCOLUMN INTENT — IMPORTANT:\nYou return three keyword buckets: `keywords` (search both columns), `artistKeywords` (search artist only), `titleKeywords` (search song title only). Choose the right bucket:\n  • When the user explicitly says a word should be IN THE TITLE only ("songs with `soul` in the title", "tracks called `love`", "anything with `night` in the name") → put it in `titleKeywords`. Putting it in `keywords` would also match every artist whose name contains it — the opposite of what the user asked.\n  • When the user clearly wants songs BY an artist or in that artist\'s style and the artist\'s name could ambiguously appear in unrelated song titles → prefer `artistKeywords`.\n  • When the user explicitly says a word should match EITHER the title OR the artist ("songs that mention `love` anywhere", "anything with `soul` in the title or the artist name") → put it in `keywords` (both columns). This is also the right bucket for broad themes where you don\'t need to narrow scope.\n\nLOCALE BIAS — IMPORTANT:\n' +
             localeHint +
-            '\n\nLIST SIZE & DIVERSITY — IMPORTANT:\n100 is the maximum, not a target. Match the breadth of the user theme:\n  • If the user names ONE artist ("Taylor Swift", "Bach") → return just that one keyword. Do not invent similar artists they did not ask for.\n  • If the user names a few specific artists → return only those artists.\n  • If the user describes a broad theme ("90s hits", "summer beach party", "Dutch 90s") → BE DIVERSE: return a wide spread of artists from different sub-genres, eras within the range, regions, and styles that fit. For a wide theme like "90s hits" you can comfortably return 60–100 distinct artists covering pop, rock, R&B, hip-hop, dance, country, alt-rock, one-hit wonders, etc. Aim for breadth, not safe big-names only.\n  • For narrower themes still cover the corners: include cult favourites, deep cuts, lesser-known but era-appropriate artists alongside the obvious picks. A diverse list yields a more interesting playlist.\n  • Never pad with noise — every keyword should be a real artist or distinctive song word the user would actually want.\n\nYear-range rules: only set startYear/endYear if the theme clearly implies a time period (e.g. "80s rock" → 1980-1989, "90s" → 1990-1999, "early 2000s" → 2000-2005, "from 1975" → 1975-1975, "songs from the 60s and 70s" → 1960-1979, "2010 onwards" → 2010-current year, "renaissance music" → 1400-1600, "medieval chants" → 800-1400, "baroque" → 1600-1750). The catalog includes classical compositions dating back roughly to year 1000, so historic ranges are valid. If no year hint is present in the theme, leave both null. Never invent a range to be helpful — only use it if the user explicitly references a year, decade, or era.',
+            '\n\nLIST SIZE & DIVERSITY — IMPORTANT:\n100 is the maximum, not a target. Match the breadth of the user theme:\n  • If the user names ONE artist ("Taylor Swift", "Bach") → return just that one keyword. Do not invent similar artists they did not ask for.\n  • If the user names a few specific artists → return only those artists.\n  • If the user describes a broad theme ("90s hits", "summer beach party", "Dutch 90s") → BE DIVERSE: return a wide spread of artists from different sub-genres, eras within the range, regions, and styles that fit. For a wide theme like "90s hits" you can comfortably return 60–100 distinct artists covering pop, rock, R&B, hip-hop, dance, country, alt-rock, one-hit wonders, etc. Aim for breadth, not safe big-names only.\n  • For narrower themes still cover the corners: include cult favourites, deep cuts, lesser-known but era-appropriate artists alongside the obvious picks. A diverse list yields a more interesting playlist.\n  • Never pad with noise — every keyword should be a real artist or distinctive song word the user would actually want.\n\nARTIST INTENT — IMPORTANT:\nFour fields say how the playlist is divided over artists. Fill them from what the user wrote, nothing else.\n  • `requestedArtists`: every artist or band the user NAMES in the theme, spelled the way the artist is usually catalogued ("Enimen" → "Eminem"). Only names the user typed, never artists you thought of yourself. Empty for a theme without names ("80s hits", "German Schlager").\n  • `onlyRequestedArtists`: true when the playlist should contain ONLY the named artists: the theme is nothing but one or more artist names, or says so ("only", "nur", "alleen", "nothing else", "all songs of"). false when the theme also asks for a genre, an era, a mood or "similar artists".\n  • `maxPerArtist`: the number, when the user limits how many songs one artist may have ("one song per band", "max 2 per artist", "jeweils 3 Songs pro Künstler"); otherwise null.\n  • `requestedArtistsMayExceedLimit`: true only when the user sets such a limit AND says the named artists may appear more often ("everyone once, only X often"); otherwise false.\n\nYear-range rules: only set startYear/endYear if the theme clearly implies a time period (e.g. "80s rock" → 1980-1989, "90s" → 1990-1999, "early 2000s" → 2000-2005, "from 1975" → 1975-1975, "songs from the 60s and 70s" → 1960-1979, "2010 onwards" → 2010-current year, "renaissance music" → 1400-1600, "medieval chants" → 800-1400, "baroque" → 1600-1750). The catalog includes classical compositions dating back roughly to year 1000, so historic ranges are valid. If no year hint is present in the theme, leave both null. Never invent a range to be helpful — only use it if the user explicitly references a year, decade, or era.',
         },
         {
           role: 'user',
@@ -761,6 +782,27 @@ class AIPlaylistGenerator {
                   description:
                     'Latest release year if the theme implies a time period; otherwise null',
                 },
+                requestedArtists: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description:
+                    'Artists or bands the user named in the theme. Empty when the theme names none.',
+                },
+                onlyRequestedArtists: {
+                  type: 'boolean',
+                  description:
+                    'true when the playlist should contain only the named artists',
+                },
+                maxPerArtist: {
+                  type: ['integer', 'null'],
+                  description:
+                    'The limit per artist the user asked for; otherwise null',
+                },
+                requestedArtistsMayExceedLimit: {
+                  type: 'boolean',
+                  description:
+                    'true only when the user says the named artists may go over maxPerArtist',
+                },
               },
               required: [
                 'title',
@@ -769,6 +811,10 @@ class AIPlaylistGenerator {
                 'titleKeywords',
                 'startYear',
                 'endYear',
+                'requestedArtists',
+                'onlyRequestedArtists',
+                'maxPerArtist',
+                'requestedArtistsMayExceedLimit',
               ],
             },
         },
@@ -789,12 +835,31 @@ class AIPlaylistGenerator {
       startYear: number | null;
       endYear: number | null;
       title?: string;
+      requestedArtists?: unknown;
+      onlyRequestedArtists?: unknown;
+      maxPerArtist?: unknown;
+      requestedArtistsMayExceedLimit?: unknown;
     };
     try {
       parsed = JSON.parse(content);
     } catch (e) {
       throw new Error('Failed to parse keyword tool call arguments');
     }
+
+    const requestedArtists = (
+      Array.isArray(parsed.requestedArtists) ? parsed.requestedArtists : []
+    )
+      .filter((a): a is string => typeof a === 'string')
+      .map((a) => a.trim())
+      .filter(Boolean);
+    const intent: ArtistIntent = {
+      requestedArtists,
+      onlyRequested:
+        parsed.onlyRequestedArtists === true && requestedArtists.length > 0,
+      maxPerArtist:
+        typeof parsed.maxPerArtist === 'number' ? parsed.maxPerArtist : null,
+      requestedExempt: parsed.requestedArtistsMayExceedLimit === true,
+    };
 
     // Combine all three column-intent buckets into typed SearchKeywords.
     // Dedupe is per-keyword-string (case-insensitive): if the same word
@@ -823,6 +888,14 @@ class AIPlaylistGenerator {
       keywords.push({ value: displayByLower.get(lower)!, target });
       if (keywords.length >= KEYWORD_LIMIT) break;
     }
+    // An artist the customer named is always searched, also when the model
+    // left the name out of its keyword buckets or the list was cut off.
+    for (const artist of requestedArtists) {
+      const lower = artist.toLowerCase();
+      if (!keywords.some((k) => k.value.toLowerCase() === lower)) {
+        keywords.push({ value: artist, target: 'artist' });
+      }
+    }
 
     const { startYear, endYear } = this.normalizeYearRange(
       parsed.startYear,
@@ -844,6 +917,17 @@ class AIPlaylistGenerator {
         `[AI] ${white.bold(jobId)} title="${white.bold(title)}" keywords: ${white.bold(keywordLogLine)}`
       )
     );
+    if (intent.requestedArtists.length > 0 || intent.maxPerArtist !== null) {
+      this.logger.log(
+        color.blue.bold(
+          `[AI] ${white.bold(jobId)} named artists: ${white.bold(
+            intent.requestedArtists.join(', ') || 'none'
+          )}${intent.onlyRequested ? ' (only these)' : ''}, limit per artist: ${white.bold(
+            intent.maxPerArtist === null ? 'none' : intent.maxPerArtist.toString()
+          )}${intent.requestedExempt ? ' (not for the named artists)' : ''}`
+        )
+      );
+    }
 
     const hasRange = startYear !== null || endYear !== null;
     this.broadcastProgress(jobId, {
@@ -865,7 +949,35 @@ class AIPlaylistGenerator {
       endYear,
     });
 
-    return { keywords, startYear, endYear, title };
+    return { keywords, startYear, endYear, title, intent };
+  }
+
+  /**
+   * Search the artists the customer named deeper than the 50 songs a keyword
+   * normally gets: a playlist of one artist used to stop at 50 of their songs
+   * and was then filled up with similar artists.
+   */
+  private deepenRequestedArtists(
+    keywords: SearchKeyword[],
+    intent: ArtistIntent,
+    trackCount: number
+  ): void {
+    if (intent.requestedArtists.length === 0) return;
+    const named = new Set(intent.requestedArtists.map((a) => a.toLowerCase()));
+    // Alone they may have to fill the whole playlist; next to a wider theme
+    // they never get more than half of it (see aiPlaylistBalance.ts). Twice
+    // that, because live and remastered versions of one song collapse into
+    // one candidate: 120 Springsteen rows were 89 songs.
+    const wanted = intent.onlyRequested ? trackCount * 2 : trackCount;
+    const limit = Math.min(
+      REQUESTED_ARTIST_LIMIT,
+      Math.max(PER_KEYWORD_LIMIT, wanted)
+    );
+    for (const keyword of keywords) {
+      if (keyword.target !== 'title' && named.has(keyword.value.toLowerCase())) {
+        keyword.limit = limit;
+      }
+    }
   }
 
   /**
@@ -1172,6 +1284,13 @@ class AIPlaylistGenerator {
         ? Prisma.sql`AND year IS NOT NULL AND year <= ${endYear}`
         : Prisma.empty;
 
+    // "Queen" also matches Queensrÿche and Queens of the Stone Age. For an
+    // artist the customer named, their own songs come first, so the deeper
+    // search is spent on them and not on the lookalikes.
+    const order = keyword.limit
+      ? Prisma.sql`(artist = ${keyword.value}) DESC, RAND()`
+      : Prisma.sql`RAND()`;
+
     return this.prisma.$queryRaw<CandidateTrack[]>(Prisma.sql`
       SELECT id, trackId, artist, name, spotifyLink
       FROM tracks
@@ -1179,8 +1298,8 @@ class AIPlaylistGenerator {
         AND spotifyLinkIgnored = 0
         AND ${columnFilter}
         ${yearFilter}
-      ORDER BY RAND()
-      LIMIT ${PER_KEYWORD_LIMIT}
+      ORDER BY ${order}
+      LIMIT ${keyword.limit ?? PER_KEYWORD_LIMIT}
     `);
   }
 
@@ -1191,7 +1310,8 @@ class AIPlaylistGenerator {
     target: number,
     startYear: number | null,
     endYear: number | null,
-    cost: CostTracker
+    cost: CostTracker,
+    intent: ArtistIntent = NO_ARTIST_INTENT
   ): Promise<CandidateTrack[]> {
     if (candidates.length === 0) return [];
 
@@ -1199,24 +1319,74 @@ class AIPlaylistGenerator {
     const byTrackId = new Map<string, CandidateTrack>();
     for (const c of candidates) byTrackId.set(c.trackId, c);
 
+    // How many songs one artist may get; see aiPlaylistBalance.ts.
+    const balance = ArtistBalance.plan(candidates, target, intent);
+    if (balance.limits) {
+      const describe = (cap: number) =>
+        Number.isFinite(cap) ? cap.toString() : 'no limit';
+      this.logger.log(
+        color.blue.bold(
+          `[AI] ${white.bold(jobId)} artist balance: ${white.bold(
+            describe(balance.cap)
+          )} per artist${balance.plan.capIsHard ? ' (asked for)' : ''}${
+            balance.plan.requested.length > 0
+              ? `, named artists ${white.bold(describe(balance.requestedCap))}`
+              : ''
+          }`
+        )
+      );
+    }
+
+    // Songs the LLM chose for an artist that already had its fair share.
+    // They are the first to go in when the playlist comes up short.
+    const heldBack: CandidateTrack[] = [];
+    const accept = (trackIds: string[]): number => {
+      const before = picks.size;
+      for (const tid of trackIds) {
+        if (picks.size >= target) break;
+        const row = byTrackId.get(tid);
+        if (!row || picks.has(tid)) continue;
+        if (balance.take(row.artist)) {
+          picks.set(tid, row);
+        } else if (balance.isSoftCapped(row.artist)) {
+          heldBack.push(row);
+        }
+      }
+      return picks.size - before;
+    };
+
+    // The next batch out of `queue`. An artist that is full is skipped, so
+    // the LLM never spends a pick on a song that would be dropped anyway.
+    const takeBatch = (queue: CandidateTrack[], from: number) => {
+      const batch: CandidateTrack[] = [];
+      let cursor = from;
+      while (cursor < queue.length && batch.length < CURATION_BATCH_SIZE) {
+        const candidate = queue[cursor++];
+        if (balance.hasRoom(candidate.artist)) batch.push(candidate);
+      }
+      let ahead = 0;
+      for (let i = cursor; i < queue.length; i++) {
+        if (balance.hasRoom(queue[i].artist)) ahead += 1;
+      }
+      return {
+        batch,
+        cursor,
+        batchesAhead: Math.ceil(ahead / CURATION_BATCH_SIZE),
+      };
+    };
+
     // Shuffle candidates so the LLM sees variety in each batch.
     const shuffled = this.shuffle([...candidates]);
-    const totalBatches = Math.max(
-      1,
-      Math.ceil(shuffled.length / CURATION_BATCH_SIZE)
-    );
 
-    // Per-batch quota so every batch contributes its share — otherwise
-    // batch 1 tends to gobble most of the target (LLM picks aggressively
-    // while the budget is huge) and later batches contribute almost
-    // nothing, hurting diversity. We round up so a stingy batch can be
-    // compensated by a later one; the hard `target` cap below stops us
-    // from overshooting.
-    const perBatchQuota = Math.max(1, Math.ceil(target / totalBatches));
-
-    for (let i = 0; i < shuffled.length; i += CURATION_BATCH_SIZE) {
-      const batch = shuffled.slice(i, i + CURATION_BATCH_SIZE);
-      const batchIndex = Math.floor(i / CURATION_BATCH_SIZE) + 1;
+    let cursor = 0;
+    let batchIndex = 0;
+    while (picks.size < target) {
+      const next = takeBatch(shuffled, cursor);
+      cursor = next.cursor;
+      if (next.batch.length === 0) break;
+      batchIndex += 1;
+      const batchesLeft = 1 + next.batchesAhead;
+      const totalBatches = batchIndex - 1 + batchesLeft;
 
       this.broadcastProgress(jobId, {
         stage: 'curating_with_llm',
@@ -1233,34 +1403,53 @@ class AIPlaylistGenerator {
         total: target,
       });
 
-      if (picks.size >= target) break;
-      // Ask the LLM for "up to perBatchQuota" from this batch — its
-      // share of the target. The LLM is still instructed to be honest
-      // about quality (no padding), so a weak batch can return fewer.
-      const askThisBatch = Math.min(perBatchQuota, target - picks.size);
+      // Every batch is asked for its share of what is still needed,
+      // otherwise batch 1 tends to gobble most of the target (the LLM picks
+      // aggressively while the budget is huge) and later batches contribute
+      // almost nothing, hurting diversity. The share is worked out again for
+      // each batch, so a stingy batch is made up for by the ones after it.
+      // The LLM is still told to be honest about quality (no padding), so a
+      // weak batch can return fewer.
+      const askThisBatch = Math.ceil((target - picks.size) / batchesLeft);
       const picked = await this.curateBatch(
         prompt,
-        batch,
+        next.batch,
         askThisBatch,
         startYear,
         endYear,
-        cost
+        cost,
+        this.artistGuidance(balance, intent)
       );
-      const beforeSize = picks.size;
-      for (const tid of picked) {
-        const row = byTrackId.get(tid);
-        if (row && !picks.has(tid)) {
-          picks.set(tid, row);
-          if (picks.size >= target) break;
-        }
-      }
+      const added = accept(picked);
       this.logger.log(
         color.blue.bold(
           `[AI]   curate batch ${white.bold(`${batchIndex}/${totalBatches}`)} → +${white.bold(
-            (picks.size - beforeSize).toString()
+            added.toString()
           )} picks (total ${white.bold(`${picks.size}/${target}`)}, quota ${white.bold(askThisBatch.toString())})`
         )
       );
+    }
+
+    // Short of the target: the fair shares were tighter than what the LLM
+    // liked. Lift them (a limit the customer set stays) and start with the
+    // songs it already chose, the artist with the fewest songs first.
+    if (picks.size < target) {
+      balance.lift();
+      while (picks.size < target && heldBack.length > 0) {
+        let fewest = 0;
+        for (let i = 1; i < heldBack.length; i++) {
+          if (
+            balance.countOf(heldBack[i].artist) <
+            balance.countOf(heldBack[fewest].artist)
+          ) {
+            fewest = i;
+          }
+        }
+        const [row] = heldBack.splice(fewest, 1);
+        if (!picks.has(row.trackId) && balance.take(row.artist)) {
+          picks.set(row.trackId, row);
+        }
+      }
     }
 
     // Top-up pass: if any batches under-delivered against their quota
@@ -1268,37 +1457,31 @@ class AIPlaylistGenerator {
     // and ask the LLM to fill the remainder — this guarantees we use
     // the full pool before giving up.
     if (picks.size < target) {
-      const leftover = shuffled.filter((c) => !picks.has(c.trackId));
-      const reshuffled = this.shuffle(leftover);
-      const totalTopupBatches = Math.max(
-        1,
-        Math.ceil(reshuffled.length / CURATION_BATCH_SIZE)
+      const leftover = this.shuffle(
+        shuffled.filter((c) => !picks.has(c.trackId))
       );
-      for (let i = 0; i < reshuffled.length; i += CURATION_BATCH_SIZE) {
-        if (picks.size >= target) break;
-        const batch = reshuffled.slice(i, i + CURATION_BATCH_SIZE);
-        const batchIndex = Math.floor(i / CURATION_BATCH_SIZE) + 1;
+      let topupCursor = 0;
+      let topupIndex = 0;
+      while (picks.size < target) {
+        const next = takeBatch(leftover, topupCursor);
+        topupCursor = next.cursor;
+        if (next.batch.length === 0) break;
+        topupIndex += 1;
         const remaining = target - picks.size;
         const picked = await this.curateBatch(
           prompt,
-          batch,
+          next.batch,
           remaining,
           startYear,
           endYear,
-          cost
+          cost,
+          this.artistGuidance(balance, intent)
         );
-        const beforeSize = picks.size;
-        for (const tid of picked) {
-          const row = byTrackId.get(tid);
-          if (row && !picks.has(tid)) {
-            picks.set(tid, row);
-            if (picks.size >= target) break;
-          }
-        }
+        const added = accept(picked);
         this.logger.log(
           color.blue.bold(
-            `[AI]   top-up batch ${white.bold(`${batchIndex}/${totalTopupBatches}`)} → +${white.bold(
-              (picks.size - beforeSize).toString()
+            `[AI]   top-up batch ${white.bold(`${topupIndex}/${topupIndex + next.batchesAhead}`)} → +${white.bold(
+              added.toString()
             )} picks (total ${white.bold(`${picks.size}/${target}`)})`
           )
         );
@@ -1308,13 +1491,46 @@ class AIPlaylistGenerator {
     return Array.from(picks.values()).slice(0, target);
   }
 
+  /**
+   * What the curation LLM is told about dividing the picks over artists. The
+   * caps are enforced in `curate` whatever it answers; saying so up front
+   * keeps it from spending its picks on songs that are then dropped.
+   */
+  private artistGuidance(balance: ArtistBalance, intent: ArtistIntent): string {
+    const lines: string[] = [];
+    const named = intent.requestedArtists.join(', ');
+    if (named) {
+      lines.push(
+        intent.onlyRequested
+          ? `The user asked for these artists and nobody else: ${named}. Only pick songs they perform.`
+          : `The user named these artists: ${named}. Give them a clear presence; the rest of the theme decides the other picks.`
+      );
+    }
+    const cap = balance.cap;
+    if (Number.isFinite(cap)) {
+      lines.push(
+        `Spread the picks over different artists: at most ${cap} song${cap === 1 ? '' : 's'} by the same artist.` +
+          (named && balance.requestedCap > cap
+            ? ' The artists the user named may have more.'
+            : '')
+      );
+    } else if (
+      intent.requestedArtists.length > 1 &&
+      Number.isFinite(balance.requestedCap)
+    ) {
+      lines.push('Divide the picks evenly over the artists the user named.');
+    }
+    return lines.length > 0 ? `\n\n${lines.join('\n')}` : '';
+  }
+
   private async curateBatch(
     prompt: string,
     batch: CandidateTrack[],
     remaining: number,
     startYear: number | null,
     endYear: number | null,
-    cost: CostTracker
+    cost: CostTracker,
+    artistGuidance: string = ''
   ): Promise<string[]> {
     const trackList = batch
       .map((t) => `${t.trackId}\t${t.artist} — ${t.name}`)
@@ -1345,7 +1561,7 @@ class AIPlaylistGenerator {
         },
         {
           role: 'user',
-          content: `Theme:\n${prompt}${yearHint}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
+          content: `Theme:\n${prompt}${yearHint}${artistGuidance}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
         },
       ],
       reasoning_effort: REASONING_EFFORT,

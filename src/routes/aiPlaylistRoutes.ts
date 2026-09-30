@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
-import AIPlaylistGenerator from '../aiPlaylist';
+import AIPlaylistGenerator, { aiPlaylistJobKey } from '../aiPlaylist';
+import AIPlaylistSuggestions from '../aiPlaylistSuggestions';
+import AIPlaylistSpotifySuggestions from '../aiPlaylistSpotifySuggestions';
 import Logger from '../logger';
 import Utils from '../utils';
 import Cache from '../cache';
@@ -10,6 +12,8 @@ const MIN_TRACKS = 25;
 const MAX_TRACKS = 500;
 const MAX_PROMPT_LEN = 250;
 const DAILY_LIMIT_PER_IP = 5;
+// How long a job's prompt is kept for the progress page's suggestions.
+const JOB_TTL_SECONDS = 30 * 60;
 
 function isDev(): boolean {
   return process.env['ENVIRONMENT'] === 'development';
@@ -24,8 +28,16 @@ function dailyKeyForIp(ip: string): string {
   return `aiPlaylist:rate:${ip}:${ymd}`;
 }
 
+function parseLocale(value: unknown): string {
+  return typeof value === 'string' && /^[a-z]{2}$/i.test(value)
+    ? value.toLowerCase()
+    : 'en';
+}
+
 export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
   const generator = AIPlaylistGenerator.getInstance();
+  const suggestions = AIPlaylistSuggestions.getInstance();
+  const spotifySuggestions = AIPlaylistSpotifySuggestions.getInstance();
   const logger = new Logger();
   const utils = new Utils();
   const cache = Cache.getInstance();
@@ -44,10 +56,7 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         : Number.parseInt(String(body.trackCount), 10);
     const captchaToken =
       typeof body.captchaToken === 'string' ? body.captchaToken : '';
-    const locale =
-      typeof body.locale === 'string' && /^[a-z]{2}$/i.test(body.locale)
-        ? body.locale.toLowerCase()
-        : 'en';
+    const locale = parseLocale(body.locale);
 
     if (!prompt || prompt.length > MAX_PROMPT_LEN) {
       return reply.status(400).send({
@@ -131,6 +140,20 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
       }
     }
 
+    // The progress page asks for matching featured playlists by job id, and
+    // it can get there before the background run has written anything.
+    try {
+      await cache.set(
+        aiPlaylistJobKey(jobId),
+        JSON.stringify({ prompt, locale, trackCount }),
+        JOB_TTL_SECONDS
+      );
+    } catch (err) {
+      logger.log(
+        color.yellow.bold(`[AI] Could not store job ${white.bold(jobId)}: ${err}`)
+      );
+    }
+
     // Return immediately. Generation runs as fire-and-forget in this HTTP
     // child worker — same pattern as the summary music-provider routes —
     // so `ProgressWebSocketServer.getInstance()` is set and progress events
@@ -157,6 +180,45 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
       }
     })();
   });
+
+  // Existing playlists that match what a job was asked for: our featured
+  // ones, and ones found on Spotify. The progress page shows them while the
+  // customer waits.
+  //
+  // Asked by job, never by free text: nothing is searched before the
+  // customer has pressed the button (Rick, 2026-09-30), and a job only
+  // exists behind the captcha and the daily limit of /generate. So there is
+  // no public endpoint that makes an LLM or Spotify call for whoever asks.
+  // Always answers with a list: a suggestion is an extra, so a model that is
+  // down shows nothing instead of an error.
+  // A suggestion has at least as many tracks as the customer asked for: a
+  // 42-song playlist is no answer to a request for 100.
+  interface Suggester {
+    suggest(prompt: string, locale: string, minTracks: number): Promise<unknown[]>;
+  }
+
+  const suggestForJob = (source: Suggester) => async (request: any, reply: any) => {
+    const jobId = String(request.params?.jobId || '');
+    let job: { prompt?: unknown; locale?: unknown; trackCount?: unknown } | null = null;
+    try {
+      const raw = jobId ? await cache.get(aiPlaylistJobKey(jobId), false) : null;
+      job = raw ? JSON.parse(raw) : null;
+    } catch {
+      job = null;
+    }
+    if (!job || typeof job.prompt !== 'string') {
+      return reply.send({ success: true, data: [] });
+    }
+    const minTracks =
+      typeof job.trackCount === 'number' && job.trackCount > 0 ? job.trackCount : 0;
+    return reply.send({
+      success: true,
+      data: await source.suggest(job.prompt, parseLocale(job.locale), minTracks),
+    });
+  };
+
+  fastify.get('/ai-playlist/suggestions/:jobId', suggestForJob(suggestions));
+  fastify.get('/ai-playlist/spotify-suggestions/:jobId', suggestForJob(spotifySuggestions));
 
   // Per-IP daily quota status — the form polls this on init so it can
   // show "X of 25 daily generations used" under the char counter.

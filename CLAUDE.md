@@ -295,6 +295,121 @@ tracks picked. Most of the gap is terra's token speed, not the reasoning.
 `chat.ts` and `mail.ts` still use legacy `functions` on the luna tier with
 reasoning off, which the API accepts.
 
+## AI playlist generator: artists and catalogue suggestions
+
+`aiPlaylist.ts` turns a customer's description into a playlist in three
+steps: an LLM names keywords (mostly artists), every keyword is a
+`LIKE` search on `tracks` (50 random rows each), and an LLM picks from the
+candidates in batches of 100. Two things sit on top of that since 2026-09-30.
+
+**Who gets how many songs** (`aiPlaylistBalance.ts`). Nothing used to count
+per artist, so whoever had the most songs in the catalogue dominated:
+"klassik" delivered 13 Beethoven pieces out of 75, and a customer who wrote
+"at most two songs per band" got 19 of one. A theme of only named artists
+("Nur Harry Styles, Olivia Rodrigo, Taylor Swift ... Sonst nichts!") came back
+padded with similar artists, and "Bruce Springsteen studio albums" stopped at
+52 songs, because a keyword fetched 50 rows and an expansion round filled the
+shortfall with other names.
+
+- The keyword call also returns what the customer said about artists:
+  `requestedArtists` (names they typed), `onlyRequestedArtists`,
+  `maxPerArtist` and `requestedArtistsMayExceedLimit`.
+- **A limit the customer states is hard.** It is never exceeded; the playlist
+  comes out shorter and the summary page says so (`submit.aiUnderfillMessage`).
+- **Named artists are what was asked for.** They are searched deeper (twice
+  the playlist, at most 500 rows, their own songs ahead of names that merely
+  contain theirs) and are not held to the fair share. Only named artists: no
+  expansion round at all, and the playlist is divided evenly among them. Named
+  next to a wider theme ("80s rock like Queen"): each may fill a quarter,
+  together half.
+- **Everyone else gets a fair share, from 90 candidates up**: the smallest cap
+  that still leaves 1.5 times the playlist to choose from, never below 2. It
+  is soft. When the playlist comes up short the cap is lifted, the songs the
+  LLM chose for a full artist go in first, then the top-up pass runs uncapped.
+- A full artist is left out of later batches (the LLM cannot spend a pick on
+  a song that would be dropped), so batches are cut as the run goes and each
+  is asked for its share of what is still missing.
+- The count is per first-listed artist ("A, B & C" counts for A), except that
+  a song naming a requested artist anywhere counts for that artist.
+
+**Existing playlists that match.** While a playlist is being put together,
+the progress page shows existing ones the customer could take instead: up to
+three of our featured playlists and up to three found on Spotify.
+
+- **Nothing is looked up before the customer presses the button** (Rick,
+  2026-09-30; a first version searched while they typed). Both lookups are
+  asked by job id: `GET /ai-playlist/suggestions/:jobId` and
+  `GET /ai-playlist/spotify-suggestions/:jobId`. `/generate` writes what the
+  job was asked to Redis (`aiPlaylistJob:<id>`, 30 minutes) before it
+  replies, so the page can ask at once. A job only exists behind the captcha
+  and the daily limit, so there is no endpoint that makes an LLM or Spotify
+  call for whoever sends it text. Do not add one.
+- Both always answer with a list. A model that is down, a rate limit or an
+  unknown job shows nothing, never an error.
+- **A suggestion has at least as many tracks as the customer asked for**
+  (the job's `trackCount`): a 42-song playlist is no answer to a request for
+  100. Featured playlists are filtered on size after the model has matched,
+  so its answer is cached once for every size. Spotify playlists are filtered
+  before the model picks (it is told the size and prefers the nearest), so
+  that cache is per size; the Spotify search itself is not repeated.
+- A customer who takes a Spotify playlist goes into the order flow with it,
+  the route a pasted link takes. The generated playlist is still finished
+  and sits on our account until the three-day cleanup.
+
+**Featured playlists** (`aiPlaylistSuggestions.ts`), in the shape of
+`/featured/:locale`. Customers often describe something the catalogue
+already has (Disney, Schlager, Eurovision, all Taylor Swift songs).
+
+- One LLM call over the whole catalogue: about 600 lines and 37k tokens, 1.5 s
+  on luna with reasoning off. Words cannot do it: requests come in any
+  language and half the playlist names say nothing about the content. The
+  catalogue is the first part of the prompt and the same all day (Redis,
+  ordered by score then id), so OpenAI's prompt cache covers it.
+- The catalogue line uses `description_en`, the page copy, not the customer's
+  blurb that `/featured` serves for promotional lists: it names genre, years
+  and artists. Descriptions are cut **by character**; half an emoji is a lone
+  surrogate and OpenAI answers the whole request with a 400.
+- Featured names say "Cartoon" where they mean Disney (`replaceBrandTerms`,
+  and several were renamed in the database), so the prompt says so.
+- **Market rule, in code.** The model also reports the language of the prompt
+  and whether it asks for one country's music. A playlist with a
+  `featuredLocale` is only offered when that locale is the visitor's, the
+  prompt's or the one asked for. Left to the model, an English "80s hits" got
+  three German lists.
+- The model is asked for eight and three are shown, so the market rule and
+  the size rule have something to drop. Made-up ids are ignored.
+- Answers are cached for six hours per locale and prompt.
+
+**Playlists found on Spotify** (`aiPlaylistSpotifySuggestions.ts`). Spotify
+cannot be shown to the model, only asked, so this works the other way round:
+the model writes a search query (the title a playlist with this music would
+have), Spotify is searched, and the model picks from what came back. Most of
+what a search returns is somebody's private mix with a lookalike name; the
+picking is what makes it usable. About 3 to 5 seconds in all.
+
+- **It must never cost the order flow its Spotify access.** A 429 on the
+  official API parks it for five minutes and more (`RateLimitManager`) and
+  sends playlist loading to the scraper. So `Spotify.searchPlaylists` sends
+  one request per query, never retries, has no fallback provider, sends
+  nothing while the official API is rate limited, pauses all playlist
+  searches for Retry-After plus ten minutes after a 429 of its own, and lets
+  at most 6 a minute and 400 a day out across all workers (Redis counters).
+  A second query is only tried when the first found fewer than four usable
+  playlists.
+- **Two caches.** What a query found is kept for a day
+  (`playlistsearch_<query>_<limit>`), and so are the playlists picked for a
+  description (`aiPlaylistSpotifySuggest_v1_<hash>`). A description that
+  comes back, or another one that leads to the same query, costs Spotify
+  nothing. When Spotify could not be asked, "nothing" is remembered for five
+  minutes only.
+- Only playlists a customer could order as they are: from what they asked
+  for up to 500 tracks (or twice what they asked, when that is more), with a
+  cover. Spotify's own editorial playlists come back
+  as `null` and cannot be loaded by id either. Playlists of our own account
+  are left out (the search happily returns earlier `qrsong! AI —` playlists).
+- The official API only (`spotify_api.ts`, `type=playlist`). The track count
+  is `tracks.total`, or `items.total` in the 2026 format; both are read.
+
 ## Testing
 - Basic test setup in `test.js`
 - Run tests with `npm test`

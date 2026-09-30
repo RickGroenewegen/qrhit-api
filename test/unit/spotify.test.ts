@@ -40,11 +40,23 @@ vi.mock('cron', () => ({
 
 // ─── Cache (in-memory) ─────────────────────────────────────────────────────
 const cacheStore = new Map<string, string>();
+// TTL each key was last stored with, and the raw INCR counters.
+const cacheTtls = new Map<string, number | undefined>();
+const cacheCounters = new Map<string, number>();
 vi.mock('../../src/cache', () => ({
   default: {
     getInstance: () => ({
       get: async (key: string) => cacheStore.get(key) ?? null,
-      set: async (key: string, value: string) => { cacheStore.set(key, value); },
+      set: async (key: string, value: string, ttl?: number) => {
+        cacheStore.set(key, value);
+        cacheTtls.set(key, ttl);
+      },
+      executeCommand: async (command: string, key: string) => {
+        if (command !== 'incr') return 1;
+        const next = (cacheCounters.get(key) || 0) + 1;
+        cacheCounters.set(key, next);
+        return next;
+      },
       del: async (key: string) => { cacheStore.delete(key); },
       delPattern: async () => {},
       acquireLock: async () => true,
@@ -98,12 +110,16 @@ const spotifyApiGetPlaylistMock = vi.fn();
 const spotifyApiGetTracksMock = vi.fn();
 const spotifyApiGetTracksByIdsMock = vi.fn();
 const spotifyApiSearchTracksMock = vi.fn();
+const spotifyApiSearchPlaylistsMock = vi.fn();
+const spotifyApiGetOwnUserIdMock = vi.fn();
 vi.mock('../../src/spotify_api', () => ({
   default: class {
     getPlaylist = spotifyApiGetPlaylistMock;
     getTracks = spotifyApiGetTracksMock;
     getTracksByIds = spotifyApiGetTracksByIdsMock;
     searchTracks = spotifyApiSearchTracksMock;
+    searchPlaylists = spotifyApiSearchPlaylistsMock;
+    getOwnUserId = spotifyApiGetOwnUserIdMock;
     createOrUpdatePlaylist = vi.fn();
     deletePlaylist = vi.fn();
     getTokensFromAuthCode = vi.fn();
@@ -419,6 +435,146 @@ describe('Spotify.searchTracks', () => {
     expect(Array.isArray(result.data?.tracks)).toBe(true);
     expect(result.data?.tracks).toHaveLength(1);
     expect(result.data?.tracks[0].name).toBe('My Song');
+  });
+});
+
+describe('Spotify.searchPlaylists', () => {
+  let spotify: Spotify;
+
+  const found = (items: any[]) => ({ success: true, data: { playlists: { items } } });
+  const item = (overrides: Partial<any> = {}) => ({
+    id: 'pl1',
+    name: 'Deutsche Schlager 60er 70er',
+    description: 'Die besten &amp; schönsten',
+    owner: { id: 'susi', display_name: 'Susi' },
+    tracks: { total: 120 },
+    images: [{ url: 'https://i.scdn.co/cover.jpg' }],
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    cacheStore.clear();
+    cacheTtls.clear();
+    cacheCounters.clear();
+    spotifyApiSearchPlaylistsMock.mockReset();
+    spotifyApiGetOwnUserIdMock.mockReset().mockResolvedValue('qrsong-account');
+    rateLimitManagerMock.getRateLimitStatus.mockResolvedValue({
+      spotifyApi: { limited: false },
+      spotifyScraper: { limited: false },
+    });
+    (Spotify as any).instance = undefined;
+    spotify = Spotify.getInstance();
+  });
+
+  it('maps what Spotify returns and leaves out nulls and our own account', async () => {
+    spotifyApiSearchPlaylistsMock.mockResolvedValue(
+      found([
+        item(),
+        // Spotify's own playlists come back as null.
+        null,
+        item({ id: 'ours', name: 'qrsong! AI — Schlager', owner: { id: 'qrsong-account' } }),
+        // The 2026 format: `items` instead of `tracks`, and no cover.
+        item({ id: 'pl2', name: 'Schlagerparty', tracks: undefined, items: { total: 80 }, images: [] }),
+        item({ id: '', name: 'No id' }),
+      ])
+    );
+
+    const result = await spotify.searchPlaylists('  Deutsche   Schlager ', 30);
+
+    expect(spotifyApiSearchPlaylistsMock).toHaveBeenCalledWith('Deutsche Schlager', 30);
+    expect(result).toEqual({
+      success: true,
+      hits: [
+        {
+          id: 'pl1',
+          name: 'Deutsche Schlager 60er 70er',
+          description: 'Die besten &amp; schönsten',
+          owner: 'Susi',
+          trackCount: 120,
+          image: 'https://i.scdn.co/cover.jpg',
+        },
+        {
+          id: 'pl2',
+          name: 'Schlagerparty',
+          description: 'Die besten &amp; schönsten',
+          owner: 'Susi',
+          trackCount: 80,
+          image: null,
+        },
+      ],
+    });
+  });
+
+  it('asks Spotify once per query and answers from the cache for a day', async () => {
+    spotifyApiSearchPlaylistsMock.mockResolvedValue(found([item()]));
+
+    await spotify.searchPlaylists('80s rock');
+    const again = await spotify.searchPlaylists('80S  Rock');
+
+    expect(again.hits).toHaveLength(1);
+    expect(spotifyApiSearchPlaylistsMock).toHaveBeenCalledTimes(1);
+    expect(cacheTtls.get('playlistsearch_80s rock_30')).toBe(24 * 3600);
+    // Our own user id is asked once and kept.
+    expect(spotifyApiGetOwnUserIdMock).toHaveBeenCalledTimes(1);
+    await spotify.searchPlaylists('90s rock');
+    expect(spotifyApiGetOwnUserIdMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends nothing while the official API is rate limited', async () => {
+    rateLimitManagerMock.getRateLimitStatus.mockResolvedValue({
+      spotifyApi: { limited: true },
+      spotifyScraper: { limited: false },
+    });
+
+    const result = await spotify.searchPlaylists('80s rock');
+
+    expect(result.success).toBe(false);
+    expect(result.hits).toEqual([]);
+    expect(spotifyApiSearchPlaylistsMock).not.toHaveBeenCalled();
+  });
+
+  it('pauses all playlist searches after a 429, for Retry-After plus ten minutes', async () => {
+    spotifyApiSearchPlaylistsMock.mockResolvedValue({
+      success: false,
+      error: 'Spotify API error: 429 Too Many Requests. Retry after: 30 seconds.',
+      retryAfter: 30,
+    });
+
+    expect((await spotify.searchPlaylists('80s rock')).success).toBe(false);
+    expect(cacheTtls.get('playlistsearch_paused')).toBe(30 + 600);
+
+    // Another query, not cached: still nothing goes out.
+    expect((await spotify.searchPlaylists('90s rock')).success).toBe(false);
+    expect(spotifyApiSearchPlaylistsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not pause for an error that is not a rate limit, and does not cache it', async () => {
+    spotifyApiSearchPlaylistsMock
+      .mockResolvedValueOnce({ success: false, error: 'Spotify API error: 500' })
+      .mockResolvedValueOnce(found([item()]));
+
+    expect((await spotify.searchPlaylists('80s rock')).success).toBe(false);
+    expect(cacheStore.has('playlistsearch_paused')).toBe(false);
+    expect((await spotify.searchPlaylists('80s rock')).hits).toHaveLength(1);
+  });
+
+  it('lets at most six searches a minute out to Spotify', async () => {
+    spotifyApiSearchPlaylistsMock.mockResolvedValue(found([item()]));
+
+    for (let i = 0; i < 6; i++) {
+      expect((await spotify.searchPlaylists(`query ${i}`)).success).toBe(true);
+    }
+    const seventh = await spotify.searchPlaylists('query 6');
+
+    expect(seventh.success).toBe(false);
+    expect(spotifyApiSearchPlaylistsMock).toHaveBeenCalledTimes(6);
+    // A cached query is still answered: it costs Spotify nothing.
+    expect((await spotify.searchPlaylists('query 0')).success).toBe(true);
+  });
+
+  it('refuses a query that is too short', async () => {
+    expect((await spotify.searchPlaylists(' a ')).success).toBe(false);
+    expect(spotifyApiSearchPlaylistsMock).not.toHaveBeenCalled();
   });
 });
 

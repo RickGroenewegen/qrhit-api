@@ -976,6 +976,57 @@ class SpotifyApi {
   }
 
   /**
+   * Searches for playlists on Spotify. One request, never retried: a 429
+   * comes back as an error (with `retryAfter`) for the caller to back off on.
+   * Spotify leaves its own editorial playlists out as `null` items.
+   * @param searchTerm The search query.
+   * @param limit Max number of results (default 20, max 50).
+   * @returns {Promise<ApiResult>} `data.playlists.items` or error info.
+   */
+  public async searchPlaylists(
+    searchTerm: string,
+    limit: number = 20
+  ): Promise<ApiResult> {
+    if (!searchTerm) {
+      return { success: false, error: 'Search term is required' };
+    }
+
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+        authUrl: this.getAuthorizationUrl() ?? undefined,
+      };
+    }
+
+    try {
+      const response = await axios.get(`https://api.spotify.com/v1/search`, {
+        params: {
+          q: searchTerm,
+          type: 'playlist',
+          limit: Math.min(limit, 50),
+        },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return this.handleApiError(error, `searching playlists for "${searchTerm}"`);
+    }
+  }
+
+  /**
+   * The Spotify user id of the account this API is logged in as (the one
+   * that owns the playlists we create), or null when it cannot be read.
+   */
+  public async getOwnUserId(): Promise<string | null> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) return null;
+    return this.getUserId(accessToken);
+  }
+
+  /**
    * Creates or updates a playlist for the user.
    * @param userId The Spotify user ID.
    * @param accessToken A valid Spotify access token.

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -361,7 +361,12 @@ describe('thinkKeywords (private)', () => {
       'titleKeywords',
       'startYear',
       'endYear',
+      'requestedArtists',
+      'onlyRequestedArtists',
+      'maxPerArtist',
+      'requestedArtistsMayExceedLimit',
     ]);
+    expect(system.content).toContain('ARTIST INTENT — IMPORTANT');
 
     // Progress broadcast before the LLM call.
     expect(h.wsProgress).toHaveBeenCalledWith(
@@ -439,6 +444,65 @@ describe('thinkKeywords (private)', () => {
         endYear: 1999,
       })
     );
+  });
+
+  it('reads what the customer said about artists and searches every named artist', async () => {
+    h.createMock.mockResolvedValueOnce(
+      toolCallResponse(
+        'returnKeywords',
+        {
+          title: 'Queen And Friends',
+          keywords: ['Queen'],
+          artistKeywords: [],
+          titleKeywords: [],
+          startYear: null,
+          endYear: null,
+          // 'David Bowie' is named but missing from the keyword buckets.
+          requestedArtists: [' Queen ', 'David Bowie', '', 7],
+          onlyRequestedArtists: true,
+          maxPerArtist: 3,
+          requestedArtistsMayExceedLimit: true,
+        },
+        { prompt_tokens: 1, completion_tokens: 1 }
+      )
+    );
+    const out = await think('job-t8', 'only Queen and Bowie', 'en', new CostTracker(MODEL));
+    expect(out.intent).toEqual({
+      requestedArtists: ['Queen', 'David Bowie'],
+      onlyRequested: true,
+      maxPerArtist: 3,
+      requestedExempt: true,
+    });
+    expect(out.keywords).toEqual([
+      { value: 'Queen', target: 'any' },
+      { value: 'David Bowie', target: 'artist' },
+    ]);
+  });
+
+  it('has no artist intent when the model leaves those fields out', async () => {
+    h.createMock.mockResolvedValueOnce(
+      toolCallResponse(
+        'returnKeywords',
+        {
+          title: 'T',
+          keywords: ['a'],
+          artistKeywords: [],
+          titleKeywords: [],
+          startYear: null,
+          endYear: null,
+          // "Only" means nothing without a name to go with it.
+          onlyRequestedArtists: true,
+        },
+        { prompt_tokens: 1, completion_tokens: 1 }
+      )
+    );
+    const out = await think('job-t9', 'hits', 'en', new CostTracker(MODEL));
+    expect(out.intent).toEqual({
+      requestedArtists: [],
+      onlyRequested: false,
+      maxPerArtist: null,
+      requestedExempt: false,
+    });
   });
 
   it('caps the merged keyword list at 100', async () => {
@@ -928,6 +992,221 @@ describe('run (curation top-up)', () => {
       expect.objectContaining({
         data: expect.objectContaining({ status: 'success', deliveredCount: 2 }),
       })
+    );
+  });
+});
+
+describe('run (artist balance)', () => {
+  const keywordsOnly = (extra: Record<string, unknown> = {}) =>
+    toolCallResponse(
+      'returnKeywords',
+      {
+        title: 'T',
+        keywords: ['X'],
+        artistKeywords: [],
+        titleKeywords: [],
+        startYear: null,
+        endYear: null,
+        ...extra,
+      },
+      { prompt_tokens: 10, completion_tokens: 2 }
+    );
+  const picks = (trackIds: string[]) =>
+    toolCallResponse('returnPicks', { trackIds }, { prompt_tokens: 10, completion_tokens: 2 });
+  const big = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) =>
+      row(`big-${from + i}`, 'Big Band', `Big Song ${from + i}`, `sb${from + i}`)
+    );
+  // Two songs per artist: o-0 and o-1 are "Other 0", o-2 and o-3 "Other 1", ...
+  const others = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) =>
+      row(
+        `o-${from + i}`,
+        `Other ${Math.floor((from + i) / 2)}`,
+        `Other Song ${from + i}`,
+        `so${from + i}`
+      )
+    );
+  const bigCount = () =>
+    (h.spotifyCreate.mock.calls[0][1] as string[]).filter((id) => id.startsWith('sb')).length;
+
+  let shuffle: { mockRestore: () => void };
+
+  beforeEach(() => {
+    // Keep the pool in the order it is written below.
+    shuffle = vi.spyOn(gen as any, 'shuffle').mockImplementation((arr: any) => arr);
+    h.spotifyCreate.mockResolvedValue({
+      success: true,
+      data: { playlistId: 'PLB', playlistUrl: 'https://spotify/PLB' },
+    });
+  });
+
+  afterEach(() => {
+    shuffle.mockRestore();
+  });
+
+  it('holds an artist to a fair share and leaves it out of later batches', async () => {
+    // 150 candidates, 60 of them by one artist. Fair share for 20 tracks: 2.
+    h.prismaMock.$queryRaw.mockResolvedValueOnce([
+      ...big(0, 30),
+      ...others(0, 70),
+      ...big(30, 30),
+      ...others(70, 20),
+    ]);
+    h.createMock
+      .mockResolvedValueOnce(keywordsOnly())
+      // Batch 1: five by the big artist, of which three are one too many.
+      .mockResolvedValueOnce(
+        picks(['big-0', 'big-1', 'big-2', 'big-3', 'big-4', 'o-0', 'o-2', 'o-4', 'o-6', 'o-8'])
+      )
+      .mockResolvedValueOnce(
+        picks(Array.from({ length: 13 }, (_, i) => `o-${70 + i}`))
+      );
+
+    await gen.run({ jobId: 'job-balance', prompt: 'theme', trackCount: 20, locale: 'en' });
+
+    expect(h.createMock).toHaveBeenCalledTimes(3);
+    const first = h.createMock.mock.calls[1][0].messages[1].content;
+    expect(first).toContain('at most 2 songs by the same artist');
+    // Two batches to go, so the first is asked for half.
+    expect(first).toContain('Pick up to 10');
+    expect(first).toContain('big-29\t');
+
+    // The artist is full after batch 1: none of its 30 other songs is offered.
+    const second = h.createMock.mock.calls[2][0].messages[1].content;
+    expect(second).not.toContain('big-');
+    expect(second).toContain('o-70\t');
+    expect(second).toContain('Pick up to 13');
+
+    expect(h.spotifyCreate.mock.calls[0][1]).toHaveLength(20);
+    expect(bigCount()).toBe(2);
+  });
+
+  it('lifts the fair share when the playlist comes up short, starting with what the LLM already chose', async () => {
+    h.prismaMock.$queryRaw.mockResolvedValueOnce([...big(0, 60), ...others(0, 40)]);
+    h.createMock
+      .mockResolvedValueOnce(keywordsOnly())
+      // Ten by the big artist and only six others: 8 of 20 within the share.
+      .mockResolvedValueOnce(
+        picks([
+          ...Array.from({ length: 10 }, (_, i) => `big-${i}`),
+          'o-0', 'o-1', 'o-2', 'o-3', 'o-4', 'o-5',
+        ])
+      )
+      .mockResolvedValueOnce(picks(['o-10', 'o-11', 'o-12', 'o-13']));
+
+    await gen.run({ jobId: 'job-lift', prompt: 'theme', trackCount: 20, locale: 'en' });
+
+    expect(h.createMock).toHaveBeenCalledTimes(3);
+    // The eight held-back picks go in first; the top-up asks for the last four.
+    const topup = h.createMock.mock.calls[2][0].messages[1].content;
+    expect(topup).toContain('Pick up to 4');
+    expect(topup).not.toContain('by the same artist');
+    expect(h.spotifyCreate.mock.calls[0][1]).toHaveLength(20);
+    expect(bigCount()).toBe(10);
+  });
+
+  it('never goes over a limit the customer set, and delivers fewer instead', async () => {
+    // Six artists with two songs each; the customer wants one per artist.
+    h.prismaMock.$queryRaw.mockResolvedValueOnce(others(0, 12));
+    h.createMock
+      .mockResolvedValueOnce(keywordsOnly({ maxPerArtist: 1 }))
+      .mockResolvedValueOnce(picks(['o-0', 'o-1', 'o-2', 'o-4', 'o-6']))
+      .mockResolvedValueOnce(picks(['o-8', 'o-9']));
+
+    await gen.run({ jobId: 'job-limit', prompt: 'one per band', trackCount: 6, locale: 'en' });
+
+    expect(h.createMock).toHaveBeenCalledTimes(3);
+    expect(h.createMock.mock.calls[1][0].messages[1].content).toContain(
+      'at most 1 song by the same artist'
+    );
+    // The top-up only offers the two artists that have nothing yet, and the
+    // limit still stands.
+    const topup = h.createMock.mock.calls[2][0].messages[1].content;
+    expect(topup).toContain('o-8\t');
+    expect(topup).toContain('o-10\t');
+    expect(topup).not.toContain('o-1\t');
+    expect(topup).toContain('at most 1 song by the same artist');
+
+    expect(h.spotifyCreate.mock.calls[0][1]).toEqual(['so0', 'so2', 'so4', 'so6', 'so8']);
+    expect(h.prismaMock.aISearch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'success', deliveredCount: 5 }),
+      })
+    );
+  });
+
+  it('leaves a small pool alone', async () => {
+    // 12 candidates, 10 by one artist: nothing to be picky about.
+    h.prismaMock.$queryRaw.mockResolvedValueOnce([...big(0, 10), ...others(0, 2)]);
+    h.createMock
+      .mockResolvedValueOnce(keywordsOnly())
+      .mockResolvedValueOnce(picks(['big-0', 'big-1', 'big-2', 'big-3', 'big-4', 'o-0']));
+
+    await gen.run({ jobId: 'job-small', prompt: 'theme', trackCount: 6, locale: 'en' });
+
+    expect(h.createMock.mock.calls[1][0].messages[1].content).not.toContain(
+      'by the same artist'
+    );
+    expect(bigCount()).toBe(5);
+  });
+});
+
+describe('run (named artists)', () => {
+  it('searches a named artist deeper, own songs first, and does not pad with other artists', async () => {
+    const JOB = 'job-named';
+    h.createMock
+      .mockResolvedValueOnce(
+        toolCallResponse(
+          'returnKeywords',
+          {
+            title: 'Queen',
+            keywords: ['Queen'],
+            artistKeywords: [],
+            titleKeywords: [],
+            startYear: null,
+            endYear: null,
+            requestedArtists: ['Queen'],
+            onlyRequestedArtists: true,
+            maxPerArtist: null,
+            requestedArtistsMayExceedLimit: false,
+          },
+          { prompt_tokens: 10, completion_tokens: 2 }
+        )
+      )
+      .mockResolvedValueOnce(
+        toolCallResponse('returnPicks', { trackIds: ['q1', 'q2', 'q3'] }, { prompt_tokens: 10, completion_tokens: 2 })
+      );
+    h.prismaMock.$queryRaw.mockResolvedValueOnce([
+      row('q1', 'Queen', 'One', 'sq1'),
+      row('q2', 'Queen', 'Two', 'sq2'),
+      row('q3', 'Queen & David Bowie', 'Three', 'sq3'),
+    ]);
+    h.spotifyCreate.mockResolvedValue({
+      success: true,
+      data: { playlistId: 'PLQ', playlistUrl: 'https://spotify/PLQ' },
+    });
+
+    await gen.run({ jobId: JOB, prompt: 'Queen, nothing else', trackCount: 120, locale: 'en' });
+
+    // Twice the playlist instead of 50, the artist's own songs ahead of
+    // names that merely contain "Queen".
+    const { sql, values } = sqlOfCall(0);
+    expect(sql).toContain('ORDER BY (artist = ?) DESC, RAND()');
+    expect(values).toEqual(['%Queen%', '%Queen%', 'Queen', 240]);
+
+    // Three candidates for 120 tracks, and still no expansion round: think
+    // + one curation batch. The top-up has nothing left to offer.
+    expect(h.createMock).toHaveBeenCalledTimes(2);
+    expect(h.createMock.mock.calls[1][0].messages[1].content).toContain(
+      'The user asked for these artists and nobody else: Queen.'
+    );
+    expect(h.spotifyCreate.mock.calls[0][1]).toEqual(['sq1', 'sq2', 'sq3']);
+    expect(h.wsComplete).toHaveBeenCalledWith(
+      JOB,
+      'ai',
+      JOB,
+      expect.objectContaining({ requestedCount: 120, deliveredCount: 3 })
     );
   });
 });

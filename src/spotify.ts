@@ -48,6 +48,28 @@ export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
 export const CACHE_KEY_TRACK_INFO = 'trackInfo_';
 export const CACHE_KEY_TRACKS_BY_IDS = 'tracksbyids_';
 export const CACHE_KEY_SEARCH = 'search_';
+export const CACHE_KEY_PLAYLIST_SEARCH = 'playlistsearch_';
+const CACHE_KEY_PLAYLIST_SEARCH_PAUSED = 'playlistsearch_paused';
+const CACHE_KEY_OWN_USER_ID = 'spotify_own_user_id';
+// What a query finds on Spotify hardly changes within a day.
+const PLAYLIST_SEARCH_TTL_SECONDS = 24 * 3600;
+// After a 429 on a playlist search: no new searches for Retry-After plus this.
+const PLAYLIST_SEARCH_PAUSE_SECONDS = 10 * 60;
+// The most playlist searches that go out to Spotify, whoever asks. Far below
+// anything Spotify would limit; it is there so a burst of generated
+// playlists cannot add up to real traffic next to the order flow's.
+const PLAYLIST_SEARCH_PER_MINUTE = 6;
+const PLAYLIST_SEARCH_PER_DAY = 400;
+
+/** A public playlist on Spotify, as a playlist search returns it. */
+export interface PlaylistSearchHit {
+  id: string;
+  name: string;
+  description: string;
+  owner: string;
+  trackCount: number;
+  image: string | null;
+}
 
 // Skipped track information for API response
 export type SkipReason = 'unavailable' | 'localFile' | 'podcast' | 'duplicate';
@@ -1504,6 +1526,129 @@ class Spotify {
         error: 'Internal error searching tracks',
       };
     }
+  }
+
+  /**
+   * Public playlists on Spotify that match a search query, for suggesting an
+   * existing playlist instead of generating one.
+   *
+   * This is an extra, so it must never cost the order flow its Spotify
+   * access: a 429 on the official API parks that API for five minutes and
+   * more (RateLimitManager) and sends playlist loading to the scraper.
+   * Hence:
+   *   - one request per query, never retried, no fallback provider;
+   *   - the answer is cached for a day;
+   *   - nothing is sent while the official API is rate limited;
+   *   - a 429 on a search pauses all playlist searches for Retry-After plus
+   *     ten minutes;
+   *   - at most PLAYLIST_SEARCH_PER_MINUTE requests a minute and
+   *     PLAYLIST_SEARCH_PER_DAY a day go out, across all workers.
+   * A caller that gets `success: false` shows nothing.
+   */
+  public async searchPlaylists(
+    query: string,
+    limit: number = 30
+  ): Promise<{ success: boolean; hits: PlaylistSearchHit[]; error?: string }> {
+    const term = (query || '').replace(/\s+/g, ' ').trim();
+    if (term.length < 2) {
+      return { success: false, hits: [], error: 'Search term too short' };
+    }
+
+    try {
+      const cacheKey = `${CACHE_KEY_PLAYLIST_SEARCH}${term.toLowerCase()}_${limit}`;
+      const cached = await this.cache.get(cacheKey);
+      if (cached) {
+        return { success: true, hits: JSON.parse(cached) };
+      }
+
+      if (await this.cache.get(CACHE_KEY_PLAYLIST_SEARCH_PAUSED)) {
+        return { success: false, hits: [], error: 'Playlist search is paused' };
+      }
+      const status = await this.rateLimitManager.getRateLimitStatus();
+      if (status.spotifyApi.limited) {
+        return { success: false, hits: [], error: 'Spotify API is rate limited' };
+      }
+      if (!(await this.takePlaylistSearchSlot())) {
+        return { success: false, hits: [], error: 'Playlist search budget used up' };
+      }
+
+      const result = await this.spotifyApi.searchPlaylists(term, limit);
+      if (!result.success) {
+        if (result.error?.includes('429')) {
+          const pause = (result.retryAfter || 60) + PLAYLIST_SEARCH_PAUSE_SECONDS;
+          await this.cache.set(CACHE_KEY_PLAYLIST_SEARCH_PAUSED, '1', pause);
+          this.logger.log(
+            color.yellow.bold(
+              `Spotify playlist search hit a rate limit, pausing it for ${white.bold(
+                pause.toString()
+              )} seconds`
+            )
+          );
+        }
+        return { success: false, hits: [], error: result.error };
+      }
+      this.analytics.increaseCounter('spotify', 'playlist_search_api', 1);
+
+      const ownUserId = await this.getOwnUserId();
+      const hits: PlaylistSearchHit[] = [];
+      // Spotify answers `null` for playlists it will not hand out (its own
+      // editorial ones), and those could not be loaded by id either.
+      for (const item of result.data?.playlists?.items || []) {
+        if (!item?.id || !item.name) continue;
+        // The AI playlists and voting lists this API creates on its own account.
+        if (ownUserId && item.owner?.id === ownUserId) continue;
+        hits.push({
+          id: item.id,
+          name: String(item.name),
+          description: String(item.description || ''),
+          owner: String(item.owner?.display_name || ''),
+          // `tracks` became `items` in the 2026 API format; both are read.
+          trackCount: Number(item.tracks?.total ?? item.items?.total ?? 0),
+          image: item.images?.[0]?.url || null,
+        });
+      }
+
+      await this.cache.set(cacheKey, JSON.stringify(hits), PLAYLIST_SEARCH_TTL_SECONDS);
+      return { success: true, hits };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error in searchPlaylists: ${error.message}`)
+      );
+      return { success: false, hits: [], error: 'Internal error searching playlists' };
+    }
+  }
+
+  /**
+   * Counts one playlist search against the minute and the day; false when
+   * either is used up. The counters live in Redis, so every worker shares
+   * them.
+   */
+  private async takePlaylistSearchSlot(): Promise<boolean> {
+    const now = new Date();
+    const day = now.toISOString().slice(0, 10);
+    const minute = now.toISOString().slice(0, 16);
+    const windows: [string, number, number][] = [
+      [`playlistsearch_budget:${minute}`, PLAYLIST_SEARCH_PER_MINUTE, 120],
+      [`playlistsearch_budget:${day}`, PLAYLIST_SEARCH_PER_DAY, 26 * 3600],
+    ];
+    for (const [key, limit, ttl] of windows) {
+      const used = parseInt(await this.cache.executeCommand('incr', key), 10);
+      if (used === 1) await this.cache.executeCommand('expire', key, ttl);
+      if (used > limit) return false;
+    }
+    return true;
+  }
+
+  /**
+   * The Spotify user id of the account this API creates playlists on. Asked
+   * once and kept: it does not change.
+   */
+  private async getOwnUserId(): Promise<string | null> {
+    const cached = await this.cache.get(CACHE_KEY_OWN_USER_ID);
+    if (cached) return cached;
+    const id = await this.spotifyApi.getOwnUserId();
+    if (id) await this.cache.set(CACHE_KEY_OWN_USER_ID, id, 30 * 24 * 3600);
+    return id;
   }
 
   public async getPlaylistTrackCount(
