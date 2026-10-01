@@ -1,5 +1,6 @@
 /**
- * How the AI playlist generator divides a playlist over artists.
+ * How the AI playlist generator divides a playlist over artists
+ * (`ArtistBalance`) and over release years (`YearSpread`, at the end).
  *
  * Without this, a broad theme ends up dominated by whoever has the most songs
  * in the catalogue: "klassik" gave 13 Beethoven pieces out of 75, and a
@@ -11,7 +12,7 @@
  *   1. A limit the customer states ("one song per band") is hard: never
  *      exceeded, the playlist comes out shorter instead.
  *   2. Artists the customer names are what they asked for, so they are not
- *      held to the share everyone else gets (see `planBalance`).
+ *      held to the share everyone else gets (see `ArtistBalance.plan`).
  *   3. Everyone else gets a fair share, but only when there is enough to
  *      choose from (`BALANCE_MIN_CANDIDATES`). That cap is soft: when the
  *      playlist comes up short it is lifted.
@@ -272,5 +273,78 @@ export class ArtistBalance {
       Number.isFinite(this.plan.cap) ||
       (this.plan.requested.length > 0 && Number.isFinite(this.plan.requestedCap))
     );
+  }
+}
+
+/**
+ * How many songs one release year may get.
+ *
+ * The cards are played by guessing when a song came out and putting it in
+ * order on a timeline. A deck with twelve songs from 1985 is a worse game
+ * than one that runs through the years, and left alone the picks bunch up
+ * where the catalogue is thickest.
+ *
+ * The same fair share as for artists, per year: the smallest cap that still
+ * leaves enough to choose from. It follows whatever years the theme has. A
+ * theme of one decade is spread over its ten years, a theme without a period
+ * over every year there are songs for, and a theme of a single year is left
+ * alone because there is nothing to spread. Always soft: it is lifted when
+ * the playlist comes up short. A song without a known year is never held
+ * back.
+ */
+export class YearSpread {
+  private counts = new Map<number, number>();
+  private lifted = false;
+
+  constructor(private readonly plannedCap: number) {}
+
+  static plan(
+    candidates: { year?: number | null }[],
+    target: number
+  ): YearSpread {
+    if (candidates.length < BALANCE_MIN_CANDIDATES) return new YearSpread(Infinity);
+    const perYear = new Map<number, number>();
+    for (const c of candidates) {
+      const year = YearSpread.known(c.year);
+      if (year !== null) perYear.set(year, (perYear.get(year) || 0) + 1);
+    }
+    return new YearSpread(fairCap(Array.from(perYear.values()), target * POOL_SLACK));
+  }
+
+  private static known(year: number | null | undefined): number | null {
+    const n = Number(year);
+    return year !== null && year !== undefined && Number.isInteger(n) && n > 0 ? n : null;
+  }
+
+  /** Songs per year as it stands: the planned cap, or none once it is lifted. */
+  get cap(): number {
+    return this.lifted ? Infinity : this.plannedCap;
+  }
+
+  /** True when a year can actually be held back. */
+  get limits(): boolean {
+    return Number.isFinite(this.plannedCap);
+  }
+
+  countOf(year: number | null | undefined): number {
+    const known = YearSpread.known(year);
+    return known === null ? 0 : this.counts.get(known) || 0;
+  }
+
+  hasRoom(year: number | null | undefined): boolean {
+    return this.countOf(year) < this.cap;
+  }
+
+  /** Count a song for its year; false (and nothing counted) when the year is full. */
+  take(year: number | null | undefined): boolean {
+    if (!this.hasRoom(year)) return false;
+    const known = YearSpread.known(year);
+    if (known !== null) this.counts.set(known, (this.counts.get(known) || 0) + 1);
+    return true;
+  }
+
+  /** Drop the cap because the playlist came up short. */
+  lift(): void {
+    this.lifted = true;
   }
 }

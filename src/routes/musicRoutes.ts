@@ -237,17 +237,22 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         r: true,
       } : null;
 
-      // The scanner's user agent, read once and shared with the failure row
-      // below. In the log it is what separates a real phone from a crawler or a
-      // link checker, which is the difference between an unknown link worth
-      // chasing and noise.
+      // The scanner's user agent and address, read once and shared with the
+      // failure row below. In the log the agent is what separates a real phone
+      // from a crawler or a link checker, which is the difference between an
+      // unknown link worth chasing and noise. The address is ipPlugin's
+      // spoof-resistant one, the same the ban list uses, so a line here can be
+      // matched to a ban.
       const userAgent = request.headers['user-agent'] || null;
+      const clientIp = request.clientIp || null;
 
       // Log the unknown link scan, indicate if cached
       logger.log(
         color.blue.bold(
           `Unknown link scanned${result.cached ? ' (CACHED)' : ''}: ` +
             color.white.bold(`url="${url}"`) +
+            color.blue.bold(', ip=') +
+            color.white.bold(clientIp ?? 'unknown') +
             color.blue.bold(', ua=') +
             color.white.bold(`"${userAgent ?? 'unknown'}"`) +
             color.blue.bold(', result=') +
@@ -265,7 +270,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       } else {
         // Log failed scan to database (skip if cached or blacklisted)
         if (!result.cached && !result.blacklisted) {
-          const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
           prisma.unknownLink.create({
             data: {
               url,
@@ -288,7 +292,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       );
       // Log exception to database as well
       const userAgent = request.headers['user-agent'] || null;
-      const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
+      const clientIp = request.clientIp || null;
       prisma.unknownLink.create({
         data: {
           url,

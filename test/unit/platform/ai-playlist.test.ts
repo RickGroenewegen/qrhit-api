@@ -283,7 +283,9 @@ describe('searchByKeyword (private)', () => {
     const { sql, values } = sqlOfCall(0);
     expect(sql).toContain('(artist LIKE ? OR name LIKE ?)');
     expect(sql).toContain('ORDER BY RAND()');
-    expect(sql).not.toContain('year');
+    // The year is selected (for the spread over years) but not filtered on.
+    expect(sql).toContain('SELECT id, trackId, artist, name, spotifyLink, year FROM tracks');
+    expect(sql).not.toContain('year IS NOT NULL');
     expect(values).toEqual(['%100\\%\\_a%', '%100\\%\\_a%', 50]);
   });
 
@@ -1082,7 +1084,7 @@ describe('run (artist balance)', () => {
     expect(bigCount()).toBe(2);
   });
 
-  it('lifts the fair share when the playlist comes up short, starting with what the LLM already chose', async () => {
+  it('when short, first asks for more inside the shares, and only then lifts them for what the LLM already chose', async () => {
     h.prismaMock.$queryRaw.mockResolvedValueOnce([...big(0, 60), ...others(0, 40)]);
     h.createMock
       .mockResolvedValueOnce(keywordsOnly())
@@ -1098,10 +1100,15 @@ describe('run (artist balance)', () => {
     await gen.run({ jobId: 'job-lift', prompt: 'theme', trackCount: 20, locale: 'en' });
 
     expect(h.createMock).toHaveBeenCalledTimes(3);
-    // The eight held-back picks go in first; the top-up asks for the last four.
+    // The top-up asks for all twelve missing songs from artists that still
+    // have room: the share stands and the full artist is not offered.
     const topup = h.createMock.mock.calls[2][0].messages[1].content;
-    expect(topup).toContain('Pick up to 4');
-    expect(topup).not.toContain('by the same artist');
+    expect(topup).toContain('Pick up to 12');
+    expect(topup).toContain('at most 2 songs by the same artist');
+    expect(topup).not.toContain('big-');
+    expect(topup).toContain('o-6\t');
+    // It found four. The last eight places go to the held-back picks, and
+    // nobody is asked again about songs that were just passed over.
     expect(h.spotifyCreate.mock.calls[0][1]).toHaveLength(20);
     expect(bigCount()).toBe(10);
   });
@@ -1149,6 +1156,123 @@ describe('run (artist balance)', () => {
       'by the same artist'
     );
     expect(bigCount()).toBe(5);
+  });
+});
+
+describe('run (year spread)', () => {
+  let shuffle: { mockRestore: () => void };
+  // Every song by another artist, so only the years are in play.
+  const song = (id: string, year: number | null) => ({
+    ...row(id, `Artist ${id}`, `Song ${id}`, `s-${id}`),
+    year,
+  });
+  const from1985 = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) => song(`y85-${from + i}`, 1985));
+  // Two songs per year: o-0 and o-1 are from 1986, o-2 and o-3 from 1987, ...
+  const others = (from: number, count: number) =>
+    Array.from({ length: count }, (_, i) =>
+      song(`o-${from + i}`, 1986 + Math.floor((from + i) / 2))
+    );
+  const keywords = () =>
+    toolCallResponse(
+      'returnKeywords',
+      { title: 'T', keywords: ['X'], artistKeywords: [], titleKeywords: [], startYear: null, endYear: null },
+      { prompt_tokens: 10, completion_tokens: 2 }
+    );
+  const picks = (trackIds: string[]) =>
+    toolCallResponse('returnPicks', { trackIds }, { prompt_tokens: 10, completion_tokens: 2 });
+
+  beforeEach(() => {
+    shuffle = vi.spyOn(gen as any, 'shuffle').mockImplementation((arr: any) => arr);
+    h.spotifyCreate.mockResolvedValue({
+      success: true,
+      data: { playlistId: 'PLY', playlistUrl: 'https://spotify/PLY' },
+    });
+  });
+
+  afterEach(() => {
+    shuffle.mockRestore();
+  });
+
+  /** 150 candidates: 60 from 1985 and two from each of 45 other years. */
+  const pool = () => [...from1985(0, 30), ...others(0, 70), ...from1985(30, 30), ...others(70, 20)];
+  // Batch 1: five from 1985 (four too many) and five other years.
+  const batchOne = () =>
+    picks(['y85-0', 'y85-1', 'y85-2', 'y85-3', 'y85-4', 'o-0', 'o-2', 'o-4', 'o-6', 'o-8']);
+  // Batch 2: fourteen songs from seven years, so two per year.
+  const batchTwo = () => picks(Array.from({ length: 14 }, (_, i) => `o-${70 + i}`));
+
+  it('holds a year to its fair share, tells the LLM the years, and fills up from other years', async () => {
+    // Fair share for 20 tracks out of this pool: one per year.
+    h.prismaMock.$queryRaw.mockResolvedValueOnce(pool());
+    h.createMock
+      .mockResolvedValueOnce(keywords())
+      .mockResolvedValueOnce(batchOne())
+      .mockResolvedValueOnce(batchTwo())
+      // Top-up inside the shares: seven songs from seven years not used yet.
+      .mockResolvedValueOnce(picks(['o-10', 'o-12', 'o-14', 'o-16', 'o-18', 'o-20', 'o-22']));
+
+    await gen.run({ jobId: 'job-years', prompt: 'theme', trackCount: 20, locale: 'en' });
+
+    expect(h.createMock).toHaveBeenCalledTimes(4);
+    const first = h.createMock.mock.calls[1][0].messages[1].content;
+    expect(first).toContain('at most 1 song from the same year');
+    expect(first).toContain('y85-0\tArtist y85-0 — Song y85-0 (1985)');
+    expect(first).toContain('o-0\tArtist o-0 — Song o-0 (1986)');
+
+    // 1985 is full after batch 1: its other 30 songs are not offered again.
+    const second = h.createMock.mock.calls[2][0].messages[1].content;
+    expect(second).not.toContain('y85-');
+    expect(second).toContain('o-70\t');
+
+    // 13 of 20 after two batches. The top-up offers only years with room.
+    const topup = h.createMock.mock.calls[3][0].messages[1].content;
+    expect(topup).toContain('Pick up to 7');
+    expect(topup).toContain('at most 1 song from the same year');
+    expect(topup).not.toContain('y85-');
+    expect(topup).not.toContain('o-1\t'); // 1986 already has its song
+    expect(topup).toContain('o-10\t');
+
+    // Twenty songs from twenty different years.
+    const ids = h.spotifyCreate.mock.calls[0][1] as string[];
+    expect(ids).toHaveLength(20);
+    expect(ids.filter((id) => id.startsWith('s-y85-'))).toEqual(['s-y85-0']);
+  });
+
+  it('lifts the share when the other years cannot fill the playlist, least crowded years first', async () => {
+    h.prismaMock.$queryRaw.mockResolvedValueOnce(pool());
+    h.createMock
+      .mockResolvedValueOnce(keywords())
+      .mockResolvedValueOnce(batchOne())
+      .mockResolvedValueOnce(batchTwo())
+      // The top-up inside the shares finds nothing more.
+      .mockResolvedValueOnce(picks([]));
+
+    await gen.run({ jobId: 'job-years-lift', prompt: 'theme', trackCount: 20, locale: 'en' });
+
+    // No further call: the eleven picks that were held back fill the last
+    // seven places.
+    expect(h.createMock).toHaveBeenCalledTimes(4);
+    const ids = h.spotifyCreate.mock.calls[0][1] as string[];
+    expect(ids).toHaveLength(20);
+    // 1985 gets one more and then waits its turn: every year goes to two
+    // before any goes to three.
+    expect(ids.filter((id) => id.startsWith('s-y85-'))).toEqual(['s-y85-0', 's-y85-1']);
+  });
+
+  it('never holds back a song whose year is unknown', async () => {
+    const unknown = Array.from({ length: 100 }, (_, i) => song(`u-${i}`, null));
+    h.prismaMock.$queryRaw.mockResolvedValueOnce(unknown);
+    h.createMock
+      .mockResolvedValueOnce(keywords())
+      .mockResolvedValueOnce(picks(unknown.slice(0, 20).map((u) => u.trackId)));
+
+    await gen.run({ jobId: 'job-noyears', prompt: 'theme', trackCount: 20, locale: 'en' });
+
+    const prompt = h.createMock.mock.calls[1][0].messages[1].content;
+    expect(prompt).not.toContain('from the same year');
+    expect(prompt).toContain('u-0\tArtist u-0 — Song u-0\n');
+    expect(h.spotifyCreate.mock.calls[0][1]).toHaveLength(20);
   });
 });
 

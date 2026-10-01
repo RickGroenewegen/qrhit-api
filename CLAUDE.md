@@ -324,11 +324,24 @@ shortfall with other names.
   together half.
 - **Everyone else gets a fair share, from 90 candidates up**: the smallest cap
   that still leaves 1.5 times the playlist to choose from, never below 2. It
-  is soft. When the playlist comes up short the cap is lifted, the songs the
-  LLM chose for a full artist go in first, then the top-up pass runs uncapped.
-- A full artist is left out of later batches (the LLM cannot spend a pick on
-  a song that would be dropped), so batches are cut as the run goes and each
-  is asked for its share of what is still missing.
+  is soft.
+- **Release years get the same fair share** (`YearSpread`, per year, soft).
+  The cards are played by guessing the year, and left alone the picks bunch
+  up where the catalogue is thickest. It follows the years the theme has: a
+  decade is spread over its ten years, a theme without a period over every
+  year it has songs for (75 tracks came out as 39 different years, two per
+  year at most), a single-year theme is left alone. A song without a known
+  year is never held back. The LLM sees each candidate's year.
+- A song whose artist or year is full is left out of later batches (the LLM
+  cannot spend a pick on a song that would be dropped), so batches are cut as
+  the run goes and each is asked for its share of what is still missing.
+- **When the playlist comes up short**, in this order: up to three top-up
+  batches inside the shares; then the shares are lifted and the songs the LLM
+  chose for a full artist or year go in, least crowded first; then a top-up
+  over the rest of the pool. The held-back songs are from exactly the artists
+  and years that are full, so taking them first (the first version did)
+  undid the spread for places the rest of the pool could have filled. A song
+  is offered in a top-up once.
 - The count is per first-listed artist ("A, B & C" counts for A), except that
   a song naming a requested artist anywhere counts for that artist.
 
@@ -1063,6 +1076,29 @@ Things here that cost something to learn:
   and survives a restart. `QRLINK_DENY_IPS` is config and needs a deploy to
   change, which is why the dashboard refuses to unblock a denylisted address
   and says so instead.
+
+## Spotify quota protection on the playlist endpoints
+
+`src/plugins/playlistGuardPlugin.ts` guards `/<service>/playlists` and
+`/<service>/playlists/tracks` (all six services). These load a playlist from
+the service itself, and a client loading playlists in bulk can get our Spotify
+access rate limited for 24 hours. It is separate from AbuseGuard: it refuses
+or downgrades requests and bans nobody.
+
+- **Forbidden user agents** (`FORBIDDEN_PLAYLIST_USER_AGENTS`,
+  case-insensitive substrings, so `okhttp` covers every version) get a 403 on
+  these routes only, logged once per IP per worker. `okhttp` went on the list
+  on 2026-10-01 after one IP loaded ~50 playlists in two minutes, up to seven
+  at a time. The QRSong app sends its WebView's agent, never okhttp. **Never
+  add `node`**: our own SSR server loads playlists with it.
+- **A missing `cache` flag used to skip the cache.** The routes read it with
+  `parseBoolean`, which turns `undefined` into `false`, so any client that
+  left it out forced a fresh fetch of the playlist and its tracks. The guard
+  now sets a missing flag to 1 (the frontend always sends it). An explicit
+  reload (`cache: 0`: the summary step's refresh and every language switch)
+  is honoured 20 times per IP per hour (`playlist_reload:<ip>` in Redis) and
+  then quietly served from the cache, logged once per IP per window. It fails
+  open when Redis is down. A playlist that is not cached yet is always fetched.
 
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory

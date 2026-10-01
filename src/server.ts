@@ -30,6 +30,7 @@ import view from '@fastify/view';
 import ejs from 'ejs';
 import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
+import playlistGuardPlugin from './plugins/playlistGuardPlugin';
 import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
 import ChatWebSocketServer from './chat-websocket';
@@ -376,6 +377,8 @@ class Server {
     });
     await this.fastify.register(require('@fastify/formbody'));
     await this.fastify.register(ipPlugin);
+    // After ipPlugin: it reads the request.clientIp that ipPlugin resolves.
+    await this.fastify.register(playlistGuardPlugin);
     await this.fastify.register(replyFrom);
     // Allowed origins for CORS (with credentials)
     const isProduction = process.env['ENVIRONMENT'] === 'production';

@@ -11,7 +11,12 @@ import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
 import { LLM_MODEL_FAST } from './llmModels';
-import { ArtistBalance, ArtistIntent, NO_ARTIST_INTENT } from './aiPlaylistBalance';
+import {
+  ArtistBalance,
+  ArtistIntent,
+  NO_ARTIST_INTENT,
+  YearSpread,
+} from './aiPlaylistBalance';
 
 // Redis cache key prefix for AI-prompt → spotifyPlaylistId lookup.
 // Lives only between AI playlist creation and the eventual PaymentHasPlaylist
@@ -78,6 +83,10 @@ const PER_KEYWORD_LIMIT = 50;
 // a playlist of one artist is not cut off at PER_KEYWORD_LIMIT songs.
 const REQUESTED_ARTIST_LIMIT = 500;
 const CURATION_BATCH_SIZE = 100;
+// When the playlist comes up short, this many batches are tried inside the
+// fair shares before they are lifted. A few, so a theme the pool cannot fill
+// does not walk the whole pool twice.
+const CAPPED_TOPUP_BATCHES = 3;
 
 interface CandidateTrack {
   id: number;
@@ -85,6 +94,8 @@ interface CandidateTrack {
   artist: string;
   name: string;
   spotifyLink: string;
+  /** Release year, when the catalogue knows it. */
+  year?: number | null;
 }
 
 /** Which column(s) a keyword should be matched against. */
@@ -1292,7 +1303,7 @@ class AIPlaylistGenerator {
       : Prisma.sql`RAND()`;
 
     return this.prisma.$queryRaw<CandidateTrack[]>(Prisma.sql`
-      SELECT id, trackId, artist, name, spotifyLink
+      SELECT id, trackId, artist, name, spotifyLink, year
       FROM tracks
       WHERE spotifyLink IS NOT NULL
         AND spotifyLinkIgnored = 0
@@ -1337,8 +1348,30 @@ class AIPlaylistGenerator {
       );
     }
 
-    // Songs the LLM chose for an artist that already had its fair share.
-    // They are the first to go in when the playlist comes up short.
+    // And how many one release year may get, so the deck runs through the
+    // years instead of bunching up where the catalogue is thickest.
+    const years = YearSpread.plan(candidates, target);
+    if (years.limits) {
+      this.logger.log(
+        color.blue.bold(
+          `[AI] ${white.bold(jobId)} year spread: ${white.bold(
+            years.cap.toString()
+          )} per year`
+        )
+      );
+    }
+
+    /** Both the artist and the year of this song still have room. */
+    const hasRoom = (c: CandidateTrack) =>
+      balance.hasRoom(c.artist) && years.hasRoom(c.year);
+    const take = (c: CandidateTrack) => {
+      balance.take(c.artist);
+      years.take(c.year);
+      picks.set(c.trackId, c);
+    };
+
+    // Songs the LLM chose for an artist or a year that already had its fair
+    // share. They are the first to go in when the playlist comes up short.
     const heldBack: CandidateTrack[] = [];
     const accept = (trackIds: string[]): number => {
       const before = picks.size;
@@ -1346,27 +1379,28 @@ class AIPlaylistGenerator {
         if (picks.size >= target) break;
         const row = byTrackId.get(tid);
         if (!row || picks.has(tid)) continue;
-        if (balance.take(row.artist)) {
-          picks.set(tid, row);
-        } else if (balance.isSoftCapped(row.artist)) {
+        if (hasRoom(row)) {
+          take(row);
+        } else if (balance.hasRoom(row.artist) || balance.isSoftCapped(row.artist)) {
+          // Not when it is a limit the customer set that stands in the way.
           heldBack.push(row);
         }
       }
       return picks.size - before;
     };
 
-    // The next batch out of `queue`. An artist that is full is skipped, so
-    // the LLM never spends a pick on a song that would be dropped anyway.
+    // The next batch out of `queue`. A song whose artist or year is full is
+    // skipped, so the LLM never spends a pick on one that would be dropped.
     const takeBatch = (queue: CandidateTrack[], from: number) => {
       const batch: CandidateTrack[] = [];
       let cursor = from;
       while (cursor < queue.length && batch.length < CURATION_BATCH_SIZE) {
         const candidate = queue[cursor++];
-        if (balance.hasRoom(candidate.artist)) batch.push(candidate);
+        if (hasRoom(candidate)) batch.push(candidate);
       }
       let ahead = 0;
       for (let i = cursor; i < queue.length; i++) {
-        if (balance.hasRoom(queue[i].artist)) ahead += 1;
+        if (hasRoom(queue[i])) ahead += 1;
       }
       return {
         batch,
@@ -1418,7 +1452,7 @@ class AIPlaylistGenerator {
         startYear,
         endYear,
         cost,
-        this.artistGuidance(balance, intent)
+        this.spreadGuidance(balance, years, intent)
       );
       const added = accept(picked);
       this.logger.log(
@@ -1430,43 +1464,24 @@ class AIPlaylistGenerator {
       );
     }
 
-    // Short of the target: the fair shares were tighter than what the LLM
-    // liked. Lift them (a limit the customer set stays) and start with the
-    // songs it already chose, the artist with the fewest songs first.
-    if (picks.size < target) {
-      balance.lift();
-      while (picks.size < target && heldBack.length > 0) {
-        let fewest = 0;
-        for (let i = 1; i < heldBack.length; i++) {
-          if (
-            balance.countOf(heldBack[i].artist) <
-            balance.countOf(heldBack[fewest].artist)
-          ) {
-            fewest = i;
-          }
-        }
-        const [row] = heldBack.splice(fewest, 1);
-        if (!picks.has(row.trackId) && balance.take(row.artist)) {
-          picks.set(row.trackId, row);
-        }
-      }
-    }
-
-    // Top-up pass: if any batches under-delivered against their quota
-    // we'll still be short of the target. Walk the unused candidates
-    // and ask the LLM to fill the remainder — this guarantees we use
-    // the full pool before giving up.
-    if (picks.size < target) {
+    // Top-up pass: batches that under-delivered against their quota leave
+    // the playlist short. Walk the unused candidates and ask the LLM to fill
+    // the remainder — this guarantees we use the full pool before giving up.
+    // A song is offered in a top-up once: asking again about one the LLM has
+    // just passed over is a call for nothing.
+    const offered = new Set<string>();
+    const topUp = async (maxBatches: number) => {
       const leftover = this.shuffle(
-        shuffled.filter((c) => !picks.has(c.trackId))
+        shuffled.filter((c) => !picks.has(c.trackId) && !offered.has(c.trackId))
       );
       let topupCursor = 0;
       let topupIndex = 0;
-      while (picks.size < target) {
+      while (picks.size < target && topupIndex < maxBatches) {
         const next = takeBatch(leftover, topupCursor);
         topupCursor = next.cursor;
         if (next.batch.length === 0) break;
         topupIndex += 1;
+        for (const candidate of next.batch) offered.add(candidate.trackId);
         const remaining = target - picks.size;
         const picked = await this.curateBatch(
           prompt,
@@ -1475,7 +1490,7 @@ class AIPlaylistGenerator {
           startYear,
           endYear,
           cost,
-          this.artistGuidance(balance, intent)
+          this.spreadGuidance(balance, years, intent)
         );
         const added = accept(picked);
         this.logger.log(
@@ -1486,17 +1501,52 @@ class AIPlaylistGenerator {
           )
         );
       }
+    };
+
+    // Short of the target with shares in force: first more of what still
+    // fits inside them. The songs that were held back are from exactly the
+    // artists and years that are full, so taking those first would undo the
+    // spread for places the rest of the pool could have filled.
+    if (picks.size < target && (balance.limits || years.limits)) {
+      await topUp(CAPPED_TOPUP_BATCHES);
+    }
+
+    // Still short: the fair shares were tighter than what the LLM liked. Lift
+    // them (a limit the customer set stays) and take the songs it already
+    // chose, the one whose artist and year have the fewest songs so far first.
+    if (picks.size < target) {
+      balance.lift();
+      years.lift();
+      const crowding = (c: CandidateTrack) =>
+        balance.countOf(c.artist) + years.countOf(c.year);
+      while (picks.size < target && heldBack.length > 0) {
+        let fewest = 0;
+        for (let i = 1; i < heldBack.length; i++) {
+          if (crowding(heldBack[i]) < crowding(heldBack[fewest])) fewest = i;
+        }
+        const [row] = heldBack.splice(fewest, 1);
+        if (!picks.has(row.trackId) && hasRoom(row)) take(row);
+      }
+    }
+
+    // And whatever is left of the pool, without the shares.
+    if (picks.size < target) {
+      await topUp(Infinity);
     }
 
     return Array.from(picks.values()).slice(0, target);
   }
 
   /**
-   * What the curation LLM is told about dividing the picks over artists. The
-   * caps are enforced in `curate` whatever it answers; saying so up front
-   * keeps it from spending its picks on songs that are then dropped.
+   * What the curation LLM is told about dividing the picks over artists and
+   * years. The caps are enforced in `curate` whatever it answers; saying so
+   * up front keeps it from spending its picks on songs that are then dropped.
    */
-  private artistGuidance(balance: ArtistBalance, intent: ArtistIntent): string {
+  private spreadGuidance(
+    balance: ArtistBalance,
+    years: YearSpread,
+    intent: ArtistIntent
+  ): string {
     const lines: string[] = [];
     const named = intent.requestedArtists.join(', ');
     if (named) {
@@ -1520,6 +1570,11 @@ class AIPlaylistGenerator {
     ) {
       lines.push('Divide the picks evenly over the artists the user named.');
     }
+    if (Number.isFinite(years.cap)) {
+      lines.push(
+        `The cards are played by guessing the year, so spread the picks over the years: at most ${years.cap} song${years.cap === 1 ? '' : 's'} from the same year.`
+      );
+    }
     return lines.length > 0 ? `\n\n${lines.join('\n')}` : '';
   }
 
@@ -1530,10 +1585,12 @@ class AIPlaylistGenerator {
     startYear: number | null,
     endYear: number | null,
     cost: CostTracker,
-    artistGuidance: string = ''
+    spreadGuidance: string = ''
   ): Promise<string[]> {
+    // With the release year where it is known: it helps the LLM judge the
+    // era, and lets it spread its picks over the years.
     const trackList = batch
-      .map((t) => `${t.trackId}\t${t.artist} — ${t.name}`)
+      .map((t) => `${t.trackId}\t${t.artist} — ${t.name}${t.year ? ` (${t.year})` : ''}`)
       .join('\n');
 
     const yearHint =
@@ -1561,7 +1618,7 @@ class AIPlaylistGenerator {
         },
         {
           role: 'user',
-          content: `Theme:\n${prompt}${yearHint}${artistGuidance}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
+          content: `Theme:\n${prompt}${yearHint}${spreadGuidance}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title (year)):\n${trackList}`,
         },
       ],
       reasoning_effort: REASONING_EFFORT,

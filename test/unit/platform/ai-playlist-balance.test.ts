@@ -4,6 +4,7 @@ import {
   ArtistIntent,
   BALANCE_MIN_CANDIDATES,
   NO_ARTIST_INTENT,
+  YearSpread,
   fairCap,
   normalizeArtist,
   primaryArtistKey,
@@ -251,5 +252,69 @@ describe('ArtistBalance counting', () => {
     hard.lift();
     expect(hard.cap).toBe(1);
     expect(hard.take('Queen')).toBe(false);
+  });
+});
+
+describe('YearSpread', () => {
+  /** `count` candidates from `year`. */
+  const from = (year: number | null, count: number) =>
+    Array.from({ length: count }, () => ({ year }));
+  /** `each` candidates from every year in the range. */
+  const range = (first: number, last: number, each: number) =>
+    Array.from({ length: last - first + 1 }, (_, i) => from(first + i, each)).flat();
+
+  it('spreads a decade over its ten years', () => {
+    // "90s hits", 75 tracks: 113 needed, 12 a year gives 120.
+    const years = YearSpread.plan(range(1990, 1999, 200), 75);
+    expect(years.cap).toBe(12);
+    expect(years.limits).toBe(true);
+  });
+
+  it('spreads a theme without a period over every year it has songs for', () => {
+    // Sixty years of candidates for 75 tracks: two a year.
+    expect(YearSpread.plan(range(1960, 2019, 40), 75).cap).toBe(2);
+    // A small playlist from a long period: every song from another year.
+    expect(YearSpread.plan(range(1960, 2019, 40), 25).cap).toBe(1);
+  });
+
+  it('counts what a year really has: a thin year does not raise the cap for the rest', () => {
+    // Twenty years with one song each and twenty with fifty: 113 needed,
+    // 20 + 20 * 5 = 120.
+    const pool = [...range(1960, 1979, 1), ...range(1980, 1999, 50)];
+    expect(YearSpread.plan(pool, 75).cap).toBe(5);
+  });
+
+  it('leaves a theme of a single year alone', () => {
+    const years = YearSpread.plan(from(1986, 300), 75);
+    // Nothing to spread: the cap is more than the playlist holds.
+    expect(years.cap).toBeGreaterThanOrEqual(75);
+  });
+
+  it('sets no cap on a small pool, or on one too small for the playlist', () => {
+    expect(YearSpread.plan(range(1980, 1989, 8), 25).limits).toBe(false);
+    expect(YearSpread.plan(range(1980, 1989, 12), 100).limits).toBe(false);
+  });
+
+  it('ignores songs without a known year when planning, and never holds them back', () => {
+    const years = YearSpread.plan([...from(null, 500), ...range(1990, 1999, 20)], 75);
+    // 200 dated candidates for 113 needed: 12 a year.
+    expect(years.cap).toBe(12);
+    for (let i = 0; i < 50; i++) expect(years.take(null)).toBe(true);
+    expect(years.take(undefined)).toBe(true);
+    expect(years.countOf(null)).toBe(0);
+  });
+
+  it('counts per year and refuses a song over the cap until it is lifted', () => {
+    const years = YearSpread.plan(range(1960, 2019, 40), 25);
+    expect(years.take(1985)).toBe(true);
+    expect(years.hasRoom(1985)).toBe(false);
+    expect(years.take(1985)).toBe(false);
+    expect(years.countOf(1985)).toBe(1);
+    expect(years.take(1986)).toBe(true);
+
+    years.lift();
+    expect(years.cap).toBe(Infinity);
+    expect(years.take(1985)).toBe(true);
+    expect(years.countOf(1985)).toBe(2);
   });
 });
