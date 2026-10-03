@@ -802,7 +802,7 @@ export default async function adminRoutes(
       const result = await data.getPlaylistTrackOrder(paymentHasPlaylistId);
 
       if (result.success) {
-        reply.send({ success: true, tracks: result.tracks });
+        reply.send({ success: true, tracks: result.tracks, mode: result.mode });
       } else {
         reply
           .status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500)
@@ -856,6 +856,36 @@ export default async function adminRoutes(
               ? 400
               : 500;
         reply.status(status).send({ success: false, error: result.error });
+      }
+    }
+  );
+
+  // "Mix years": a fresh year-mixed order, which regenerations then keep
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/track-order/mix',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const paymentHasPlaylistId = parseInt(
+        request.params.paymentHasPlaylistId,
+        10
+      );
+
+      if (!Number.isFinite(paymentHasPlaylistId)) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.mixPlaylistTrackOrder(paymentHasPlaylistId);
+
+      if (result.success) {
+        reply.send({ success: true, tracks: result.tracks, mode: result.mode });
+      } else {
+        reply
+          .status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500)
+          .send({ success: false, error: result.error });
       }
     }
   );

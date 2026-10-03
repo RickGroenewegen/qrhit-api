@@ -17,6 +17,7 @@ import {
   updatePlaylistBlocked,
   getPlaylistTrackOrder,
   updatePlaylistTrackOrder,
+  mixPlaylistTrackOrder,
   loadBlocked,
   loadBlockedFromCache,
   isPlaylistBlocked,
@@ -28,8 +29,16 @@ import {
 /**
  * Pure unit tests for src/data/playlists.ts. All functions take a DataDeps
  * object, so every collaborator is a plain literal with vi.fn()s — no DB,
- * no Redis, no network.
+ * no Redis, no network. The year mix itself is covered by track-mix.test.ts.
  */
+
+const h = vi.hoisted(() => ({
+  writeMixedTrackOrder: vi.fn(async () => [] as number[]),
+}));
+
+vi.mock('../../../src/data/trackOrder', () => ({
+  writeMixedTrackOrder: h.writeMixedTrackOrder,
+}));
 
 /** Flatten a tagged-template $queryRaw/$executeRaw call into { sql, values }. */
 function flatten(call: any[]) {
@@ -80,6 +89,7 @@ function makeDeps() {
       findMany: vi.fn(),
       update: vi.fn(async () => ({})),
     },
+    trackExtraInfo: { findMany: vi.fn(async () => []) },
     orderType: { findFirst: vi.fn() },
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
@@ -1073,9 +1083,16 @@ describe('buildMusicMatchExport', () => {
 });
 
 describe('getPlaylistTrackOrder', () => {
+  const php = (playlist: { manualTrackOrder: boolean; trackMixSeed: number | null }) => ({
+    playlistId: 42,
+    playlist,
+  });
+
   it('returns the playlist tracks ordered by order then trackId', async () => {
     const { deps, prisma } = makeDeps();
-    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(
+      php({ manualTrackOrder: false, trackMixSeed: null })
+    );
     prisma.playlistHasTrack.findMany.mockResolvedValue([
       { order: 0, track: { id: 7, trackId: 'sp-7', artist: 'Queen', name: 'Bo Rhap', year: 1975 } },
       { order: 1, track: { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975 } },
@@ -1084,6 +1101,7 @@ describe('getPlaylistTrackOrder', () => {
     const res = await getPlaylistTrackOrder(deps, 5);
 
     expect(res.success).toBe(true);
+    expect(res.mode).toBe('service');
     expect(res.tracks).toEqual([
       { id: 7, trackId: 'sp-7', artist: 'Queen', name: 'Bo Rhap', year: 1975, order: 0 },
       { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975, order: 1 },
@@ -1094,6 +1112,46 @@ describe('getPlaylistTrackOrder', () => {
         orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
       })
     );
+  });
+
+  it('shows the year the card prints: the per-playlist override first', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(
+      php({ manualTrackOrder: false, trackMixSeed: null })
+    );
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { order: 0, track: { id: 7, trackId: 'sp-7', artist: 'Queen', name: 'Bo Rhap', year: 1975 } },
+      { order: 1, track: { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975 } },
+    ]);
+    prisma.trackExtraInfo.findMany.mockResolvedValue([{ trackId: 9, year: 1974 }] as any);
+
+    const res = await getPlaylistTrackOrder(deps, 5);
+
+    expect(res.tracks!.map((t) => t.year)).toEqual([1975, 1974]);
+    expect(prisma.trackExtraInfo.findMany).toHaveBeenCalledWith({
+      where: { playlistId: 42, year: { not: null } },
+      select: { trackId: true, year: true },
+    });
+  });
+
+  it('reports a hand order as manual, even on a mixed deck', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(
+      php({ manualTrackOrder: true, trackMixSeed: 1234 })
+    );
+    prisma.playlistHasTrack.findMany.mockResolvedValue([]);
+
+    expect((await getPlaylistTrackOrder(deps, 5)).mode).toBe('manual');
+  });
+
+  it('reports a deck with a mix seed as mixed', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(
+      php({ manualTrackOrder: false, trackMixSeed: 1234 })
+    );
+    prisma.playlistHasTrack.findMany.mockResolvedValue([]);
+
+    expect((await getPlaylistTrackOrder(deps, 5)).mode).toBe('mixed');
   });
 
   it('404s when the paymentHasPlaylist does not exist', async () => {
@@ -1220,6 +1278,82 @@ describe('updatePlaylistTrackOrder', () => {
 
     expect(res).toEqual({ success: false, error: 'PaymentHasPlaylist not found' });
     expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('mixPlaylistTrackOrder', () => {
+  beforeEach(() => {
+    h.writeMixedTrackOrder.mockClear();
+  });
+
+  it('mixes with a new seed, stores it and clears the hand order flag', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique
+      .mockResolvedValueOnce({ playlistId: 42 })
+      .mockResolvedValueOnce({
+        playlistId: 42,
+        playlist: { manualTrackOrder: false, trackMixSeed: 99 },
+      });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { order: 0, track: { id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975 } },
+    ]);
+
+    const res = await mixPlaylistTrackOrder(deps, 5);
+
+    expect(h.writeMixedTrackOrder).toHaveBeenCalledTimes(1);
+    const [, playlistId, seed] = h.writeMixedTrackOrder.mock.calls[0] as any[];
+    expect(playlistId).toBe(42);
+    expect(Number.isInteger(seed) && seed > 0).toBe(true);
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: { trackMixSeed: seed, manualTrackOrder: false },
+    });
+    // The order is written before the flags change, see the function comment.
+    expect(h.writeMixedTrackOrder.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.playlist.update.mock.invocationCallOrder[0]
+    );
+    expect(res).toEqual({
+      success: true,
+      mode: 'mixed',
+      tracks: [{ id: 9, trackId: 'sp-9', artist: 'Abba', name: 'SOS', year: 1975, order: 0 }],
+    });
+  });
+
+  it('gives a fresh mix on every press', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
+      playlistId: 42,
+      playlist: { manualTrackOrder: false, trackMixSeed: 1 },
+    });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([]);
+
+    await mixPlaylistTrackOrder(deps, 5);
+    await mixPlaylistTrackOrder(deps, 5);
+
+    const seeds = h.writeMixedTrackOrder.mock.calls.map((call: any[]) => call[2]);
+    expect(seeds[0]).not.toBe(seeds[1]);
+  });
+
+  it('404s when the paymentHasPlaylist does not exist', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(null);
+
+    const res = await mixPlaylistTrackOrder(deps, 5);
+
+    expect(res).toEqual({ success: false, error: 'PaymentHasPlaylist not found' });
+    expect(h.writeMixedTrackOrder).not.toHaveBeenCalled();
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
+  });
+
+  it('leaves the flags alone when writing the order fails', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    h.writeMixedTrackOrder.mockRejectedValueOnce(new Error('db down'));
+
+    const res = await mixPlaylistTrackOrder(deps, 5);
+
+    expect(res).toEqual({ success: false, error: 'db down' });
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
   });
 });
 

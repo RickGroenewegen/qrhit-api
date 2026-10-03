@@ -17,8 +17,12 @@ const h = vi.hoisted(() => ({
   clearPlaylistCache: vi.fn(async () => undefined),
   getLink: vi.fn(async () => undefined),
   checkUnfinalizedPayments: vi.fn(async () => undefined),
+  writeMixedTrackOrder: vi.fn(async () => [] as number[]),
 }));
 
+vi.mock('../../../src/data/trackOrder', () => ({
+  writeMixedTrackOrder: h.writeMixedTrackOrder,
+}));
 vi.mock('../../../src/data/trackYears', () => ({
   updateTrackYear: h.updateTrackYear,
 }));
@@ -94,6 +98,7 @@ beforeEach(() => {
   h.clearPlaylistCache.mockClear();
   h.getLink.mockClear();
   h.checkUnfinalizedPayments.mockClear();
+  h.writeMixedTrackOrder.mockClear();
 });
 
 const LONG = 'ABCDEFGHIJKLMNOPQRSTUVWXY'; // 25 chars > MAX_WORD_LEN 20
@@ -627,6 +632,39 @@ describe('storeTracks', () => {
     const upd = flatten(prisma.$executeRaw.mock.calls[2]);
     expect(upd.sql).toContain('UPDATE playlist_has_tracks pht');
     expect(upd.values).toEqual(['s1', 2, 99, 's1']);
+
+    // No mix seed: a consumer deck keeps the streaming service's order.
+    expect(h.writeMixedTrackOrder).not.toHaveBeenCalled();
+  });
+
+  it('mixes a deck with a mix seed once the years are in, instead of the service order', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      manualTrackOrder: false,
+      trackMixSeed: 777,
+    } as any);
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], new Map([['s1', 2]]));
+
+    // delete + insert only: the service-order UPDATE would be overwritten anyway.
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(2);
+    expect(h.writeMixedTrackOrder).toHaveBeenCalledWith(deps, 99, 777);
+    expect(h.updateTrackYear.mock.invocationCallOrder[0]).toBeLessThan(
+      h.writeMixedTrackOrder.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('keeps a hand order even when the deck has a mix seed', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({
+      manualTrackOrder: true,
+      trackMixSeed: 777,
+    } as any);
+    prisma.$queryRaw.mockResolvedValue([{ maxOrder: 40 }] as any);
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], new Map([['s1', 2]]));
+
+    expect(h.writeMixedTrackOrder).not.toHaveBeenCalled();
   });
 
   it('leaves an admin-set order alone instead of rewriting it from the service', async () => {

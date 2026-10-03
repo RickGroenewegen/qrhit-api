@@ -1,8 +1,10 @@
 import { color } from 'console-log-colors';
+import { randomInt } from 'crypto';
 import slugify from 'slugify';
 import { CartItem } from '../interfaces/CartItem';
 import { DataDeps } from './types';
 import { PRINTER_TYPE } from '../config/constants';
+import { writeMixedTrackOrder } from './trackOrder';
 
 export const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 // Stored in the Redis set when nothing is blocked, so readers can tell
@@ -842,43 +844,75 @@ export interface TrackOrderEntry {
 }
 
 /**
- * Tracks of the playlist behind a paymentHasPlaylist, in playlist_has_tracks.order.
+ * Who decides a deck's order: an admin's hand order, the year mix of a
+ * business deck (src/trackMix.ts), or the streaming service.
+ */
+export type TrackOrderMode = 'manual' | 'mixed' | 'service';
+
+/**
+ * Tracks of the playlist behind a paymentHasPlaylist, in playlist_has_tracks.order,
+ * with the year the card prints (the per-playlist override first).
  */
 export async function getPlaylistTrackOrder(
   deps: DataDeps,
   paymentHasPlaylistId: number
-): Promise<{ success: boolean; error?: string; tracks?: TrackOrderEntry[] }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  tracks?: TrackOrderEntry[];
+  mode?: TrackOrderMode;
+}> {
   try {
     const php = await deps.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
-      select: { playlistId: true },
+      select: {
+        playlistId: true,
+        playlist: { select: { manualTrackOrder: true, trackMixSeed: true } },
+      },
     });
 
     if (!php) {
       return { success: false, error: 'PaymentHasPlaylist not found' };
     }
 
-    const rows = await deps.prisma.playlistHasTrack.findMany({
-      where: { playlistId: php.playlistId },
-      // The composite key has no natural tiebreaker, so add trackId to keep the
-      // order stable for playlists whose rows all still sit at the default 0.
-      orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
-      select: {
-        order: true,
-        track: {
-          select: { id: true, trackId: true, artist: true, name: true, year: true },
+    const [rows, yearOverrides] = await Promise.all([
+      deps.prisma.playlistHasTrack.findMany({
+        where: { playlistId: php.playlistId },
+        // The composite key has no natural tiebreaker, so add trackId to keep the
+        // order stable for playlists whose rows all still sit at the default 0.
+        orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
+        select: {
+          order: true,
+          track: {
+            select: { id: true, trackId: true, artist: true, name: true, year: true },
+          },
         },
-      },
-    });
+      }),
+      deps.prisma.trackExtraInfo.findMany({
+        where: { playlistId: php.playlistId, year: { not: null } },
+        select: { trackId: true, year: true },
+      }),
+    ]);
+
+    const yearOverride = new Map(
+      yearOverrides.map((row) => [row.trackId, row.year])
+    );
+
+    const mode: TrackOrderMode = php.playlist.manualTrackOrder
+      ? 'manual'
+      : php.playlist.trackMixSeed !== null
+        ? 'mixed'
+        : 'service';
 
     return {
       success: true,
+      mode,
       tracks: rows.map((row) => ({
         id: row.track.id,
         trackId: row.track.trackId,
         artist: row.track.artist,
         name: row.track.name,
-        year: row.track.year,
+        year: yearOverride.get(row.track.id) ?? row.track.year,
         order: row.order,
       })),
     };
@@ -964,6 +998,49 @@ export async function updatePlaylistTrackOrder(
     deps.logger.log(
       color.red.bold(
         `Error updating track order for paymentHasPlaylist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * "Mix years" on the track-order page: a fresh year mix (src/trackMix.ts) for
+ * the playlist behind a paymentHasPlaylist, returned like getPlaylistTrackOrder.
+ * The new seed is stored, so later regenerations reproduce this deck, and the
+ * hand order flag is cleared so storeTracks keeps mixing instead of keeping a
+ * frozen order.
+ */
+export async function mixPlaylistTrackOrder(
+  deps: DataDeps,
+  paymentHasPlaylistId: number
+): ReturnType<typeof getPlaylistTrackOrder> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { playlistId: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'PaymentHasPlaylist not found' };
+    }
+
+    const seed = randomInt(1, 2 ** 31 - 1);
+    // Order first: should the flag update fail, the deck is mixed and still
+    // marked as a hand order, which keeps what the admin sees.
+    await writeMixedTrackOrder(deps, php.playlistId, seed);
+    await deps.prisma.playlist.update({
+      where: { id: php.playlistId },
+      data: { trackMixSeed: seed, manualTrackOrder: false },
+    });
+
+    return getPlaylistTrackOrder(deps, paymentHasPlaylistId);
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error mixing track order for paymentHasPlaylist ${color.white.bold(
           paymentHasPlaylistId
         )}: ${error.message}`
       )

@@ -43,6 +43,7 @@ export const h = {
     },
     playlist: {
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
   data: {
@@ -148,6 +149,7 @@ export function resetGeneratorMocks(): void {
   h.prisma.paymentHasPlaylistDesign.findMany.mockResolvedValue([]);
   h.prisma.playlistHasTrack.count.mockResolvedValue(0);
   h.prisma.playlist.update.mockResolvedValue({});
+  h.prisma.playlist.updateMany.mockResolvedValue({ count: 0 });
 
   // data defaults
   h.data.getUserByUserId.mockResolvedValue({ userId: 'u1' });

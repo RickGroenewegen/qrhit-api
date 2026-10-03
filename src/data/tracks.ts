@@ -7,6 +7,7 @@ import { clearPlaylistCache } from './misc';
 import { getLink } from './musicLinks';
 import { checkUnfinalizedPayments } from './users';
 import { splitLongWord } from './hyphenate';
+import { writeMixedTrackOrder } from './trackOrder';
 
 const MAX_WORD_LEN = 20;
 
@@ -723,17 +724,22 @@ export async function storeTracks(
     )
   );
 
+  // Who decides the card order: an admin's hand order first, then the year mix
+  // of a business deck (Playlist.trackMixSeed), then the streaming service. A
+  // mixed deck gets its order at the very end, once updateTrackYear has filled
+  // in every year.
+  const orderSettings = await deps.prisma.playlist.findUnique({
+    where: { id: playlistDatabaseId },
+    select: { manualTrackOrder: true, trackMixSeed: true },
+  });
+  const keepManualOrder = orderSettings?.manualTrackOrder === true;
+  const mixSeed = keepManualOrder ? null : orderSettings?.trackMixSeed ?? null;
+
   // Bulk insert playlist_has_tracks with order
   if (trackOrder && trackOrder.size > 0) {
     // An admin-set order outranks the streaming service's. Existing rows keep
     // the order they have; only tracks added to the playlist since then get a
     // position, appended after the last card so nothing shifts.
-    const playlist = await deps.prisma.playlist.findUnique({
-      where: { id: playlistDatabaseId },
-      select: { manualTrackOrder: true },
-    });
-    const keepManualOrder = playlist?.manualTrackOrder === true;
-
     let orderOffset = 0;
     if (keepManualOrder) {
       const [maxRow] = await deps.prisma.$queryRaw<{ maxOrder: number | null }[]>`
@@ -769,7 +775,7 @@ export async function storeTracks(
           `Keeping manual track order for playlist ${color.white.bold(playlistId)}`
         )
       );
-    } else {
+    } else if (mixSeed === null) {
       // Update order for existing tracks (INSERT IGNORE skips these)
       // Need qualified column names for UPDATE with JOIN
       const updateOrderCases: Prisma.Sql[] = [];
@@ -814,6 +820,10 @@ export async function storeTracks(
   );
 
   await updateTrackYear(deps, providedTrackIds, tracks);
+
+  if (mixSeed !== null) {
+    await writeMixedTrackOrder(deps, playlistDatabaseId, mixSeed);
+  }
 }
 
 export async function searchTracks(

@@ -882,6 +882,34 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   themselves, so the mail shows the browser. `GET /admin/toolkit/share` lists
   shares with their download counts, `DELETE .../:token` removes one.
 
+## Card order: service, year mix, hand order
+
+Cards print in `playlist_has_tracks.order` (`getTracks`; QR colours, the PDF
+chunks and the corrections page all number cards that way). It is one order
+per playlist, shared by every order of it, and three things can set it, the
+first that applies wins:
+
+1. **A hand order.** Drag and drop on the dashboard's track-order page sets
+   `Playlist.manualTrackOrder`. Regeneration then keeps every card where it is
+   and adds new tracks at the end.
+2. **The year mix.** Business clients often build their list from old to new,
+   and Schneiders delivers the deck in that order: the first box compartment
+   was all sixties. `storePlaylistData` gives a business deck (`isBusinessDeck`:
+   printer Schneiders or Tromp, or a vibe order) a `Playlist.trackMixSeed`, and
+   `storeTracks` then orders the cards with `src/trackMix.ts` after the years
+   are known: every stack of 48 gets its share of every era, shuffled, with no
+   two neighbours sharing a year or an artist where the deck allows it. The
+   mix is seeded, so a regeneration reproduces the same deck and print
+   fingerprint until a track or a year changes; once set, the seed stays,
+   whichever order triggers the next regeneration. "Mix years" on the
+   track-order page (`POST /admin/playlist/:phpId/track-order/mix`) draws a new
+   seed and clears the hand order.
+3. **The streaming service's order**, for everything else (consumer decks).
+
+`Payment.isBusinessOrder` (a company on the invoice at checkout) does not make
+a business deck: those are ordinary Print&Bind orders. The Excel QR-link supplement keeps
+its row order (a new playlist, no seed).
+
 ## Featured playlist covers
 
 `playlists.image` is a URL on the music service's CDN, stored once when the

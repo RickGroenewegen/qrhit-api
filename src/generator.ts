@@ -40,6 +40,7 @@ import { finalCheckHoldDetails, finalCheckHoldReason } from './finalCheckHoldRea
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 import { computePrintFingerprint } from './printFingerprint';
 import { deckDesigns, designIndexForCard, getExtraDesigns } from './cardDesigns';
+import { isBusinessDeck } from './trackMix';
 
 class Generator {
   private static instance: Generator;
@@ -845,6 +846,16 @@ class Generator {
         )}`
       )
     );
+
+    // A business deck is put in a year-mixed order instead (src/trackMix.ts).
+    // The seed is set once and kept, so every later regeneration, whichever
+    // order triggers it, reproduces the same deck; storeTracks applies it.
+    if (isBusinessDeck(playlist.printerType, payment.vibe)) {
+      await this.prisma.playlist.updateMany({
+        where: { id: playlist.id, trackMixSeed: null },
+        data: { trackMixSeed: crypto.randomInt(1, 2 ** 31 - 1) },
+      });
+    }
 
     // Create trackOrder map from array index to preserve playlist order
     const trackOrder = new Map<string, number>();

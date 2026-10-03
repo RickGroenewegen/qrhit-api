@@ -241,6 +241,34 @@ describe('generate()', () => {
     expect(push[0].args[1]).toBe('9.9.9.9');
   });
 
+  it('leaves a consumer deck on the streaming service order', async () => {
+    const { mollie } = arrange();
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    expect(h.prisma.playlist.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a Schneiders deck', {}, { printerType: 'schneiders' }],
+    ['a Tromp deck', {}, { printerType: 'tromp' }],
+    ['a company-list (vibe) order', { vibe: true }, {}],
+  ])('gives %s a year-mix seed once, before storing the tracks', async (_label, paymentOver, playlistOver) => {
+    const { mollie } = arrange(paymentOver, playlistOver);
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    expect(h.prisma.playlist.updateMany).toHaveBeenCalledTimes(1);
+    const call = h.prisma.playlist.updateMany.mock.calls[0][0];
+    // Only a playlist without a seed gets one, so later regenerations keep it.
+    expect(call.where).toEqual({ id: 21, trackMixSeed: null });
+    expect(Number.isInteger(call.data.trackMixSeed)).toBe(true);
+    expect(call.data.trackMixSeed).toBeGreaterThan(0);
+    expect(h.prisma.playlist.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      h.data.storeTracks.mock.invocationCallOrder[0]
+    );
+  });
+
   it('truncates oversized playlists to MAX_CARDS (digital) and MAX_CARDS_PHYSICAL (physical)', async () => {
     const { mollie } = arrange();
     const many = Array.from({ length: MAX_CARDS + 5 }, (_, i) => ({ id: `t${i}` }));

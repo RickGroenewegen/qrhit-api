@@ -372,6 +372,10 @@ class Data {
     );
   }
 
+  public async mixPlaylistTrackOrder(paymentHasPlaylistId: number) {
+    return playlistsModule.mixPlaylistTrackOrder(this.deps, paymentHasPlaylistId);
+  }
+
   public async buildMusicMatchExport(): Promise<playlistsModule.MusicMatchExport> {
     return playlistsModule.buildMusicMatchExport(this.deps);
   }
