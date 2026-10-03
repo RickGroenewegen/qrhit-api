@@ -793,6 +793,11 @@ System → "Sync business lists", `POST /admin/mail-octopus/business-sync`,
   → NL (the column default; every NULL company was Dutch or Belgian). An
   address on several companies goes with the latest updated company. Users
   in `admin`/`vibeadmin` are left out.
+- **Excluding a company:** "Exclude from business mailings" on the company's
+  details (`Company.excludeFromMailing`). Its contacts are left out and the
+  next run takes them off, unless they are also a contact of a company that
+  is not excluded. These removals do not count towards the guard below; an
+  unsubscribed contact still stays on the list.
 - **A reconcile, not an upload.** It reads the three lists and diffs them
   with the database: add, update what differs, move between lists when the
   language changes, remove who is no longer a company contact. So no `sync`

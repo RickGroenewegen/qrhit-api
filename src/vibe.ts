@@ -1081,6 +1081,7 @@ class Vibe {
         'name',
         'followUp',
         'onlyForAdmin',
+        'excludeFromMailing',
         'address',
         'housenumber',
         'city',

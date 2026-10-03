@@ -14,6 +14,10 @@ import Logger from './logger';
  * Nobody is ever subscribed again: a PUT without `status` keeps an existing
  * contact's status, a move carries `unsubscribed` to the new list, and an
  * unsubscribed contact who is no longer a company contact stays on the list.
+ *
+ * A company with `excludeFromMailing` (the admin's company details) keeps its
+ * contacts off the lists, unless they are also a contact of a company that
+ * is not excluded.
  */
 
 export type BusinessListKey = 'nl' | 'en' | 'de';
@@ -49,6 +53,7 @@ export interface BusinessCompanyRow {
   countrycode: string | null;
   contact: string | null;
   contactemail: string | null;
+  excludeFromMailing: boolean;
   updatedAt: Date;
   User: {
     email: string;
@@ -73,7 +78,7 @@ export type BusinessSyncAction =
       from: BusinessListKey[];
       status?: 'unsubscribed';
     }
-  | { type: 'remove'; email: string; list: BusinessListKey }
+  | { type: 'remove'; email: string; list: BusinessListKey; excluded?: true }
   | { type: 'keep'; email: string; list: BusinessListKey };
 
 export interface BusinessSyncResult {
@@ -86,6 +91,7 @@ export interface BusinessSyncResult {
   moved: string[];
   removed: string[];
   kept: string[];
+  excluded: string[];
   unchanged: number;
   skipped: string[];
   errors: string[];
@@ -111,14 +117,17 @@ export function splitName(name: string | null): {
 /**
  * The wanted state: each company's contact address and users (staff left
  * out), one entry per lowercased e-mail. When an address belongs to several
- * companies, the latest updated company wins.
+ * companies, the latest updated company wins. `excluded` are the addresses
+ * that only belong to excluded companies.
  */
 export function wantedContacts(companies: BusinessCompanyRow[]): {
   contacts: Map<string, BusinessContact>;
   invalid: string[];
+  excluded: string[];
 } {
   const contacts = new Map<string, BusinessContact>();
   const invalid = new Set<string>();
+  const excluded = new Set<string>();
   const ordered = [...companies].sort(
     (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
   );
@@ -139,6 +148,10 @@ export function wantedContacts(companies: BusinessCompanyRow[]): {
         invalid.add(email);
         continue;
       }
+      if (company.excludeFromMailing) {
+        excluded.add(email);
+        continue;
+      }
       contacts.set(email, {
         email,
         list: businessListFor(company.locale),
@@ -151,7 +164,11 @@ export function wantedContacts(companies: BusinessCompanyRow[]): {
     }
   }
 
-  return { contacts, invalid: [...invalid] };
+  return {
+    contacts,
+    invalid: [...invalid],
+    excluded: [...excluded].filter((email) => !contacts.has(email)),
+  };
 }
 
 function differs(contact: BusinessContact, current: CurrentContact): boolean {
@@ -166,10 +183,15 @@ function isOptedOut(status: string): boolean {
   return status !== 'subscribed' && status !== 'pending';
 }
 
-/** What the run will do, from the wanted state and the lists' contents. */
+/**
+ * What the run will do, from the wanted state and the lists' contents.
+ * Removing a contact of an excluded company is marked `excluded`: the admin
+ * asked for it, so the removal guard does not count it.
+ */
 export function planBusinessSync(
   wanted: Map<string, BusinessContact>,
-  current: CurrentContact[]
+  current: CurrentContact[],
+  excluded: Set<string> = new Set()
 ): { actions: BusinessSyncAction[]; unchanged: number } {
   const byEmail = new Map<string, CurrentContact[]>();
   for (const entry of current) {
@@ -204,11 +226,16 @@ export function planBusinessSync(
   for (const [email, entries] of byEmail) {
     if (wanted.has(email)) continue;
     for (const entry of entries) {
-      actions.push({
-        type: isOptedOut(entry.status) ? 'keep' : 'remove',
-        email,
-        list: entry.list,
-      });
+      if (isOptedOut(entry.status)) {
+        actions.push({ type: 'keep', email, list: entry.list });
+      } else {
+        actions.push({
+          type: 'remove',
+          email,
+          list: entry.list,
+          ...(excluded.has(email) ? { excluded: true as const } : {}),
+        });
+      }
     }
   }
 
@@ -272,6 +299,7 @@ export class BusinessContacts {
         countrycode: true,
         contact: true,
         contactemail: true,
+        excludeFromMailing: true,
         updatedAt: true,
         User: {
           select: {
@@ -367,6 +395,7 @@ export class BusinessContacts {
       moved: [],
       removed: [],
       kept: [],
+      excluded: [],
       unchanged: 0,
       skipped: [],
       errors: [],
@@ -395,16 +424,23 @@ export class BusinessContacts {
     try {
       this.info(`Starting business list sync${dryRun ? ' (dry run)' : ''}`);
 
-      const { contacts, invalid } = await this.loadWanted();
+      const { contacts, invalid, excluded } = await this.loadWanted();
       const current = await this.loadCurrent(ids);
-      const { actions, unchanged } = planBusinessSync(contacts, current);
+      const { actions, unchanged } = planBusinessSync(
+        contacts,
+        current,
+        new Set(excluded)
+      );
 
       result.wanted = contacts.size;
       for (const contact of contacts.values()) result.perList[contact.list]++;
       result.unchanged = unchanged;
       result.skipped = invalid;
+      result.excluded = excluded;
 
-      const removals = actions.filter((a) => a.type === 'remove').length;
+      const removals = actions.filter(
+        (a) => a.type === 'remove' && !a.excluded
+      ).length;
       result.removalsBlocked =
         removals > REMOVAL_GUARD_MIN &&
         removals > current.length * REMOVAL_GUARD_SHARE;
@@ -419,7 +455,7 @@ export class BusinessContacts {
           result.kept.push(email);
           continue;
         }
-        if (action.type === 'remove' && result.removalsBlocked) continue;
+        if (action.type === 'remove' && !action.excluded && result.removalsBlocked) continue;
 
         const bucket = {
           add: result.added,
@@ -485,7 +521,7 @@ export class BusinessContacts {
           `[${white.bold('businessContacts')}] Business list sync ${dryRun ? 'planned' : 'done'}: ` +
             `${white.bold(result.wanted)} contacts (NL ${white.bold(result.perList.nl)}, EN ${white.bold(result.perList.en)}, DE ${white.bold(result.perList.de)}), ` +
             `added ${white.bold(result.added.length)}, updated ${white.bold(result.updated.length)}, moved ${white.bold(result.moved.length)}, ` +
-            `removed ${white.bold(result.removed.length)}, kept ${white.bold(result.kept.length)}, unchanged ${white.bold(result.unchanged)}, ` +
+            `removed ${white.bold(result.removed.length)}, kept ${white.bold(result.kept.length)}, excluded ${white.bold(result.excluded.length)}, unchanged ${white.bold(result.unchanged)}, ` +
             `skipped ${white.bold(result.skipped.length)}, errors ${white.bold(result.errors.length)}`
         )
       );

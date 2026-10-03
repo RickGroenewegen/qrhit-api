@@ -42,6 +42,7 @@ function company(overrides: Partial<BusinessCompanyRow> = {}): BusinessCompanyRo
     countrycode: 'NL',
     contact: 'Jan de Vries',
     contactemail: 'jan@acme.nl',
+    excludeFromMailing: false,
     updatedAt: new Date('2026-09-01'),
     User: [],
     ...overrides,
@@ -134,6 +135,20 @@ describe('wantedContacts', () => {
     expect(invalid).toEqual(['not-an-address']);
   });
 
+  it('leaves out an excluded company, unless the address is also on a company that is not', () => {
+    const { contacts, excluded } = wantedContacts([
+      company({
+        id: 1,
+        excludeFromMailing: true,
+        User: [user('piet@acme.nl', 'Piet'), user('both@acme.nl', 'Both')],
+      }),
+      company({ id: 2, name: 'Other', contactemail: 'both@acme.nl', updatedAt: new Date('2025-01-01') }),
+    ]);
+    expect([...contacts.keys()]).toEqual(['both@acme.nl']);
+    expect(contacts.get('both@acme.nl')!.fields.CompanyName).toBe('Other');
+    expect(excluded).toEqual(['jan@acme.nl', 'piet@acme.nl']);
+  });
+
   it('puts an address on two companies with the latest updated one', () => {
     const { contacts } = wantedContacts([
       company({ id: 1, name: 'Old', locale: 'de', updatedAt: new Date('2026-01-01') }),
@@ -202,6 +217,18 @@ describe('planBusinessSync', () => {
       { type: 'remove', email: 'gone@acme.nl', list: 'nl' },
       { type: 'remove', email: 'pending@acme.nl', list: 'en' },
       { type: 'keep', email: 'optout@acme.nl', list: 'de' },
+    ]);
+  });
+
+  it('marks the removal of an excluded company contact, and still keeps an unsubscribed one', () => {
+    const { actions } = planBusinessSync(
+      new Map(),
+      [onList('ex@acme.nl', 'nl'), onList('exout@acme.nl', 'nl', { status: 'unsubscribed' })],
+      new Set(['ex@acme.nl', 'exout@acme.nl'])
+    );
+    expect(actions).toEqual([
+      { type: 'remove', email: 'ex@acme.nl', list: 'nl', excluded: true },
+      { type: 'keep', email: 'exout@acme.nl', list: 'nl' },
     ]);
   });
 });
@@ -316,6 +343,23 @@ describe('BusinessContacts.sync', () => {
     const pushes = outbound.calls('PushoverClient', 'sendMessage');
     expect(pushes).toHaveLength(1);
     expect(pushes[0].args[0].message).toContain('Not removing 12 of 12');
+  });
+
+  it('removes the contacts of excluded companies however many there are', async () => {
+    prismaMock.company.findMany.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) =>
+        company({ id: i, contactemail: `person${i}@acme.nl`, excludeFromMailing: true })
+      )
+    );
+    listContents({
+      nl: Array.from({ length: 12 }, (_, i) => onList(`person${i}@acme.nl`, 'nl')),
+    });
+    const result = await service.sync();
+    expect(result.removalsBlocked).toBe(false);
+    expect(result.removed).toHaveLength(12);
+    expect(result.excluded).toHaveLength(12);
+    expect(axiosDelete).toHaveBeenCalledTimes(12);
+    expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(0);
   });
 
   it('plans without writing in a dry run', async () => {

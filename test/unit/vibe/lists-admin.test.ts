@@ -50,6 +50,7 @@ describe('updateCompany', () => {
     const res = await vibe.updateCompany(1, {
       name: 'Renamed',
       followUp: true,
+      excludeFromMailing: true,
       evilField: 'drop me',
       test: true,
       id: 666,
@@ -59,7 +60,7 @@ describe('updateCompany', () => {
     expect(res.data.company.name).toBe('Renamed');
     expect(h.prisma.company.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { name: 'Renamed', followUp: true, address: 'Street' },
+      data: { name: 'Renamed', followUp: true, excludeFromMailing: true, address: 'Street' },
     });
     expect(h.prisma.companyList.updateMany).toHaveBeenCalledWith({
       where: { companyId: 1, status: 'new' },

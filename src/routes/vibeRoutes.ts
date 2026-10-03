@@ -504,6 +504,7 @@ export default async function vibeRoutes(
         name,
         followUp,
         onlyForAdmin,
+        excludeFromMailing,
         address,
         housenumber,
         city,
@@ -529,6 +530,8 @@ export default async function vibeRoutes(
         name,
         followUp,
         onlyForAdmin,
+        excludeFromMailing:
+          typeof excludeFromMailing === 'boolean' ? excludeFromMailing : undefined,
         address,
         housenumber,
         city,

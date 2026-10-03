@@ -1042,6 +1042,9 @@ model Company {
   name                 String
   followUp             Boolean        @default(false)
   onlyForAdmin         Boolean        @default(false)
+  // Keeps the company's contacts off the EmailOctopus business lists
+  // (src/businessContacts.ts).
+  excludeFromMailing   Boolean        @default(false)
   favorite             Boolean        @default(false)
   address              String?
   housenumber          String?
