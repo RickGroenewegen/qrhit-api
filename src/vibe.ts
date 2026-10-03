@@ -74,6 +74,7 @@ class Vibe {
           email: true,
           displayName: true,
           phone: true,
+          locale: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -260,99 +261,17 @@ class Vibe {
       const companyId = companyResult.data.company.id;
 
       // 1b. Create the user for this company (admin)
-      // Hash the password using the same method as in auth.ts
-      // (pbkdf2Sync with 10000 iterations, 64 bytes, sha512)
-      const salt = auth.generateSalt();
-      const hash = auth.hashPassword(userPassword, salt);
-
       const isQRVote = this.utils.parseBoolean(qrvote);
-
-      // Find the appropriate user group based on qrvote flag
-      const userGroupName = isQRVote ? 'qrvoteadmin' : 'companyadmin';
-      const userGroup = await this.prisma.userGroup.findUnique({
-        where: { name: userGroupName },
+      const user = await this.upsertLeadUser({
+        email,
+        fullname,
+        phone,
+        companyId,
+        locale: formLocale,
+        password: userPassword,
+        marketingEmails: !!marketingEmails,
+        isQRVote,
       });
-
-      // Create the user (if not exists)
-      let user = await this.prisma.user.findUnique({
-        where: { email },
-      });
-      if (!user) {
-        // Generate a hash for the user (required field)
-        const userHash = require('crypto')
-          .randomBytes(8)
-          .toString('hex')
-          .slice(0, 16);
-
-        // For QRVote users, generate verification hash and set verified to false
-        // For regular users, set verified to true with current date
-        let verificationHash: string | null = null;
-        let verified = true;
-        let verifiedAt: Date | null = new Date();
-
-        if (isQRVote) {
-          verificationHash = require('crypto').randomBytes(16).toString('hex');
-          verified = false;
-          verifiedAt = null;
-        }
-
-        user = await this.prisma.user.create({
-          data: {
-            userId: email,
-            email,
-            displayName: fullname || email.split('@')[0],
-            phone: phone || null,
-            password: hash,
-            salt: salt,
-            hash: userHash,
-            companyId: companyId,
-            locale: formLocale,
-            marketingEmails: !!marketingEmails,
-            sync: false,
-            verificationHash: verificationHash,
-            verified: verified,
-            verifiedAt: verifiedAt,
-          },
-        });
-      } else {
-        // User already exists, update with verification hash if QRVote
-        if (isQRVote) {
-          const verificationHash = require('crypto')
-            .randomBytes(16)
-            .toString('hex');
-          user = await this.prisma.user.update({
-            where: { id: user.id },
-            data: {
-              verificationHash: verificationHash,
-              verified: false,
-              verifiedAt: null,
-            },
-          });
-        }
-
-        // If this unaffiliated user submitted a business intake, adopt them
-        // as the contact for the newly created company. Never overwrite an
-        // existing companyId — that would move someone else's user.
-        const mergePatch: any = {};
-        if (user.companyId == null) {
-          mergePatch.companyId = companyId;
-        }
-        if (phone && !user.phone) {
-          mergePatch.phone = phone;
-        }
-        if (Object.keys(mergePatch).length > 0) {
-          user = await this.prisma.user.update({
-            where: { id: user.id },
-            data: mergePatch,
-          });
-        }
-      }
-
-      // Add user to the appropriate group using the helper function
-      if (userGroup) {
-        await this.ensureUserInGroup(user.id, userGroupName);
-      }
-      await this.ensureUserInGroup(user.id, 'users');
 
       // 2. Create the company list with the same name
       // Use the company name as the list name and slug (slugify for URL safety)
@@ -474,6 +393,112 @@ class Vibe {
         statusCode: 500,
       };
     }
+  }
+
+  /**
+   * The user behind a lead from a public form (OnzeVibe, QRVote, /business):
+   * created when the e-mail is new, otherwise adopted as the company's
+   * contact when it has no company yet. Also puts it in its groups.
+   */
+  public async upsertLeadUser(lead: {
+    email: string;
+    fullname?: string;
+    phone?: string;
+    companyId: number;
+    locale: string;
+    password: string;
+    marketingEmails?: boolean;
+    isQRVote?: boolean;
+  }): Promise<any> {
+    const { email, fullname, phone, companyId, isQRVote } = lead;
+
+    // Hash the password using the same method as in auth.ts
+    // (pbkdf2Sync with 10000 iterations, 64 bytes, sha512)
+    const salt = auth.generateSalt();
+    const hash = auth.hashPassword(lead.password, salt);
+
+    // Find the appropriate user group based on qrvote flag
+    const userGroupName = isQRVote ? 'qrvoteadmin' : 'companyadmin';
+    const userGroup = await this.prisma.userGroup.findUnique({
+      where: { name: userGroupName },
+    });
+
+    // Create the user (if not exists)
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      // Generate a hash for the user (required field)
+      const userHash = crypto.randomBytes(8).toString('hex').slice(0, 16);
+
+      // For QRVote users, generate verification hash and set verified to false
+      // For regular users, set verified to true with current date
+      let verificationHash: string | null = null;
+      let verified = true;
+      let verifiedAt: Date | null = new Date();
+
+      if (isQRVote) {
+        verificationHash = crypto.randomBytes(16).toString('hex');
+        verified = false;
+        verifiedAt = null;
+      }
+
+      user = await this.prisma.user.create({
+        data: {
+          userId: email,
+          email,
+          displayName: fullname || email.split('@')[0],
+          phone: phone || null,
+          password: hash,
+          salt: salt,
+          hash: userHash,
+          companyId: companyId,
+          locale: lead.locale,
+          marketingEmails: !!lead.marketingEmails,
+          sync: false,
+          verificationHash: verificationHash,
+          verified: verified,
+          verifiedAt: verifiedAt,
+        },
+      });
+    } else {
+      // User already exists, update with verification hash if QRVote
+      if (isQRVote) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            verificationHash: crypto.randomBytes(16).toString('hex'),
+            verified: false,
+            verifiedAt: null,
+          },
+        });
+      }
+
+      // If this unaffiliated user submitted a business intake, adopt them
+      // as the contact for the newly created company. Never overwrite an
+      // existing companyId — that would move someone else's user.
+      const mergePatch: any = {};
+      if (user.companyId == null) {
+        mergePatch.companyId = companyId;
+      }
+      if (phone && !user.phone) {
+        mergePatch.phone = phone;
+      }
+      if (Object.keys(mergePatch).length > 0) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: mergePatch,
+        });
+      }
+    }
+
+    // Add user to the appropriate group using the helper function
+    if (userGroup) {
+      await this.ensureUserInGroup(user.id, userGroupName);
+    }
+    await this.ensureUserInGroup(user.id, 'users');
+
+    return user;
   }
 
   /**
@@ -2533,6 +2558,9 @@ class Vibe {
         numberOfTracks: companyList.numberOfCards,
         hideCircle: companyList.hideCircle,
         qrColor: companyList.qrColor,
+        // The list's back-side text colour; without it every business card
+        // back printed black whatever the admin had set.
+        fontColor: companyList.textColor || '#000000',
         amount: 1,
         price: price,
         type: 'physical',

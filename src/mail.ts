@@ -1141,6 +1141,15 @@ class Mail {
     phone?: string | null;
     message?: string | null;
     locale?: string | null;
+    /** Set for a quote request: what was asked and where to pick it up. */
+    quote?: {
+      requestId: number;
+      quantity: number;
+      website?: string | null;
+      brandKitUrl?: string | null;
+      files: string[];
+      dashboardUrl: string;
+    };
   }): Promise<void> {
     if (!this.ses) return;
 
@@ -1158,6 +1167,13 @@ class Mail {
     if (lead.locale) {
       rows.push(['Language', lead.locale]);
     }
+    if (lead.quote) {
+      rows.push(['Quote request', `#${lead.quote.requestId}: ${lead.quote.quantity} boxes, design + quotation within 24 hours`]);
+      if (lead.quote.website) rows.push(['Website', lead.quote.website]);
+      if (lead.quote.brandKitUrl) rows.push(['Brand kit link', lead.quote.brandKitUrl]);
+      if (lead.quote.files.length) rows.push(['Brand kit files', lead.quote.files.join('\n')]);
+      rows.push(['Dashboard', lead.quote.dashboardUrl]);
+    }
     if (lead.message && String(lead.message).trim()) {
       rows.push(['Message', String(lead.message).trim()]);
     }
@@ -1173,7 +1189,9 @@ class Mail {
     // Form values end up in raw MIME headers; keep them single-line.
     const headerSafe = (value: string) => value.replace(/[\r\n<>"]/g, ' ').replace(/\s+/g, ' ').trim();
     const senderName = headerSafe(lead.fullname) || process.env['PRODUCT_NAME']!;
-    const subject = `${process.env['PRODUCT_NAME']} Business request: ${headerSafe(lead.company)}`;
+    const subject = lead.quote
+      ? `${process.env['PRODUCT_NAME']} Quote request (${lead.quote.quantity} boxes): ${headerSafe(lead.company)}`
+      : `${process.env['PRODUCT_NAME']} Business request: ${headerSafe(lead.company)}`;
 
     this.logger.log(
       color.blue.bold(
@@ -2976,20 +2994,33 @@ ${params.html}
    * @param subject The email subject (already translated)
    * @param message The email message (already translated)
    * @param locale The target locale
+   * @param options Files to attach, a different sender/Reply-To (the business
+   *   inbox for company mail), escaping of the message and rethrowing, for a
+   *   caller that has to tell the admin a send failed
    */
   public async sendCustomMail(
     email: string,
     fullname: string,
     subject: string,
     message: string,
-    locale: string = 'en'
+    locale: string = 'en',
+    options: {
+      attachments?: Array<{ filename: string; contentType: string; data: Buffer }>;
+      fromEmail?: string;
+      replyTo?: string;
+      escapeMessage?: boolean;
+      throwOnError?: boolean;
+    } = {}
   ): Promise<void> {
-    if (!this.ses) return;
+    if (!this.ses) {
+      if (options.throwOnError) throw new Error('Mail is not configured (SES)');
+      return;
+    }
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
     // Convert line breaks to HTML <br> tags for HTML version
-    const messageHtml = message.replace(/\n/g, '<br>');
+    const messageHtml = (options.escapeMessage ? this.escapeHtml(message) : message).replace(/\n/g, '<br>');
 
     // Determine greeting based on locale
     const mailParams = {
@@ -3024,17 +3055,26 @@ ${params.html}
           cid: 'logo',
         },
       ];
+      for (const file of options.attachments ?? []) {
+        attachments.push({
+          contentType: file.contentType,
+          // renderRaw writes the name into a plain header: ASCII, no quotes.
+          filename: file.filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\\r\n]/g, '_'),
+          data: this.wrapBase64(file.data.toString('base64')),
+        });
+      }
 
+      const fromEmail = options.fromEmail || process.env['INFO_EMAIL'];
       const rawEmail = await this.renderRaw(
         {
-          from: `${process.env['PRODUCT_NAME']} <${process.env['INFO_EMAIL']}>`,
+          from: `${process.env['PRODUCT_NAME']} <${fromEmail}>`,
           to: email,
-          subject,
+          subject: this.encodeHeader(subject),
           html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
           text,
           attachments,
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['INFO_EMAIL'],
+          replyTo: options.replyTo || process.env['INFO_EMAIL'],
         },
         true // BCC custom emails
       );
@@ -3049,7 +3089,13 @@ ${params.html}
 
       await this.ses.send(command);
       this.logger.log(
-        color.blue.bold(`Custom email sent to ${white.bold(email)}`)
+        color.blue.bold(
+          `Custom email sent to ${white.bold(email)}${
+            options.attachments?.length
+              ? ` with ${white.bold(String(options.attachments.length))} attachment(s)`
+              : ''
+          }`
+        )
       );
     } catch (error) {
       console.error('Error while sending custom email:', error);
@@ -3058,7 +3104,16 @@ ${params.html}
           `Failed to send custom email to ${white.bold(email)}: ${error}`
         )
       );
+      if (options.throwOnError) throw error;
     }
+  }
+
+  /** RFC 2047 encoding for a header that is not plain ASCII (German umlauts). */
+  private encodeHeader(value: string): string {
+    const singleLine = value.replace(/[\r\n]+/g, ' ');
+    return /^[\x20-\x7e]*$/.test(singleLine)
+      ? singleLine
+      : `=?UTF-8?B?${Buffer.from(singleLine, 'utf8').toString('base64')}?=`;
   }
 
   /**

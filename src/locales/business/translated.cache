@@ -1158,5 +1158,33 @@
   "invoice_lines.licenseFee": [
     "nl",
     "de"
+  ],
+  "quotation.optionsIntro": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsCardsUnit": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsPricePerBox": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsQuantity": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsChoiceLabel": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsDepositText": [
+    "nl",
+    "de"
+  ],
+  "quotation.optionsPiDelivered": [
+    "nl",
+    "de"
   ]
 }

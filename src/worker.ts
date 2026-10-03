@@ -4,7 +4,6 @@ import Logger from './logger';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
-import AssetQueue from './assetQueue';
 import ErrorTracking from './errorTracking';
 
 dotenv.config({ quiet: true });
@@ -21,14 +20,12 @@ class QueueWorker {
   private generatorQueue: GeneratorQueue;
   private musicFetchQueue: MusicFetchQueue;
   private excelQueue: ExcelQueue;
-  private assetQueue: AssetQueue;
   private shutdownInProgress = false;
 
   constructor() {
     this.generatorQueue = GeneratorQueue.getInstance();
     this.musicFetchQueue = MusicFetchQueue.getInstance();
     this.excelQueue = ExcelQueue.getInstance();
-    this.assetQueue = AssetQueue.getInstance();
     this.setupSignalHandlers();
   }
 
@@ -47,7 +44,6 @@ class QueueWorker {
           this.generatorQueue.shutdown(),
           this.musicFetchQueue.close(),
           this.excelQueue.close(),
-          this.assetQueue.close(),
         ]);
         this.logger.log(color.green.bold('Worker shutdown complete'));
         process.exit(0);
@@ -89,26 +85,22 @@ class QueueWorker {
       // Start Excel workers (2 workers for concurrent Excel processing)
       this.excelQueue.startWorkers(2);
 
-      // Start Asset workers (1 worker to respect Gemini rate limits)
-      this.assetQueue.startWorkers(4);
-
       const musicFetchWorkers = process.env['ENVIRONMENT'] === 'production' ? 1 : 0;
       this.logger.log(
         color.green.bold(
           `Queue workers started successfully with ${white.bold(
             workerCount.toString()
-          )} Generator workers, ${white.bold(musicFetchWorkers.toString())} MusicFetch worker${musicFetchWorkers === 1 ? '' : 's'}, 2 Excel workers, and 1 Asset worker`
+          )} Generator workers, ${white.bold(musicFetchWorkers.toString())} MusicFetch worker${musicFetchWorkers === 1 ? '' : 's'} and 2 Excel workers`
         )
       );
 
       // Log queue status every 30 seconds
       setInterval(async () => {
         try {
-          const [generatorStatus, musicFetchStatus, excelStatus, assetStatus] = await Promise.all([
+          const [generatorStatus, musicFetchStatus, excelStatus] = await Promise.all([
             this.generatorQueue.getQueueStatus(),
             this.musicFetchQueue.getQueueStatus(),
             this.excelQueue.getQueueStatus(),
-            this.assetQueue.getQueueStatus(),
           ]);
 
           this.logger.log(
@@ -133,14 +125,6 @@ class QueueWorker {
             ` | Active: ${white.bold(excelStatus.active.toString())}` +
             ` | Completed: ${white.bold(excelStatus.completed.toString())}` +
             ` | Failed: ${white.bold(excelStatus.failed.toString())}`
-          );
-
-          this.logger.log(
-            blue.bold('Asset Queue:') +
-            ` Waiting: ${white.bold(assetStatus.waiting.toString())}` +
-            ` | Active: ${white.bold(assetStatus.active.toString())}` +
-            ` | Completed: ${white.bold(assetStatus.completed.toString())}` +
-            ` | Failed: ${white.bold(assetStatus.failed.toString())}`
           );
         } catch (error) {
           this.logger.log(

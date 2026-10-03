@@ -38,8 +38,8 @@ import ProgressWebSocketServer from './progress-websocket';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
-import AssetQueue from './assetQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
+import businessRoutes from './routes/businessRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
@@ -167,6 +167,7 @@ class Server {
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await discountRoutes(this.fastify, getAuthHandler);
+    await businessRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -274,14 +275,11 @@ class Server {
           const excelQueue = ExcelQueue.getInstance();
           excelQueue.startWorkers(2);
 
-          const assetQueue = AssetQueue.getInstance();
-          assetQueue.startWorkers(4);
-
           this.logger.log(
             color.blue.bold(
               `Queue workers initialized successfully: ${color.white.bold(
                 workerCount.toString()
-              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers, ${color.white.bold('1')} Asset worker`
+              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers`
             )
           );
         } catch (error) {

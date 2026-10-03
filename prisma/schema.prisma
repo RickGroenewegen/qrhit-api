@@ -1064,8 +1064,63 @@ model Company {
   CompanyEvent         CompanyEvent[]
   CompanyAsset         CompanyAsset[]
   Quotation            Quotation[]
+  CompanyQuoteRequest  CompanyQuoteRequest[]
+  CompanyFile          CompanyFile[]
 
   @@map("companies")
+}
+
+// A request from the /business form: design + three-size quotation promised
+// within 24 hours. boxd lists the open ones (GET /vibe/quote-requests) and
+// moves them along; see "Business quote requests" in the frontend CLAUDE.md.
+model CompanyQuoteRequest {
+  id            Int       @id @default(autoincrement())
+  companyId     Int
+  listId        Int?
+  userId        Int? // the lead's contact user
+  status        String    @default("open") // open, in_progress, design_ready, sent, closed
+  quantity      Int
+  website       String?   @db.VarChar(500)
+  brandKitUrl   String?   @db.VarChar(1000)
+  message       String?   @db.Text
+  locale        String    @default("nl")
+  quotationId   Int?
+  startedAt     DateTime?
+  designReadyAt DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  Company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CompanyFile CompanyFile[]
+
+  @@index([status])
+  @@index([companyId])
+  @@map("company_quote_requests")
+}
+
+// The company's asset store: any file, kept private under
+// PRIVATE_DIR/company-files/<companyId>/ and served only to admins.
+model CompanyFile {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  quoteRequestId Int?
+  category       String   @default("other") // brand, design, generated, other
+  source         String   @default("admin") // client, admin, boxd, migrated
+  filename       String
+  originalName   String
+  mimeType       String
+  size           Int      @default(0)
+  note           String?  @db.Text
+  legacyKey      String?  @unique
+  createdAt      DateTime @default(now())
+
+  Company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CompanyQuoteRequest CompanyQuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([quoteRequestId])
+  @@map("company_files")
 }
 
 model Quotation {
@@ -1113,6 +1168,9 @@ model CompanyEvent {
   @@map("company_events")
 }
 
+// The old AI asset generator. Unread since the asset store (CompanyFile)
+// replaced it; kept as the rollback path, its images were copied over by
+// scripts/migrate-company-assets.ts.
 model CompanyAsset {
   id             Int      @id @default(autoincrement())
   companyId      Int

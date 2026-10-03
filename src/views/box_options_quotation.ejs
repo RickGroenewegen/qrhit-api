@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title><%= t('title') %> - <%= company.name %></title>
+    <%# The three-size quotation (variant schneider-options). Header, address
+        block, totals styling, product information and terms follow
+        tromp_quotation.ejs so both quotations read as one family. %>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
+
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #0b2c31;
+            background: white;
+            font-size: 14px;
+        }
+
+        .container {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            padding: 12mm 15mm;
+            background: white;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 8px; }
+        .quotation-title {
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif;
+            font-stretch: expanded;
+            font-size: 34px;
+            line-height: 1.1;
+            font-weight: 900;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+        }
+        .company-section { text-align: right; }
+        .company-section .label { font-size: 10px; color: #3d6d74; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .logo { height: 50px; width: auto; margin-bottom: 8px; }
+        .company-details { font-size: 11px; color: #3d6d74; line-height: 1.3; }
+
+        .info-section { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 14px; }
+        .info-label {
+            font-size: 11px; color: #3d6d74; text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 6px; padding-left: 15px; position: relative;
+        }
+        .info-label:before {
+            content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 15px; background: #18565e;
+        }
+        .info-content { padding-left: 15px; }
+        .info-content .name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .info-content .details { font-size: 12px; color: #3d6d74; line-height: 1.4; }
+        .info-field { margin-top: 4px; display: flex; gap: 12px; }
+        .info-field .field-label { font-weight: 600; color: #0b2c31; min-width: 60px; display: inline-block; }
+        .quotation-details { background: #feefe5; padding: 12px 15px; border-radius: 4px; }
+        .quotation-details .detail-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+        .quotation-details .detail-label { color: #3d6d74; }
+        .quotation-details .detail-value { font-weight: 600; }
+
+        .intro { font-size: 12.5px; color: #3d6d74; line-height: 1.5; margin-bottom: 12px; }
+
+        .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+        .option { border: 1px solid #eed2bf; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+        .option-shot { height: 92px; background: #feefe5; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .option-shot img { width: 100%; height: 100%; object-fit: cover; }
+        .option-head { background: #18565e; color: #feefe5; padding: 7px 10px; }
+        .option-count {
+            font-family: 'Archivo', 'Arial Black', Arial, sans-serif; font-stretch: expanded; font-weight: 900;
+            font-size: 22px; line-height: 1; margin-right: 4px;
+        }
+        .option-unit { font-size: 12px; font-weight: 600; }
+        .option-details { font-size: 11px; color: #3d6d74; padding: 7px 10px 0; min-height: 34px; line-height: 1.35; }
+        .option-rows { padding: 4px 10px 8px; margin-top: auto; }
+        .option-row { display: flex; justify-content: space-between; gap: 6px; font-size: 11.5px; padding: 3px 0; border-bottom: 1px solid #f8e1d2; }
+        .option-row:last-child { border-bottom: none; }
+        .option-row .label { color: #3d6d74; }
+        .option-row .value { font-weight: 600; white-space: nowrap; }
+        .option-row.price .value { font-size: 13px; }
+        .option-row.total { border-top: 2px solid #18565e; border-bottom: none; margin-top: 4px; padding-top: 6px; }
+        .option-row.total .label { color: #0b2c31; font-weight: 700; }
+        .option-row.total .value { color: #18565e; font-size: 14px; font-weight: 700; }
+        .option-vat-note { font-size: 9px; color: #3d6d74; text-align: right; margin: -6px 0 10px; }
+
+        .choice { display: flex; gap: 18px; align-items: center; font-size: 12px; margin: 6px 0 8px; }
+        .choice .label { color: #3d6d74; }
+        .choice .tick { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+        .choice .box { width: 13px; height: 13px; border: 1.5px solid #18565e; border-radius: 2px; display: inline-block; }
+
+        .notes-section { margin-bottom: 40px; page-break-before: always; padding-top: 15mm; }
+        .section-title {
+            font-size: 16px; font-weight: 600; margin-bottom: 15px; padding-bottom: 8px;
+            border-bottom: 2px solid #18565e; display: inline-block;
+        }
+        .notes-content {
+            font-size: 13px; color: #3d6d74; line-height: 1.8; background: #feefe5;
+            padding: 20px; border-radius: 4px; border-left: 4px solid #18565e;
+        }
+        .notes-content strong { color: #0b2c31; }
+
+        .terms-section { margin-bottom: 25px; page-break-before: always; padding-top: 15mm; }
+        .terms-list { list-style: none; padding: 0; counter-reset: item; }
+        .terms-list li { position: relative; padding-left: 25px; margin-bottom: 10px; font-size: 13px; color: #3d6d74; line-height: 1.6; }
+        .terms-list li:before { content: counter(item) "."; counter-increment: item; position: absolute; left: 0; color: #18565e; font-weight: 600; }
+
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eed2bf; }
+        .footer-content { font-size: 13px; color: #3d6d74; line-height: 1.6; }
+        .footer-content a { color: #18565e; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <%
+        const shots = { 48: '1x1.jpeg', 96: '2x1.jpeg', 192: '2x2.jpeg' };
+        const details = { 48: 'schneider48Details', 96: 'schneider96Details', 192: 'schneider192Details' };
+    %>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 class="quotation-title"><%= t('title') %></h1>
+            </div>
+            <div class="company-section">
+                <div class="label"><%= t('issuedBy') %></div>
+                <img src="<%= baseUrl %>/assets/images/logo.png" alt="QRSong!" class="logo" />
+                <div class="company-details">
+                    QRSong!<br>
+                    Box A3821<br>
+                    Keurenplein 41<br>
+                    1069CD Amsterdam<br>
+                    zakelijk@qrsong.io<br>
+                    <%= t('senderCoc') %>: 99311917<br>
+                    <%= t('senderVat') %>: <%= (vatContext.region === 'nl' && locale === 'nl') ? '8689.27.764.B.01' : 'NL868927764B01' %>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-box">
+                <div class="info-label"><%= t('addressedTo') %></div>
+                <div class="info-content">
+                    <div class="name"><%= company.name %></div>
+                    <div class="details">
+                        <% if (company.address && company.housenumber) { %>
+                            <%= company.address %> <%= company.housenumber %><br>
+                        <% } %>
+                        <% if (company.zipcode && company.city) { %>
+                            <%= company.zipcode %> <%= company.city %><br>
+                        <% } %>
+                        <% if (company.countrycode) { %>
+                            <%= companyCountryName %><br>
+                        <% } %>
+                        <% if (company.contact) { %>
+                            <div class="info-field"><span class="field-label"><%= t('labelContact') %></span><span><%= company.contact %></span></div>
+                        <% } %>
+                        <% if (company.contactphone) { %>
+                            <div class="info-field"><span class="field-label"><%= t('labelPhone') %></span><span><%= company.contactphone %></span></div>
+                        <% } %>
+                        <% if (company.contactemail) { %>
+                            <div class="info-field"><span class="field-label"><%= t('labelEmail') %></span><span><%= company.contactemail %></span></div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label"><%= t('detailsTitle') %></div>
+                <div class="quotation-details">
+                    <div class="detail-row"><span class="detail-label"><%= t('number') %></span><span class="detail-value"><%= quotationNumber %></span></div>
+                    <div class="detail-row"><span class="detail-label"><%= t('date') %></span><span class="detail-value"><%= formatDate(createdAt) %></span></div>
+                    <div class="detail-row"><span class="detail-label"><%= t('validUntil') %></span><span class="detail-value"><%= formatDate(validUntil) %></span></div>
+                </div>
+            </div>
+        </div>
+
+        <p class="intro"><%= t('optionsIntro', { quantity: formatNumber(quantity) }) %></p>
+
+        <div class="options">
+            <% options.forEach(function(option) { %>
+            <div class="option">
+                <div class="option-shot">
+                    <img src="<%= baseUrl %>/assets/images/<%= shots[option.cards] %>" alt="<%= t('productSchneiderBox', { count: option.cards }) %>" />
+                </div>
+                <div class="option-head">
+                    <span class="option-count"><%= option.cards %></span>
+                    <span class="option-unit"><%= t('optionsCardsUnit') %></span>
+                </div>
+                <div class="option-details"><%= t(details[option.cards]) %></div>
+                <div class="option-rows">
+                    <div class="option-row price">
+                        <span class="label"><%= t('optionsPricePerBox') %></span>
+                        <span class="value"><%= formatCurrency(option.pricePerBox) %></span>
+                    </div>
+                    <div class="option-row">
+                        <span class="label"><%= t('optionsQuantity') %></span>
+                        <span class="value">&times; <%= formatNumber(option.quantity) %></span>
+                    </div>
+                    <div class="option-row">
+                        <span class="label"><%= t('totalExclVat') %></span>
+                        <span class="value"><%= formatCurrency(option.total) %></span>
+                    </div>
+                    <div class="option-row">
+                        <% if (vatContext.reverseCharge) { %>
+                        <span class="label"><%= t('vatReverseCharge') %></span>
+                        <span class="value"><%= formatCurrency(0) %></span>
+                        <% } else { %>
+                        <span class="label"><%= t('vat', { percent: vatContext.rate }) %></span>
+                        <span class="value"><%= formatCurrency(option.vat) %></span>
+                        <% } %>
+                    </div>
+                    <div class="option-row total">
+                        <span class="label"><%= vatContext.rate > 0 ? t('totalInclVat') : t('total') %></span>
+                        <span class="value"><%= formatCurrency(option.totalIncl) %></span>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+        <% if (vatContext.reverseCharge) { %>
+        <div class="option-vat-note"><%= t('vatReverseChargeNote') %></div>
+        <% } %>
+
+        <div style="margin-top: 8px;">
+            <div style="font-size: 10px; color: #3d6d74; margin-bottom: 6px; line-height: 1.4;">
+                <%= t('signatureIntro') %>
+            </div>
+            <div style="border: 1px solid #eed2bf; border-radius: 4px; padding: 10px; width: 62%;">
+                <div class="choice">
+                    <span class="label"><%= t('optionsChoiceLabel') %></span>
+                    <% options.forEach(function(option) { %>
+                    <span class="tick"><span class="box"></span><%= option.cards %> <%= t('optionsCardsUnit') %></span>
+                    <% }); %>
+                </div>
+                <div style="font-size: 11px; color: #3d6d74; margin-bottom: 4px;"><%= t('signatureFor') %> <%= company.name %></div>
+                <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 10px; padding: 10px; background: #dce9ea; border-left: 4px solid #18565e; border-radius: 4px;">
+            <strong style="color: #18565e; font-size: 12px;"><%= t('depositTitle') %></strong>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #3d6d74; line-height: 1.3;">
+                <%= t('optionsDepositText') %>
+            </p>
+        </div>
+
+        <div class="notes-section">
+            <h2 class="section-title"><%= t('productInfoTitle') %></h2>
+            <div class="notes-content">
+                <strong><%= t('piWhatIsDelivered') %></strong><br>
+                • <%= t('optionsPiDelivered', { quantity: formatNumber(quantity) }) %><br><br>
+
+                <% options.forEach(function(option) { %>
+                <strong><%= t('productSchneiderBox', { count: option.cards }) %></strong><br>
+                <% if (option.cards === 48) { %>
+                • <%= t('piSchneider48a') %><br>
+                • <%= t('piSchneider48b') %><br>
+                <% } else if (option.cards === 96) { %>
+                • <%= t('piSchneider96') %><br>
+                • <%= t('piSchneiderBoard') %><br>
+                <% } else { %>
+                • <%= t('piSchneiderOther') %><br>
+                • <%= t('piSchneiderBoard') %><br>
+                <% } %>
+                • <%= t('piSchneiderTotal', { boxes: formatNumber(quantity), cards: formatNumber(quantity * option.cards) }) %><br><br>
+                <% }); %>
+
+                <strong><%= t('piSpecsCards') %></strong><br>
+                • <%= t('piSchneiderCard1') %><br>
+                • <%= t('piSchneiderCard2') %><br>
+                • <%= t('piSchneiderCard3') %><br>
+                • <%= t('piSchneiderCard4') %>
+            </div>
+        </div>
+
+        <%- include('partials/quotation_terms', { brandName: 'QRSong!' }) %>
+
+        <div class="footer">
+            <div class="footer-content">
+                <%= t('footerContact') %> <a href="mailto:zakelijk@qrsong.io">zakelijk@qrsong.io</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

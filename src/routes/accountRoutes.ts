@@ -19,9 +19,16 @@ import crypto from 'crypto';
 import LoginRateLimiter from '../loginRateLimiter';
 import { setAuthCookie, clearAuthCookie } from '../cookieAuth';
 import { APP_DESIGN_PRICE } from '../config/constants';
+import { CARD_DESIGN_SELECT, pickCardDesign } from '../cardDesigns';
 
 const prisma = PrismaInstance.getInstance();
 const rateLimiter = LoginRateLimiter.getInstance();
+
+/** The card type the customer chose: sheets are stored as physical with subType 'sheets'. */
+function orderLineType(php: { type: string; subType: string | null }): 'digital' | 'physical' | 'sheets' {
+  if (php.subType === 'sheets') return 'sheets';
+  return php.type === 'physical' ? 'physical' : 'digital';
+}
 
 export default async function accountRoutes(
   fastify: FastifyInstance,
@@ -1287,6 +1294,7 @@ export default async function accountRoutes(
                     playlistId: true,
                     name: true,
                     image: true,
+                    type: true,
                   },
                 },
                 bingoFiles: {
@@ -1351,6 +1359,11 @@ export default async function accountRoutes(
               image: php.playlist.image,
               numberOfTracks: php.numberOfTracks,
               type: php.type,
+              // What the customer chose: sheets are stored as physical + subType.
+              orderType: orderLineType(php),
+              // Gift cards and business (OnzeVibe) orders cannot be ordered again
+              // from the account: they are not a card set built in the order flow.
+              canOrderAgain: php.playlist.type !== 'giftcard' && !payment.vibe,
               // Individual playlist download availability
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
@@ -1387,6 +1400,94 @@ export default async function accountRoutes(
           success: false,
           error: 'internalServerError',
         });
+      }
+    }
+  );
+
+  // "Order again" from the account: one past order line as the order flow
+  // needs it to start over on the card overview with the same card and box
+  // design. Images are bare filenames in shared folders, so the new order
+  // reuses the same files.
+  fastify.get(
+    '/api/account/order-again/:paymentHasPlaylistId',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const phpId = parseInt(request.params.paymentHasPlaylistId, 10);
+        if (!Number.isInteger(phpId)) {
+          reply.status(400).send({ success: false, error: 'invalidId' });
+          return;
+        }
+        const user = await prisma.user.findUnique({
+          where: { userId: request.user.userId },
+          select: { id: true },
+        });
+        const php = await prisma.paymentHasPlaylist.findUnique({
+          where: { id: phpId },
+          include: {
+            payment: { select: { userId: true, status: true, vibe: true } },
+            playlist: {
+              select: { playlistId: true, serviceType: true, type: true, name: true, image: true },
+            },
+            extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' } },
+          },
+        });
+        if (!user || !php || php.payment.userId !== user.id || php.payment.status !== 'paid') {
+          reply.status(404).send({ success: false, error: 'orderNotFound' });
+          return;
+        }
+        if (php.playlist.type === 'giftcard' || php.payment.vibe) {
+          reply.status(400).send({ success: false, error: 'notReorderable' });
+          return;
+        }
+
+        const type = orderLineType(php);
+        reply.send({
+          success: true,
+          order: {
+            paymentHasPlaylistId: php.id,
+            playlistId: php.playlist.playlistId,
+            serviceType: php.playlist.serviceType || 'spotify',
+            name: php.playlist.name,
+            image: php.playlist.image,
+            type,
+            eco: php.eco,
+            doubleSided: php.doubleSided,
+            allowDuplicates: php.allowDuplicates,
+            gamesEnabled: php.gamesEnabled,
+            design: pickCardDesign(php),
+            extraDesigns: php.extraDesigns.map(pickCardDesign),
+            // Boxes come with physical cards only.
+            box:
+              type === 'physical' && php.boxEnabled
+                ? {
+                    boxFrontBackgroundType: php.boxFrontBackgroundType,
+                    boxFrontBackground: php.boxFrontBackground,
+                    boxFrontBackgroundColor: php.boxFrontBackgroundColor,
+                    boxFrontLogo: php.boxFrontLogo,
+                    boxFrontLogoScale: php.boxFrontLogoScale,
+                    boxFrontLogoPositionX: php.boxFrontLogoPositionX,
+                    boxFrontLogoPositionY: php.boxFrontLogoPositionY,
+                    boxFrontEmoji: php.boxFrontEmoji,
+                    boxBackBackgroundType: php.boxBackBackgroundType,
+                    boxBackBackground: php.boxBackBackground,
+                    boxBackBackgroundColor: php.boxBackBackgroundColor,
+                    boxBackFontColor: php.boxBackFontColor,
+                    boxBackUseGradient: php.boxBackUseGradient,
+                    boxBackGradientColor: php.boxBackGradientColor,
+                    boxBackGradientDegrees: php.boxBackGradientDegrees,
+                    boxBackGradientPosition: php.boxBackGradientPosition,
+                    boxBackOpacity: php.boxBackOpacity,
+                    boxBackText: php.boxBackText,
+                    boxBackSelectedFont: php.boxBackSelectedFont,
+                    boxBackSelectedFontSize: php.boxBackSelectedFontSize,
+                  }
+                : null,
+          },
+        });
+      } catch (error) {
+        console.error('Error in order again:', error);
+        reply.status(500).send({ success: false, error: 'internalServerError' });
       }
     }
   );

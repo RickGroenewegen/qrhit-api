@@ -38,6 +38,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Usage: `./_scripts/rebuild-locales.sh [key1 key2 ...]`
    - Keys are optional and just logged for documentation purposes
 
+### Production, read-only
+
+3. **ro-query.sh**
+   - One query against the production database as the read-only user (`LIVE_DB_READONLY_*`, host from `DATABASE_URL`), with a 10 s limit
+   - Usage: `./_scripts/ro-query.sh [--vertical] "SELECT …"`; anything but SELECT/SHOW/DESCRIBE/EXPLAIN/WITH is refused
+   - Keep it narrow (indexed ids, LIMIT): it is the live database
+
 ### Translation Files
 - Translations are stored in `src/locales/*.json` (en.json, nl.json, de.json, etc.)
 - Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`
@@ -750,6 +757,22 @@ so no invoice matched the quotation or the Sell column.
   its own ids, so a company in `qrhit_dev` can resolve to a real customer's
   contact in the shared administration (dev company 53 finds contact
   `qrhit-53`). An invoice created from a local API is a real invoice.
+
+## Business quote requests, the company asset store, three-size quotations
+
+The /business form, the private file store behind a company's Assets tab,
+mailing files to a contact and the 48/96/192 quotation all live in
+`src/routes/businessRoutes.ts` (`quoteRequests.ts`, `companyFiles.ts`,
+`boxOptionsQuotation.ts`, `services/boxOptionsPricing.ts`). The frontend
+CLAUDE.md, "Business quote requests", explains the flow and its rules. Two
+things to know here:
+
+- boxd and qquote call these routes with the admin bearer token
+  (`QRSONG_API_TOKEN` in their `.env`), like the dashboard.
+- The AI asset generator (`assetQueue.ts`, Gemini) is gone; `company_assets`
+  is kept unread as the rollback path. After `db push` on production, run
+  `npx tsx scripts/migrate-company-assets.ts` (report) and then with
+  `--write` to copy its images into the store.
 
 ## Featured playlist covers
 
