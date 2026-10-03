@@ -797,12 +797,13 @@ things to know here:
 - **Previews are bounded** because PSD and PDF brand kits come from the public
   /business form without login: a PSD header is only believed when its
   image data is in the file (sides up to 300,000), a PDF page is scaled by
-  its longer side, a CSV is read for its first 256 KB, an xlsx that really
-  unpacks past 64 MB is refused before exceljs sees it (`zipInflatedSize`
-  inflates every entry with a cap; a zip's declared sizes are not
-  believed), sharp stops at 100 megapixels, and a failed preview
-  (`.thumb.failed`) is not retried for a day. Keep any new renderer inside
-  such limits.
+  its longer side, a CSV is read for its first 256 KB, an xlsx over 10 MB or
+  that really unpacks past 64 MB is refused before exceljs sees it
+  (`xlsxUnpacksWithin` streams every entry through the JSZip copy exceljs
+  itself loads and stops at the limit: a zip parser of our own would see
+  other entries than exceljs, and the declared sizes are not believed),
+  sharp stops at 100 megapixels, and a failed preview (`.thumb.failed`) is
+  not retried for a day. Keep any new renderer inside such limits.
 
 ## EmailOctopus business lists (company contacts)
 

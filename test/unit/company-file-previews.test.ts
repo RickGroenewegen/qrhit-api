@@ -12,7 +12,7 @@ import {
   readPsdStructure,
   sheetSvg,
   xlsxThumb,
-  zipInflatedSize,
+  xlsxUnpacksWithin,
 } from '../../src/companyFilePreviews';
 
 /**
@@ -263,63 +263,74 @@ describe('spreadsheet previews', () => {
     expect(svg).toContain('<svg');
   });
 
-  it('measures what a real workbook unpacks to', async () => {
+  it('measures a real workbook and lets it through', async () => {
     const workbook = new ExcelJS.Workbook();
     workbook.addWorksheet('Blad1').addRow(['a']);
     const xlsx = Buffer.from(await workbook.xlsx.writeBuffer());
-    expect(zipInflatedSize(xlsx, 64 * MB)).toBeGreaterThan(0);
-    expect(zipInflatedSize(Buffer.from('not a zip'), 64 * MB)).toBeNull();
+    expect(await xlsxUnpacksWithin(xlsx, 64 * MB)).toBe(true);
+    await expect(xlsxThumb(Buffer.from('not a zip'))).rejects.toThrow();
   });
 
-  it('refuses a zip bomb that lies about its size', async () => {
-    // Declares 100 bytes, inflates to 70 MB.
-    const bomb = oneEntryZip(Buffer.alloc(70 * MB), 100);
-    expect(zipInflatedSize(bomb, 64 * MB)).toBeNull();
+  it('stops counting a zip bomb that lies about its size', async () => {
+    // Declares 100 bytes, unpacks to 70 MB; JSZip itself would only notice at the end.
+    const bomb = zipOf([{ name: 'xl/worksheets/sheet1.xml', content: Buffer.alloc(70 * MB), declaredSize: 100 }]);
+    expect(await xlsxUnpacksWithin(bomb, 64 * MB)).toBe(false);
     await expect(xlsxThumb(bomb)).rejects.toThrow(/too large/);
   });
 
-  it('counts compressed data shared by several entries every time', () => {
-    expect(zipInflatedSize(oneEntryZip(Buffer.alloc(40 * MB), 100, 1), 64 * MB)).toBe(40 * MB);
-    expect(zipInflatedSize(oneEntryZip(Buffer.alloc(40 * MB), 100, 2), 64 * MB)).toBeNull();
+  it('adds up every entry exceljs would read', async () => {
+    const one = { name: 'xl/worksheets/sheet1.xml', content: Buffer.alloc(40 * MB), declaredSize: 40 * MB };
+    expect(await xlsxUnpacksWithin(zipOf([one]), 64 * MB)).toBe(true);
+    const two = zipOf([one, { ...one, name: 'xl/worksheets/sheet2.xml' }]);
+    expect(await xlsxUnpacksWithin(two, 64 * MB)).toBe(false);
+  });
+
+  it('refuses a lying entry under the limit as well, as exceljs would fail on it', async () => {
+    const liar = zipOf([{ name: 'xl/worksheets/sheet1.xml', content: Buffer.alloc(MB), declaredSize: 100 }]);
+    await expect(xlsxUnpacksWithin(liar, 64 * MB)).rejects.toThrow(/size mismatch/);
+  });
+
+  it('does not open a workbook file over 10 MB', async () => {
+    await expect(xlsxThumb(Buffer.alloc(11 * MB))).rejects.toThrow(/too large/);
   });
 });
 
 const MB = 1024 * 1024;
 
-/**
- * A zip with one deflated file, declaring `declaredSize` as its unpacked
- * size, and `directoryEntries` central directory entries all pointing at it
- * (the overlapping-file zip bomb).
- */
-function oneEntryZip(content: Buffer, declaredSize: number, directoryEntries = 1): Buffer {
-  const name = Buffer.from('xl/worksheets/sheet1.xml');
-  const data = deflateRawSync(content);
-  const local = Buffer.alloc(30);
-  local.writeUInt32LE(0x04034b50, 0);
-  local.writeUInt16LE(20, 4);
-  local.writeUInt16LE(8, 8);
-  local.writeUInt32LE(data.length, 18);
-  local.writeUInt32LE(declaredSize, 22);
-  local.writeUInt16LE(name.length, 26);
+/** A zip of deflated files, each declaring `declaredSize` as what it unpacks to. */
+function zipOf(files: { name: string; content: Buffer; declaredSize: number }[]): Buffer {
+  const locals: Buffer[] = [];
   const central: Buffer[] = [];
-  for (let i = 0; i < directoryEntries; i++) {
+  let offset = 0;
+  for (const file of files) {
+    const name = Buffer.from(file.name);
+    const data = deflateRawSync(file.content);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(file.declaredSize, 22);
+    local.writeUInt16LE(name.length, 26);
     const entry = Buffer.alloc(46);
     entry.writeUInt32LE(0x02014b50, 0);
     entry.writeUInt16LE(20, 4);
     entry.writeUInt16LE(20, 6);
     entry.writeUInt16LE(8, 10);
     entry.writeUInt32LE(data.length, 20);
-    entry.writeUInt32LE(declaredSize, 24);
+    entry.writeUInt32LE(file.declaredSize, 24);
     entry.writeUInt16LE(name.length, 28);
-    entry.writeUInt32LE(0, 42);
+    entry.writeUInt32LE(offset, 42);
+    locals.push(local, name, data);
     central.push(entry, name);
+    offset += 30 + name.length + data.length;
   }
   const directory = Buffer.concat(central);
   const end = Buffer.alloc(22);
   end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(directoryEntries, 8);
-  end.writeUInt16LE(directoryEntries, 10);
+  end.writeUInt16LE(files.length, 8);
+  end.writeUInt16LE(files.length, 10);
   end.writeUInt32LE(directory.length, 12);
-  end.writeUInt32LE(30 + name.length + data.length, 16);
-  return Buffer.concat([local, name, data, directory, end]);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
 }
