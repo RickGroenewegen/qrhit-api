@@ -624,9 +624,9 @@ tab (`PUT /vibe/companies/:companyId/lists/:listId/sold`, admin only;
 shows: `sellPrice` (ex VAT, after discount) as turnover, gross at the VAT its
 invoice carries (21% for a Dutch company, 0% for EU reverse charge and
 export), and `sellPrice - buyPrice` as profit (0, and not "known", while the
-buy price is empty). Every sold list counts: `Company.test` is not test data
-but a leftover "Lead" flag the admin can no longer change, and filtering on it
-hid a real €20k sale on the first deploy. A list without a sell price
+buy price is empty). Every sold list counts: filtering on the old "Lead" flag
+(`Company.test`, removed 2026-10-03) hid a real €20k sale on the first
+deploy. A list without a sell price
 cannot be switched on. The day, month and country reports take
 `?segment=consumer|business|both` (default consumer, what they always
 showed); every row carries the `business*` fields, zero outside the segment.
@@ -773,6 +773,37 @@ things to know here:
   is kept unread as the rollback path. After `db push` on production, run
   `npx tsx scripts/migrate-company-assets.ts` (report) and then with
   `--write` to copy its images into the store.
+
+## EmailOctopus business lists (company contacts)
+
+Every company's contact address and its users go on an EmailOctopus business
+list in the company's language, next to the consumer lists that
+`Mail.uploadContacts()` fills. `src/businessContacts.ts`, run nightly at 03:30
+from `Mail.startCron()` and on demand from the dashboard (Bulk actions →
+System → "Sync business lists", `POST /admin/mail-octopus/business-sync`,
+`dryRun` for a preview). Built 2026-10-03.
+
+- **Lists:** `QRSong! business (NL|EN|DE) (LIVE|DEVELOPMENT)`, made by
+  `scripts/create-business-octopus-lists.ts`, ids in
+  `MAIL_OCTOPUS_BUSINESS_LIST_ID_NL/EN/DE` (LIVE on the servers, DEVELOPMENT
+  locally, like the consumer lists). Fields `FirstName`/`LastName` (the name
+  split at the first space), `CompanyName`, `Country`. Every company is
+  mailable; there is no lead/customer split.
+- **Language:** `company.locale`, nl → NL, de → DE, anything else → EN, NULL
+  → NL (the column default; every NULL company was Dutch or Belgian). An
+  address on several companies goes with the latest updated company. Users
+  in `admin`/`vibeadmin` are left out.
+- **A reconcile, not an upload.** It reads the three lists and diffs them
+  with the database: add, update what differs, move between lists when the
+  language changes, remove who is no longer a company contact. So no `sync`
+  flag and no hooks in the company code.
+- **Nobody is subscribed again.** The upsert is sent without `status` (new
+  contacts are created subscribed, existing ones keep theirs); a move carries
+  `unsubscribed` to the new list; an unsubscribed contact who left a company
+  stays on the list. Never add a `status` to the upsert.
+- A run that would remove more than 20% of the lists (and more than 10)
+  removes nobody and sends a Pushover: a broken query or the wrong database
+  must not empty them.
 
 ## Featured playlist covers
 

@@ -45,12 +45,12 @@ describe('getUsersByCompany', () => {
     });
   });
 
-  it('returns users sorted by displayName plus the company test flag', async () => {
-    h.prisma.company.findUnique.mockResolvedValue({ id: 3, test: true });
+  it('returns users sorted by displayName', async () => {
+    h.prisma.company.findUnique.mockResolvedValue({ id: 3 });
     const users = [{ id: 1, email: 'a@b.c' }];
     h.prisma.user.findMany.mockResolvedValue(users);
     const res = await vibe.getUsersByCompany(3);
-    expect(res).toEqual({ success: true, users, test: true });
+    expect(res).toEqual({ success: true, users });
     expect(h.prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { companyId: 3 },

@@ -103,8 +103,7 @@ export function toBusinessSale(list: any): BusinessSale {
 
 /**
  * Sold lists, optionally only those sold within [start, end]. Every sold
- * list counts, whatever its company's status: `Company.test` is the admin's
- * "Lead" flag, not test data, and a lead that bought a list has sold one.
+ * list counts.
  */
 export async function getBusinessSales(range?: {
   start: Date;

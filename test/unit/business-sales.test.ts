@@ -115,9 +115,9 @@ describe('toBusinessSale', () => {
 });
 
 describe('getBusinessSales', () => {
-  // Company.test is the admin's "Lead" flag: a lead's sold list counts too
-  // (Kranen Kerstpakketten's Kramp list went missing on the first deploy).
-  it('reads every sold list, within the range when one is given, whatever the company status', async () => {
+  // Every sold list counts (Kranen Kerstpakketten's Kramp list went missing
+  // on the first deploy, when lead companies were filtered out).
+  it('reads every sold list, within the range when one is given', async () => {
     prismaMock.companyList.findMany.mockResolvedValue([list()]);
     const start = new Date(2026, 8, 1);
     const end = new Date(2026, 9, 0, 23, 59, 59);

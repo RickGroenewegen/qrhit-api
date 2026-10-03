@@ -282,7 +282,6 @@ export class QuoteRequests {
 
     const result = await Vibe.getInstance().createCompany({
       name,
-      test: true, // a lead, not production
       onlyForAdmin: true,
       contact: valid.fullname,
       contactemail: valid.email,

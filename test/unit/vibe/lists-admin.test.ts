@@ -49,8 +49,9 @@ describe('updateCompany', () => {
 
     const res = await vibe.updateCompany(1, {
       name: 'Renamed',
-      test: true,
+      followUp: true,
       evilField: 'drop me',
+      test: true,
       id: 666,
       address: 'Street',
     });
@@ -58,7 +59,7 @@ describe('updateCompany', () => {
     expect(res.data.company.name).toBe('Renamed');
     expect(h.prisma.company.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { name: 'Renamed', test: true, address: 'Street' },
+      data: { name: 'Renamed', followUp: true, address: 'Street' },
     });
     expect(h.prisma.companyList.updateMany).toHaveBeenCalledWith({
       where: { companyId: 1, status: 'new' },
@@ -107,14 +108,13 @@ describe('getCompanyLists / getAllCompanies', () => {
 
   it('getAllCompanies flattens the list count', async () => {
     h.prisma.company.findMany.mockResolvedValue([
-      { id: 1, name: 'A', test: false, _count: { CompanyList: 3 } },
+      { id: 1, name: 'A', _count: { CompanyList: 3 } },
     ]);
     const res = await vibe.getAllCompanies(['admin']);
     expect(res.success).toBe(true);
     expect(res.data.companies[0]).toMatchObject({
       id: 1,
       numberOfLists: 3,
-      test: false,
     });
     expect(res.data.companies[0]._count).toBeUndefined();
   });
@@ -549,7 +549,7 @@ describe('getQuotationPDF', () => {
       locale,
     });
     h.prisma.company.findMany.mockResolvedValue([
-      { id: 1, name: 'Acme Co!', test: false, _count: { CompanyList: 0 } },
+      { id: 1, name: 'Acme Co!', _count: { CompanyList: 0 } },
     ]);
   }
 

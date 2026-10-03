@@ -99,6 +99,11 @@ vi.mock('../../src/chat', () => ({
 const cronCtor = vi.hoisted(() => vi.fn());
 vi.mock('cron', () => ({ CronJob: cronCtor }));
 
+const businessSync = vi.hoisted(() => vi.fn(async () => ({})));
+vi.mock('../../src/businessContacts', () => ({
+  default: { getInstance: () => ({ sync: businessSync }) },
+}));
+
 vi.mock('axios');
 import axios from 'axios';
 const axiosPut = vi.mocked(axios.put);
@@ -1528,7 +1533,7 @@ describe('startCron', () => {
     cronCtor.mockClear();
     prismaMock.user.findMany.mockResolvedValue([]);
     mail.startCron();
-    expect(cronCtor).toHaveBeenCalledTimes(1);
+    expect(cronCtor).toHaveBeenCalledTimes(2);
     const [schedule, callback, onComplete, start] = cronCtor.mock
       .calls[0] as any[];
     expect(schedule).toBe('0 3 * * *');
@@ -1540,5 +1545,18 @@ describe('startCron', () => {
       expect(prismaMock.user.findMany).toHaveBeenCalled()
     );
     expect(axiosPut).not.toHaveBeenCalled();
+  });
+
+  it('schedules the business list sync at 3:30 AM', () => {
+    cronCtor.mockClear();
+    businessSync.mockClear();
+    mail.startCron();
+    const [schedule, callback, onComplete, start] = cronCtor.mock
+      .calls[1] as any[];
+    expect(schedule).toBe('30 3 * * *');
+    expect(onComplete).toBeNull();
+    expect(start).toBe(true);
+    callback();
+    expect(businessSync).toHaveBeenCalledWith();
   });
 });

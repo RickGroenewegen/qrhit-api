@@ -161,11 +161,10 @@ describe('handleCompanyListCreate — happy path (companyadmin)', () => {
     expect(res.list.id).toBe(55);
     expect(res.portalWelcomeSent).toBe(true);
 
-    // Company created as non-lead (no source: 'business')
+    // Company visible to vibeadmins too (no source: 'business')
     expect(h.prisma.company.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         name: 'Acme & Co!',
-        test: false,
         onlyForAdmin: false,
         contact: 'Rick Tester',
         contactemail: 'rick@acme.test',
@@ -358,10 +357,10 @@ describe('handleCompanyListCreate — business intake (source=business)', () => 
     expect(res.success).toBe(true);
 
     expect(h.prisma.company.create.mock.calls[0][0].data).toMatchObject({
-      test: true,
       onlyForAdmin: true,
       message: 'Call me back',
     });
+    expect(h.prisma.company.create.mock.calls[0][0].data).not.toHaveProperty('test');
 
     // The lead never gets a welcome mail...
     expect(outbound.calls('Mail', 'sendPortalWelcomeEmail')).toHaveLength(0);
@@ -459,7 +458,6 @@ describe('createCompany', () => {
     expect(h.prisma.company.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         name: 'Solo',
-        test: false,
         followUp: false,
         onlyForAdmin: false,
       }),

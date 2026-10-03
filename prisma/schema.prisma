@@ -1040,7 +1040,6 @@ model TrustPilot {
 model Company {
   id                   Int            @id @default(autoincrement())
   name                 String
-  test                 Boolean        @default(false)
   followUp             Boolean        @default(false)
   onlyForAdmin         Boolean        @default(false)
   favorite             Boolean        @default(false)

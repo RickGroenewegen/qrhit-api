@@ -163,12 +163,13 @@ describe('normalizeUrl', () => {
 describe('createFromForm', () => {
   const requests = QuoteRequests.getInstance();
 
-  it('creates a lead company, user, list, request and brand kit files', async () => {
+  it('creates a company, user, list, request and brand kit files', async () => {
     const result = await requests.createFromForm(form(), [file('logo.svg')], '203.0.113.1');
     expect(result).toEqual({ requestId: 12, companyId: 900 });
     expect(h.createCompany).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Bakkerij Zoet', test: true, onlyForAdmin: true, contactemail: 'anna@zoet.nl' })
+      expect.objectContaining({ name: 'Bakkerij Zoet', onlyForAdmin: true, contactemail: 'anna@zoet.nl' })
     );
+    expect(h.createCompany.mock.calls[0][0]).not.toHaveProperty('test');
     expect(h.requestCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({ companyId: 900, listId: 55, userId: 77, quantity: 250 }),
     });

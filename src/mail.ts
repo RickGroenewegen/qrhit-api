@@ -19,6 +19,7 @@ import OpenAI from 'openai';
 import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
+import BusinessContacts from './businessContacts';
 import type {
   FinalCheckCorrectionTab,
   FinalCheckFlaggedImage,
@@ -1122,6 +1123,18 @@ class Mail {
       '0 3 * * *',
       () => {
         this.uploadContacts();
+      },
+      null,
+      true
+    );
+    // Company contacts onto the NL/EN/DE business lists. Errors are logged
+    // and pushed inside sync().
+    new CronJob(
+      '30 3 * * *',
+      () => {
+        BusinessContacts.getInstance()
+          .sync()
+          .catch(() => {});
       },
       null,
       true

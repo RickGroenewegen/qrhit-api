@@ -35,6 +35,7 @@ import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
 import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
+import BusinessContacts from '../businessContacts';
 import Promotional from '../promotional';
 import AbuseGuard from '../abuse_guard';
 import IpAllowlist from '../ipAllowlist';
@@ -637,6 +638,37 @@ export default async function adminRoutes(
             `mail-octopus/resync failed: ${error.message || error}`
           )
         );
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || String(error) });
+      }
+    }
+  );
+
+  // Reconcile the NL/EN/DE business lists with the company contacts now,
+  // instead of at 03:30. Body { dryRun?: boolean }: a dry run answers with
+  // what would change; a real run starts in the background (a first fill is
+  // a few hundred paced writes, longer than the load balancer waits) and
+  // logs its result.
+  fastify.post(
+    '/admin/mail-octopus/business-sync',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const dryRun = request.body?.dryRun === true;
+      const businessContacts = BusinessContacts.getInstance();
+      if (businessContacts.isRunning()) {
+        reply.status(409).send({ success: false, error: 'already_running' });
+        return;
+      }
+      try {
+        if (dryRun) {
+          const result = await businessContacts.sync({ dryRun });
+          reply.send({ success: true, started: false, ...result });
+        } else {
+          businessContacts.sync().catch(() => {});
+          reply.send({ success: true, started: true });
+        }
+      } catch (error: any) {
         reply
           .status(500)
           .send({ success: false, error: error.message || String(error) });
@@ -6172,11 +6204,10 @@ export default async function adminRoutes(
     async (_request: any, reply: any) => {
       try {
         const companies = await prisma.company.findMany({
-          orderBy: [{ test: 'asc' }, { name: 'asc' }],
+          orderBy: { name: 'asc' },
           select: {
             id: true,
             name: true,
-            test: true,
             address: true,
             housenumber: true,
             city: true,

@@ -181,7 +181,6 @@ describe('importCompaniesFromExcel', () => {
     expect(h.prisma.company.create).toHaveBeenCalledWith({
       data: {
         name: 'Unigear',
-        test: true, // imported as lead
         followUp: false,
         address: 'Utrechtseweg',
         housenumber: '92',
@@ -246,7 +245,6 @@ describe('importCompaniesFromExcel', () => {
     expect(h.prisma.company.create).toHaveBeenCalledWith({
       data: {
         name: 'Acme BV',
-        test: true,
         followUp: false,
         address: 'Hoofdstraat',
         housenumber: '12a',

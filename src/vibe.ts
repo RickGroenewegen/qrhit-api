@@ -47,7 +47,6 @@ class Vibe {
     success: boolean;
     users?: any[];
     error?: string;
-    test?: boolean;
   }> {
     try {
       if (!companyId || isNaN(companyId)) {
@@ -57,7 +56,7 @@ class Vibe {
       // Check if company exists
       const company = await this.prisma.company.findUnique({
         where: { id: companyId },
-        select: { id: true, test: true }, // Include test property
+        select: { id: true },
       });
 
       if (!company) {
@@ -80,8 +79,7 @@ class Vibe {
         },
       });
 
-      // Optionally, you could return the company test property as well
-      return { success: true, users, test: company.test };
+      return { success: true, users };
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error getting users by company: ${error}`)
@@ -238,11 +236,10 @@ class Vibe {
 
     try {
       // 1. Create the company (if not exists)
-      const isBusinessLead = source === 'business';
+      const fromBusinessForm = source === 'business';
       const companyResult = await this.createCompany({
         name: company,
-        test: isBusinessLead, // business intake form = lead, not production
-        onlyForAdmin: isBusinessLead,
+        onlyForAdmin: fromBusinessForm,
         contact: fullname,
         contactemail: email,
         contactphone: phone,
@@ -319,9 +316,9 @@ class Vibe {
             locale,
             user.verificationHash || ''
           );
-        } else if (!isBusinessLead) {
+        } else if (!fromBusinessForm) {
           // Send regular OnzeVibe portal welcome email
-          // Skipped for the /business intake form — those are leads, handled manually
+          // Skipped for the /business intake form, which is handled manually
           await this.mail.sendPortalWelcomeEmail(
             email,
             fullname,
@@ -333,8 +330,8 @@ class Vibe {
             adminUrl // pass admin URL
           );
         } else {
-          // /business intake: the lead gets no mail, but the business inbox
-          // does, so the request lands in mail as well as Pushover.
+          // /business intake: the contact gets no mail, but the business
+          // inbox does, so the request lands in mail as well as Pushover.
           await this.mail.sendBusinessLeadNotification({
             company,
             fullname,
@@ -370,7 +367,7 @@ class Vibe {
             sound: 'incoming',
           },
           clientIp,
-          isBusinessLead // always notify for /business intake, even in dev / trusted IP
+          fromBusinessForm // always notify for /business intake, even in dev / trusted IP
         );
       } catch (pushErr) {
         this.logger.log(
@@ -1082,7 +1079,6 @@ class Vibe {
       // Validate the data
       const validFields = [
         'name',
-        'test',
         'followUp',
         'onlyForAdmin',
         'address',
@@ -1185,15 +1181,11 @@ class Vibe {
       // Check if user is admin
       const isAdmin = userGroups?.includes('admin');
 
-      // Fetch companies and include a count of their lists and the "test" property
-      // Order: test=false first, then by name
+      // Fetch companies by name with a count of their lists
       // Filter out onlyForAdmin companies for non-admin users
       const companiesWithListCount = await this.prisma.company.findMany({
         where: isAdmin ? {} : { onlyForAdmin: false },
-        orderBy: [
-          { test: 'asc' }, // false (0) first, then true (1)
-          { name: 'asc' },
-        ],
+        orderBy: { name: 'asc' },
         include: {
           _count: {
             select: { CompanyList: true },
@@ -1201,11 +1193,10 @@ class Vibe {
         },
       });
 
-      // Map the result to add the numberOfLists property and ensure "test" is present
+      // Map the result to add the numberOfLists property
       const companies = companiesWithListCount.map((company) => ({
         ...company,
         numberOfLists: company._count.CompanyList, // Use the actual count
-        test: company.test, // Ensure test property is present
         _count: undefined, // Remove the internal _count object
         // Derived server-side so the frontend never re-implements the
         // legacy free-text country normalization
@@ -1231,7 +1222,6 @@ class Vibe {
    */
   public async createCompany(companyData: {
     name: string;
-    test?: boolean;
     followUp?: boolean;
     onlyForAdmin?: boolean;
     address?: string;
@@ -1265,7 +1255,6 @@ class Vibe {
       const newCompany = await this.prisma.company.create({
         data: {
           name: companyData.name.trim(), // Trim whitespace
-          test: companyData.test || false, // Store the test property
           followUp: companyData.followUp || false,
           onlyForAdmin: companyData.onlyForAdmin || false,
           address: companyData.address,
@@ -4872,11 +4861,10 @@ class Vibe {
             }
           }
 
-          // Create company (as lead)
+          // Create company
           const newCompany = await this.prisma.company.create({
             data: {
               name: companyName,
-              test: true, // Lead
               followUp: false,
               address,
               housenumber,

@@ -502,7 +502,6 @@ export default async function vibeRoutes(
       const companyId = parseInt(request.params.companyId);
       const {
         name,
-        test,
         followUp,
         onlyForAdmin,
         address,
@@ -528,7 +527,6 @@ export default async function vibeRoutes(
 
       const result = await vibe.updateCompany(companyId, {
         name,
-        test,
         followUp,
         onlyForAdmin,
         address,
@@ -2603,7 +2601,6 @@ export default async function vibeRoutes(
       try {
         const {
           name,
-          test,
           followUp,
           onlyForAdmin,
           address,
@@ -2625,7 +2622,6 @@ export default async function vibeRoutes(
 
         const result = await vibe.createCompany({
           name,
-          test,
           followUp,
           onlyForAdmin,
           address,
