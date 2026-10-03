@@ -5,6 +5,17 @@ import { readPlaylistItems } from '../playlistItems';
 import ToolkitOrder, { ToolkitOrderError } from '../toolkitOrder';
 import Generator from '../generator';
 import PrismaInstance from '../prisma';
+import {
+  deleteShare,
+  downloadMail,
+  findShare,
+  listShares,
+  recordDownload,
+  saveShare,
+  shareStream,
+  ShareError,
+} from '../toolkitShare';
+import Mail from '../mail';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skill-qrsong), a CLI the agent
@@ -18,6 +29,8 @@ import PrismaInstance from '../prisma';
  * - GET  /admin/toolkit/order/:paymentId          order, design, print files and every card's track + year check
  * - PUT  /admin/toolkit/order/:paymentId/design   change design / template of the order line
  * - POST /admin/toolkit/order/:paymentId/regenerate  rebuild QR codes and PDFs without any mail
+ * - POST /admin/toolkit/share, GET, DELETE /:token  a secret download link for a zip or PDF too large to mail (src/toolkitShare.ts)
+ * - GET  /share/:token/:name                      PUBLIC: the download itself; mails the share's notify address
  *
  * The order routes were approved by Rick on 2026-10-03 (option A in the
  * Revant session): orders for printers we mail ourselves, never Print&Bind.
@@ -143,5 +156,67 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
     }
     const jobId = await generator.queueGenerate(paymentId, request.clientIp, '', true, true, false);
     return { success: true, jobId };
+  });
+
+  fastify.post('/admin/toolkit/share', adminOnly, async (request: any, reply: any) => {
+    if (!request.isMultipart()) return reply.status(400).send({ success: false, error: 'send the file as multipart/form-data' });
+    try {
+      const fields: Record<string, string> = {};
+      let file: { filename: string; buffer: Buffer } | null = null;
+      for await (const part of request.parts()) {
+        if (part.type === 'file') {
+          const buffer = await part.toBuffer();
+          if (part.fieldname === 'file' && !file) file = { filename: part.filename, buffer };
+        } else if (typeof part.value === 'string') {
+          fields[part.fieldname] = part.value;
+        }
+      }
+      if (!file) return reply.status(400).send({ success: false, error: 'no file' });
+      return { success: true, ...(await saveShare(file.filename, file.buffer, { label: fields['label'], notify: fields['notify'] })) };
+    } catch (error: any) {
+      if (error instanceof ShareError) return reply.status(error.status).send({ success: false, error: error.message });
+      const tooLarge = error?.code === 'FST_REQ_FILE_TOO_LARGE';
+      return reply.status(tooLarge ? 413 : 500).send({ success: false, error: tooLarge ? 'file larger than 100 MB' : error?.message || 'upload failed' });
+    }
+  });
+
+  // Public: whoever has the link downloads the file. Every GET is logged; the
+  // share's notify address (info@ by default) gets a mail in the standard
+  // custom_email template (Mail.sendCustomMail), at most one per 10 minutes.
+  fastify.get('/share/:token/:name', async (request: any, reply: any) => {
+    const found = await findShare(String(request.params.token), String(request.params.name));
+    if (!found) return reply.status(404).send('Not found');
+    const userAgent = String(request.headers['user-agent'] || '');
+    const ip = String(request.clientIp || request.ip || '');
+    try {
+      const { notify, count } = await recordDownload(found.meta, { ip, userAgent, method: request.method });
+      if (notify && found.meta.notify) {
+        const { subject, message } = downloadMail(found.meta, { ip, userAgent }, count);
+        Mail.getInstance()
+          .sendCustomMail(found.meta.notify, 'Rick', subject, message, 'nl', { escapeMessage: true })
+          .catch(() => {});
+      }
+    } catch {
+      // Logging or the mail failing must never block the download.
+    }
+    reply
+      .header('Content-Type', found.meta.name.endsWith('.pdf') ? 'application/pdf' : 'application/zip')
+      .header('Content-Disposition', `attachment; filename="${found.meta.name}"`)
+      .header('Content-Length', String(found.meta.size))
+      .header('X-Robots-Tag', 'noindex, nofollow')
+      .header('Cache-Control', 'private, no-store');
+    return reply.send(shareStream(found.file));
+  });
+
+  fastify.get('/admin/toolkit/share', adminOnly, async () => ({ success: true, shares: await listShares() }));
+
+  fastify.delete('/admin/toolkit/share/:token', adminOnly, async (request: any, reply: any) => {
+    try {
+      await deleteShare(String(request.params.token));
+      return { success: true };
+    } catch (error: any) {
+      if (error instanceof ShareError) return reply.status(error.status).send({ success: false, error: error.message });
+      return reply.status(500).send({ success: false, error: error?.message || 'delete failed' });
+    }
   });
 }

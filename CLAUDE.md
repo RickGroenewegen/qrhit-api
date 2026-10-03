@@ -840,6 +840,16 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
 - Finishing the year check (`POST /yearcheck`) still finalizes the order with
   the "finalized" mail to the order's address, as for any order; toolkit
   orders are booked on Rick's account.
+- `POST /admin/toolkit/share` (multipart `file`, zip or pdf, up to 100 MB,
+  optional `label` and `notify`) stores a file under
+  `PRIVATE_DIR/share/<128-bit hex token>/` and returns the secret download link
+  `/share/<token>/<name>`: for print files too large to mail (Rick,
+  2026-10-03). That public route serves the file, logs every request in the
+  share's `downloads.jsonl` and mails `notify` (default `INFO_EMAIL`) on a GET
+  (not a HEAD), at most once per 10 minutes, in the standard `custom_email`
+  template (`Mail.sendCustomMail`). Mail scanners such as Microsoft Safe Links open links
+  themselves, so the mail shows the browser. `GET /admin/toolkit/share` lists
+  shares with their download counts, `DELETE .../:token` removes one.
 
 ## Featured playlist covers
 
