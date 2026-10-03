@@ -36,7 +36,20 @@ export async function sanitizeTitleOrArtist(
 
   let sanitizedText = text;
   for (const longWord of longWords) {
-    const segments = await deps.openai.splitArtistOrString(longWord, type);
+    // A failed call (spend limit, outage, timeout) must not fail the order:
+    // the split is cosmetic and the hyphenation fallback below does the job.
+    let segments: string[] = [];
+    try {
+      segments = await deps.openai.splitArtistOrString(longWord, type);
+    } catch (error: any) {
+      deps.logger.log(
+        color.yellow.bold(
+          `LLM split failed for ${type} "${color.white.bold(longWord)}": ${color.white.bold(
+            error?.message ?? String(error)
+          )}`
+        )
+      );
+    }
     let splitWord = segments.join(' ');
 
     const llmFailed =

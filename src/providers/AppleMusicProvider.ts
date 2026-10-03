@@ -323,11 +323,13 @@ class AppleMusicProvider implements IMusicProvider {
   }
 
   /**
-   * Make a request to the Apple Music API
+   * Make a request to the Apple Music API. `quiet404` keeps a 404 out of the
+   * log for callers that expect one (the storefront resolver's id lookups).
    */
   private async apiRequest<T>(
     endpoint: string,
-    storefront: string = DEFAULT_STOREFRONT
+    storefront: string = DEFAULT_STOREFRONT,
+    { quiet404 = false }: { quiet404?: boolean } = {}
   ): Promise<{ success: boolean; data?: T; error?: string }> {
     const token = await this.getDeveloperToken();
     if (!token) {
@@ -346,12 +348,14 @@ class AppleMusicProvider implements IMusicProvider {
       });
 
       if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        this.logger.log(
-          color.red.bold(
-            `[${color.white.bold('apple_music')}] API error ${color.white.bold(String(response.status))} ${color.white.bold(response.statusText)} for ${color.white.bold(url)} body: ${color.white.bold(body.slice(0, 500))}`
-          )
-        );
+        if (!(quiet404 && response.status === 404)) {
+          const body = await response.text().catch(() => '');
+          this.logger.log(
+            color.red.bold(
+              `[${color.white.bold('apple_music')}] API error ${color.white.bold(String(response.status))} ${color.white.bold(response.statusText)} for ${color.white.bold(url)} body: ${color.white.bold(body.slice(0, 500))}`
+            )
+          );
+        }
         return {
           success: false,
           error: `Apple Music API error: ${response.status} ${response.statusText}`,
@@ -760,8 +764,10 @@ class AppleMusicProvider implements IMusicProvider {
     if (await this.cache.get(missKey)) return appleMusicLink;
 
     // Step 1: the song id itself, if the target storefront can stream it
-    // (catalog ids are mostly global)
-    const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront);
+    // (catalog ids are mostly global). The id lookups here expect a 404 when
+    // a region has its own ids for an album, so they do not log it; the
+    // "resolve failed" line below reports a song that really cannot play.
+    const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront, { quiet404: true });
     const direct = directResult.data?.data?.[0]?.attributes;
 
     if (directResult.success && direct?.url && direct.playParams) {
@@ -782,11 +788,11 @@ class AppleMusicProvider implements IMusicProvider {
     // this id (the link's storefront, then the default one).
     let isrc = knownIsrc || null;
     if (!isrc) {
-      const originalResult = await this.apiRequest<any>(`/songs/${songId}`, originalStorefront);
+      const originalResult = await this.apiRequest<any>(`/songs/${songId}`, originalStorefront, { quiet404: true });
       isrc = originalResult.data?.data?.[0]?.attributes?.isrc || null;
     }
     if (!isrc && originalStorefront !== DEFAULT_STOREFRONT) {
-      const fallbackResult = await this.apiRequest<any>(`/songs/${songId}`, DEFAULT_STOREFRONT);
+      const fallbackResult = await this.apiRequest<any>(`/songs/${songId}`, DEFAULT_STOREFRONT, { quiet404: true });
       isrc = fallbackResult.data?.data?.[0]?.attributes?.isrc || null;
     }
 

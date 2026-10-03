@@ -398,8 +398,10 @@ describe('AppleMusicProvider.getTracks', () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }))
       .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }));
+    const log = vi.spyOn((p as any).logger, 'log');
     const result = await p.getTracks('pl.gone');
     expect(result).toEqual({ success: false, error: 'Apple Music API error: 404 Not Found' });
+    expect(log.mock.calls.some(([line]) => String(line).includes('API error'))).toBe(true);
   });
 
   it('serves the cached track list', async () => {
@@ -570,6 +572,33 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
       'https://api.music.apple.com/v1/catalog/de/songs?filter[isrc]=GBUM71029604',
     ]);
     expect(resolved).toBe('https://music.apple.com/de/song/via-isrc/2');
+  });
+
+  it('does not log the 404s it expects from its id lookups', async () => {
+    const p = newProvider();
+    const log = vi.spyOn((p as any).logger, 'log');
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }))
+      .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { isrc: 'GBUM71029604' } }] }))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/via-isrc/2', playParams: { id: '2' } } }] })
+      );
+
+    await p.resolveSongToStorefront('https://music.apple.com/us/song/track/12345', 'de');
+
+    const lines = log.mock.calls.map(([line]) => String(line));
+    expect(lines.some((line) => line.includes('API error'))).toBe(false);
+    expect(lines.some((line) => line.includes('via ISRC'))).toBe(true);
+  });
+
+  it('still logs a lookup error that is not a 404', async () => {
+    const p = newProvider();
+    const log = vi.spyOn((p as any).logger, 'log');
+    fetchMock.mockResolvedValue(jsonResponse({}, { ok: false, status: 500, statusText: 'Internal Server Error' }));
+
+    await p.resolveSongToStorefront('https://music.apple.com/us/song/track/12345', 'de');
+
+    expect(log.mock.calls.some(([line]) => String(line).includes('API error'))).toBe(true);
   });
 
   it('returns the original link when nothing resolves anywhere', async () => {

@@ -148,6 +148,16 @@ describe('sanitizeTitleOrArtist', () => {
     const expected = splitLongWord(LONG, 'en', 20).join(' ');
     expect(await sanitizeTitleOrArtist(deps, LONG, 'title', 'en')).toBe(expected);
   });
+
+  it('falls back to hyphenation when the LLM call fails, instead of failing the order', async () => {
+    const { deps } = makeDeps();
+    deps.openai.splitArtistOrString.mockRejectedValue(
+      new Error('429 Your organization has reached its configured enforced spend limit.')
+    );
+
+    const expected = splitLongWord(LONG, 'en', 20).join(' ');
+    expect(await sanitizeTitleOrArtist(deps, `Intro ${LONG}`, 'artist', 'en')).toBe(`Intro ${expected}`);
+  });
 });
 
 describe('findAndUpdateTrackByISRC', () => {
