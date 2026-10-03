@@ -1,14 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import ExcelJS from 'exceljs';
+import { PDFDocument, rgb } from 'pdf-lib';
 import sharp from 'sharp';
 import {
   csvThumb,
   isPdfData,
   parseCsv,
+  pdfThumb,
   psdThumb,
   readPsdStructure,
   sheetSvg,
   xlsxThumb,
+  zipUnpackedSize,
 } from '../../src/companyFilePreviews';
 
 /**
@@ -171,12 +174,35 @@ describe('PSD previews', () => {
   it('refuses something that is not a PSD', async () => {
     await expect(psdThumb(Buffer.from('not a photoshop file at all'))).rejects.toThrow();
   });
+
+  it('does not believe a header whose image is not in the file', async () => {
+    // A small file that claims to be 299,999 rows high, raw and RLE alike: it
+    // must be refused at once, not looped over or allocated for.
+    for (const rle of [false, true]) {
+      const file = buildPsd({ width: 4, height: 4, mode: 3, rle, planes: [Buffer.alloc(16, 9), Buffer.alloc(16), Buffer.alloc(16)] });
+      file.writeUInt32BE(299_999, 14);
+      const started = Date.now();
+      await expect(psdThumb(file)).rejects.toThrow();
+      expect(Date.now() - started).toBeLessThan(1000);
+    }
+    const huge = buildPsd({ width: 4, height: 4, mode: 3, planes: [Buffer.alloc(16, 9), Buffer.alloc(16), Buffer.alloc(16)] });
+    huge.writeUInt32BE(4_000_000_000, 18);
+    await expect(psdThumb(huge)).rejects.toThrow();
+  });
 });
 
-describe('PDF detection', () => {
+describe('PDF previews', () => {
   it('finds the PDF inside an Illustrator file', () => {
     expect(isPdfData(Buffer.from('%PDF-1.5\n%...'))).toBe(true);
     expect(isPdfData(Buffer.from('%!PS-Adobe-3.0 EPSF-3.0'))).toBe(false);
+  });
+
+  it('scales a very tall page by its longer side', async () => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage([2, 14400]).drawRectangle({ x: 0, y: 0, width: 2, height: 14400, color: rgb(0, 0, 0) });
+    const meta = await sharp(await pdfThumb(Buffer.from(await pdf.save()))).metadata();
+    expect(meta.height).toBeLessThanOrEqual(480);
+    expect(meta.width).toBeLessThanOrEqual(480);
   });
 });
 
@@ -227,5 +253,25 @@ describe('spreadsheet previews', () => {
     const svg = csvThumb('Titel,Artiest\nBrabant,Guus Meeuwis\n');
     expect(svg).toContain('Guus Meeuwis');
     expect(svg).toContain('>CSV<');
+  });
+
+  it('reads only the start of a CSV', () => {
+    const started = Date.now();
+    const svg = csvThumb(Buffer.alloc(20 * 1024 * 1024, 'a'));
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(svg).toContain('<svg');
+  });
+
+  it('refuses a workbook that says it unpacks to more than the limit', async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet('Blad1').addRow(['a']);
+    const xlsx = Buffer.from(await workbook.xlsx.writeBuffer());
+    expect(zipUnpackedSize(xlsx)).toBeGreaterThan(0);
+
+    // Make the first central directory entry claim 2 GB.
+    const entry = xlsx.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    xlsx.writeUInt32LE(0x7fffffff, entry + 24);
+    await expect(xlsxThumb(xlsx)).rejects.toThrow(/too large/);
+    expect(zipUnpackedSize(Buffer.from('not a zip'))).toBeNull();
   });
 });

@@ -237,7 +237,14 @@ export interface CompanyFileThumb {
 }
 
 /** Spreadsheets become SVG (drawn by the browser, with its fonts); everything else webp. */
-const THUMB_SUFFIXES = ['.thumb.webp', '.thumb.svg'];
+const THUMB_SUFFIXES = ['.thumb.webp', '.thumb.svg', '.thumb.failed'];
+
+/**
+ * A file whose preview failed is not tried again for a day: brand kits come
+ * from the public form, and a file built to be slow would otherwise cost
+ * that time on every view of the Assets tab.
+ */
+const FAILED_RETRY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Two renders at a time per process, and one per file: a page of dashboard
@@ -275,7 +282,7 @@ async function renderThumb(kind: ThumbKind, source: string): Promise<CompanyFile
     case 'xlsx':
       return { data: Buffer.from(await xlsxThumb(buffer)), contentType: 'image/svg+xml' };
     case 'csv':
-      return { data: Buffer.from(csvThumb(buffer.toString('utf8'))), contentType: 'image/svg+xml' };
+      return { data: Buffer.from(csvThumb(buffer)), contentType: 'image/svg+xml' };
   }
 }
 
@@ -295,13 +302,24 @@ export async function companyFileThumb(file: {
   } catch {
     /* not made yet */
   }
+  const failedPath = `${source}.thumb.failed`;
+  const failedAt = await fs.stat(failedPath).then(s => s.mtimeMs).catch(() => null);
+  if (failedAt !== null && Date.now() - failedAt < FAILED_RETRY_MS) {
+    throw new Error('The preview failed recently');
+  }
 
   let pending = rendersInFlight.get(thumbPath);
   if (!pending) {
     pending = inRenderSlot(async () => {
-      const thumb = await renderThumb(kind, source);
-      await fs.writeFile(thumbPath, thumb.data).catch(() => undefined);
-      return thumb;
+      try {
+        const thumb = await renderThumb(kind, source);
+        await fs.writeFile(thumbPath, thumb.data).catch(() => undefined);
+        await fs.unlink(failedPath).catch(() => undefined);
+        return thumb;
+      } catch (error) {
+        await fs.writeFile(failedPath, String((error as Error)?.message ?? error)).catch(() => undefined);
+        throw error;
+      }
     }).finally(() => rendersInFlight.delete(thumbPath));
     rendersInFlight.set(thumbPath, pending);
   }

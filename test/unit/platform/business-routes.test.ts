@@ -329,6 +329,21 @@ describe('thumbnails', () => {
     expect(res.rawPayload.subarray(8, 12).toString('latin1')).toBe('WEBP');
   });
 
+  it('does not try a failed preview again on the next view', async () => {
+    const id = (await upload(1, 'broken.pdf', Buffer.from('%PDF-1.4 this is not really a PDF'))).json().files[0].id;
+    const first = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    expect(first.statusCode).toBe(404);
+    const dir = path.join(privateDir, 'company-files', '1');
+    expect((await fs.readdir(dir)).some((f) => f.endsWith('.thumb.failed'))).toBe(true);
+
+    const again = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    expect(again.statusCode).toBe(404);
+
+    // Deleting the file takes the marker with it.
+    await app.inject({ method: 'DELETE', url: `/vibe/companies/1/files/${id}` });
+    expect(await fs.readdir(dir)).toHaveLength(0);
+  });
+
   it('answers 404 for a type without a preview, and the file stays downloadable', async () => {
     const id = (await upload(1, 'pack.zip')).json().files[0].id;
     const listed = (await app.inject({ method: 'GET', url: '/vibe/companies/1/files' })).json().files[0];

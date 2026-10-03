@@ -18,7 +18,19 @@ import sharp from 'sharp';
 
 export const THUMB_SIZE = 480;
 const RENDER_SIZE = THUMB_SIZE * 2;
-const MAX_INPUT_PIXELS = 268402689;
+
+/**
+ * Limits, because brand kits come from the public /business form: every
+ * renderer here must stay bounded in memory and time whatever a file claims.
+ * 100 megapixels is a 10,000 px square, more than an A1 poster at 300 dpi.
+ */
+const MAX_INPUT_PIXELS = 100_000_000;
+/** PSB's own limit (PSD's is 30,000). */
+const PSD_MAX_SIDE = 300_000;
+/** A preview needs the first rows only. */
+const CSV_MAX_BYTES = 256 * 1024;
+/** What an xlsx may unpack to, by its own directory; more is refused unread. */
+const XLSX_MAX_UNPACKED_BYTES = 64 * 1024 * 1024;
 
 export async function webpThumb(input: Buffer | string): Promise<Buffer> {
   return sharp(input, { animated: false, limitInputPixels: MAX_INPUT_PIXELS })
@@ -35,9 +47,15 @@ export function isPdfData(buffer: Buffer): boolean {
 export async function pdfThumb(buffer: Buffer): Promise<Buffer> {
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
+    // Scale by the longer side: a page 1 pt wide and 14,400 pt tall would
+    // otherwise get a canvas of millions of pixels high.
+    const info = await parser.getInfo({ parsePageInfo: true, first: 1 });
+    const page1 = info.pages?.[0];
+    const longest = Math.max(page1?.width ?? 0, page1?.height ?? 0);
+    if (!Number.isFinite(longest) || longest <= 0) throw new Error('The PDF has no first page size');
     const result = await parser.getScreenshot({
       first: 1,
-      desiredWidth: RENDER_SIZE,
+      scale: RENDER_SIZE / longest,
       imageBuffer: true,
       imageDataUrl: false,
     });
@@ -162,7 +180,7 @@ function psdComposite(buffer: Buffer, psd: PsdStructure): Buffer | null {
     psd.mode === PSD_RGB ? 3 : psd.mode === PSD_CMYK ? 4 : psd.mode === PSD_GRAYSCALE || psd.mode === PSD_DUOTONE ? 1 : 0;
   if (!colourChannels || (psd.depth !== 8 && psd.depth !== 16) || psd.channels < colourChannels) return null;
   const { width, height } = psd;
-  if (!width || !height) return null;
+  if (!width || !height || width > PSD_MAX_SIDE || height > PSD_MAX_SIDE) return null;
 
   let pos = psd.imageDataStart;
   const compression = buffer.readUInt16BE(pos);
@@ -176,21 +194,27 @@ function psdComposite(buffer: Buffer, psd: PsdStructure): Buffer | null {
   const outHeight = Math.ceil(height / step);
   const bytesPerSample = psd.depth / 8;
   const rowBytes = width * bytesPerSample;
+  const rows = samples * height;
+
+  // The header's size is a claim: the data it describes must be in the file
+  // before anything is allocated or looped over for it.
+  const countSize = psd.psb ? 4 : 2;
+  const firstRow = compression === 0 ? pos : pos + psd.channels * height * countSize;
+  if (compression === 0 ? firstRow + rows * rowBytes > buffer.length : firstRow > buffer.length) return null;
 
   // Where each row of each channel starts (and the next one begins).
-  const rowStart = new Array<number>(samples * height + 1);
+  const rowStart = new Float64Array(rows + 1);
   if (compression === 0) {
-    for (let i = 0; i <= samples * height; i++) rowStart[i] = pos + i * rowBytes;
+    for (let i = 0; i <= rows; i++) rowStart[i] = pos + i * rowBytes;
   } else {
-    const countSize = psd.psb ? 4 : 2;
-    let offset = pos + psd.channels * height * countSize;
-    for (let i = 0; i < samples * height; i++) {
+    let offset = firstRow;
+    for (let i = 0; i < rows; i++) {
       rowStart[i] = offset;
       offset += psd.psb ? buffer.readUInt32BE(pos + i * 4) : buffer.readUInt16BE(pos + i * 2);
     }
-    rowStart[samples * height] = offset;
+    rowStart[rows] = offset;
   }
-  if (rowStart[samples * height] > buffer.length) return null;
+  if (rowStart[rows] > buffer.length) return null;
 
   const out = Buffer.alloc(outWidth * outHeight * samples);
   const row = Buffer.alloc(rowBytes);
@@ -358,6 +382,11 @@ const VISIBLE_ROWS = Math.floor((SHEET.height - SHEET.header - SHEET.tabBar) / S
 const MAX_COLUMNS = 12;
 
 export async function xlsxThumb(buffer: Buffer): Promise<string> {
+  // exceljs unpacks the whole workbook; a zip bomb would take the process with it.
+  const unpacked = zipUnpackedSize(buffer);
+  if (unpacked === null || unpacked > XLSX_MAX_UNPACKED_BYTES) {
+    throw new Error('The workbook is too large to preview');
+  }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as any);
   const sheet =
@@ -395,7 +424,40 @@ export async function xlsxThumb(buffer: Buffer): Promise<string> {
   return sheetSvg({ name: sheet.name, widths, rows });
 }
 
-export function csvThumb(text: string, name = 'CSV'): string {
+/**
+ * What a zip says its entries unpack to, from its central directory; null
+ * when there is none or it is ZIP64 (sizes beyond 4 GB), which no preview
+ * needs.
+ */
+export function zipUnpackedSize(buffer: Buffer): number | null {
+  const EOCD = 0x06054b50;
+  const ENTRY = 0x02014b50;
+  // The end record sits in the last 22 bytes plus at most a 64 KB comment.
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 22 - 0xffff); i--) {
+    if (buffer.readUInt32LE(i) === EOCD) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) return null;
+  const entries = buffer.readUInt16LE(eocd + 10);
+  let pos = buffer.readUInt32LE(eocd + 16);
+  if (entries === 0xffff || pos === 0xffffffff) return null;
+  let total = 0;
+  for (let n = 0; n < entries; n++) {
+    if (pos + 46 > buffer.length || buffer.readUInt32LE(pos) !== ENTRY) return null;
+    const size = buffer.readUInt32LE(pos + 24);
+    if (size === 0xffffffff) return null;
+    total += size;
+    pos += 46 + buffer.readUInt16LE(pos + 28) + buffer.readUInt16LE(pos + 30) + buffer.readUInt16LE(pos + 32);
+  }
+  return total;
+}
+
+export function csvThumb(source: Buffer | string, name = 'CSV'): string {
+  // Only the first rows are drawn; a file without line breaks is not read to its end.
+  const text = typeof source === 'string' ? source.slice(0, CSV_MAX_BYTES) : source.subarray(0, CSV_MAX_BYTES).toString('utf8');
   const rows = parseCsv(text, VISIBLE_ROWS);
   const columnCount = Math.min(Math.max(1, ...rows.map(r => r.length)), MAX_COLUMNS);
   const widths: number[] = [];

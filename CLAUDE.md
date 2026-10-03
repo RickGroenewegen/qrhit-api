@@ -794,6 +794,13 @@ things to know here:
   the browser renders with its own fonts (the servers have none). exceljs
   cannot read workbooks with namespace-prefixed XML (some .NET exports);
   those keep the icon.
+- **Previews are bounded** because PSD and PDF brand kits come from the public
+  /business form without login: a PSD header is only believed when its
+  image data is in the file (sides up to 300,000), a PDF page is scaled by
+  its longer side, a CSV is read for its first 256 KB, an xlsx whose zip
+  directory says it unpacks past 64 MB is refused unread, sharp stops at
+  100 megapixels, and a failed preview (`.thumb.failed`) is not retried for
+  a day. Keep any new renderer inside such limits.
 
 ## EmailOctopus business lists (company contacts)
 
