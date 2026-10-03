@@ -1199,17 +1199,12 @@ The server routes have been refactored into logical modules for better maintaina
 - **Development Server**: `npm start` (localhost:4200)
 - **Build Command**: `npm run build` (builds into `dist/qrhit-build` and publishes into `dist/qrhit`; `deploy_frontend` then restarts and runs `npm run invalidate-cloudfront`, see "Deploys" in the frontend's CLAUDE.md)
 
-#### OnzeVibe Company Portal
-- **Location**: `/users/rick/sites/qrhit-vibe` (Angular 19 portal)
-- **CLAUDE.md**: `/users/rick/sites/qrhit-vibe/CLAUDE.md`
-- **Description**: Angular 19.2.10 portal for OnzeVibe that connects to this QRSong! API
-- **Purpose**: Company playlist management and voting system where users can create lists, submit songs, and vote on tracks
-- **Development Server**: `npm start` (localhost:4200)
-- **Production Server**: `npm run start:prod` (localhost:5000)
-- **Build Command**: `npm run build` (includes CloudFront invalidation)
+The OnzeVibe company portal (`qrhit-vibe`) is no longer worked on: its
+folder was removed on 2026-10-03 (Rick). The `/vibe/*` routes stay, the
+frontend's admin dashboard (companies, lists, quotations) uses them.
 
 ### Frontend-Backend Integration
-Both Angular frontends consume this API through the following key endpoints:
+The frontend consumes this API through the following key endpoints:
 
 #### Authentication & User Management
 - **POST** `/validate` - JWT token validation
