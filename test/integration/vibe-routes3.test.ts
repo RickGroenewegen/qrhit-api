@@ -26,7 +26,6 @@ import PDF from '../../src/pdf';
  *  - PUT /vibe/companies/:companyId (400/404/200)
  *  - PUT /vibe/companies/:companyId/lists/:listId/info (400/404/409/200)
  *  - GET/POST/PUT/DELETE /vibe/companies/:companyId/lists/:listId/delivery-addresses
- *  - GET/DELETE /vibe/companies/:companyId/lists/:listId/files/:type (no upload)
  *  - GET /vibe/companies/:companyId/lists/:listId/order-email
  *  - PUT /vibe/companies/:companyId/favorite
  *  - GET /vibe/production-lists
@@ -568,61 +567,6 @@ describe('vibe portal routes — wave 3 coverage', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().success).toBe(true);
-    });
-  });
-
-  // ====================================================================
-  // DESIGN FILES (GET + DELETE without upload)
-  // ====================================================================
-
-  describe('design file endpoints (non-upload)', () => {
-    it('GET files — 400 for invalid file type path (not listed file type)', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/invalid-type`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain('Invalid file type');
-    });
-
-    it('GET files — returns empty list when no files exist', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().files)).toBe(true);
-      expect(res.json().files).toHaveLength(0);
-    });
-
-    it('DELETE files/:type — 404 when no file seeded', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/cards`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('GET files/:type/download — 404 for unknown list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/999999/files/cards/download`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('GET files/:type/download — 400 for invalid type', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/invalid-type/download`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(400);
     });
   });
 

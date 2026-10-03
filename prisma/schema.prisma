@@ -1106,6 +1106,7 @@ model CompanyQuoteRequest {
 model CompanyFile {
   id             Int      @id @default(autoincrement())
   companyId      Int
+  companyListId  Int? // set: the file belongs to that list, not to the company as a whole
   quoteRequestId Int?
   category       String   @default("other") // brand, design, generated, other
   source         String   @default("admin") // client, admin, boxd, migrated
@@ -1118,9 +1119,11 @@ model CompanyFile {
   createdAt      DateTime @default(now())
 
   Company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CompanyList         CompanyList?         @relation(fields: [companyListId], references: [id], onDelete: SetNull)
   CompanyQuoteRequest CompanyQuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
+  @@index([companyListId])
   @@index([quoteRequestId])
   @@map("company_files")
 }
@@ -1274,6 +1277,7 @@ model CompanyList {
   CompanyListDeliveryAddress CompanyListDeliveryAddress[]
   CompanyListFile            CompanyListFile[]
   CompanyListInvoice         CompanyListInvoice[]
+  CompanyFile                CompanyFile[]
 
   @@map("company_lists")
 }

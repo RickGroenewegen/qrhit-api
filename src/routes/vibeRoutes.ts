@@ -1096,190 +1096,9 @@ export default async function vibeRoutes(
     }
   );
 
-  // ---- Design files (cards / box) ----
-
-  const LIST_FILE_TYPES: string[] = ['cards', 'box'];
-  const listFilesDir = () => `${process.env['PRIVATE_DIR']}/list-files`;
-
-  // Get design files for a list
-  fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/files',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      const list = await findCompanyList(companyId, listId, reply);
-      if (!list) return;
-
-      const prisma = PrismaInstance.getInstance();
-      const files = await (prisma as any).companyListFile.findMany({
-        where: { companyListId: listId },
-        orderBy: { type: 'asc' },
-      });
-      reply.send({ success: true, files });
-    }
-  );
-
-  // Upload (or replace) a design file for a list
-  fastify.post(
-    '/vibe/companies/:companyId/lists/:listId/files/:type',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      const type = request.params.type;
-      if (!LIST_FILE_TYPES.includes(type)) {
-        reply.status(400).send({ error: 'Invalid file type' });
-        return;
-      }
-      const list = await findCompanyList(companyId, listId, reply);
-      if (!list) return;
-
-      const fsPromises = require('fs').promises;
-      const path = require('path');
-
-      let savedFilename: string | null = null;
-      let originalName: string | null = null;
-      let mimeType: string | null = null;
-      let size = 0;
-
-      const parts = request.parts();
-      for await (const part of parts) {
-        if (part.type === 'file' && part.fieldname === 'file') {
-          const safeName = String(part.filename || 'design')
-            .replace(/[^a-zA-Z0-9._-]/g, '_')
-            .slice(-100);
-          savedFilename = `list_${listId}_${type}_${Date.now()}_${safeName}`;
-          originalName = part.filename || safeName;
-          mimeType = part.mimetype || null;
-
-          await fsPromises.mkdir(listFilesDir(), { recursive: true });
-          const buffer = await part.toBuffer();
-          size = buffer.length;
-          await fsPromises.writeFile(
-            path.join(listFilesDir(), savedFilename),
-            buffer
-          );
-        }
-      }
-
-      if (!savedFilename) {
-        reply.status(400).send({ error: 'No file uploaded' });
-        return;
-      }
-
-      const prisma = PrismaInstance.getInstance();
-      const existing = await (prisma as any).companyListFile.findUnique({
-        where: { companyListId_type: { companyListId: listId, type } },
-      });
-      if (existing) {
-        // Remove the old file from disk; the DB row is replaced below.
-        try {
-          await fsPromises.unlink(path.join(listFilesDir(), existing.filename));
-        } catch {
-          /* old file may already be gone */
-        }
-      }
-
-      const file = await (prisma as any).companyListFile.upsert({
-        where: { companyListId_type: { companyListId: listId, type } },
-        create: {
-          companyListId: listId,
-          type,
-          filename: savedFilename,
-          originalName,
-          mimeType,
-          size,
-        },
-        update: {
-          filename: savedFilename,
-          originalName,
-          mimeType,
-          size,
-        },
-      });
-      reply.status(201).send({ success: true, file });
-    }
-  );
-
-  // Download a design file
-  fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/files/:type/download',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      const type = request.params.type;
-      if (!LIST_FILE_TYPES.includes(type)) {
-        reply.status(400).send({ error: 'Invalid file type' });
-        return;
-      }
-      const list = await findCompanyList(companyId, listId, reply);
-      if (!list) return;
-
-      const prisma = PrismaInstance.getInstance();
-      const file = await (prisma as any).companyListFile.findUnique({
-        where: { companyListId_type: { companyListId: listId, type } },
-      });
-      if (!file) {
-        reply.status(404).send({ error: 'File not found' });
-        return;
-      }
-
-      const fsPromises = require('fs').promises;
-      const path = require('path');
-      try {
-        const buffer = await fsPromises.readFile(
-          path.join(listFilesDir(), file.filename)
-        );
-        reply
-          .header('Content-Type', file.mimeType || 'application/octet-stream')
-          .header(
-            'Content-Disposition',
-            `attachment; filename="${encodeURIComponent(file.originalName)}"`
-          )
-          .send(buffer);
-      } catch {
-        reply.status(404).send({ error: 'File missing on disk' });
-      }
-    }
-  );
-
-  // Delete a design file
-  fastify.delete(
-    '/vibe/companies/:companyId/lists/:listId/files/:type',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      const type = request.params.type;
-      if (!LIST_FILE_TYPES.includes(type)) {
-        reply.status(400).send({ error: 'Invalid file type' });
-        return;
-      }
-      const list = await findCompanyList(companyId, listId, reply);
-      if (!list) return;
-
-      const prisma = PrismaInstance.getInstance();
-      const file = await (prisma as any).companyListFile.findUnique({
-        where: { companyListId_type: { companyListId: listId, type } },
-      });
-      if (!file) {
-        reply.status(404).send({ error: 'File not found' });
-        return;
-      }
-
-      const fsPromises = require('fs').promises;
-      const path = require('path');
-      try {
-        await fsPromises.unlink(path.join(listFilesDir(), file.filename));
-      } catch {
-        /* file may already be gone */
-      }
-      await (prisma as any).companyListFile.delete({ where: { id: file.id } });
-      reply.send({ success: true });
-    }
-  );
+  // A list's design files are in the asset store now (CompanyFile with
+  // companyListId, routes/businessRoutes.ts). The company_list_files table is
+  // left in place and unread.
 
   // ---- Order e-mail ----
 
@@ -1679,11 +1498,11 @@ export default async function vibeRoutes(
       }
 
       const prisma = PrismaInstance.getInstance();
-      // `assets` is the Assets tab's badge: the files in the company store.
+      // `assets` is the Assets tab's badge: the company's own files, not its lists'.
       const [users, lists, assets, quotations] = await Promise.all([
         prisma.user.count({ where: { companyId } }),
         prisma.companyList.count({ where: { companyId } }),
-        prisma.companyFile.count({ where: { companyId } }),
+        prisma.companyFile.count({ where: { companyId, companyListId: null } }),
         (prisma as any).quotation.count({ where: { companyId } }),
       ]);
 

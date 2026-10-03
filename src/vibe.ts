@@ -1349,7 +1349,7 @@ class Vibe {
         include: {
           Company: { select: { id: true, name: true } },
           CompanyListDeliveryAddress: true,
-          CompanyListFile: { select: { type: true } },
+          CompanyFile: { where: { category: 'design' }, select: { id: true } },
         },
         orderBy: { updatedAt: 'desc' },
       });
@@ -1379,7 +1379,7 @@ class Vibe {
           sellPrice: list.sellPrice,
           desiredDeliveryDate: list.desiredDeliveryDate,
           deliveryAddressCount: list.CompanyListDeliveryAddress.length,
-          fileTypes: list.CompanyListFile.map((f: any) => f.type),
+          designFileCount: list.CompanyFile.length,
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
         };
@@ -1404,7 +1404,7 @@ class Vibe {
         include: {
           Company: { select: { id: true, name: true } },
           CompanyListDeliveryAddress: { orderBy: { id: 'asc' } },
-          CompanyListFile: true,
+          CompanyFile: { where: { category: 'design' }, orderBy: { createdAt: 'asc' } },
         },
       });
       if (!list || list.companyId !== companyId) {
@@ -1489,7 +1489,7 @@ class Vibe {
       );
       if (addresses.length === 0) {
         warnings.push(
-          'Geen leveradressen ingevoerd op deze lijst (tabblad "Delivery"). Alleen het QRSong! adres staat in de mail.'
+          'Geen leveradressen bij deze lijst. Alleen het QRSong! adres staat in de mail: vul het adres van de klant zelf aan.'
         );
       }
       addresses.push({
@@ -1498,18 +1498,15 @@ class Vibe {
         boxes: 3,
       });
 
-      const files = list.CompanyListFile.map((f: any) => ({
-        type: f.type,
+      // The attachments: the list's assets in the Design category.
+      const files = list.CompanyFile.map((f: any) => ({
+        id: f.id,
         originalName: f.originalName,
       }));
-      for (const type of ['cards', 'box']) {
-        if (!files.some((f: any) => f.type === type)) {
-          warnings.push(
-            type === 'cards'
-              ? 'Het ontwerp voor de kaarten ontbreekt nog (tabblad "Files").'
-              : 'Het ontwerp voor het doosje ontbreekt nog (tabblad "Files").'
-          );
-        }
+      if (!files.length) {
+        warnings.push(
+          'Er staan nog geen ontwerpen bij deze lijst (tabblad "Assets", categorie Design).'
+        );
       }
 
       const numberWords = [

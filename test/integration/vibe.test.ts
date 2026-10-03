@@ -654,45 +654,6 @@ describe('vibe portal routes', () => {
     });
   });
 
-  describe('design files', () => {
-    it('returns an empty file list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().files).toEqual([]);
-    });
-
-    it('rejects an invalid file type', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/poster/download`,
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('404s downloading a file that was never uploaded', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/cards/download`,
-        headers,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('404s deleting a file that does not exist', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}/files/box`,
-        headers,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-  });
-
   describe('order email', () => {
     it('builds the Dutch printer order email with warnings', async () => {
       await prisma().companyList.update({
@@ -725,10 +686,10 @@ describe('vibe portal routes', () => {
       expect(email.text).toContain('Goedendag');
       expect(email.text).toContain('15 augustus 2026');
       expect(email.html).toContain('<strong>25</strong>');
-      // designs were never uploaded -> two file warnings
+      // the list has no design assets -> one warning
       expect(
-        email.warnings.filter((w: string) => w.includes('ontbreekt')).length
-      ).toBe(2);
+        email.warnings.filter((w: string) => w.includes('nog geen ontwerpen')).length
+      ).toBe(1);
     });
 
     it('404s for an unknown list', async () => {

@@ -12,6 +12,7 @@ import {
   contentDisposition,
   deleteCompanyFile,
   findCompanyFile,
+  findCompanyList,
   isAllowedExtension,
   readCompanyFile,
   saveCompanyFile,
@@ -131,12 +132,32 @@ export default async function businessRoutes(
 
   // ---- Asset store ----
 
+  /**
+   * The list a request names (`listId` in the query or a form field), or
+   * null for the company's own files. `false` when it is not this company's
+   * list; the reply has been sent then.
+   */
+  async function listScope(companyId: number, raw: unknown, reply: any): Promise<number | null | false> {
+    if (raw === undefined || raw === null || raw === '') return null;
+    const list = await findCompanyList(companyId, parseInt(String(raw), 10));
+    if (!list) {
+      reply.status(400).send({ success: false, error: 'listId does not belong to this company' });
+      return false;
+    }
+    return list.id;
+  }
+
+  // Newest first. Without listId: the company's own files; ?listId=<id>: that
+  // list's; ?listId=all: both.
   fastify.get('/vibe/companies/:companyId/files', staff, async (request: any, reply: any) => {
     const company = await findCompany(companyIdOf(request), reply);
     if (!company) return;
+    const all = request.query.listId === 'all';
+    const listId = all ? null : await listScope(company.id, request.query.listId, reply);
+    if (listId === false) return;
     const files = await prisma.companyFile.findMany({
-      where: { companyId: company.id },
-      orderBy: { createdAt: 'desc' },
+      where: all ? { companyId: company.id } : { companyId: company.id, companyListId: listId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
     reply.send({
       success: true,
@@ -201,6 +222,8 @@ export default async function businessRoutes(
       }
       quoteRequestId = id;
     }
+    const companyListId = await listScope(company.id, fields['listId'], reply);
+    if (companyListId === false) return;
 
     const saved = [];
     for (const file of incoming) {
@@ -209,6 +232,7 @@ export default async function businessRoutes(
           category: fields['category'],
           source: fields['source'],
           note: fields['note'],
+          companyListId,
           quoteRequestId,
         })
       );
@@ -261,9 +285,11 @@ export default async function businessRoutes(
           return;
         }
         reply
-          .header('Content-Type', 'image/webp')
+          .header('Content-Type', thumb.contentType)
+          .header('X-Content-Type-Options', 'nosniff')
+          .header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
           .header('Cache-Control', 'private, max-age=86400')
-          .send(thumb);
+          .send(thumb.data);
       } catch {
         reply.status(404).send({ success: false, error: 'No thumbnail' });
       }
@@ -280,7 +306,14 @@ export default async function businessRoutes(
         return;
       }
       const { category, note, originalName } = request.body || {};
-      const updated = await updateCompanyFile(file, { category, note, originalName });
+      // companyListId: a list of this company moves the file there, null back to the company.
+      let companyListId: number | null | undefined;
+      if (request.body && 'companyListId' in request.body) {
+        const scope = await listScope(file.companyId, request.body.companyListId, reply);
+        if (scope === false) return;
+        companyListId = scope;
+      }
+      const updated = await updateCompanyFile(file, { category, note, originalName, companyListId });
       reply.send({ success: true, file: toFileDto(updated) });
     }
   );

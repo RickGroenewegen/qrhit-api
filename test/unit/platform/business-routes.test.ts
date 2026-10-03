@@ -38,7 +38,10 @@ vi.mock('../../../src/prisma', () => ({
         },
         findMany: async ({ where }: any) =>
           h.files.filter(
-            (f) => f.companyId === where.companyId && (!where.id || where.id.in.includes(f.id))
+            (f) =>
+              f.companyId === where.companyId &&
+              (!where.id || where.id.in.includes(f.id)) &&
+              (!('companyListId' in where) || (f.companyListId ?? null) === where.companyListId)
           ),
         findUnique: async ({ where }: any) => h.files.find((f) => f.id === where.id) ?? null,
         delete: async ({ where }: any) => {
@@ -49,6 +52,11 @@ vi.mock('../../../src/prisma', () => ({
           Object.assign(row, data);
           return row;
         },
+      },
+      // List 7 is company 1's, list 8 company 2's.
+      companyList: {
+        findUnique: async ({ where }: any) =>
+          ({ 7: { id: 7, companyId: 1 }, 8: { id: 8, companyId: 2 } })[where.id as 7 | 8] ?? null,
       },
       user: {
         findFirst: async ({ where }: any) =>
@@ -181,12 +189,19 @@ beforeEach(async () => {
   h.createFromForm.mockReset();
 });
 
-async function upload(companyId: number, filename: string, content = Buffer.from('data'), category = 'design') {
+async function upload(
+  companyId: number,
+  filename: string,
+  content = Buffer.from('data'),
+  category = 'design',
+  listId?: number
+) {
   return app.inject({
     method: 'POST',
     url: `/vibe/companies/${companyId}/files`,
     ...multipart([
       { name: 'category', value: category },
+      ...(listId ? [{ name: 'listId', value: String(listId) }] : []),
       { name: 'file', filename, content },
     ]),
   });
@@ -228,6 +243,98 @@ describe('asset store', () => {
     expect(res.statusCode).toBe(200);
     expect(h.files).toHaveLength(0);
     expect(await fs.readdir(path.join(privateDir, 'company-files', '1'))).toHaveLength(0);
+  });
+});
+
+describe('list assets', () => {
+  const names = (res: any) => res.json().files.map((f: any) => f.originalName).sort();
+
+  it('keeps a list\'s files apart from the company\'s own', async () => {
+    await upload(1, 'logo.png', Buffer.from('x'), 'brand');
+    const listed = (await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 7)).json().files[0];
+    expect(listed).toMatchObject({ companyListId: 7 });
+
+    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files' }))).toEqual(['logo.png']);
+    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=7' }))).toEqual(['cards.pdf']);
+    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=all' }))).toEqual([
+      'cards.pdf',
+      'logo.png',
+    ]);
+  });
+
+  it('refuses another company\'s list', async () => {
+    expect((await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 8)).statusCode).toBe(400);
+    expect(h.files).toHaveLength(0);
+    const res = await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=8' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('moves a file to a list and back', async () => {
+    const id = (await upload(1, 'tracks.xlsx', Buffer.from('x'), 'other')).json().files[0].id;
+    const toList = await app.inject({
+      method: 'PATCH',
+      url: `/vibe/companies/1/files/${id}`,
+      payload: { companyListId: 7 },
+    });
+    expect(toList.json().file).toMatchObject({ companyListId: 7, category: 'other' });
+
+    const back = await app.inject({
+      method: 'PATCH',
+      url: `/vibe/companies/1/files/${id}`,
+      payload: { companyListId: null },
+    });
+    expect(back.json().file).toMatchObject({ companyListId: null });
+
+    const elsewhere = await app.inject({
+      method: 'PATCH',
+      url: `/vibe/companies/1/files/${id}`,
+      payload: { companyListId: 8 },
+    });
+    expect(elsewhere.statusCode).toBe(400);
+  });
+
+  it('leaves the list alone when an edit does not name one', async () => {
+    const id = (await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 7)).json().files[0].id;
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/vibe/companies/1/files/${id}`,
+      payload: { note: 'Print file' },
+    });
+    expect(res.json().file).toMatchObject({ companyListId: 7, note: 'Print file' });
+  });
+});
+
+describe('thumbnails', () => {
+  it('draws a spreadsheet as an SVG the browser renders, and keeps it', async () => {
+    const id = (await upload(1, 'tracks.csv', Buffer.from('Titel;Artiest\nBrabant;Guus Meeuwis\n'), 'other')).json()
+      .files[0].id;
+    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('image/svg+xml');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['content-security-policy']).toContain('sandbox');
+    expect(res.body).toContain('Guus Meeuwis');
+    const onDisk = await fs.readdir(path.join(privateDir, 'company-files', '1'));
+    expect(onDisk.some((f) => f.endsWith('.thumb.svg'))).toBe(true);
+  });
+
+  it('renders the first page of a PDF as webp', async () => {
+    const { PDFDocument, rgb } = await import('pdf-lib');
+    const pdf = await PDFDocument.create();
+    pdf.addPage([400, 300]).drawRectangle({ x: 50, y: 50, width: 300, height: 200, color: rgb(0.1, 0.5, 0.4) });
+    const id = (await upload(1, 'box.pdf', Buffer.from(await pdf.save()))).json().files[0].id;
+    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('image/webp');
+    expect(res.rawPayload.subarray(8, 12).toString('latin1')).toBe('WEBP');
+  });
+
+  it('answers 404 for a type without a preview, and the file stays downloadable', async () => {
+    const id = (await upload(1, 'pack.zip')).json().files[0].id;
+    const listed = (await app.inject({ method: 'GET', url: '/vibe/companies/1/files' })).json().files[0];
+    expect(listed.hasThumb).toBe(false);
+    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    expect(res.statusCode).toBe(404);
   });
 });
 

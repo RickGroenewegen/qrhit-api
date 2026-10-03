@@ -773,6 +773,27 @@ things to know here:
   is kept unread as the rollback path. After `db push` on production, run
   `npx tsx scripts/migrate-company-assets.ts` (report) and then with
   `--write` to copy its images into the store.
+- **Company files and list files** (2026-10-03). `CompanyFile.companyListId`
+  puts a file on one of the company's lists (designs, track list, printer
+  files); null keeps it on the company (logos, brand kit).
+  `GET .../files` without `listId` is the company's own, `?listId=<id>` that
+  list's, `?listId=all` both; uploads take a `listId` field and `PATCH` a
+  `companyListId` to move a file. A list that is deleted hands its files
+  back to the company (`SetNull`). The list's old Files tab
+  (`company_list_files`, cards/box, never used in production) is gone with
+  its routes; the table stays unread. The printer order mail
+  (`getOrderEmail`) and Live orders count the list's assets in the Design
+  category.
+- **Thumbnails** (`companyFilePreviews.ts`, cached next to the file as
+  `.thumb.webp` / `.thumb.svg`, two renders at a time per process): images
+  with sharp; PDF and Illustrator (an `.ai` is a PDF inside) the first page
+  through pdf-parse/pdf.js; PSD our own reader of the merged image
+  (ag-psd refuses CMYK, and print files are CMYK), wrapped in a TIFF with
+  the file's ICC profile so sharp converts the colours, falling back to
+  Photoshop's stored JPEG preview; xlsx/csv the top-left corner as an SVG
+  the browser renders with its own fonts (the servers have none). exceljs
+  cannot read workbooks with namespace-prefixed XML (some .NET exports);
+  those keep the icon.
 
 ## EmailOctopus business lists (company contacts)
 

@@ -339,7 +339,7 @@ describe('getProductionLists', () => {
         sellPrice: 20,
         desiredDeliveryDate: null,
         CompanyListDeliveryAddress: [{ id: 1 }, { id: 2 }],
-        CompanyListFile: [{ type: 'cards' }, { type: 'box' }],
+        CompanyFile: [{ id: 11 }, { id: 12 }],
         createdAt: new Date('2026-01-01'),
         updatedAt: new Date('2026-01-02'),
       },
@@ -355,7 +355,7 @@ describe('getProductionLists', () => {
         numberOfBoxes: 12, // explicit value wins over calculator
         calculationSchneider: JSON.stringify({ quantity: 99 }),
         CompanyListDeliveryAddress: [],
-        CompanyListFile: [],
+        CompanyFile: [],
       },
       {
         id: 3,
@@ -368,7 +368,7 @@ describe('getProductionLists', () => {
         numberOfBoxes: null,
         calculation: 'NOT JSON', // parse failure -> 0 boxes
         CompanyListDeliveryAddress: [],
-        CompanyListFile: [],
+        CompanyFile: [],
       },
     ]);
 
@@ -380,7 +380,7 @@ describe('getProductionLists', () => {
       companyName: 'Acme',
       numberOfBoxes: 40,
       deliveryAddressCount: 2,
-      fileTypes: ['cards', 'box'],
+      designFileCount: 2,
     });
     expect(res.data[1]).toMatchObject({
       id: 2,
@@ -390,6 +390,10 @@ describe('getProductionLists', () => {
     expect(res.data[2]).toMatchObject({ id: 3, numberOfBoxes: 0 });
     expect(h.prisma.companyList.findMany.mock.calls[0][0].where).toEqual({
       status: 'production',
+    });
+    // Design files are the list's assets in the Design category.
+    expect(h.prisma.companyList.findMany.mock.calls[0][0].include.CompanyFile.where).toEqual({
+      category: 'design',
     });
   });
 
@@ -422,9 +426,9 @@ describe('getOrderEmail', () => {
         },
         { id: 2, name: 'Tweede', address: 'Laan 2', country: 'België' },
       ],
-      CompanyListFile: [
-        { type: 'cards', originalName: 'cards.pdf' },
-        { type: 'box', originalName: 'box.pdf' },
+      CompanyFile: [
+        { id: 31, originalName: 'cards.pdf' },
+        { id: 32, originalName: 'box.pdf' },
       ],
       ...over,
     };
@@ -474,9 +478,13 @@ describe('getOrderEmail', () => {
     // HTML escapes ampersands
     expect(d.html).toContain('Magazijn &amp; Co');
     expect(d.files).toEqual([
-      { type: 'cards', originalName: 'cards.pdf' },
-      { type: 'box', originalName: 'box.pdf' },
+      { id: 31, originalName: 'cards.pdf' },
+      { id: 32, originalName: 'box.pdf' },
     ]);
+    expect(h.prisma.companyList.findUnique.mock.calls[0][0].include.CompanyFile).toEqual({
+      where: { category: 'design' },
+      orderBy: { createdAt: 'asc' },
+    });
   });
 
   it('falls back to the 96-card spec for unknown Schneider card counts', async () => {
@@ -506,7 +514,7 @@ describe('getOrderEmail', () => {
         calculationSchneider: null,
         desiredDeliveryDate: null,
         CompanyListDeliveryAddress: [],
-        CompanyListFile: [{ type: 'cards', originalName: 'c.pdf' }],
+        CompanyFile: [],
         numberOfCards: 200,
       })
     );
@@ -528,7 +536,7 @@ describe('getOrderEmail', () => {
       expect.stringContaining('Geen aantal dozen gevonden'),
       expect.stringContaining('Geen gewenste leverdatum'),
       expect.stringContaining('Geen leveradressen'),
-      expect.stringContaining('doosje ontbreekt'),
+      expect.stringContaining('nog geen ontwerpen bij deze lijst'),
     ]);
   });
 

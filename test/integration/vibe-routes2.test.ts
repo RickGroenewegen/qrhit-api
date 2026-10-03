@@ -797,7 +797,6 @@ describe('vibe portal routes — wave 2 coverage', () => {
     // Endpoints accessible to vibeadmin
     const vibeAdminEndpoints = [
       { method: 'GET', url: (cId: number, lId: number) => `/vibe/companies/${cId}/lists/${lId}/delivery-addresses` },
-      { method: 'GET', url: (cId: number, lId: number) => `/vibe/companies/${cId}/lists/${lId}/files` },
     ] as const;
 
     for (const ep of vibeAdminEndpoints) {
