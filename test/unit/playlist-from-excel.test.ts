@@ -299,6 +299,70 @@ describe('PlaylistFromExcel job', () => {
     expect(h.createOrUpdatePlaylist).toHaveBeenCalledWith('Retry', ['sp9']);
   });
 
+  it('reports every matched row with its track, source, match kind and duplicates', async () => {
+    h.queryRaw.mockImplementation(async (_strings: TemplateStringsArray, ...values: any[]) => {
+      if (values.includes('los del rio') && values.includes('macarena')) {
+        return [{ trackId: 'db1', artist: 'Los Del Rio', name: 'Macarena' }];
+      }
+      return [];
+    });
+    h.searchTracks.mockImplementation(async (query: string) => ({
+      success: true,
+      data: {
+        tracks: query.includes('Scatman')
+          ? [{ id: 'sp2', artist: 'Scatman John', artists: ['Scatman John'], name: 'Scatman (Ski-Ba-Bop-Ba-Dop-Bop)' }]
+          : [],
+      },
+    }));
+    h.createOrUpdatePlaylist.mockResolvedValue({
+      success: true,
+      data: { playlistId: 'pl3', playlistUrl: 'https://open.spotify.com/playlist/pl3' },
+    });
+
+    const jobId = service.startJob({
+      rows: [
+        { row: 2, artist: 'Los Del Rio', title: 'Macarena' },
+        { row: 3, artist: 'Scatman John', title: 'Scatman' },
+        { row: 4, artist: 'Nobody Knows', title: 'Lost Song' },
+        { row: 5, artist: 'Los Del Rio', title: 'Macarena' },
+      ],
+      filename: 'x.xlsx',
+      playlistName: 'Rows',
+      artistColumn: 0,
+      titleColumn: 1,
+      hasHeader: true,
+    });
+
+    const job = await waitForJob(service, jobId);
+    expect(job.status).toBe('completed');
+    expect(job.matches).toEqual([
+      { row: 2, artist: 'Los Del Rio', title: 'Macarena', trackId: 'db1', source: 'db', match: 'exact', matchedName: 'Macarena', matchedArtist: 'Los Del Rio' },
+      { row: 3, artist: 'Scatman John', title: 'Scatman', trackId: 'sp2', source: 'spotify', match: 'loose', matchedName: 'Scatman (Ski-Ba-Bop-Ba-Dop-Bop)', matchedArtist: 'Scatman John' },
+      { row: 5, artist: 'Los Del Rio', title: 'Macarena', trackId: 'db1', source: 'db', match: 'exact', matchedName: 'Macarena', matchedArtist: 'Los Del Rio', duplicateOfRow: 2 },
+    ]);
+    expect(job.notFound).toEqual([{ row: 4, artist: 'Nobody Knows', title: 'Lost Song' }]);
+    expect(job.addedCount).toBe(2);
+    expect(h.createOrUpdatePlaylist).toHaveBeenCalledWith('Rows', ['db1', 'sp2']);
+  });
+
+  it('only matches when createPlaylist is false', async () => {
+    h.queryRaw.mockResolvedValue([{ trackId: 'db1', artist: 'A', name: 'B' }]);
+
+    const file = await buildSheet([['A', 'B']]);
+    const upload = await service.parseUpload(
+      parts(file, { artistColumn: '0', titleColumn: '1', hasHeader: 'false', createPlaylist: 'false' })
+    );
+    expect(upload.createPlaylist).toBe(false);
+
+    const job = await waitForJob(service, service.startJob(upload));
+    expect(job.status).toBe('completed');
+    expect(job.stage).toBe('done');
+    expect(job.createPlaylist).toBe(false);
+    expect(job.matches?.map((m) => m.trackId)).toEqual(['db1']);
+    expect(job.playlistId).toBeUndefined();
+    expect(h.createOrUpdatePlaylist).not.toHaveBeenCalled();
+  });
+
   it('surfaces a Spotify playlist error as a failed job', async () => {
     h.queryRaw.mockResolvedValue([{ trackId: 'db1' }]);
     h.createOrUpdatePlaylist.mockResolvedValue({ success: false, error: 'Spotify authentication required' });

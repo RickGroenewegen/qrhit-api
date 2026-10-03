@@ -3,6 +3,7 @@
 #
 #   _scripts/ro-query.sh "SELECT code, percent, startDate, endDate FROM discount_codes WHERE code = 'BF2026'"
 #   _scripts/ro-query.sh --vertical "SELECT * FROM playlists WHERE id = 159"
+#   _scripts/ro-query.sh --batch "SELECT id, orderId FROM payments WHERE email = 'x@y.nl'"
 #
 # Production is reached only as LIVE_DB_READONLY_USER (grants: SELECT, SHOW
 # VIEW on qrhit.*), on the host of DATABASE_URL, never with DATABASE_URL's own
@@ -13,14 +14,19 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# --vertical: one column per line; --batch: tab-separated with a header row
+# (mysql's escaping of tab, newline and backslash), for scripts such as qrsong.
 vertical=""
 if [[ "${1:-}" == "--vertical" ]]; then
   vertical="--vertical"
   shift
+elif [[ "${1:-}" == "--batch" ]]; then
+  vertical="--batch"
+  shift
 fi
 sql="${1:-}"
 if [[ -z "$sql" ]]; then
-  echo "usage: _scripts/ro-query.sh [--vertical] \"SELECT …\"" >&2
+  echo "usage: _scripts/ro-query.sh [--vertical|--batch] \"SELECT …\"" >&2
   exit 1
 fi
 if ! [[ "$(printf '%s' "$sql" | tr '[:lower:]' '[:upper:]' | sed -E 's/^[[:space:]]+//')" =~ ^(SELECT|SHOW|DESCRIBE|EXPLAIN|WITH) ]]; then

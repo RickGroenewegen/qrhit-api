@@ -33,6 +33,23 @@ export interface PlaylistFromExcelRow {
   title: string;
 }
 
+/**
+ * How one sheet row was matched. Reported per row so a caller (the qrsong
+ * toolkit) can check every row against the track it became, instead of only
+ * the counts. `match` is 'exact' when the cleaned titles are equal and
+ * 'loose' when one title is only a prefix of the other (a different version
+ * can slip in that way, so loose rows deserve a look).
+ */
+export interface PlaylistFromExcelMatch extends PlaylistFromExcelRow {
+  trackId: string;
+  source: 'db' | 'spotify';
+  match: 'exact' | 'loose';
+  matchedName: string | null;
+  matchedArtist: string | null;
+  /** Set when an earlier row already matched the same Spotify track: this row adds nothing to the playlist. */
+  duplicateOfRow?: number;
+}
+
 export interface PlaylistFromExcelSnapshot {
   jobId: string;
   status: 'running' | 'completed' | 'failed';
@@ -43,6 +60,10 @@ export interface PlaylistFromExcelSnapshot {
   foundInDb: number;
   foundOnSpotify: number;
   notFound: PlaylistFromExcelRow[];
+  /** Every matched row, in sheet order (filled when matching is done). */
+  matches?: PlaylistFromExcelMatch[];
+  /** False when the caller only wanted the matches: no playlist is made. */
+  createPlaylist: boolean;
   playlistId?: string;
   playlistUrl?: string;
   addedCount?: number;
@@ -58,12 +79,15 @@ export interface PlaylistFromExcelUpload {
   artistColumn: number;
   titleColumn: number;
   hasHeader: boolean;
+  /** Default true; the form field `createPlaylist=false` only matches. */
+  createPlaylist?: boolean;
 }
 
-interface MatchedTrack {
-  row: PlaylistFromExcelRow;
+interface FoundTrack {
   trackId: string;
-  source: 'db' | 'spotify';
+  match: 'exact' | 'loose';
+  name: string | null;
+  artist: string | null;
 }
 
 /** Shape of one item in Spotify.searchTracks()'s formatted result. */
@@ -108,6 +132,7 @@ class PlaylistFromExcel {
     let titleColumn = 1;
     let hasHeader = true;
     let playlistName = '';
+    let createPlaylist = true;
 
     for await (const part of parts) {
       if (part.type === 'file') {
@@ -128,6 +153,9 @@ class PlaylistFromExcel {
           break;
         case 'playlistName':
           playlistName = value;
+          break;
+        case 'createPlaylist':
+          createPlaylist = value !== 'false';
           break;
       }
     }
@@ -172,7 +200,7 @@ class PlaylistFromExcel {
       playlistName = `${base} (${new Date().toISOString().slice(0, 10)})`;
     }
 
-    return { rows, filename, playlistName, artistColumn, titleColumn, hasHeader };
+    return { rows, filename, playlistName, artistColumn, titleColumn, hasHeader, createPlaylist };
   }
 
   /**
@@ -192,6 +220,7 @@ class PlaylistFromExcel {
       foundInDb: 0,
       foundOnSpotify: 0,
       notFound: [],
+      createPlaylist: upload.createPlaylist !== false,
       startedAt: Date.now(),
     };
     this.jobs.set(jobId, snapshot);
@@ -232,15 +261,23 @@ class PlaylistFromExcel {
 
   private async run(jobId: string, upload: PlaylistFromExcelUpload): Promise<void> {
     const snapshot = this.jobs.get(jobId)!;
-    const matched: MatchedTrack[] = [];
+    const matched: PlaylistFromExcelMatch[] = [];
     const unmatched: PlaylistFromExcelRow[] = [];
+    const toMatch = (row: PlaylistFromExcelRow, found: FoundTrack, source: 'db' | 'spotify'): PlaylistFromExcelMatch => ({
+      ...row,
+      trackId: found.trackId,
+      source,
+      match: found.match,
+      matchedName: found.name,
+      matchedArtist: found.artist,
+    });
 
     // Phase 1: our own tracks table.
     snapshot.stage = 'database';
     for (const row of upload.rows) {
-      const trackId = await this.findInDatabase(row);
-      if (trackId) {
-        matched.push({ row, trackId, source: 'db' });
+      const found = await this.findInDatabase(row);
+      if (found) {
+        matched.push(toMatch(row, found, 'db'));
         snapshot.foundInDb++;
       } else {
         unmatched.push(row);
@@ -264,9 +301,9 @@ class PlaylistFromExcel {
     snapshot.total = unmatched.length;
     await this.persist(snapshot);
     for (const row of unmatched) {
-      const trackId = await this.findOnSpotify(jobId, row);
-      if (trackId) {
-        matched.push({ row, trackId, source: 'spotify' });
+      const found = await this.findOnSpotify(jobId, row);
+      if (found) {
+        matched.push(toMatch(row, found, 'spotify'));
         snapshot.foundOnSpotify++;
       } else {
         snapshot.notFound.push(row);
@@ -275,14 +312,36 @@ class PlaylistFromExcel {
       if (snapshot.processed % 10 === 0) await this.persist(snapshot);
     }
 
-    // Keep sheet order, drop duplicate Spotify ids.
-    matched.sort((a, b) => a.row.row - b.row.row);
-    const seen = new Set<string>();
+    // Keep sheet order, drop duplicate Spotify ids (and say which row they repeat).
+    matched.sort((a, b) => a.row - b.row);
+    const firstRow = new Map<string, number>();
     const trackIds: string[] = [];
     for (const m of matched) {
-      if (seen.has(m.trackId)) continue;
-      seen.add(m.trackId);
+      const earlier = firstRow.get(m.trackId);
+      if (earlier !== undefined) {
+        m.duplicateOfRow = earlier;
+        continue;
+      }
+      firstRow.set(m.trackId, m.row);
       trackIds.push(m.trackId);
+    }
+    snapshot.matches = matched;
+
+    if (!snapshot.createPlaylist) {
+      snapshot.stage = 'done';
+      snapshot.status = 'completed';
+      snapshot.total = upload.rows.length;
+      snapshot.processed = upload.rows.length;
+      snapshot.finishedAt = Date.now();
+      await this.persist(snapshot);
+      this.logger.log(
+        color.green.bold(
+          `Playlist from Excel ${color.white.bold(jobId)}: matched only, ${color.white.bold(
+            trackIds.length
+          )} unique tracks for ${color.white.bold(upload.rows.length)} rows (no playlist made)`
+        )
+      );
+      return;
     }
 
     if (trackIds.length === 0) {
@@ -327,19 +386,22 @@ class PlaylistFromExcel {
    * (suffixes like " - Remastered" and "(feat. …)" stripped) so a sheet that
    * says "Bohemian Rhapsody" still hits "Bohemian Rhapsody - Remastered 2011".
    */
-  private async findInDatabase(row: PlaylistFromExcelRow): Promise<string | null> {
+  private async findInDatabase(row: PlaylistFromExcelRow): Promise<FoundTrack | null> {
     const artist = row.artist.toLowerCase().trim();
     const title = row.title.toLowerCase().trim();
 
-    const exact = await this.prisma.$queryRaw<{ trackId: string }[]>`
-      SELECT trackId
+    const exact = await this.prisma.$queryRaw<{ trackId: string; artist?: string; name?: string }[]>`
+      SELECT trackId, artist, name
       FROM tracks
       WHERE LOWER(TRIM(artist)) = ${artist}
         AND LOWER(TRIM(name)) = ${title}
       ORDER BY manuallyChecked DESC, id ASC
       LIMIT 1
     `;
-    if (exact.length > 0) return exact[0].trackId;
+    if (exact.length > 0) {
+      const hit = exact[0];
+      return { trackId: hit.trackId, match: 'exact', name: hit.name ?? null, artist: hit.artist ?? null };
+    }
 
     const cleanedTitle = this.utils.cleanTrackName(row.title).toLowerCase().trim();
     const primaryArtist = this.primaryArtist(row.artist).toLowerCase();
@@ -355,7 +417,10 @@ class PlaylistFromExcel {
     `;
     for (const candidate of loose) {
       const candidateTitle = this.utils.cleanTrackName(candidate.name).toLowerCase().trim();
-      if (candidateTitle === cleanedTitle) return candidate.trackId;
+      if (candidateTitle === cleanedTitle) {
+        // Same cleaned title: the version may differ ("- Remastered"), the song does not.
+        return { trackId: candidate.trackId, match: 'exact', name: candidate.name, artist: candidate.artist };
+      }
     }
     return null;
   }
@@ -369,7 +434,7 @@ class PlaylistFromExcel {
    * still matches a sheet that lists Bruno Mars.
    * 429s bubble up as a retryAfter and pause the whole loop for that long.
    */
-  private async findOnSpotify(jobId: string, row: PlaylistFromExcelRow): Promise<string | null> {
+  private async findOnSpotify(jobId: string, row: PlaylistFromExcelRow): Promise<FoundTrack | null> {
     const cleanedTitle = this.utils.cleanTrackName(row.title);
     const primaryArtist = this.primaryArtist(row.artist);
     const queries = [
@@ -380,7 +445,14 @@ class PlaylistFromExcel {
     for (const query of queries) {
       const tracks = await this.searchWithBackoff(jobId, query);
       const hit = this.pickCandidate(tracks, row);
-      if (hit) return hit.id;
+      if (hit) {
+        return {
+          trackId: hit.track.id,
+          match: hit.exact ? 'exact' : 'loose',
+          name: hit.track.name ?? null,
+          artist: hit.track.artists?.length ? hit.track.artists.join(', ') : hit.track.artist ?? null,
+        };
+      }
     }
     return null;
   }
@@ -393,7 +465,7 @@ class PlaylistFromExcel {
   private pickCandidate(
     tracks: SpotifySearchTrack[],
     row: PlaylistFromExcelRow
-  ): SpotifySearchTrack | null {
+  ): { track: SpotifySearchTrack; exact: boolean } | null {
     const wantedTitle = this.normalize(this.utils.cleanTrackName(row.title));
     if (!wantedTitle) return null;
 
@@ -403,12 +475,12 @@ class PlaylistFromExcel {
       if (!credited.some((a) => this.artistMatches(a, row.artist))) continue;
 
       const candidateTitle = this.normalize(this.utils.cleanTrackName(track.name));
-      if (candidateTitle === wantedTitle) return track;
+      if (candidateTitle === wantedTitle) return { track, exact: true };
       if (!looseHit && this.titleLooselyMatches(candidateTitle, wantedTitle)) {
         looseHit = track;
       }
     }
-    return looseHit;
+    return looseHit ? { track: looseHit, exact: false } : null;
   }
 
   private titleLooselyMatches(candidate: string, wanted: string): boolean {

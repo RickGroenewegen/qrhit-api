@@ -42,7 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 3. **ro-query.sh**
    - One query against the production database as the read-only user (`LIVE_DB_READONLY_*`, host from `DATABASE_URL`), with a 10 s limit
-   - Usage: `./_scripts/ro-query.sh [--vertical] "SELECT …"`; anything but SELECT/SHOW/DESCRIBE/EXPLAIN/WITH is refused
+   - Usage: `./_scripts/ro-query.sh [--vertical|--batch] "SELECT …"`; anything but SELECT/SHOW/DESCRIBE/EXPLAIN/WITH is refused (`--batch` is tab-separated with a header, for scripts)
    - Keep it narrow (indexed ids, LIMIT): it is the live database
 
 ### Translation Files
@@ -809,6 +809,37 @@ System → "Sync business lists", `POST /admin/mail-octopus/business-sync`,
 - A run that would remove more than 20% of the lists (and more than 10)
   removes nobody and sends a Pushover: a broken query or the wrong database
   must not empty them.
+
+## The qrsong toolkit's routes (admin only)
+
+Rick's `qrsong` CLI (`~/Sites/skill-qrsong`) drives business orders with the
+admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
+`getAuthHandler(['admin'])`, none behind a dashboard screen:
+
+- `POST /admin/playlist-from-excel` takes `createPlaylist=false` to only
+  match, and every job now reports `matches` per row (track id, database or
+  Spotify, `exact` or `loose`, the matched name and artist, `duplicateOfRow`).
+  Loose matches deserve a look: the prefix rule took BLØF "Hier" for "Hier
+  Aan De Kust", and "Grease" as an artist matched the 2016 Grease Live cast.
+- `POST /admin/toolkit/playlist` makes or refills a playlist from exact track
+  ids; `GET /admin/toolkit/playlist/:id/items` reads one back exactly as
+  Spotify holds it (`src/playlistItems.ts`; `Spotify.getTracks` merges and
+  filters, which is right for printing and wrong for verifying);
+  `POST /admin/toolkit/tracks` gives metadata for ids.
+- `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
+  Tromp order directly, like the reseller API: status `paid`, totals 0, no
+  Mollie, no invoice, no mail, `marketingEmails` off, generation with
+  `skipMainMail`, and **printer hold on from the start** (reason null, a
+  hand-placed hold). The hourly printer pass does not look at `printerType`,
+  so without the hold such an order goes to Print&Bind. Print&Bind and the
+  reseller type are refused; `expectedTracks` refuses a playlist whose track
+  count differs. Approved by Rick on 2026-10-03.
+- `GET /admin/toolkit/order/:paymentId` (design, print files, every card with
+  its year check), `PUT .../design`, `POST .../regenerate` (forced finalize,
+  no mail, only while on hold and not at a printer).
+- Finishing the year check (`POST /yearcheck`) still finalizes the order with
+  the "finalized" mail to the order's address, as for any order; toolkit
+  orders are booked on Rick's account.
 
 ## Featured playlist covers
 

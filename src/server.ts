@@ -40,6 +40,7 @@ import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import businessRoutes from './routes/businessRoutes';
+import toolkitRoutes from './routes/toolkitRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
@@ -168,6 +169,7 @@ class Server {
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await discountRoutes(this.fastify, getAuthHandler);
     await businessRoutes(this.fastify, getAuthHandler);
+    await toolkitRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
