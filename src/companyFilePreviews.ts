@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { PDFParse } from 'pdf-parse';
 import sharp from 'sharp';
+import { inflateRawSync } from 'zlib';
 
 /**
  * Thumbnails for the asset store (companyFiles.ts decides which file gets
@@ -29,7 +30,7 @@ const MAX_INPUT_PIXELS = 100_000_000;
 const PSD_MAX_SIDE = 300_000;
 /** A preview needs the first rows only. */
 const CSV_MAX_BYTES = 256 * 1024;
-/** What an xlsx may unpack to, by its own directory; more is refused unread. */
+/** What an xlsx may unpack to (measured, not as declared); more is refused before exceljs sees it. */
 const XLSX_MAX_UNPACKED_BYTES = 64 * 1024 * 1024;
 
 export async function webpThumb(input: Buffer | string): Promise<Buffer> {
@@ -383,9 +384,8 @@ const MAX_COLUMNS = 12;
 
 export async function xlsxThumb(buffer: Buffer): Promise<string> {
   // exceljs unpacks the whole workbook; a zip bomb would take the process with it.
-  const unpacked = zipUnpackedSize(buffer);
-  if (unpacked === null || unpacked > XLSX_MAX_UNPACKED_BYTES) {
-    throw new Error('The workbook is too large to preview');
+  if (zipInflatedSize(buffer, XLSX_MAX_UNPACKED_BYTES) === null) {
+    throw new Error('The workbook is too large to preview, or not a zip this can read');
   }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as any);
@@ -425,34 +425,55 @@ export async function xlsxThumb(buffer: Buffer): Promise<string> {
 }
 
 /**
- * What a zip says its entries unpack to, from its central directory; null
- * when there is none or it is ZIP64 (sizes beyond 4 GB), which no preview
- * needs.
+ * What a zip really unpacks to, at most `limit` bytes: null when it unpacks
+ * to more, or is not a zip this can read (ZIP64, a method other than stored
+ * or deflate, more than 10,000 entries). The sizes a zip declares are not
+ * believed: each entry is inflated, with a hard cap on the output, from the
+ * same bytes JSZip (inside exceljs) reads, which are where the central
+ * directory points (it skips the local header's sizes). Entries that share
+ * their compressed data are counted every time, as JSZip unpacks them.
  */
-export function zipUnpackedSize(buffer: Buffer): number | null {
+export function zipInflatedSize(buffer: Buffer, limit: number): number | null {
   const EOCD = 0x06054b50;
   const ENTRY = 0x02014b50;
-  // The end record sits in the last 22 bytes plus at most a 64 KB comment.
-  let eocd = -1;
-  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 22 - 0xffff); i--) {
-    if (buffer.readUInt32LE(i) === EOCD) {
-      eocd = i;
-      break;
+  const LOCAL = 0x04034b50;
+  try {
+    // The end record sits in the last 22 bytes plus at most a 64 KB comment.
+    let eocd = -1;
+    for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 22 - 0xffff); i--) {
+      if (buffer.readUInt32LE(i) === EOCD) {
+        eocd = i;
+        break;
+      }
     }
+    if (eocd < 0) return null;
+    const entries = buffer.readUInt16LE(eocd + 10);
+    let pos = buffer.readUInt32LE(eocd + 16);
+    if (entries === 0xffff || entries > 10_000 || pos === 0xffffffff) return null;
+
+    let total = 0;
+    for (let n = 0; n < entries; n++) {
+      if (buffer.readUInt32LE(pos) !== ENTRY) return null;
+      const method = buffer.readUInt16LE(pos + 10);
+      const compressedSize = buffer.readUInt32LE(pos + 20);
+      const localHeader = buffer.readUInt32LE(pos + 42);
+      if (compressedSize === 0xffffffff || localHeader === 0xffffffff) return null;
+      if (buffer.readUInt32LE(localHeader) !== LOCAL) return null;
+      const dataStart = localHeader + 30 + buffer.readUInt16LE(localHeader + 26) + buffer.readUInt16LE(localHeader + 28);
+      if (dataStart + compressedSize > buffer.length) return null;
+      const data = buffer.subarray(dataStart, dataStart + compressedSize);
+
+      if (method === 0) total += compressedSize;
+      else if (method === 8) total += inflateRawSync(data, { maxOutputLength: limit - total + 1 }).length;
+      else return null;
+      if (total > limit) return null;
+      pos += 46 + buffer.readUInt16LE(pos + 28) + buffer.readUInt16LE(pos + 30) + buffer.readUInt16LE(pos + 32);
+    }
+    return total;
+  } catch {
+    // Past the end of the buffer, broken deflate data, or more than the cap.
+    return null;
   }
-  if (eocd < 0) return null;
-  const entries = buffer.readUInt16LE(eocd + 10);
-  let pos = buffer.readUInt32LE(eocd + 16);
-  if (entries === 0xffff || pos === 0xffffffff) return null;
-  let total = 0;
-  for (let n = 0; n < entries; n++) {
-    if (pos + 46 > buffer.length || buffer.readUInt32LE(pos) !== ENTRY) return null;
-    const size = buffer.readUInt32LE(pos + 24);
-    if (size === 0xffffffff) return null;
-    total += size;
-    pos += 46 + buffer.readUInt16LE(pos + 28) + buffer.readUInt16LE(pos + 30) + buffer.readUInt16LE(pos + 32);
-  }
-  return total;
 }
 
 export function csvThumb(source: Buffer | string, name = 'CSV'): string {

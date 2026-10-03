@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import ExcelJS from 'exceljs';
 import { PDFDocument, rgb } from 'pdf-lib';
 import sharp from 'sharp';
+import { deflateRawSync } from 'zlib';
 import {
   csvThumb,
   isPdfData,
@@ -11,7 +12,7 @@ import {
   readPsdStructure,
   sheetSvg,
   xlsxThumb,
-  zipUnpackedSize,
+  zipInflatedSize,
 } from '../../src/companyFilePreviews';
 
 /**
@@ -262,16 +263,63 @@ describe('spreadsheet previews', () => {
     expect(svg).toContain('<svg');
   });
 
-  it('refuses a workbook that says it unpacks to more than the limit', async () => {
+  it('measures what a real workbook unpacks to', async () => {
     const workbook = new ExcelJS.Workbook();
     workbook.addWorksheet('Blad1').addRow(['a']);
     const xlsx = Buffer.from(await workbook.xlsx.writeBuffer());
-    expect(zipUnpackedSize(xlsx)).toBeGreaterThan(0);
+    expect(zipInflatedSize(xlsx, 64 * MB)).toBeGreaterThan(0);
+    expect(zipInflatedSize(Buffer.from('not a zip'), 64 * MB)).toBeNull();
+  });
 
-    // Make the first central directory entry claim 2 GB.
-    const entry = xlsx.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
-    xlsx.writeUInt32LE(0x7fffffff, entry + 24);
-    await expect(xlsxThumb(xlsx)).rejects.toThrow(/too large/);
-    expect(zipUnpackedSize(Buffer.from('not a zip'))).toBeNull();
+  it('refuses a zip bomb that lies about its size', async () => {
+    // Declares 100 bytes, inflates to 70 MB.
+    const bomb = oneEntryZip(Buffer.alloc(70 * MB), 100);
+    expect(zipInflatedSize(bomb, 64 * MB)).toBeNull();
+    await expect(xlsxThumb(bomb)).rejects.toThrow(/too large/);
+  });
+
+  it('counts compressed data shared by several entries every time', () => {
+    expect(zipInflatedSize(oneEntryZip(Buffer.alloc(40 * MB), 100, 1), 64 * MB)).toBe(40 * MB);
+    expect(zipInflatedSize(oneEntryZip(Buffer.alloc(40 * MB), 100, 2), 64 * MB)).toBeNull();
   });
 });
+
+const MB = 1024 * 1024;
+
+/**
+ * A zip with one deflated file, declaring `declaredSize` as its unpacked
+ * size, and `directoryEntries` central directory entries all pointing at it
+ * (the overlapping-file zip bomb).
+ */
+function oneEntryZip(content: Buffer, declaredSize: number, directoryEntries = 1): Buffer {
+  const name = Buffer.from('xl/worksheets/sheet1.xml');
+  const data = deflateRawSync(content);
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(8, 8);
+  local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(declaredSize, 22);
+  local.writeUInt16LE(name.length, 26);
+  const central: Buffer[] = [];
+  for (let i = 0; i < directoryEntries; i++) {
+    const entry = Buffer.alloc(46);
+    entry.writeUInt32LE(0x02014b50, 0);
+    entry.writeUInt16LE(20, 4);
+    entry.writeUInt16LE(20, 6);
+    entry.writeUInt16LE(8, 10);
+    entry.writeUInt32LE(data.length, 20);
+    entry.writeUInt32LE(declaredSize, 24);
+    entry.writeUInt16LE(name.length, 28);
+    entry.writeUInt32LE(0, 42);
+    central.push(entry, name);
+  }
+  const directory = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(directoryEntries, 8);
+  end.writeUInt16LE(directoryEntries, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(30 + name.length + data.length, 16);
+  return Buffer.concat([local, name, data, directory, end]);
+}
