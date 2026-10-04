@@ -5,6 +5,7 @@
  *  - axios            → Jumbo gameset API
  *  - cron             → CronJob recorded; asserts the nightly import cron
  *                       does NOT start under ENVIRONMENT=test
+ *  - ../../src/musicfetch → processExternalCards spy (the nightly link pass)
  *  - ../../src/prisma → in-memory externalCard model
  *  - ../../src/utils  → isMainServer=false (no EC2 probe)
  * File-based imports (country / musicmatch) read REAL fixture files from a
@@ -46,14 +47,22 @@ vi.mock('../../../src/utils', () => ({
 const cronCalls = vi.hoisted(() => [] as any[][]);
 const cronStarts = vi.hoisted(() => ({ count: 0 }));
 vi.mock('cron', () => ({
-  CronJob: class {
+  CronJob: class CronJobMock {
     constructor(...args: any[]) {
       cronCalls.push(args);
+    }
+    static from(params: any) {
+      return new CronJobMock(params);
     }
     start() {
       cronStarts.count++;
     }
   },
+}));
+
+const processExternalCards = vi.hoisted(() => vi.fn(async () => ({}) as any));
+vi.mock('../../../src/musicfetch', () => ({
+  default: { getInstance: () => ({ processExternalCards }) },
 }));
 
 vi.mock('axios');
@@ -510,5 +519,76 @@ describe('getStats', () => {
     expect(prismaMock.externalCard.count).toHaveBeenNthCalledWith(10, {
       where: { amazonMusicLink: { not: null } },
     });
+  });
+});
+
+describe('nightly import cron', () => {
+  const ORIGINAL_KEY = process.env['MUSICFETCH_API_KEY'];
+  const emptyImport = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
+
+  // Schedules the job as the main server would and returns its params.
+  async function scheduleNightlyJob() {
+    isMainServer.mockResolvedValueOnce(true);
+    service.startNightlyImportCron();
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    return cronCalls[cronCalls.length - 1][0];
+  }
+
+  beforeEach(() => {
+    processExternalCards.mockReset();
+    processExternalCards.mockResolvedValue({});
+    process.env['MUSICFETCH_API_KEY'] = 'test-key';
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (ORIGINAL_KEY === undefined) delete process.env['MUSICFETCH_API_KEY'];
+    else process.env['MUSICFETCH_API_KEY'] = ORIGINAL_KEY;
+  });
+
+  it('runs at 2 AM and never overlaps a run that is still busy', async () => {
+    const job = await scheduleNightlyJob();
+    expect(job.cronTime).toBe('0 2 * * *');
+    expect(job.waitForCompletion).toBe(true);
+  });
+
+  it('fetches the missing music links for all cards right after the import', async () => {
+    const order: string[] = [];
+    vi.spyOn(service, 'importAllExternalCards').mockImplementation(async () => {
+      order.push('import');
+      return emptyImport;
+    });
+    processExternalCards.mockImplementation(async () => {
+      order.push('musicfetch');
+      return {};
+    });
+
+    const job = await scheduleNightlyJob();
+    await job.onTick();
+
+    expect(order).toEqual(['import', 'musicfetch']);
+    // No card ids: the same "everything still missing links" pass as the bulk action
+    expect(processExternalCards).toHaveBeenCalledWith();
+  });
+
+  it('still fetches links when the import throws', async () => {
+    vi.spyOn(service, 'importAllExternalCards').mockRejectedValue(new Error('jumbo down'));
+
+    const job = await scheduleNightlyJob();
+    await job.onTick();
+
+    expect(processExternalCards).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips MusicFetch without an API key, which would burn every card\'s attempts', async () => {
+    delete process.env['MUSICFETCH_API_KEY'];
+    vi.spyOn(service, 'importAllExternalCards').mockResolvedValue(emptyImport);
+
+    const job = await scheduleNightlyJob();
+    await job.onTick();
+
+    expect(service.importAllExternalCards).toHaveBeenCalled();
+    expect(processExternalCards).not.toHaveBeenCalled();
   });
 });

@@ -524,21 +524,57 @@ class ExternalCardService {
   }
 
   /**
-   * Start the nightly import cron job (runs at 2 AM)
+   * Fill in the other music services for cards that only have Spotify, the
+   * same work as the "Fetch External Card Links" bulk action. Skipped without
+   * an API key: MusicFetch would count every card as a failed attempt and
+   * give up on it after three runs.
+   */
+  private async fetchMissingMusicLinks(): Promise<void> {
+    if (!process.env['MUSICFETCH_API_KEY']) {
+      this.logger.log(
+        color.yellow.bold(
+          `Skipping external card music links: ${color.white.bold('MUSICFETCH_API_KEY')} not set`
+        )
+      );
+      return;
+    }
+    try {
+      // Imported here because musicfetch.ts imports this file
+      const MusicFetch = (await import('./musicfetch')).default;
+      await MusicFetch.getInstance().processExternalCards();
+    } catch (e: any) {
+      this.logger.log(
+        color.red.bold(`Nightly external card music link fetch failed: ${e.message || e}`)
+      );
+    }
+  }
+
+  /**
+   * Start the nightly import cron job (runs at 2 AM), followed by the
+   * MusicFetch pass for the cards it brought in
    */
   public startNightlyImportCron(): void {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          const importJob = new CronJob('0 2 * * *', async () => {
-            this.logger.log(color.blue.bold('Starting nightly external card import...'));
-            try {
-              await this.importAllExternalCards();
-            } catch (e: any) {
-              this.logger.log(
-                color.red.bold(`Nightly external card import failed: ${e.message || e}`)
-              );
-            }
+          const importJob = CronJob.from({
+            cronTime: '0 2 * * *',
+            onTick: async () => {
+              this.logger.log(color.blue.bold('Starting nightly external card import...'));
+              try {
+                await this.importAllExternalCards();
+              } catch (e: any) {
+                this.logger.log(
+                  color.red.bold(`Nightly external card import failed: ${e.message || e}`)
+                );
+              }
+              // Also after a failed import: cards from earlier runs may still
+              // be waiting for their links
+              await this.fetchMissingMusicLinks();
+            },
+            // MusicFetch allows 5 requests a minute, so a big new set can run
+            // past the next 2 AM; skip that tick rather than fetch twice
+            waitForCompletion: true,
           });
           importJob.start();
           this.logger.log(
