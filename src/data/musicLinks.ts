@@ -3,6 +3,7 @@ import { ApiResult } from '../interfaces/ApiResult';
 import { serviceColumnMap, serviceCheckedColumnMap, serviceTypeMap } from '../providers/MusicProviderFactory';
 import { DataDeps } from './types';
 import { isPlaylistBlocked } from './playlists';
+import { playPhpId } from '../analytics';
 
 export const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 
@@ -262,6 +263,21 @@ export async function getLink(
 ): Promise<ApiResult> {
   deps.analytics.increaseCounter('songs', 'played');
   logLink(deps, trackId, clientIp, php);
+
+  // Per order line, for the play rankings on the admin Analytics page. Old
+  // cards (/qrlink without a php) cannot be attributed to an order.
+  const phpId = playPhpId(php);
+  if (phpId !== null) {
+    deps.analytics.recordPlaylistPlay(phpId).catch((error: Error) => {
+      deps.logger.log(
+        color.red.bold(
+          `Could not count the play of php ${color.white.bold(
+            phpId
+          )}: ${color.white.bold(error.message)}`
+        )
+      );
+    });
+  }
 
   // Log IP, trackId, and user agent
   deps.logger.log(

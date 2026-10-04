@@ -671,6 +671,12 @@ class Data {
     return miscModule.getLastPlays(this.deps);
   }
 
+  public async getPlaylistPlayRanking(
+    group: miscModule.PlayRankingGroup = 'order'
+  ): Promise<miscModule.PlaylistPlayRanking | miscModule.PlaylistPlayRankingPerPlaylist> {
+    return miscModule.getPlaylistPlayRanking(this.deps, group);
+  }
+
   public async translateGenres() {
     return miscModule.translateGenres(this.deps);
   }

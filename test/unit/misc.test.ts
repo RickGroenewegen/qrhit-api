@@ -107,6 +107,7 @@ vi.mock('../../../src/data/featuredPlaylists', () => ({
 import {
   getPDFFilepath,
   getLastPlays,
+  getPlaylistPlayRanking,
   translateGenres,
   clearPlaylistCache,
   clearNonFeaturedPlaylistCaches,
@@ -321,7 +322,7 @@ describe('getLastPlays', () => {
     const track = { id: 10, name: 'Track B', artist: 'Artist B', trackId: 'sp456' };
     const phpEntry = {
       id: 5,
-      playlist: { name: 'Cool Playlist' },
+      playlist: { id: 3, name: 'Cool Playlist', image: 'https://i.scdn.co/cover', customImage: null },
       payment: { user: { displayName: 'JohnDoe' } },
     };
 
@@ -340,6 +341,10 @@ describe('getLastPlays', () => {
     expect(result).toHaveLength(1);
     expect(result[0].playlistName).toBe('Cool Playlist');
     expect(result[0].displayName).toBe('JohnDoe');
+    expect(result[0].php).toBe(5);
+    expect(result[0].playlistId).toBe(3);
+    expect(result[0].playlistImage).toBe('https://i.scdn.co/cover');
+    expect(result[0].playlistCustomImage).toBeNull();
   });
 
   it('does NOT call paymentHasPlaylist.findMany when phpIds is empty', async () => {
@@ -360,6 +365,226 @@ describe('getLastPlays', () => {
 
     await getLastPlays(deps);
     expect(phpFindMany).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getPlaylistPlayRanking
+// ---------------------------------------------------------------------------
+describe('getPlaylistPlayRanking', () => {
+  const emptyWindow = { plays: 0, orders: 0, top: [] };
+  const line = (id: number, playlistId: number, fullname: string) => ({
+    id,
+    type: 'physical',
+    numberOfTracks: 100,
+    playlist: { id: playlistId, name: 'Hits of the 80s', image: 'cover.jpg', customImage: null },
+    payment: {
+      orderId: `Q-${id}`,
+      paymentId: `tr_${id}`,
+      fullname,
+      vibe: false,
+      createdAt: new Date('2026-09-01T10:00:00Z'),
+    },
+  });
+
+  it('gives each order line its own row, with its order details', async () => {
+    const findMany = vi.fn(async () => [line(1, 9, 'Anna'), line(2, 9, 'Bram')]);
+    const deps = makeDeps({
+      prisma: { paymentHasPlaylist: { findMany } },
+      analytics: {
+        getPlaylistPlayRanking: vi.fn(async () => ({
+          since: '2026-10-01T00:00:00.000Z',
+          day: {
+            plays: 5,
+            orders: 2,
+            top: [
+              { php: 2, plays: 3 },
+              { php: 1, plays: 2 },
+            ],
+          },
+          week: emptyWindow,
+          total: { plays: 5, orders: 2, top: [{ php: 2, plays: 3 }, { php: 1, plays: 2 }] },
+        })),
+      },
+    });
+
+    const ranking = await getPlaylistPlayRanking(deps);
+
+    // One query for every order line in any window
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect((findMany.mock.calls[0] as any)[0].where).toEqual({ id: { in: [2, 1] } });
+    expect(ranking.group).toBe('order');
+    expect(ranking.since).toBe('2026-10-01T00:00:00.000Z');
+    expect(ranking.day.plays).toBe(5);
+    expect(ranking.day.top).toEqual([
+      expect.objectContaining({ rank: 1, php: 2, plays: 3, playlistId: 9, customerName: 'Bram', orderId: 'Q-2', found: true }),
+      expect.objectContaining({ rank: 2, php: 1, plays: 2, playlistId: 9, customerName: 'Anna', orderId: 'Q-1' }),
+    ]);
+    expect(ranking.week).toEqual(emptyWindow);
+  });
+
+  it('gives equal plays the same rank', async () => {
+    const deps = makeDeps({
+      prisma: { paymentHasPlaylist: { findMany: vi.fn(async () => []) } },
+      analytics: {
+        getPlaylistPlayRanking: vi.fn(async () => ({
+          since: null,
+          day: emptyWindow,
+          week: emptyWindow,
+          total: {
+            plays: 7,
+            orders: 3,
+            top: [
+              { php: 1, plays: 3 },
+              { php: 2, plays: 3 },
+              { php: 3, plays: 1 },
+            ],
+          },
+        })),
+      },
+    });
+
+    const ranking = await getPlaylistPlayRanking(deps);
+    expect(ranking.total.top.map((row) => row.rank)).toEqual([1, 1, 3]);
+  });
+
+  it('keeps the row of a deleted order line, marked as not found', async () => {
+    const deps = makeDeps({
+      prisma: { paymentHasPlaylist: { findMany: vi.fn(async () => []) } },
+      analytics: {
+        getPlaylistPlayRanking: vi.fn(async () => ({
+          since: null,
+          day: emptyWindow,
+          week: emptyWindow,
+          total: { plays: 4, orders: 1, top: [{ php: 99, plays: 4 }] },
+        })),
+      },
+    });
+
+    const ranking = await getPlaylistPlayRanking(deps);
+    expect(ranking.total.top[0]).toMatchObject({
+      rank: 1,
+      php: 99,
+      plays: 4,
+      found: false,
+      playlistName: null,
+      customerName: null,
+    });
+  });
+
+  it('does not query the database when nothing was played', async () => {
+    const findMany = vi.fn(async () => []);
+    const deps = makeDeps({
+      prisma: { paymentHasPlaylist: { findMany } },
+      analytics: {
+        getPlaylistPlayRanking: vi.fn(async () => ({
+          since: null,
+          day: emptyWindow,
+          week: emptyWindow,
+          total: emptyWindow,
+        })),
+      },
+    });
+
+    await getPlaylistPlayRanking(deps);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  describe('per playlist', () => {
+    const counts = (day: [number, number][], week: [number, number][], total: [number, number][]) => ({
+      since: '2026-10-01T00:00:00.000Z',
+      day: new Map(day),
+      week: new Map(week),
+      total: new Map(total),
+    });
+    const playlist = (id: number, name: string) => ({ id, name, image: `${id}.jpg`, customImage: null });
+
+    it('adds up the order lines of the same playlist', async () => {
+      // php 1 and 2 are two customers' copies of playlist 9; php 3 is playlist 4.
+      const phpFindMany = vi.fn(async () => [
+        { id: 1, playlistId: 9 },
+        { id: 2, playlistId: 9 },
+        { id: 3, playlistId: 4 },
+      ]);
+      const playlistFindMany = vi.fn(async () => [playlist(9, 'Hits of the 80s'), playlist(4, 'Dutch Classics')]);
+      const deps = makeDeps({
+        prisma: {
+          paymentHasPlaylist: { findMany: phpFindMany },
+          playlist: { findMany: playlistFindMany },
+        },
+        analytics: {
+          getPlayCounts: vi.fn(async () =>
+            counts([[1, 3], [2, 2], [3, 4]], [[1, 3], [2, 2], [3, 4]], [[1, 30], [2, 2], [3, 4]])
+          ),
+        },
+      });
+
+      const ranking: any = await getPlaylistPlayRanking(deps, 'playlist');
+
+      expect(ranking.group).toBe('playlist');
+      expect(ranking.since).toBe('2026-10-01T00:00:00.000Z');
+      expect(ranking.day).toMatchObject({ plays: 9, orders: 3, playlists: 2 });
+      expect(ranking.day.top).toEqual([
+        { rank: 1, playlistId: 9, plays: 5, orders: 2, found: true, playlistName: 'Hits of the 80s', playlistImage: '9.jpg', playlistCustomImage: null },
+        { rank: 2, playlistId: 4, plays: 4, orders: 1, found: true, playlistName: 'Dutch Classics', playlistImage: '4.jpg', playlistCustomImage: null },
+      ]);
+      expect(ranking.total.top[0]).toMatchObject({ playlistId: 9, plays: 32, orders: 2 });
+      // One lookup for the lines, one for the playlists
+      expect(phpFindMany).toHaveBeenCalledTimes(1);
+      expect(playlistFindMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('looks the order lines up in chunks', async () => {
+      const total: [number, number][] = Array.from({ length: 12001 }, (_, i) => [i + 1, 1]);
+      const phpFindMany = vi.fn(async (args: any) =>
+        args.where.id.in.map((id: number) => ({ id, playlistId: 7 }))
+      );
+      const deps = makeDeps({
+        prisma: {
+          paymentHasPlaylist: { findMany: phpFindMany },
+          playlist: { findMany: vi.fn(async () => [playlist(7, 'Big one')]) },
+        },
+        analytics: { getPlayCounts: vi.fn(async () => counts([], [], total)) },
+      });
+
+      const ranking: any = await getPlaylistPlayRanking(deps, 'playlist');
+
+      expect(phpFindMany).toHaveBeenCalledTimes(3);
+      expect(ranking.total.top).toEqual([expect.objectContaining({ playlistId: 7, plays: 12001, orders: 12001 })]);
+    });
+
+    it('counts the plays of a deleted order line in the window, but in no row', async () => {
+      const deps = makeDeps({
+        prisma: {
+          paymentHasPlaylist: { findMany: vi.fn(async () => [{ id: 1, playlistId: 9 }]) },
+          playlist: { findMany: vi.fn(async () => [playlist(9, 'Hits of the 80s')]) },
+        },
+        analytics: { getPlayCounts: vi.fn(async () => counts([], [], [[1, 2], [99, 5]])) },
+      });
+
+      const ranking: any = await getPlaylistPlayRanking(deps, 'playlist');
+
+      expect(ranking.total).toMatchObject({ plays: 7, orders: 2, playlists: 1 });
+      expect(ranking.total.top).toEqual([expect.objectContaining({ playlistId: 9, plays: 2 })]);
+    });
+
+    it('queries nothing when nothing was played', async () => {
+      const phpFindMany = vi.fn(async () => []);
+      const playlistFindMany = vi.fn(async () => []);
+      const deps = makeDeps({
+        prisma: {
+          paymentHasPlaylist: { findMany: phpFindMany },
+          playlist: { findMany: playlistFindMany },
+        },
+        analytics: { getPlayCounts: vi.fn(async () => counts([], [], [])) },
+      });
+
+      const ranking: any = await getPlaylistPlayRanking(deps, 'playlist');
+
+      expect(ranking.total).toEqual({ plays: 0, orders: 0, playlists: 0, top: [] });
+      expect(phpFindMany).not.toHaveBeenCalled();
+      expect(playlistFindMany).not.toHaveBeenCalled();
+    });
   });
 });
 

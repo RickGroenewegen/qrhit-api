@@ -598,6 +598,49 @@ again; payment creation does the same lookup itself. `GET
 colour of a card background for the design the site derives. `chat.json`
 carries `{{appDesignPrice}}`, filled from the constant like the card limits.
 
+## Play rankings per order line (admin Analytics page)
+
+The frontend's admin Analytics page (`/dashboard/map`) ranks the most played
+order lines over the last 24 hours, the last 7 days and all time
+(`GET /playlist-plays`, admin only, `getPlaylistPlayRanking` in
+`data/misc.ts`). By default a row is a `payment_has_playlist` id: the same
+playlist bought by two customers is two rows. The page's "Per playlist"
+switch asks `?group=playlist`, which adds those rows up per playlist. Built
+2026-10-03.
+
+- **Redis only counts per order line.** The per-playlist ranking reads every
+  line's count (`AnalyticsClient.getPlayCounts`), looks up the playlist of
+  each line played in any window (`IN` chunks of 5000) and sums. There are no
+  per-playlist keys: the scan path does not know the playlist without a
+  database query, and both views come from the same counts, the seed
+  included. A line deleted since it was played still counts in its window's
+  total but in no playlist's row.
+
+- **Counted in `getLink()`** (`data/musicLinks.ts`), next to
+  `analytics:songs:played`, by `AnalyticsClient.recordPlaylistPlay`. Only
+  scans that carry a php (`/qrlink2/:trackId/:php`) count; old `/qrlink`
+  cards and the admin's track edit cannot be attributed. A Redis failure is
+  logged and never fails the scan.
+- **Kept with the dashboard counters, so nothing clears them**: the analytics
+  client's own connection on **db 1**, unprefixed. `Cache` is db 0 and puts
+  the package version in every key it reads through `get`/`set`, so a deploy
+  orphans those. Keys: `plays:php:total` (sorted set, member = php id, no
+  TTL), `plays:php:hour:<YYYYMMDDHH>` (UTC, one sorted set per hour, 8-day
+  TTL; the day window reads 24 of them, the week 168), `plays:php:since`
+  (when counting began) and `plays:php:seeded`.
+- **Never put them under `analytics:`.** `getAllCounters()` runs
+  `KEYS analytics:*` and `GET`s each key, and a sorted set answers WRONGTYPE:
+  the dashboard's analytics call would fail.
+- ioredis 6 speaks RESP3 by default with the "legacy" reply mapping, which
+  answers `ZRANGE ... WITHSCORES` as the flat RESP2 list (checked 2026-10-03
+  on Redis 7.2). `addScores` reads `[member, score]` pairs as well, in case
+  the mapping ever changes.
+- **Seeded once** from the scan log (`ipInfoList`, the last 1000 scans) by
+  `npx tsx scripts/seed-playlist-plays.ts` (dry run; `--write` to add). It only
+  adds scans from before `plays:php:since`, so nothing is counted twice, moves
+  `since` back to the oldest scan, and refuses once `plays:php:seeded` exists.
+  There is no older per-scan history anywhere: all time means "since".
+
 ## Turnover and profit: one set of sums
 
 The day and month reports (`Mollie.getSalesReport`), the country report

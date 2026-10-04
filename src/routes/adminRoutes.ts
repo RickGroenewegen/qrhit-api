@@ -211,6 +211,18 @@ export default async function adminRoutes(
     }
   );
 
+  // Most played: last 24 hours, last 7 days and all time. Per order line, or
+  // with ?group=playlist every order of a playlist added up.
+  fastify.get(
+    '/playlist-plays',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const group = request.query?.group === 'playlist' ? 'playlist' : 'order';
+      const ranking = await data.getPlaylistPlayRanking(group);
+      reply.send({ success: true, data: ranking });
+    }
+  );
+
   // Broadcast push notification
   fastify.post(
     '/push/broadcast',

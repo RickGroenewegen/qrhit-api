@@ -123,7 +123,10 @@ export async function getLastPlays(deps: DataDeps): Promise<any[]> {
             id: true,
             playlist: {
               select: {
+                id: true,
                 name: true,
+                image: true,
+                customImage: true,
               },
             },
             payment: {
@@ -164,7 +167,11 @@ export async function getLastPlays(deps: DataDeps): Promise<any[]> {
         if (ipInfo.php) {
           const phpInfo = phpMap.get(parseInt(ipInfo.php));
           if (phpInfo) {
+            result.php = phpInfo.id;
+            result.playlistId = phpInfo.playlist.id;
             result.playlistName = phpInfo.playlist.name;
+            result.playlistImage = phpInfo.playlist.image || null;
+            result.playlistCustomImage = phpInfo.playlist.customImage || null;
             result.displayName = phpInfo.payment.user?.displayName || null;
           }
         }
@@ -175,6 +182,251 @@ export async function getLastPlays(deps: DataDeps): Promise<any[]> {
     .filter(Boolean);
 
   return lastPlays;
+}
+
+export interface PlayRankingRow {
+  /** Equal plays share a rank. */
+  rank: number;
+  php: number;
+  plays: number;
+  /** False when the order line has been deleted since it was played. */
+  found: boolean;
+  playlistId: number | null;
+  playlistName: string | null;
+  playlistImage: string | null;
+  playlistCustomImage: string | null;
+  type: string | null;
+  numberOfTracks: number | null;
+  orderId: string | null;
+  customerName: string | null;
+  business: boolean;
+  orderedAt: Date | null;
+}
+
+export interface PlayRankingWindow {
+  plays: number;
+  orders: number;
+  top: PlayRankingRow[];
+}
+
+export interface PlaylistPlayRanking {
+  group: 'order';
+  since: string | null;
+  day: PlayRankingWindow;
+  week: PlayRankingWindow;
+  total: PlayRankingWindow;
+}
+
+/** One playlist in the per-playlist ranking: all its order lines added up. */
+export interface PlaylistRankingRow {
+  /** Equal plays share a rank. */
+  rank: number;
+  playlistId: number;
+  plays: number;
+  /** Order lines of this playlist played in the window. */
+  orders: number;
+  found: boolean;
+  playlistName: string | null;
+  playlistImage: string | null;
+  playlistCustomImage: string | null;
+}
+
+export interface PlaylistRankingWindow {
+  plays: number;
+  orders: number;
+  playlists: number;
+  top: PlaylistRankingRow[];
+}
+
+export interface PlaylistPlayRankingPerPlaylist {
+  group: 'playlist';
+  since: string | null;
+  day: PlaylistRankingWindow;
+  week: PlaylistRankingWindow;
+  total: PlaylistRankingWindow;
+}
+
+export type PlayRankingGroup = 'order' | 'playlist';
+
+const PLAYLIST_RANKING_LIMIT = 50;
+// Order lines per `IN (...)` when every played line's playlist is looked up.
+const PHP_LOOKUP_CHUNK = 5000;
+
+/** Competition ranking over rows sorted by plays: equal plays share a rank. */
+function withRanks<T extends { plays: number }>(rows: T[]): (T & { rank: number })[] {
+  let rank = 0;
+  return rows.map((row, index) => {
+    if (index === 0 || rows[index - 1].plays !== row.plays) {
+      rank = index + 1;
+    }
+    return { ...row, rank };
+  });
+}
+
+/**
+ * The play rankings of the admin Analytics page. Per order line by default,
+ * so the same playlist bought by two customers is two rows; per playlist adds
+ * those order lines up. The counts live in the analytics Redis database
+ * (AnalyticsClient), per order line only; the rest is read here.
+ */
+export async function getPlaylistPlayRanking(
+  deps: DataDeps,
+  group: PlayRankingGroup = 'order'
+): Promise<PlaylistPlayRanking | PlaylistPlayRankingPerPlaylist> {
+  if (group === 'playlist') {
+    return getPlayRankingPerPlaylist(deps);
+  }
+  const ranking = await deps.analytics.getPlaylistPlayRanking();
+  const windows = [ranking.day, ranking.week, ranking.total];
+  const phpIds = [
+    ...new Set(windows.flatMap((w) => w.top.map((entry) => entry.php))),
+  ];
+
+  const lines =
+    phpIds.length > 0
+      ? await deps.prisma.paymentHasPlaylist.findMany({
+          where: { id: { in: phpIds } },
+          select: {
+            id: true,
+            type: true,
+            numberOfTracks: true,
+            playlist: {
+              select: { id: true, name: true, image: true, customImage: true },
+            },
+            payment: {
+              select: {
+                orderId: true,
+                paymentId: true,
+                fullname: true,
+                vibe: true,
+                createdAt: true,
+              },
+            },
+          },
+        })
+      : [];
+  const byId = new Map(lines.map((line) => [line.id, line]));
+
+  const toWindow = (window: (typeof windows)[number]): PlayRankingWindow => {
+    const top = withRanks(window.top).map((entry) => {
+      const line = byId.get(entry.php);
+      return {
+        rank: entry.rank,
+        php: entry.php,
+        plays: entry.plays,
+        found: !!line,
+        playlistId: line?.playlist.id ?? null,
+        playlistName: line?.playlist.name ?? null,
+        playlistImage: line?.playlist.image || null,
+        playlistCustomImage: line?.playlist.customImage || null,
+        type: line?.type ?? null,
+        numberOfTracks: line?.numberOfTracks ?? null,
+        orderId: line ? line.payment.orderId || line.payment.paymentId : null,
+        customerName: line?.payment.fullname || null,
+        business: !!line?.payment.vibe,
+        orderedAt: line?.payment.createdAt ?? null,
+      };
+    });
+    return { plays: window.plays, orders: window.orders, top };
+  };
+
+  return {
+    group: 'order',
+    since: ranking.since,
+    day: toWindow(ranking.day),
+    week: toWindow(ranking.week),
+    total: toWindow(ranking.total),
+  };
+}
+
+/**
+ * Adds every order line's plays up by playlist. Redis only knows order lines,
+ * so this needs the playlist of every line played in a window, not only of
+ * the top: one lookup for all of them.
+ */
+async function getPlayRankingPerPlaylist(
+  deps: DataDeps
+): Promise<PlaylistPlayRankingPerPlaylist> {
+  const counts = await deps.analytics.getPlayCounts();
+  const phpIds = [
+    ...new Set([...counts.total.keys(), ...counts.week.keys(), ...counts.day.keys()]),
+  ];
+  const playlistOf = new Map<number, number>();
+  for (let i = 0; i < phpIds.length; i += PHP_LOOKUP_CHUNK) {
+    const lines = await deps.prisma.paymentHasPlaylist.findMany({
+      where: { id: { in: phpIds.slice(i, i + PHP_LOOKUP_CHUNK) } },
+      select: { id: true, playlistId: true },
+    });
+    for (const line of lines) {
+      playlistOf.set(line.id, line.playlistId);
+    }
+  }
+
+  const sumWindow = (window: Map<number, number>) => {
+    let plays = 0;
+    let orders = 0;
+    const perPlaylist = new Map<number, { plays: number; orders: number }>();
+    for (const [php, count] of window) {
+      if (count <= 0) continue;
+      plays += count;
+      orders++;
+      // A line deleted since it was played still counts in the window's
+      // plays, but has no playlist to add them to.
+      const playlistId = playlistOf.get(php);
+      if (playlistId === undefined) continue;
+      const entry = perPlaylist.get(playlistId) ?? { plays: 0, orders: 0 };
+      entry.plays += count;
+      entry.orders++;
+      perPlaylist.set(playlistId, entry);
+    }
+    const top = [...perPlaylist.entries()]
+      .map(([playlistId, entry]) => ({ playlistId, ...entry }))
+      .sort((a, b) => b.plays - a.plays || a.playlistId - b.playlistId)
+      .slice(0, PLAYLIST_RANKING_LIMIT);
+    return { plays, orders, playlists: perPlaylist.size, top };
+  };
+  const day = sumWindow(counts.day);
+  const week = sumWindow(counts.week);
+  const total = sumWindow(counts.total);
+
+  const playlistIds = [
+    ...new Set([day, week, total].flatMap((w) => w.top.map((entry) => entry.playlistId))),
+  ];
+  const playlists =
+    playlistIds.length > 0
+      ? await deps.prisma.playlist.findMany({
+          where: { id: { in: playlistIds } },
+          select: { id: true, name: true, image: true, customImage: true },
+        })
+      : [];
+  const byId = new Map(playlists.map((playlist) => [playlist.id, playlist]));
+
+  const toWindow = (window: typeof day): PlaylistRankingWindow => ({
+    plays: window.plays,
+    orders: window.orders,
+    playlists: window.playlists,
+    top: withRanks(window.top).map((entry) => {
+      const playlist = byId.get(entry.playlistId);
+      return {
+        rank: entry.rank,
+        playlistId: entry.playlistId,
+        plays: entry.plays,
+        orders: entry.orders,
+        found: !!playlist,
+        playlistName: playlist?.name ?? null,
+        playlistImage: playlist?.image || null,
+        playlistCustomImage: playlist?.customImage || null,
+      };
+    }),
+  });
+
+  return {
+    group: 'playlist',
+    since: counts.since,
+    day: toWindow(day),
+    week: toWindow(week),
+    total: toWindow(total),
+  };
 }
 
 export async function translateGenres(deps: DataDeps): Promise<{

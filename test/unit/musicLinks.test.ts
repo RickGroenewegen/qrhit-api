@@ -113,7 +113,10 @@ function makeDeps(overrides: Record<string, any> = {}): any {
 
   const utils = { lookupIp: vi.fn() };
 
-  const analytics = { increaseCounter: vi.fn() };
+  const analytics = {
+    increaseCounter: vi.fn(),
+    recordPlaylistPlay: vi.fn(async () => undefined),
+  };
 
   const appTheme = { getTheme: vi.fn() };
 
@@ -394,6 +397,42 @@ describe('getLink', () => {
     await getLink(deps, 1, '1.2.3.4');
 
     expect(deps.analytics.increaseCounter).toHaveBeenCalledWith('songs', 'played');
+  });
+
+  it('counts the play for its order line when the scan carries a php', async () => {
+    const deps = makeDeps();
+    deps.cache.get.mockResolvedValue(null);
+    deps.prisma.$queryRaw.mockResolvedValue([]);
+
+    // Route params arrive as strings
+    await getLink(deps, 1, '1.2.3.4', true, undefined, '77' as any);
+
+    expect(deps.analytics.recordPlaylistPlay).toHaveBeenCalledWith(77);
+  });
+
+  it('counts nothing per order line without a usable php', async () => {
+    const deps = makeDeps();
+    deps.cache.get.mockResolvedValue(null);
+    deps.prisma.$queryRaw.mockResolvedValue([]);
+
+    await getLink(deps, 1, '1.2.3.4');
+    await getLink(deps, 1, '1.2.3.4', true, undefined, 'abc' as any);
+
+    expect(deps.analytics.recordPlaylistPlay).not.toHaveBeenCalled();
+  });
+
+  it('still answers the scan when counting the play fails', async () => {
+    const deps = makeDeps();
+    deps.cache.get.mockResolvedValue(JSON.stringify({ link: 'spotify:track:1' }));
+    deps.analytics.recordPlaylistPlay.mockRejectedValue(new Error('redis down'));
+
+    const result = await getLink(deps, 1, '1.2.3.4', true, undefined, 5);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(result.success).toBe(true);
+    expect(deps.logger.log).toHaveBeenCalledWith(
+      expect.stringContaining('Could not count the play of php')
+    );
   });
 
   it('returns a blocked result when Redis lists the php as blocked', async () => {
