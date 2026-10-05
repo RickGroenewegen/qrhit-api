@@ -1,9 +1,15 @@
 /**
- * growth-oracle KPI adapter — the revenue source of truth for QRSong.
+ * growl KPI adapter — the revenue source of truth for QRSong.
  *
  * Contract (growth.config.json -> kpi.command):
  *   prints ONE JSON object on stdout, keys subset of kpi.keys, "?" for
  *   anything this adapter cannot know, exit 0.
+ *
+ * With --days=<n> (growth.config.json -> kpi.seriesCommand, the Growl
+ * dashboard's revenue chart): prints ONE JSON array instead, a row per day of
+ * the last n days, [{date, purchases, revenue}], oldest first. Same sources
+ * and the same rules as the 28-day object: revenue ex-VAT, App Designer
+ * included in revenue but not in purchases. Days are UTC dates.
  *
  * Reads paid, non-test orders straight from the payments table, plus the App
  * Designer ledger (app_design_purchases: an account upgrade paid through its
@@ -62,7 +68,58 @@ function createClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
+interface DayRow {
+  day: string | Date;
+  orders: number;
+  revenue_exvat: number;
+}
+
+/** --days=<n>: revenue and orders per day, for the dashboard's chart. */
+async function daily(days: number): Promise<void> {
+  const prisma = createClient();
+  const orders = await prisma.$queryRawUnsafe<DayRow[]>(`
+    SELECT DATE(createdAt) AS day, COUNT(*) AS orders, COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat
+    FROM payments
+    WHERE status = 'paid'
+      AND test = 0
+      AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days - 1} DAY)
+    GROUP BY DATE(createdAt)
+  `);
+  // App Designer bought outside an order: revenue of its own (see main)
+  const appDesign = await prisma.$queryRawUnsafe<DayRow[]>(`
+    SELECT DATE(createdAt) AS day, 0 AS orders, COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat
+    FROM app_design_purchases
+    WHERE paymentId IS NULL
+      AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days - 1} DAY)
+    GROUP BY DATE(createdAt)
+  `);
+  const key = (d: string | Date) => (d instanceof Date ? d.toISOString() : String(d)).slice(0, 10);
+  const byDay = new Map<string, { purchases: number; revenue: number }>();
+  for (const r of [...orders, ...appDesign]) {
+    const k = key(r.day);
+    const cur = byDay.get(k) ?? { purchases: 0, revenue: 0 };
+    cur.purchases += Number(r.orders) || 0;
+    cur.revenue += Number(r.revenue_exvat) || 0;
+    byDay.set(k, cur);
+  }
+  const out = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i)).toISOString().slice(0, 10);
+    const d = byDay.get(date) ?? { purchases: 0, revenue: 0 };
+    out.push({ date, purchases: d.purchases, revenue: round2(d.revenue) });
+  }
+  process.stdout.write(JSON.stringify(out) + '\n');
+  process.exit(0);
+}
+
 async function main(): Promise<void> {
+  const daysArg = process.argv.find((a) => a.startsWith('--days='));
+  if (daysArg) {
+    const days = Number(daysArg.slice('--days='.length));
+    if (!Number.isInteger(days) || days < 1 || days > 400) throw new Error('--days must be 1 to 400');
+    return daily(days);
+  }
   const prisma = createClient();
   const rows = await prisma.$queryRawUnsafe<Row[]>(`
     SELECT

@@ -730,7 +730,7 @@ describe('order lifecycle mails', () => {
     expect(raw).toContain('http://localhost:4200/en/gift-box');
   });
 
-  it('sendFinalizedMail invites a review with the playlist subject', async () => {
+  it('sendFinalizedMail asks to check the cards with the playlist subject', async () => {
     await mail.sendFinalizedMail(
       makePayment(),
       'http://localhost:4200/en/review/pay_123',
@@ -738,7 +738,7 @@ describe('order lifecycle mails', () => {
     );
     const raw = lastRaw();
     expect(raw).toContain(
-      "Subject: We invite you to review playlist 'Road Trip Hits'"
+      "Subject: Check your cards for 'Road Trip Hits' before we print them"
     );
     expect(raw).toContain('http://localhost:4200/en/review/pay_123');
     expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(0);
