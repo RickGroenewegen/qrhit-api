@@ -6218,13 +6218,9 @@ export default async function adminRoutes(
         return reply.status(400).send({ success: false, error: 'No valid locales' });
       }
 
-      // Fire and forget — translate each selected locale sequentially; progress
-      // is logged to stdout.
-      (async () => {
-        for (const l of locales) {
-          await translation.translateEmptyFields(l);
-        }
-      })().catch((err) => {
+      // Fire and forget: every row is translated into all selected locales in
+      // one call; progress is logged to stdout.
+      translation.translateEmptyFields(locales).catch((err) => {
         logger.log(color.red.bold(`[translate-fields] Fatal error: ${err.message}`));
       });
 

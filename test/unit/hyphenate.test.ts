@@ -60,6 +60,21 @@ describe('splitLongWord', () => {
     }
   });
 
+  it('splits Danish and Hungarian words on syllables, not fixed chunks', () => {
+    expect(splitLongWord('arbejdsløshedsforsikring', 'da', 8)).toEqual([
+      'arbejds',
+      'løsheds',
+      'forsik',
+      'ring',
+    ]);
+    expect(splitLongWord('megszentségteleníthetetlenség', 'hu', 8)).toEqual([
+      'megszent',
+      'ségtele',
+      'níthetet',
+      'lenség',
+    ]);
+  });
+
   it('falls back to fixed chunks when hyphenation yields a single syllable', () => {
     // 'strength' is one syllable; with maxLen 4 it must be hard-chunked
     expect(splitLongWord('strength', 'en', 4)).toEqual(['stre', 'ngth']);

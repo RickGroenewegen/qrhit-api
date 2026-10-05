@@ -1738,6 +1738,7 @@ class AIPlaylistGenerator {
       sv: 'Swedish (Sweden)',
       no: 'Norwegian (Norway)',
       da: 'Danish (Denmark)',
+      hu: 'Hungarian (Hungary)',
       jp: 'Japanese (Japan)',
       cn: 'Chinese (Mainland China / Taiwan / Hong Kong)',
       en: 'English (UK / US / global)',

@@ -11,6 +11,8 @@ describe('getCurrencyForCountry', () => {
     expect(getCurrencyForCountry('NO')).toBe('NOK');
     expect(getCurrencyForCountry('gb')).toBe('GBP');
     expect(getCurrencyForCountry('us')).toBe('USD');
+    expect(getCurrencyForCountry('HU')).toBe('HUF');
+    expect(getCurrencyForCountry('DK')).toBe('DKK');
   });
 
   it('defaults to EUR for eurozone, unknown, and missing countries', () => {
@@ -57,5 +59,11 @@ describe('roundTotal (psychological price snapping)', () => {
   it('PLN snaps to whole units', () => {
     expect(roundTotal(49.49, 'PLN')).toBe(49);
     expect(roundTotal(49.5, 'PLN')).toBe(50);
+  });
+
+  it('HUF snaps to 100 Ft', () => {
+    expect(roundTotal(13012.4, 'HUF')).toBe(13000);
+    expect(roundTotal(5460, 'HUF')).toBe(5500);
+    expect(roundTotal(1256, 'HUF')).toBe(1300);
   });
 });

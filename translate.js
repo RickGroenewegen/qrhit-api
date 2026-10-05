@@ -14,7 +14,7 @@ const bundles = [
   {
     name: 'main',
     baseDir: path.join(__dirname, '/src/locales'),
-    languages: ['nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no'],
+    languages: ['nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no', 'da', 'hu'],
     languagesFull: [
       'Dutch',
       'German',
@@ -27,6 +27,8 @@ const bundles = [
       'Chinese', // (Simplified)
       'Swedish',
       'Norwegian',
+      'Danish',
+      'Hungarian',
     ],
     style:
       '. Be informal. ',

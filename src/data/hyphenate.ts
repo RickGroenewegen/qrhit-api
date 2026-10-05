@@ -13,6 +13,8 @@ const patternModules: Record<string, string> = {
   ru: 'hyphenation.ru',
   hin: 'hyphenation.hi',
   no: 'hyphenation.da',
+  da: 'hyphenation.da',
+  hu: 'hyphenation.hu',
 };
 
 const hyphenatorCache = new Map<string, any | null>();

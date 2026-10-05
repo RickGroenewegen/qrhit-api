@@ -4,6 +4,7 @@ import path from 'path';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
 import Logger from './logger';
+import { sanitizeBrandName } from './brandName';
 import { color, white } from 'console-log-colors';
 
 interface LocaleInfo {
@@ -26,6 +27,8 @@ const LOCALE_DATA: LocaleInfo[] = [
   { code: 'cn', name: 'Chinese', greeting: '你好', storefront: 'cn' },
   { code: 'sv', name: 'Swedish', greeting: 'Hej', storefront: 'se' },
   { code: 'no', name: 'Norwegian', greeting: 'Hei', storefront: 'no' },
+  { code: 'da', name: 'Danish', greeting: 'Hej', storefront: 'dk' },
+  { code: 'hu', name: 'Hungarian', greeting: 'Szia', storefront: 'hu' },
 ];
 
 /**
@@ -237,91 +240,180 @@ class Translation {
   }
 
   /**
-   * Translate all empty language-specific fields in the database for a given locale.
-   * Uses ChatGPT to translate from the English (_en) source field.
-   * Progress is logged to stdout.
+   * Fill every empty language-specific database field for `locales` from its
+   * English (_en) source: the backfill a new language needs (Admin › Bulk
+   * actions › Translate Fields). It covers every `<field>_<locale>` column
+   * that is still read: genre names, playlist descriptions, company list
+   * descriptions, and occasion names, descriptions and bodies. The `blogs`
+   * and `trustpilot` tables have such columns too, but nothing reads them
+   * (the blog is markdown, reviews are a JSON file), and a new language does
+   * not get them.
+   *
+   * Each row is translated by the translator that wrote its other languages,
+   * in one call for all of its missing locales:
+   * - genres: the genre-name translator of the nightly cron;
+   * - playlists: the SEO translator for an SEO-written description, word for
+   *   word for a kept one (preserveDescription), otherwise translateText; the
+   *   row is then marked for Merchant Center and its product page cache,
+   *   which never expires, is cleared;
+   * - the rest: translateText.
+   * A field that cannot be read (a column missing from the schema) or a row
+   * the model fails on is logged, and the run moves on. Progress is logged
+   * to stdout.
    */
-  public async translateEmptyFields(locale: string): Promise<void> {
+  public async translateEmptyFields(locales: string[]): Promise<void> {
     const prisma = PrismaInstance.getInstance();
     const chatgpt = new ChatGPT();
     const logger = new Logger();
-    const targetLang = this.getLanguageName(locale);
+    const tag = white.bold('[translate-fields]');
+
+    const targets = [...new Set(locales)].filter(
+      (l) => l !== 'en' && this.isValidLocale(l)
+    );
+    if (targets.length === 0) return;
+    const targetNames = targets.map((l) => this.getLanguageName(l)).join(', ');
+
+    type FieldConfig = {
+      model: string;
+      delegate: any;
+      field: string;
+      // Columns the translator needs besides id and the field's own columns.
+      extraSelect?: Record<string, true>;
+      translate: (record: any, missing: string[]) => Promise<Record<string, string>>;
+      // Written along with the translations.
+      extraData?: Record<string, unknown>;
+      afterUpdate?: (record: any) => Promise<void>;
+    };
+
+    const generic =
+      (field: string) =>
+      (record: any, missing: string[]): Promise<Record<string, string>> =>
+        chatgpt.translateText(record[`${field}_en`], missing);
+
+    const configs: FieldConfig[] = [
+      {
+        model: 'genre',
+        delegate: prisma.genre,
+        field: 'name',
+        translate: (record, missing) => chatgpt.translateGenreNames(record.name_en, missing),
+      },
+      {
+        model: 'Playlist',
+        delegate: prisma.playlist,
+        field: 'description',
+        extraSelect: {
+          playlistId: true,
+          name: true,
+          promotionalDescription: true,
+          preserveDescription: true,
+          seoDescriptionGenerated: true,
+        },
+        translate: (record, missing) =>
+          this.translatePlaylistDescription(chatgpt, record, missing),
+        extraData: { markedForMerchantCenter: true },
+        afterUpdate: async (record) => {
+          const Data = (await import('./data')).default;
+          await Data.getInstance().clearPlaylistCache(record.playlistId);
+        },
+      },
+      {
+        model: 'CompanyList',
+        delegate: prisma.companyList,
+        field: 'description',
+        translate: generic('description'),
+      },
+      ...['name', 'description', 'body'].map((field) => ({
+        model: 'EventBase',
+        delegate: prisma.eventBase,
+        field,
+        translate: generic(field),
+      })),
+    ];
+
+    logger.log(color.blue.bold(`${tag} Starting translation to ${white.bold(targetNames)}...`));
 
     let totalUpdated = 0;
 
-    const modelConfigs: Array<{
-      model: string;
-      delegate: any;
-      fields: string[];
-    }> = [
-      { model: 'Playlist', delegate: prisma.playlist, fields: ['description'] },
-      { model: 'genre', delegate: prisma.genre, fields: ['name'] },
-      { model: 'CompanyList', delegate: prisma.companyList, fields: ['description'] },
-      { model: 'Blog', delegate: prisma.blog, fields: ['title', 'content', 'summary'] },
-      { model: 'EventBase', delegate: prisma.eventBase, fields: ['name', 'description', 'body'] },
-    ];
+    for (const config of configs) {
+      const { field } = config;
+      const enField = `${field}_en`;
+      const targetFields = targets.map((l) => `${field}_${l}`);
+      const label = white.bold(`${config.model}.${field}`);
+      const select = {
+        id: true,
+        [enField]: true,
+        ...Object.fromEntries(targetFields.map((f) => [f, true])),
+        ...config.extraSelect,
+      };
 
-    const tag = white.bold('[translate-fields]');
-
-    logger.log(color.blue.bold(`${tag} Starting translation to ${white.bold(targetLang)} (${white.bold(locale)})...`));
-
-    for (const config of modelConfigs) {
-      for (const field of config.fields) {
-        const enField = `${field}_en`;
-        const targetField = `${field}_${locale}`;
-
-        const records = await config.delegate.findMany({
-          where: {
-            [enField]: { not: '' },
-            OR: [
-              { [targetField]: '' },
-              { [targetField]: null },
-            ],
-          },
-          select: { id: true, [enField]: true },
-        }).catch(() =>
-          config.delegate.findMany({
+      let records: any[];
+      try {
+        // A non-nullable column refuses `null` in a filter, so those are
+        // asked again with empty strings only.
+        records = await config.delegate
+          .findMany({
             where: {
               [enField]: { not: '' },
-              [targetField]: '',
+              OR: targetFields.flatMap((f) => [{ [f]: '' }, { [f]: null }]),
             },
-            select: { id: true, [enField]: true },
+            select,
           })
-        );
+          .catch(() =>
+            config.delegate.findMany({
+              where: {
+                [enField]: { not: '' },
+                OR: targetFields.map((f) => ({ [f]: '' })),
+              },
+              select,
+            })
+          );
+      } catch (err: any) {
+        logger.log(color.red.bold(`${tag} Cannot read ${label}, skipping: ${white.bold(err.message)}`));
+        continue;
+      }
 
-        if (records.length === 0) {
-          logger.log(color.gray(`${tag} ${white.bold(config.model + '.' + targetField)}: no empty fields, skipping`));
-          continue;
-        }
+      if (records.length === 0) {
+        logger.log(color.gray(`${tag} ${label}: no empty fields, skipping`));
+        continue;
+      }
 
-        logger.log(color.blue.bold(`${tag} ${white.bold(config.model + '.' + targetField)}: translating ${white.bold(String(records.length))} records`));
+      logger.log(color.blue.bold(`${tag} ${label}: translating ${white.bold(String(records.length))} records`));
 
-        for (const record of records) {
-          const enValue = record[enField];
-          if (!enValue) continue;
+      for (const record of records) {
+        const enValue = record[enField];
+        const missing = targets.filter((l) => !String(record[`${field}_${l}`] ?? '').trim());
+        if (!enValue || missing.length === 0) continue;
 
-          try {
-            const translations = await chatgpt.translateText(enValue, [locale]);
-            const translated = translations[locale];
-
-            if (translated) {
-              await config.delegate.update({
-                where: { id: record.id },
-                data: { [targetField]: translated },
-              });
-
-              const preview = translated.length > 80 ? translated.substring(0, 80) + '...' : translated;
-              logger.log(color.blue.bold(`${tag} Updated ${white.bold(config.model + '.' + targetField)} (id=${white.bold(String(record.id))}) to '${white.bold(preview)}' for language '${white.bold(targetLang)}'`));
-              totalUpdated++;
-            }
-          } catch (err: any) {
-            logger.log(color.red.bold(`${tag} ERROR translating ${white.bold(config.model + '.' + targetField)} (id=${white.bold(String(record.id))}): ${white.bold(err.message)}`));
+        try {
+          const translations = await config.translate(record, missing);
+          const data: Record<string, string> = {};
+          for (const locale of missing) {
+            const value = translations[locale]?.trim();
+            if (value) data[`${field}_${locale}`] = value;
           }
+
+          if (Object.keys(data).length === 0) {
+            logger.log(color.yellow.bold(`${tag} No translation for ${label} (id=${white.bold(String(record.id))})`));
+            continue;
+          }
+
+          await config.delegate.update({
+            where: { id: record.id },
+            data: { ...data, ...config.extraData },
+          });
+          await config.afterUpdate?.(record);
+
+          const first = Object.values(data)[0];
+          const preview = first.length > 80 ? first.substring(0, 80) + '...' : first;
+          logger.log(color.blue.bold(`${tag} Updated ${label} (id=${white.bold(String(record.id))}) in ${white.bold(Object.keys(data).map((k) => k.slice(field.length + 1)).join(', '))}: '${white.bold(preview)}'`));
+          totalUpdated += Object.keys(data).length;
+        } catch (err: any) {
+          logger.log(color.red.bold(`${tag} ERROR translating ${label} (id=${white.bold(String(record.id))}): ${white.bold(err.message)}`));
         }
       }
     }
 
-    logger.log(color.blue.bold(`${tag} Done. Updated ${white.bold(String(totalUpdated))} fields for ${white.bold(targetLang)}.`));
+    logger.log(color.blue.bold(`${tag} Done. Updated ${white.bold(String(totalUpdated))} fields for ${white.bold(targetNames)}.`));
 
     // EventBase names/descriptions feed the public occasion pages — bust their cache.
     try {
@@ -331,6 +423,54 @@ class Translation {
     } catch {
       // Non-fatal: caches expire on their own TTL.
     }
+  }
+
+  /**
+   * A playlist description in `locales`, made the way its other languages
+   * were (see SeoDescriptions.generateForPlaylist and
+   * Promotional.translateDescription): the SEO translator for SEO copy, word
+   * for word from the customer's own text for a kept description, and plain
+   * translation for the rest. A kept description already written in one of
+   * `locales` is stored as it stands.
+   */
+  private async translatePlaylistDescription(
+    chatgpt: ChatGPT,
+    playlist: {
+      name: string;
+      description_en: string;
+      promotionalDescription: string | null;
+      preserveDescription: boolean;
+      seoDescriptionGenerated: boolean;
+    },
+    locales: string[]
+  ): Promise<Record<string, string>> {
+    if (playlist.preserveDescription) {
+      const original = sanitizeBrandName(
+        (playlist.promotionalDescription || playlist.description_en).trim()
+      );
+      const { sourceLocale, translations } = await chatgpt.translateLiterally(
+        original,
+        playlist.name,
+        locales
+      );
+      return Object.fromEntries(
+        locales
+          .map((l) => [l, l === sourceLocale ? original : sanitizeBrandName(translations[l] || '')])
+          .filter(([, value]) => value)
+      );
+    }
+
+    if (playlist.seoDescriptionGenerated) {
+      return chatgpt.translateSeoDescription(playlist.description_en, playlist.name, locales);
+    }
+
+    const translations = await chatgpt.translateText(
+      sanitizeBrandName(playlist.description_en),
+      locales
+    );
+    return Object.fromEntries(
+      Object.entries(translations).map(([l, value]) => [l, sanitizeBrandName(value)])
+    );
   }
 }
 

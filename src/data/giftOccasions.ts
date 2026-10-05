@@ -18,7 +18,7 @@
 
 // ISO-3166 alpha-2 store markets the calendar is prefilled for.
 export const TARGET_COUNTRIES = [
-  'NL', 'BE', 'DE', 'AT', 'FR', 'ES', 'IT', 'PT', 'PL', 'SE', 'NO', 'GB', 'US', 'JP', 'CN',
+  'NL', 'BE', 'DE', 'AT', 'FR', 'ES', 'IT', 'PT', 'PL', 'SE', 'NO', 'DK', 'HU', 'GB', 'US', 'JP', 'CN',
 ] as const;
 
 // The store market whose occasion date drives each locale's public occasion
@@ -36,6 +36,8 @@ export const LOCALE_PRIMARY_COUNTRY: Record<string, string> = {
   pl: 'PL',
   sv: 'SE',
   no: 'NO',
+  da: 'DK',
+  hu: 'HU',
   jp: 'JP',
   cn: 'CN',
 };
@@ -222,6 +224,8 @@ const FATHERS_DAY: Record<string, (year: number) => Date> = {
   ES: (y) => utcDate(y, 3, 19),
   PT: (y) => utcDate(y, 3, 19),
   SE: (y) => nthWeekdayOfMonth(y, 11, 0, 2), // 2nd Sunday of November
+  DK: (y) => utcDate(y, 6, 5), // Fars dag = Constitution Day
+  HU: (y) => nthWeekdayOfMonth(y, 6, 0, 3), // Apák napja, 3rd Sunday of June
   JP: (y) => nthWeekdayOfMonth(y, 6, 0, 3), // 3rd Sunday of June
   CN: (y) => nthWeekdayOfMonth(y, 6, 0, 3),
 };

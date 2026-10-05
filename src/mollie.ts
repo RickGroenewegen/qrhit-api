@@ -1497,6 +1497,8 @@ class Mollie {
     SE: ['swish', 'klarna', 'creditcard', 'applepay'],
     NO: ['klarna', 'creditcard', 'applepay', 'paypal'],
     DK: ['klarna', 'creditcard', 'applepay', 'paypal'],
+    // Mollie takes HUF on the card rails and PayPal only.
+    HU: ['creditcard', 'applepay', 'paypal'],
     GB: ['creditcard', 'applepay', 'paypal', 'klarna'],
     IE: ['creditcard', 'applepay', 'paypal', 'klarna'],
   };
@@ -1527,6 +1529,7 @@ class Mollie {
     nb: 'NO',
     no: 'NO',
     da: 'DK',
+    hu: 'HU',
     pl: 'PL',
     pt: 'PT',
     it: 'IT',
@@ -1571,6 +1574,7 @@ class Mollie {
       nb: 'nb_NO',
       no: 'nb_NO',
       da: 'da_DK',
+      hu: 'hu_HU',
       hin: 'en_US',
       hi: 'en_US',
     };
@@ -1580,20 +1584,21 @@ class Mollie {
   /**
    * Currencies for which each method is accepted by Mollie. Method is
    * filtered out if the presentment currency isn't in its list. Methods not
-   * in this map are treated as EUR-only.
-   * See https://docs.mollie.com/reference/payment-method-availability
+   * in this map are treated as EUR-only, and the compiler does not ask about
+   * a new currency here: add it to every method that takes it.
+   * See https://docs.mollie.com/docs/multicurrency
    */
   private static readonly METHOD_CURRENCY_SUPPORT: Partial<
     Record<MollieMethod, ReadonlyArray<SupportedCurrency>>
   > = {
     creditcard: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD',
+      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD',
     ],
     applepay: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD',
+      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD',
     ],
     paypal: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD', 'PLN',
+      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD', 'PLN',
     ],
     klarna: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
     riverty: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
@@ -4311,6 +4316,14 @@ class Mollie {
         } else if (dbPayment.exchangeRate) {
           refundValue = amount * dbPayment.exchangeRate;
         }
+      }
+
+      // PayPal pays forints back in whole units only (Mollie rounds a HUF
+      // PayPal payment to 0 decimals), so a partial HUF refund is rounded
+      // down, never above what was paid. The epsilon keeps a full refund that
+      // computes to 12999.9999… at 13000.
+      if (currency === 'HUF') {
+        refundValue = Math.floor(refundValue + 1e-6);
       }
 
       const formattedAmount = refundValue.toFixed(2);

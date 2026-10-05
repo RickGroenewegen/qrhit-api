@@ -68,6 +68,8 @@ describe('supplement rules fill library gaps', () => {
     expect(iso(f.resolve(2026, 'AT')!)).toBe('2026-06-14'); // 2nd Sun June
     expect(iso(f.resolve(2026, 'FR')!)).toBe('2026-06-21'); // 3rd Sun June
     expect(iso(f.resolve(2026, 'SE')!)).toBe('2026-11-08'); // 2nd Sun Nov
+    expect(iso(f.resolve(2026, 'DK')!)).toBe('2026-06-05'); // Constitution Day
+    expect(iso(f.resolve(2026, 'HU')!)).toBe('2026-06-21'); // 3rd Sun June
   });
 
   it("only supplements Mother's Day for JP/CN (library covers the rest)", () => {
@@ -87,6 +89,8 @@ describe('target countries', () => {
   it('covers the configured store markets', () => {
     expect(TARGET_COUNTRIES).toContain('NL');
     expect(TARGET_COUNTRIES).toContain('US');
-    expect(TARGET_COUNTRIES.length).toBe(15);
+    expect(TARGET_COUNTRIES).toContain('DK');
+    expect(TARGET_COUNTRIES).toContain('HU');
+    expect(TARGET_COUNTRIES.length).toBe(17);
   });
 });

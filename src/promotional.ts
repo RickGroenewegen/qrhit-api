@@ -11,6 +11,7 @@ import * as path from 'path';
 import Utils from './utils';
 import Discount from './discount';
 import SeoDescriptions from './seoDescriptions';
+import { sanitizeBrandName } from './brandName';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -623,7 +624,7 @@ class Promotional {
    * Replace competitor brand name with QRSong! in text
    */
   private sanitizeBrandName(text: string): string {
-    return text.replace(/hitster/gi, 'QRSong!');
+    return sanitizeBrandName(text);
   }
 
   /**

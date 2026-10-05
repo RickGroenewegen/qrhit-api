@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// translateEmptyFields uses Prisma + ChatGPT: both mocked (no DB / OpenAI).
-const { prismaMock, translateTextMock } = vi.hoisted(() => {
+// translateEmptyFields uses Prisma, ChatGPT and the playlist cache: all
+// mocked (no DB / OpenAI / Redis).
+const {
+  prismaMock,
+  translateTextMock,
+  translateGenreNamesMock,
+  translateSeoDescriptionMock,
+  translateLiterallyMock,
+  clearPlaylistCacheMock,
+} = vi.hoisted(() => {
   const delegate = () => ({
     findMany: vi.fn().mockResolvedValue([]),
     update: vi.fn().mockResolvedValue({}),
@@ -15,6 +23,10 @@ const { prismaMock, translateTextMock } = vi.hoisted(() => {
       eventBase: delegate(),
     },
     translateTextMock: vi.fn(),
+    translateGenreNamesMock: vi.fn(),
+    translateSeoDescriptionMock: vi.fn(),
+    translateLiterallyMock: vi.fn(),
+    clearPlaylistCacheMock: vi.fn().mockResolvedValue({ success: true }),
   };
 });
 
@@ -24,7 +36,13 @@ vi.mock('../../src/prisma', () => ({
 vi.mock('../../src/chatgpt', () => ({
   ChatGPT: class {
     translateText = translateTextMock;
+    translateGenreNames = translateGenreNamesMock;
+    translateSeoDescription = translateSeoDescriptionMock;
+    translateLiterally = translateLiterallyMock;
   },
+}));
+vi.mock('../../src/data', () => ({
+  default: { getInstance: () => ({ clearPlaylistCache: clearPlaylistCacheMock }) },
 }));
 
 import Translation from '../../src/translation';
@@ -32,9 +50,9 @@ import Translation from '../../src/translation';
 const translation = new Translation();
 
 describe('locale metadata', () => {
-  it('exposes all 12 supported locales', () => {
+  it('exposes all 14 supported locales', () => {
     expect(Translation.ALL_LOCALES).toEqual([
-      'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no',
+      'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no', 'da', 'hu',
     ]);
     expect(translation.allLocales).toEqual(Translation.ALL_LOCALES);
   });
@@ -130,59 +148,168 @@ describe('translateEmptyFields', () => {
       d.update.mockReset().mockResolvedValue({});
     }
     translateTextMock.mockReset();
+    translateGenreNamesMock.mockReset();
+    translateSeoDescriptionMock.mockReset();
+    translateLiterallyMock.mockReset();
+    clearPlaylistCacheMock.mockClear();
   });
 
-  it('translates empty target fields from the _en source via ChatGPT', async () => {
-    prismaMock.playlist.findMany.mockResolvedValue([
-      { id: 1, description_en: 'Hello world' },
-      { id: 2, description_en: '' }, // falsy source -> skipped
-    ]);
-    translateTextMock.mockResolvedValue({ de: 'Hallo Welt' });
+  const playlistRow = (overrides: Record<string, unknown> = {}) => ({
+    id: 1,
+    playlistId: 'p1',
+    name: '80s Hits',
+    description_en: 'Hello world',
+    description_da: null,
+    description_hu: '',
+    promotionalDescription: null,
+    preserveDescription: false,
+    seoDescriptionGenerated: false,
+    ...overrides,
+  });
 
-    await translation.translateEmptyFields('de');
+  it('asks for every row missing any of the locales, with null and empty both counting', async () => {
+    await translation.translateEmptyFields(['da', 'hu']);
 
-    expect(translateTextMock).toHaveBeenCalledWith('Hello world', ['de']);
-    expect(prismaMock.playlist.update).toHaveBeenCalledTimes(1);
-    expect(prismaMock.playlist.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { description_de: 'Hallo Welt' },
-    });
-    // findMany was called with the null-OR where clause first
     expect(prismaMock.playlist.findMany).toHaveBeenCalledWith({
       where: {
         description_en: { not: '' },
-        OR: [{ description_de: '' }, { description_de: null }],
+        OR: [
+          { description_da: '' },
+          { description_da: null },
+          { description_hu: '' },
+          { description_hu: null },
+        ],
       },
-      select: { id: true, description_en: true },
+      select: expect.objectContaining({
+        id: true,
+        description_en: true,
+        description_da: true,
+        description_hu: true,
+        preserveDescription: true,
+        seoDescriptionGenerated: true,
+      }),
     });
   });
 
-  it('falls back to the non-OR query when the first findMany rejects', async () => {
-    prismaMock.genre.findMany
-      .mockRejectedValueOnce(new Error('Unknown column'))
-      .mockResolvedValueOnce([{ id: 7, name_en: 'Rock' }]);
-    translateTextMock.mockResolvedValue({ nl: 'Rock-NL' });
+  it('translates a row into all of its missing locales in one call', async () => {
+    prismaMock.companyList.findMany.mockResolvedValue([
+      { id: 4, description_en: 'Vote now', description_da: '', description_hu: 'Szavazz' },
+    ]);
+    translateTextMock.mockResolvedValue({ da: 'Stem nu' });
 
-    await translation.translateEmptyFields('nl');
+    await translation.translateEmptyFields(['da', 'hu']);
 
-    expect(prismaMock.genre.findMany).toHaveBeenCalledTimes(2);
-    expect(prismaMock.genre.findMany).toHaveBeenLastCalledWith({
-      where: { name_en: { not: '' }, name_nl: '' },
-      select: { id: true, name_en: true },
+    // hu already has a text, so only da is asked for.
+    expect(translateTextMock).toHaveBeenCalledWith('Vote now', ['da']);
+    expect(prismaMock.companyList.update).toHaveBeenCalledWith({
+      where: { id: 4 },
+      data: { description_da: 'Stem nu' },
     });
+  });
+
+  it('translates a plain playlist description with translateText and replaces the competitor name', async () => {
+    prismaMock.playlist.findMany.mockResolvedValue([
+      playlistRow({ description_en: 'Better than Hitster' }),
+    ]);
+    translateTextMock.mockResolvedValue({ da: 'Bedre end Hitster', hu: 'Jobb mint a Hitster' });
+
+    await translation.translateEmptyFields(['da', 'hu']);
+
+    expect(translateTextMock).toHaveBeenCalledWith('Better than QRSong!', ['da', 'hu']);
+    expect(prismaMock.playlist.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        description_da: 'Bedre end QRSong!',
+        description_hu: 'Jobb mint a QRSong!',
+        markedForMerchantCenter: true,
+      },
+    });
+    expect(clearPlaylistCacheMock).toHaveBeenCalledWith('p1');
+  });
+
+  it('translates an SEO-written playlist description with the SEO translator', async () => {
+    prismaMock.playlist.findMany.mockResolvedValue([
+      playlistRow({ seoDescriptionGenerated: true }),
+    ]);
+    translateSeoDescriptionMock.mockResolvedValue({ da: 'Hej verden', hu: 'Szia világ' });
+
+    await translation.translateEmptyFields(['da', 'hu']);
+
+    expect(translateSeoDescriptionMock).toHaveBeenCalledWith('Hello world', '80s Hits', ['da', 'hu']);
+    expect(translateTextMock).not.toHaveBeenCalled();
+    expect(prismaMock.playlist.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { description_da: 'Hej verden', description_hu: 'Szia világ', markedForMerchantCenter: true },
+    });
+  });
+
+  it('translates a kept description word for word from the customer text, keeping the original in its own language', async () => {
+    prismaMock.playlist.findMany.mockResolvedValue([
+      playlistRow({
+        preserveDescription: true,
+        description_en: 'My dad loves these',
+        promotionalDescription: 'Min far elsker dem',
+      }),
+    ]);
+    translateLiterallyMock.mockResolvedValue({
+      sourceLocale: 'da',
+      translations: { da: 'reworded', hu: 'Apám imádja őket' },
+    });
+
+    await translation.translateEmptyFields(['da', 'hu']);
+
+    expect(translateLiterallyMock).toHaveBeenCalledWith('Min far elsker dem', '80s Hits', ['da', 'hu']);
+    expect(prismaMock.playlist.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        description_da: 'Min far elsker dem',
+        description_hu: 'Apám imádja őket',
+        markedForMerchantCenter: true,
+      },
+    });
+  });
+
+  it('translates genre names with the genre translator, falling back to the non-null query', async () => {
+    prismaMock.genre.findMany
+      .mockRejectedValueOnce(new Error('Argument name_da must not be null'))
+      .mockResolvedValueOnce([{ id: 7, name_en: 'Rock', name_da: '', name_hu: '' }]);
+    translateGenreNamesMock.mockResolvedValue({ da: 'Rock', hu: 'Rock' });
+
+    await translation.translateEmptyFields(['da', 'hu']);
+
+    expect(prismaMock.genre.findMany).toHaveBeenLastCalledWith({
+      where: { name_en: { not: '' }, OR: [{ name_da: '' }, { name_hu: '' }] },
+      select: { id: true, name_en: true, name_da: true, name_hu: true },
+    });
+    expect(translateGenreNamesMock).toHaveBeenCalledWith('Rock', ['da', 'hu']);
     expect(prismaMock.genre.update).toHaveBeenCalledWith({
       where: { id: 7 },
-      data: { name_nl: 'Rock-NL' },
+      data: { name_da: 'Rock', name_hu: 'Rock' },
+    });
+  });
+
+  it('skips a field it cannot read and carries on with the next', async () => {
+    prismaMock.genre.findMany.mockRejectedValue(new Error('Unknown column name_da'));
+    prismaMock.eventBase.findMany.mockImplementation(async (args: any) =>
+      args?.where?.name_en ? [{ id: 9, name_en: 'Christmas', name_da: '' }] : []
+    );
+    translateTextMock.mockResolvedValue({ da: 'Jul' });
+
+    await translation.translateEmptyFields(['da']);
+
+    expect(prismaMock.eventBase.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { name_da: 'Jul' },
     });
   });
 
   it('continues after a per-record translation error and skips empty results', async () => {
-    prismaMock.blog.findMany.mockImplementation(async (args: any) =>
-      args?.where?.title_en
+    prismaMock.eventBase.findMany.mockImplementation(async (args: any) =>
+      args?.where?.name_en
         ? [
-            { id: 1, title_en: 'First' },
-            { id: 2, title_en: 'Second' },
-            { id: 3, title_en: 'Third' },
+            { id: 1, name_en: 'First', name_fr: '' },
+            { id: 2, name_en: 'Second', name_fr: '' },
+            { id: 3, name_en: 'Third', name_fr: '' },
           ]
         : []
     );
@@ -191,13 +318,25 @@ describe('translateEmptyFields', () => {
       .mockResolvedValueOnce({}) // no translation for locale -> no update
       .mockResolvedValueOnce({ fr: 'Troisième' });
 
-    await translation.translateEmptyFields('fr');
+    await translation.translateEmptyFields(['fr']);
 
-    expect(prismaMock.blog.update).toHaveBeenCalledTimes(1);
-    expect(prismaMock.blog.update).toHaveBeenCalledWith({
+    expect(prismaMock.eventBase.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.eventBase.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { title_fr: 'Troisième' },
+      data: { name_fr: 'Troisième' },
     });
+  });
+
+  it('never reads the unread blogs table', async () => {
+    await translation.translateEmptyFields(['da']);
+    expect(prismaMock.blog.findMany).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for English or an unknown locale', async () => {
+    await translation.translateEmptyFields(['en', 'xx']);
+    for (const d of Object.values(prismaMock)) {
+      expect(d.findMany).not.toHaveBeenCalled();
+    }
   });
 });
 

@@ -18,7 +18,9 @@
         "jp": "app-designer-the-qrsong-app-in-your-own-style",
         "cn": "app-designer-the-qrsong-app-in-your-own-style",
         "sv": "app-designer-qrsong-appen-i-din-egen-stil",
-        "no": "app-designer-qrsong-appen-i-din-egen-stil"
+        "no": "app-designer-qrsong-appen-i-din-egen-stil",
+        "da": "app-designer-qrsong-appen-i-din-egen-stil",
+        "hu": "app-designer-a-qrsong-app-a-sajat-stilusodban"
       },
       "titles": {
         "en": "App Designer: the QRSong! app in your own style",
@@ -32,7 +34,9 @@
         "jp": "App Designer: QRSong!アプリを自分のスタイルに",
         "cn": "App Designer：让 QRSong! 应用变成你的风格",
         "sv": "App Designer: QRSong!-appen i din egen stil",
-        "no": "App Designer: QRSong!-appen i din egen stil"
+        "no": "App Designer: QRSong!-appen i din egen stil",
+        "da": "App Designer: QRSong!-appen i din egen stil",
+        "hu": "App Designer: a QRSong! app a saját stílusodban"
       },
       "summaries": {
         "en": "Give the free QRSong! app your own colours, photo, logo and help text. How it works, what it changes on each screen, and when it is worth it.",
@@ -46,7 +50,9 @@
         "jp": "無料のQRSong!アプリに、自分の色、写真、ロゴ、ヘルプ文を入れられます。画面ごとの変わり方、設定方法、使う価値がある場面を説明します。",
         "cn": "了解如何用 App Designer 为免费的 QRSong! 应用换上你的颜色、照片、Logo 和帮助文字：它会改变哪些屏幕、怎么设置，以及什么时候值得用。",
         "sv": "Ge den kostnadsfria QRSong!-appen egna färger, foto, logotyp och hjälptext för dina spelkort. Se hur det fungerar och när det är värt det.",
-        "no": "Gi den gratis QRSong!-appen egne farger, bilde, logo og hjelpetekst. Se hvordan det fungerer, og når det er verdt det."
+        "no": "Gi den gratis QRSong!-appen egne farger, bilde, logo og hjelpetekst. Se hvordan det fungerer, og når det er verdt det.",
+        "da": "Giv den gratis QRSong!-app dine egne farver, foto, logo og hjælpetekst. Se hvad der ændres på skærmene, og hvornår det er det værd.",
+        "hu": "Add meg az ingyenes QRSong! app saját színeit, fotóját, logóját és súgószövegét. Megmutatom, hol változik az app, és mikor éri meg."
       },
       "imagePrompt": "A designer's desk seen from above, about the idea of giving an app your own look and your own logo: in the centre a smartphone lies flat showing the QRSong app screen from the app screen reference, a purple to pink gradient with a big yellow round scan button, but with the customer's own logo from the logo reference in place of the QRSong! logo: a compact stacked two-line lockup, no wider than the scan button area, with no icon or badge above it: \"Emma's\" large in an ornate yellow script with a cream outline and a cream swash underline, and below it a smaller \"MUSIC QUIZ\" in spaced cream capitals between two small yellow stars, spelled exactly like that. Around the phone, like a mood board, lie fanned colour swatch cards in the same purple, pink and yellow, a small paintbrush with a drop of yellow paint, a printed party photo, an open notebook with a pencil sketch of a vinyl record with a question mark, and a few QR music cards like the real cards in the other references, their white QR panel exactly centred on the front. Bright, clean top light, playful and crafted, no people.",
       "referenceImages": [
@@ -82,7 +88,9 @@
         "jp": "music-match-k-pop-edition-a-k-pop-card-game-for-every-generation",
         "cn": "music-match-k-pop-edition-a-k-pop-card-game-for-every-generation",
         "sv": "music-match-k-pop-edition-ett-k-pop-kortspel-for-varje-generation",
-        "no": "music-match-k-pop-edition-et-k-pop-kortspill-for-alle-generasjoner"
+        "no": "music-match-k-pop-edition-et-k-pop-kortspill-for-alle-generasjoner",
+        "da": "music-match-k-pop-edition-et-k-pop-kortspil-til-alle-generationer",
+        "hu": "music-match-k-pop-edition-k-pop-kartyajatek-minden-generacionak"
       },
       "titles": {
         "en": "Music Match K-Pop Edition: a K-pop card game for every generation",
@@ -96,7 +104,9 @@
         "jp": "Music Match K-Pop Edition：世代をこえて遊べるK-popカードゲーム",
         "cn": "Music Match K-Pop 版：适合每一代粉丝的 K-pop 卡牌游戏",
         "sv": "Music Match K-Pop Edition: ett K-pop-kortspel för varje generation",
-        "no": "Music Match K-Pop Edition: et K-pop kortspill for alle generasjoner"
+        "no": "Music Match K-Pop Edition: et K-pop kortspill for alle generasjoner",
+        "da": "Music Match K-Pop Edition: et K-pop kortspil til alle generationer",
+        "hu": "Music Match K-Pop Edition: K-pop kártyajáték minden generációnak"
       },
       "summaries": {
         "en": "The K-pop edition of Music Match: match songs on generation, agency, members and more. How it plays, what changed from the original, and who it suits.",
@@ -110,7 +120,9 @@
         "jp": "Music MatchのK-pop版を紹介。世代、事務所、メンバー数で曲を合わせる遊び方、変更点、音楽イベントの企画に向くかがわかります。",
         "cn": "了解 Music Match K-Pop 版怎么玩，和原版有什么不同，以及它更适合哪些 K-pop 粉丝一起开局。",
         "sv": "K-pop-utgåvan av Music Match: matcha låtar på generation, agency, medlemmar och mer. Så spelas det, vad som ändrats och vem det passar.",
-        "no": "K-pop-utgaven av Music Match: match låter på generasjon, selskap, medlemmer og mer. Slik spilles det, hva som er nytt, og hvem det passer for."
+        "no": "K-pop-utgaven av Music Match: match låter på generasjon, selskap, medlemmer og mer. Slik spilles det, hva som er nytt, og hvem det passer for.",
+        "da": "K-pop udgaven af Music Match: match sange på generation, bureau, medlemmer og mere. Se reglerne, ændringerne og hvem spillet passer til.",
+        "hu": "Bemutató a Music Match K-Pop Editionhöz: hogyan működnek a QR-kártyák, mi változott az eredetihez képest, és kinek jó ez a K-pop játék."
       },
       "imagePrompt": "The scramble of a Music Match K-Pop round, a dynamic close-up at table height on a dark wooden table at night: in the centre a few pink Claim Cubes like reference 1, with three hands from different sides lunging for them at the same moment, one slapping a cream Match Card face down on the table. In the foreground a phone held low is scanning a blue QR Card like reference 2, and a small fan of cream Match Cards like reference 3 lies next to the round DJ Token. The hot pink Music Match K-Pop Edition box like reference 1 stands slightly out of focus behind them, beside a softly glowing pastel heart-shaped fan lightstick with no logo. Magenta and electric blue concert-style light spills across the table, with motion blur on the hands only.",
       "referenceImages": [
@@ -151,7 +163,9 @@
         "jp": "corporate-gifts-people-keep-custom-music-card-sets-jp",
         "cn": "corporate-gifts-people-keep-custom-music-card-sets-cn",
         "sv": "foretagspresenter-folk-behaller-skraddarsydda-kortlekar-for-musikquiz",
-        "no": "firmagaver-folk-tar-vare-pa-egne-kortsett-til-musikkquiz-med-lyd"
+        "no": "firmagaver-folk-tar-vare-pa-egne-kortsett-til-musikkquiz-med-lyd",
+        "da": "firmagaver-folk-beholder-personlige-musikquiz-kort",
+        "hu": "ceges-ajandek-amit-megtartanak-egyedi-qr-kodos-zenei-kartyak"
       },
       "titles": {
         "en": "Corporate gifts people keep: custom music card sets",
@@ -165,7 +179,9 @@
         "jp": "手元に残る法人ギフト: 音楽イベントの企画にも使えるカスタム音楽カードセット",
         "cn": "让人愿意留下的企业礼品：定制音乐卡牌套装",
         "sv": "Företagspresenter folk behåller: egna musikquiz med kort",
-        "no": "Firmagaver folk beholder: eget musikk quiz spill"
+        "no": "Firmagaver folk beholder: eget musikk quiz spill",
+        "da": "Firmagaver folk beholder: personlige musikquiz-kort",
+        "hu": "Céges ajándék, amit megtartanak: egyedi QR-kódos zenei kártyák"
       },
       "summaries": {
         "en": "What makes a company gift survive the desk drawer, why letting the team pick the songs is the part that matters, and the real numbers: minimum order, lead time and what you can customise.",
@@ -179,7 +195,9 @@
         "jp": "会社のギフトが引き出し行きで終わらない理由、チームが曲を選ぶ意味、カスタム音楽カードの最小ロット、納期、カスタマイズ範囲がわかります。音楽イベントの企画やゲームにも使える作り方を、数字も含めて正直にまとめました。",
         "cn": "了解什么样的公司礼物不会被塞进抽屉，为什么让团队选歌才是关键，以及最低起订量、交期和可定制内容。",
         "sv": "Så blir företagspresenter ett musikquiz som används på riktigt: låt teamet välja låtarna och se minimiorder, leveranstid och val du kan anpassa.",
-        "no": "Slik lager du en firmagave som faktisk blir brukt: et musikk quiz spill med låter teamet velger selv, med minstekjøp, leveringstid og valg."
+        "no": "Slik lager du en firmagave som faktisk blir brukt: et musikk quiz spill med låter teamet velger selv, med minstekjøp, leveringstid og valg.",
+        "da": "Se hvad der får en firmagave til at blive brugt, hvordan teamet vælger sangene, og få de praktiske tal for minimum, levering og design.",
+        "hu": "Céges ajándék, amit nem tesznek fiókba: mikor működik a zenés QR-kártya, hogyan válasszon dalt a csapat, és mik a rendelési feltétel."
       },
       "imagePrompt": "Corporate gifting, shot like a premium product campaign: on a pale oak reception desk in a bright modern office, three stacked QRSong business boxes like reference 3, the top one open with its lid leaning against the stack and its coral tray showing four compartments of QR music cards with personalised back designs like reference 3. The lids carry a simple made-up geometric company emblem in teal and coral with no words. A coral satin ribbon curls in the foreground, a staff lanyard and a closed laptop sit soft in the background, and morning sun through tall windows casts long window-frame shadows across the desk.",
       "referenceImages": [
@@ -211,7 +229,9 @@
         "cn": "qr-codes-for-musicians-what-actually-works-cn",
         "sv": "qr-kod-for-musiker-vad-som-faktiskt-funkar",
         "no": "qr-koder-for-musikere-hva-som-faktisk-fungerer",
-        "jp": "qr-codes-for-musicians-what-actually-works-jp"
+        "jp": "qr-codes-for-musicians-what-actually-works-jp",
+        "da": "qr-koder-for-musikere-hvad-virker-faktisk",
+        "hu": "qr-kod-zeneszeknek-ami-tenyleg-mukodik"
       },
       "titles": {
         "en": "QR codes for musicians: what actually works",
@@ -225,7 +245,9 @@
         "cn": "音乐人怎么用二维码：真正有用的做法",
         "sv": "QR kod för musiker: vad som faktiskt funkar",
         "no": "QR-koder for musikere: hva som faktisk fungerer",
-        "jp": "ミュージシャン向けQRコードの作り方、本当に使える方法"
+        "jp": "ミュージシャン向けQRコードの作り方、本当に使える方法",
+        "da": "QR-koder for musikere: hvad virker faktisk",
+        "hu": "QR-kód zenészeknek: ami tényleg működik"
       },
       "summaries": {
         "en": "Putting a QR code on a poster, merch table or record sleeve. Static versus dynamic, where to point it so it works on every service, and the print rules that decide whether it scans at all.",
@@ -239,7 +261,9 @@
         "cn": "把二维码印在海报、周边摊位或唱片封套前，先弄清静态和动态的取舍、该链接到哪里才能兼容各平台，以及哪些印刷细节会决定它到底扫不扫得出来。",
         "sv": "Så använder du en QR kod på affisch, merchbord eller skivomslag: statisk eller dynamisk kod, rätt länk för alla tjänster och tryckregler.",
         "no": "Slik bruker du QR-koder på plakater, merch og plateomslag: statisk eller dynamisk, hvor lenken bør gå, og hva som må til for at den skanner.",
-        "jp": "ポスター、物販、レコードにQRコードを載せるなら。静的と動的の違い、SpotifyやApple Musicへの誘導先、読み取れる印刷ルールがわかります。"
+        "jp": "ポスター、物販、レコードにQRコードを載せるなら。静的と動的の違い、SpotifyやApple Musicへの誘導先、読み取れる印刷ルールがわかります。",
+        "da": "Sådan bruger du QR-koder på plakater, merch og pladecovers: statisk vs. dynamisk, hvor linket bør pege hen, og hvad der skal til for scanning.",
+        "hu": "Megmutatom, hova mutasson a zenészeknek szánt QR-kód, statikus vagy dinamikus legyen, és milyen nyomdai szabályokon múlik, hogy beolvassák."
       },
       "imagePrompt": "The merch table of a small music venue just after a gig, shot low and close in moody light: a hand holds a phone up to scan a big black QR code printed on a kraft-paper sign propped in a wooden stand, beside a crate of vinyl records in plain unprinted sleeves and a pile of folded band t-shirts with no print visible. Behind, out of focus, the empty stage glows under teal and coral lights, a guitar leaning against an amplifier. The phone screen is only a soft blur."
     },
@@ -265,7 +289,9 @@
         "jp": "how-to-make-your-own-music-bingo-cards-jp",
         "cn": "how-to-make-your-own-music-bingo-cards-cn",
         "sv": "sa-gor-du-egna-musikbingo-brickor",
-        "no": "hvordan-lage-musikkbingo"
+        "no": "hvordan-lage-musikkbingo",
+        "da": "sadan-laver-du-dine-egne-musikbingo-kort",
+        "hu": "hogyan-keszits-sajat-zenei-bingokartyakat"
       },
       "titles": {
         "en": "How to make your own music bingo cards",
@@ -279,7 +305,9 @@
         "jp": "音楽ビンゴカードの作り方",
         "cn": "如何制作自己的音乐宾果卡",
         "sv": "Så gör du egna bingobrickor för musikbingo",
-        "no": "Hvordan lage egne kort til musikkbingo"
+        "no": "Hvordan lage egne kort til musikkbingo",
+        "da": "Sådan laver du dine egne musikbingo-kort",
+        "hu": "Hogyan készíts saját zenei bingókártyákat"
       },
       "summaries": {
         "en": "Build music bingo cards by hand with a spreadsheet and a printer, or generate them from a playlist. How many songs you need, what goes wrong, and how to settle a disputed win.",
@@ -293,7 +321,9 @@
         "jp": "音楽イベントの企画ゲームにも使える音楽ビンゴカードの作り方。手作りとプレイリストからの自動生成、必要な曲数、勝ち判定までわかります。",
         "cn": "你会学到如何用表格和打印机手工制作音乐宾果卡，或直接从歌单生成。还会讲需要多少首歌、常见问题和有争议的胜利怎么判定。",
         "sv": "Gör bingobrickor för musikbingo själv med kalkylark och skrivare, eller skapa dem från en spellista. Du får antal låtar, fallgropar och vinstkoll.",
-        "no": "Slik lager du musikkbingo-kort for hånd eller fra en spilleliste, hvor mange sanger du trenger, hva som går galt, og hvordan du sjekker en vinner."
+        "no": "Slik lager du musikkbingo-kort for hånd eller fra en spilleliste, hvor mange sanger du trenger, hva som går galt, og hvordan du sjekker en vinner.",
+        "da": "Lav musikbingo-kort i hånden med regneark og printer, eller ud fra en playliste. Se hvor mange sange du skal bruge, og hvordan du tjekker vinderen.",
+        "hu": "Készíts zenei bingókártyákat táblázattal és nyomtatóval, vagy generáld őket Spotify playlistből. Dalok száma, hibák, vitás nyerések."
       },
       "imagePrompt": "The winning moment of a music bingo night, a tight close-up at table height: a printed music bingo sheet exactly like reference 3 (a 5x5 grid of song titles with a FREE centre square) lies on a wooden table, five squares in one diagonal line stamped with translucent coral dabber circles, and a coral bingo dauber rests on the sheet. Behind it, out of focus, more bingo sheets, a small stack of QR music cards and a glowing bluetooth speaker, with warm string lights in the dark background.",
       "referenceImages": [
@@ -321,7 +351,9 @@
         "jp": "meet-the-qrsong-gift-box",
         "cn": "meet-the-qrsong-gift-box",
         "sv": "meet-the-qrsong-gift-box",
-        "no": "mt-qrsong-gaveeske"
+        "no": "mt-qrsong-gaveeske",
+        "da": "qrsong-gaveaesken-hvad-den-loser-og-hvad-den-ikke-loser",
+        "hu": "a-qrsong-ajandekdoboz-mit-old-meg-es-mit-nem"
       },
       "titles": {
         "en": "The QRSong! gift box: what it does and does not fix",
@@ -335,7 +367,9 @@
         "jp": "QRSong!のギフトボックス：できること、できないこと",
         "cn": "QRSong! 礼盒：它能解决什么，不能解决什么",
         "sv": "QRSong! presentbox: vad den löser och inte löser",
-        "no": "QRSong! gaveeske: hva den fikser, og hva den ikke fikser"
+        "no": "QRSong! gaveeske: hva den fikser, og hva den ikke fikser",
+        "da": "QRSong! gaveæsken: hvad den løser, og hvad den ikke løser",
+        "hu": "A QRSong! ajándékdoboz: mit old meg, és mit nem"
       },
       "summaries": {
         "en": "A foldable printed box with a window in the lid, holding up to 190 cards. What to put behind the window, and why presentation only amplifies a personal deck.",
@@ -349,7 +383,9 @@
         "jp": "ふたに窓があり、最大190枚のカードを入れられる折りたたみ式の印刷ボックス。窓に何を入れると伝わるのか、見た目が個人的なデッキをどう引き立てるのかがわかります。",
         "cn": "这款可折叠印刷礼盒盒盖带窗口，最多可放190张卡牌。你会知道窗口里放什么最合适、折盒和寄送要注意什么，以及为什么好包装只会放大一副本来就私人的牌。",
         "sv": "En vikbar tryckt presentbox med fönster i locket, för upp till 190 kort. Läs vad du kan visa i fönstret och när boxen faktiskt hjälper.",
-        "no": "En sammenleggbar trykt eske med vindu i lokket, med plass til 190 kort. Hva du bør legge bak vinduet, og hvorfor en personlig kortstokk betyr mest."
+        "no": "En sammenleggbar trykt eske med vindu i lokket, med plass til 190 kort. Hva du bør legge bak vinduet, og hvorfor en personlig kortstokk betyr mest.",
+        "da": "En foldbar trykt æske med vindue i låget og plads til op til 190 kort. Se hvad du skal sætte i vinduet, og hvorfor æsken kun løfter et personligt spil.",
+        "hu": "Összehajtható nyomtatott díszdoboz ablakos tetővel, akár 190 kártyához. Mikor tesz hozzá az ajándékhoz, és mikor nem menti meg a paklit."
       },
       "updated": "2026-09-12",
       "imagePrompt": "The moment a gift is opened, photographed from just above: two hands lift the QRSong gift box of reference 3 out of a nest of crinkled coral tissue paper. The window in its lid shows a personal photo of a happy golden retriever on a beach. Beside it the lid of a second, opened box reveals neat piles of QR music cards with personalised artwork like reference 4. A loose teal ribbon and torn kraft wrapping paper lie around on a linen tablecloth, soft window light from the side.",
@@ -383,7 +419,9 @@
         "jp": "qrsongqrgames",
         "cn": "qrsongqrgames",
         "sv": "vi-introducerar-qrgames-for-qrsong-kort",
-        "no": "fire-spill-du-kan-spille-med-en-bunke-musikkort"
+        "no": "fire-spill-du-kan-spille-med-en-bunke-musikkort",
+        "da": "fire-spil-med-et-saet-musikkort-timeline-bingo-og-kahoot-music-quiz",
+        "hu": "negy-jatek-amit-egyetlen-pakli-zenes-kartyaval-jatszhatsz"
       },
       "titles": {
         "en": "Four games you can play with one deck of music cards",
@@ -397,7 +435,9 @@
         "jp": "音楽イベント企画にも使える、1組の音楽カードで遊べる4つのゲーム",
         "cn": "一副音乐卡牌能玩的四种游戏",
         "sv": "Fyra musikspel du kan spela med samma kortlek",
-        "no": "Fire musikkspill du kan spille med én kortstokk musikkort"
+        "no": "Fire musikkspill du kan spille med én kortstokk musikkort",
+        "da": "Fire spil med ét sæt musikkort, timeline, bingo og Kahoot music quiz",
+        "hu": "Négy játék, amit egyetlen pakli zenés kártyával játszhatsz"
       },
       "summaries": {
         "en": "Timeline, bingo, quiz and Music Match all run on the same cards. Which to play for which group, and why switching game revives a deck better than new songs.",
@@ -411,7 +451,9 @@
         "jp": "タイムライン、ビンゴ、カフート風の音楽クイズ、Music Matchを同じカードで遊ぶ方法。人数や場に合わせた選び方もわかります。",
         "cn": "同一副卡牌可以玩时间线、音乐宾果、音乐问答和 Music Match。这里讲每种适合什么人，以及为什么换玩法比加新歌更能让一副牌重新好玩。",
         "sv": "Timeline, bingo, quiz och Music Match funkar med samma kort. Här får du veta vilket musikspel som passar vilken grupp och varför att byta spel hjälper.",
-        "no": "Timeline, musikk bingo, musikk quiz med lyd og Music Match bruker samme kort. Se hva som passer for ulike grupper, og hvorfor bytte spill hjelper."
+        "no": "Timeline, musikk bingo, musikk quiz med lyd og Music Match bruker samme kort. Se hva som passer for ulike grupper, og hvorfor bytte spill hjelper.",
+        "da": "Timeline, bingo, Kahoot music quiz og Music Match bruger de samme kort. Se hvilket spil der passer til gruppen, og hvordan du vækker sættet igen.",
+        "hu": "Timeline, bingó, kvíz és Music Match ugyanazzal a paklival. Megmutatom, melyik játék melyik társasághoz illik, és miért éleszti újra a paklit."
       },
       "imagePrompt": "One deck, four games: a graphic overhead flat lay on a warm off-white tabletop divided into four tidy zones, with a single stack of QR music cards in the exact centre. Top left, Timeline: five card backs in a row, their release years climbing from left to right. Top right, Music Bingo: a bingo sheet like reference 3 with a few coral dabber marks. Bottom left, Music Quiz: a small brass desk bell and a pencil on a scorepad with tally marks. Bottom right, Music Match: a small hand of cards next to a discard pile, the top card of the pile and the card being played on it sharing the same decade. Knolling-style order, crisp soft shadows, the brand palette in the props.",
       "referenceImages": [
@@ -440,7 +482,9 @@
         "jp": "qrsongapple-musictidaldeezeryoutube-music",
         "cn": "qrsong-apple-musictidaldeezer-youtube-music",
         "sv": "qrsong-lagger-till-apple-music-tidal-deezer-och-youtube-music",
-        "no": "hvilken-strommetjeneste-fungerer-best-for-musikkquiz-med-lyd"
+        "no": "hvilken-strommetjeneste-fungerer-best-for-musikkquiz-med-lyd",
+        "da": "hvilken-streamingtjeneste-fungerer-bedst-til-musikkort",
+        "hu": "melyik-streaming-szolgaltatas-a-legjobb-zenei-kartyakhoz"
       },
       "titles": {
         "en": "Which streaming service works best for music cards",
@@ -454,7 +498,9 @@
         "jp": "音楽カードゲームに一番合うストリーミングサービスは？",
         "cn": "哪种流媒体服务最适合音乐卡牌游戏",
         "sv": "Vilken streamingtjänst funkar bäst för musikquiz?",
-        "no": "Hvilken strømmetjeneste fungerer best for musikkquiz med lyd"
+        "no": "Hvilken strømmetjeneste fungerer best for musikkquiz med lyd",
+        "da": "Hvilken streamingtjeneste fungerer bedst til musikkort",
+        "hu": "Melyik streaming szolgáltatás a legjobb zenei kártyákhoz"
       },
       "summaries": {
         "en": "Spotify, Apple Music, Tidal, Deezer and YouTube Music are not equivalent. The hidden playback comparison that decides whether the game works at all.",
@@ -468,7 +514,9 @@
         "jp": "Spotify、Apple Music、Tidal、Deezer、YouTube Musicの違いを、タイトル非表示再生と発売年の正確さで比較。音楽カードゲームがちゃんと遊べる選び方がわかります。",
         "cn": "Spotify、Apple Music、Tidal、Deezer 和 YouTube Music 并不一样。这里比较隐藏播放和年份来源，帮你判断游戏能不能顺畅玩起来。",
         "sv": "Spotify, Apple Music, Tidal, Deezer och YouTube Music funkar olika. Här får du jämförelsen som avgör om ditt musikquiz fungerar på riktigt.",
-        "no": "Spotify, Apple Music, Tidal, Deezer og YouTube Music er ulike. Se hvilken tjeneste som fungerer best for musikkquiz med lyd før du velger konto."
+        "no": "Spotify, Apple Music, Tidal, Deezer og YouTube Music er ulike. Se hvilken tjeneste som fungerer best for musikkquiz med lyd før du velger konto.",
+        "da": "Spotify, Apple Music, Tidal, Deezer og YouTube Music er ikke ens. Her får du forskellen, der afgør om dit musikspil virker.",
+        "hu": "Spotify, Apple Music, Tidal, Deezer és YouTube Music összevetése: kiderül, melyik rejti el a lejátszást, és hol működik jól a játék."
       },
       "imagePrompt": "Five smartphones standing upright in a neat row on a polished deep teal surface, like contestants lined up on a stage, each screen glowing one solid colour (green, pink-red, cyan, violet, red) with no interface, text or logos, their coloured light pooling and reflecting on the surface. In front of the middle phone lies one QR music card, front side up, picked out by a narrow warm spotlight. Dark, cinematic product lighting."
     },
@@ -491,7 +539,9 @@
         "jp": "hitstaltapple-musicqr",
         "cn": "-hitstalt-apple-music-qrsong",
         "sv": "spela-qrsong-med-apple-music-via-hitstalt",
-        "no": "spill-qr-musikkortene-dine-med-apple-music"
+        "no": "spill-qr-musikkortene-dine-med-apple-music",
+        "da": "spil-dine-qr-musikkort-med-apple-music",
+        "hu": "jatszd-le-a-qr-zenei-kartyaidat-apple-music-kal"
       },
       "titles": {
         "en": "Play your QR music cards with Apple Music",
@@ -505,7 +555,9 @@
         "jp": "Apple MusicでQRコード音楽カードを遊ぶ",
         "cn": "用 Apple Music 播放你的 QR 音乐卡牌",
         "sv": "Spela dina QR-musikkort med Apple Music",
-        "no": "Spill QR-musikkortene dine med Apple Music"
+        "no": "Spill QR-musikkortene dine med Apple Music",
+        "da": "Spil dine QR-musikkort med Apple Music",
+        "hu": "Játszd le a QR zenei kártyáidat Apple Music-kal"
       },
       "summaries": {
         "en": "Apple Music works directly in the free QRSong! app now, with the song title hidden and the full track playing. Here is how it compares to Spotify, Tidal, Deezer and YouTube Music.",
@@ -519,7 +571,9 @@
         "jp": "無料のQRSong!アプリでApple Musicに直接対応。曲名を隠したままフル再生でき、SpotifyやTidalなどとの違いもわかります。",
         "cn": "现在，免费 QRSong! app 已经可以直接使用 Apple Music，隐藏歌名并播放完整歌曲。这里会说明连接方法，也会诚实比较它和 Spotify、Tidal、Deezer、YouTube Music 在游戏里的差别。",
         "sv": "Apple Music fungerar nu direkt i gratisappen QRSong!, med dold låttitel och hela spåret. Så står det sig mot Spotify, Tidal, Deezer och YouTube Music.",
-        "no": "Apple Music fungerer nå direkte i den gratis QRSong!-appen, med skjult tittel og hele låten. Se forskjellen mot Spotify, Tidal, Deezer og YouTube Music."
+        "no": "Apple Music fungerer nå direkte i den gratis QRSong!-appen, med skjult tittel og hele låten. Se forskjellen mot Spotify, Tidal, Deezer og YouTube Music.",
+        "da": "Apple Music virker nu direkte i den gratis QRSong!-app, med skjult titel og hele nummeret. Se forskellen på Spotify, Tidal, Deezer og YouTube Music.",
+        "hu": "Az Apple Music már közvetlenül működik az ingyenes QRSong! appban, rejtett címmel és teljes dallal. Megmutatom, miben más, mint a Spotify és a többi."
       },
       "imagePrompt": "Evening listening at home: a hand holds a phone over a fanned spread of QR music cards on a soft wool throw, scanning one of them, and the phone screen shows the QRSong app exactly as in reference 3. A pair of premium over-ear headphones lies beside the cards, and a warm pink-to-red glow from a lamp spills across the scene while the rest of the room falls into soft teal shadow.",
       "referenceImages": [
@@ -548,7 +602,9 @@
         "jp": "music-matchqr",
         "cn": "music-match",
         "sv": "music-match-qr-musikpartyspelet",
-        "no": "music-match-musikk-quiz-spill-med-kort-forklart"
+        "no": "music-match-musikk-quiz-spill-med-kort-forklart",
+        "da": "music-match-sadan-fungerer-musikkortspillet",
+        "hu": "music-match-a-zenes-kartyajatek-erthetoen"
       },
       "titles": {
         "en": "Music Match: the music card game explained",
@@ -562,7 +618,9 @@
         "jp": "Music Match: 音楽カードゲームの遊び方",
         "cn": "Music Match：这款音乐卡牌游戏怎么玩",
         "sv": "Music Match: musik quiz spel med kort, förklarat",
-        "no": "Music Match: musikk quiz spill med kort forklart"
+        "no": "Music Match: musikk quiz spill med kort forklart",
+        "da": "Music Match: sådan fungerer musikkortspillet",
+        "hu": "Music Match: a zenés kártyajáték érthetően"
       },
       "summaries": {
         "en": "Match on artist, genre or decade and race to empty your hand. How it differs from a timeline game, and why it suits a table with uneven music knowledge.",
@@ -576,7 +634,9 @@
         "jp": "Music Matchは、アーティスト、ジャンル、年代で手札を合わせて先に出し切る音楽カードゲーム。タイムラインゲームとの違いと、知識差のある場に向く理由がわかります。",
         "cn": "了解 Music Match 这款音乐卡牌游戏：按歌手、风格或年代配对出牌，抢先清空手牌，也看看它和音乐时间线游戏有什么不同。",
         "sv": "Matcha artist, genre eller årtionde och bli först av med dina kort. Här får du skillnaden mot tidslinjespel och varför ojämn musikkoll funkar.",
-        "no": "Match på artist, sjanger eller tiår og bli først tom for kort. Se hvordan spillet skiller seg fra tidslinje, og hvorfor det passer blandede lag."
+        "no": "Match på artist, sjanger eller tiår og bli først tom for kort. Se hvordan spillet skiller seg fra tidslinje, og hvorfor det passer blandede lag.",
+        "da": "Match på kunstner, genre eller årti, og kom først af med dine kort. Se forskellen fra et music timeline game, og hvem spillet passer bedst til.",
+        "hu": "Párosíts előadó, műfaj vagy évtized alapján, és ürítsd ki elsőként a kezed. Megmutatom, miben más, mint egy idővonalas zenés játék."
       }
     },
     {
@@ -598,7 +658,9 @@
         "jp": "-1",
         "cn": "-2",
         "sv": "dela-din-spellista-fa-rabatter",
-        "no": "del-spillelisten-til-musikkquizen-og-fa-rabatt"
+        "no": "del-spillelisten-til-musikkquizen-og-fa-rabatt",
+        "da": "fremhaev-din-playliste-og-fa-rabat",
+        "hu": "tedd-kozze-a-lejatszasi-listadat-es-szerezz-kedvezmenyt"
       },
       "titles": {
         "en": "Feature your playlist and earn a discount",
@@ -612,7 +674,9 @@
         "jp": "プレイリストを公開して割引をもらう",
         "cn": "公开你的歌单，赚取折扣",
         "sv": "Lyft fram din spellista och få rabatt",
-        "no": "Del spillelisten til musikkquizen og få rabatt"
+        "no": "Del spillelisten til musikkquizen og få rabatt",
+        "da": "Fremhæv din playliste og få rabat",
+        "hu": "Tedd közzé a lejátszási listádat, és szerezz kedvezményt"
       },
       "summaries": {
         "en": "How the discount works, and more usefully, what makes a featured playlist other people actually pick. Concept beats taste, and the title is the whole pitch.",
@@ -626,7 +690,9 @@
         "jp": "QRSong!で公開プレイリストから割引をもらう仕組みと、実際に選ばれるプレイリスト名の考え方を紹介。大事なのは好みよりコンセプトです。",
         "cn": "了解公开歌单赚取下单折扣的方式，也看看什么样的歌单更容易被别人选中。关键不是品味多好，而是概念清不清楚，标题说不说得明白。",
         "sv": "Så fungerar rabatten och vad som gör att andra faktiskt väljer din spellista: en tydlig idé slår smak, och titeln säljer hela upplägget.",
-        "no": "Slik fungerer rabatten når du deler en spilleliste, og hva som gjør at andre faktisk velger den til sin egen musikkquiz. Tittel og konsept teller mest."
+        "no": "Slik fungerer rabatten når du deler en spilleliste, og hva som gjør at andre faktisk velger den til sin egen musikkquiz. Tittel og konsept teller mest.",
+        "da": "Sådan virker rabatten, og hvad der får andre til at vælge netop din playliste. Konceptet slår smag, og titlen er hele salgsargumentet.",
+        "hu": "Elmondom, hogyan működik a kedvezmény, és milyen kiemelt lejátszási listát választanak tényleg mások: az ötlet többet ér, mint az ízlés."
       },
       "imagePrompt": "A featured deck in the spotlight, styled like a tiny gallery display on a desk, close-up: three small decks of QR music cards lie flat on a pale oak surface against a deep teal wall, each deck a palm-sized stack only 6 cm wide and about 2 cm high, lower than the coffee mug and the paperback book beside them, each with a different personalised front design like reference 3. The middle deck sits on a small coral plinth, lit by a single warm spotlight, with a small coral ribbon rosette without text next to it, while the two other decks stay in soft shadow.",
       "referenceImages": [
@@ -655,7 +721,9 @@
         "jp": "qrsong-135",
         "cn": "qrsong-135-",
         "sv": "sa-haller-du-igang-ett-musikquiz-hela-kvallen",
-        "no": "slik-arrangerer-du-en-musikkquiz-med-lyd-som-holder-koken"
+        "no": "slik-arrangerer-du-en-musikkquiz-med-lyd-som-holder-koken",
+        "da": "sadan-holder-du-en-musikaften-der-bliver-ved",
+        "hu": "hogyan-tarts-zenei-estet-ami-nem-ul-le"
       },
       "titles": {
         "en": "How to host a music night that keeps going",
@@ -669,7 +737,9 @@
         "jp": "音楽イベント企画で人気の音楽ゲームを、最後まで盛り上げる開き方",
         "cn": "怎样办一场不会冷场的音乐之夜",
         "sv": "Så håller du igång ett musikquiz hela kvällen",
-        "no": "Slik arrangerer du en musikkquiz med lyd som holder koken"
+        "no": "Slik arrangerer du en musikkquiz med lyd som holder koken",
+        "da": "Sådan holder du en musikaften, der bliver ved",
+        "hu": "Hogyan tarts zenei estet, ami nem ül le"
       },
       "summaries": {
         "en": "Setup, the first ten minutes, and what to do when attention drops around card forty. Speaker, snippet length and the one person who knows every song.",
@@ -683,7 +753,9 @@
         "jp": "音楽イベント企画で音楽ゲームを最後まで盛り上げるコツを、準備と最初の10分からまとめました。カード40枚目で集中が落ちた時の立て直し、スピーカー、再生秒数、全部知っている人への対応もわかります。",
         "cn": "想办一场不冷场的音乐之夜？这里讲清楚开场前的设置、前十分钟怎么带大家上手，以及注意力下滑时怎么把气氛拉回来。",
         "sv": "Du får tips om ljud, första rundan och tempot när energin dippar runt kort fyrtio. Om högtalare, klipplängd och den som kan alla låtar.",
-        "no": "Oppsett, de første ti minuttene og hva du gjør når energien faller rundt kort førti. Tips om høyttaler, klipplengde og eksperten ved bordet."
+        "no": "Oppsett, de første ti minuttene og hva du gjør når energien faller rundt kort førti. Tips om høyttaler, klipplengde og eksperten ved bordet.",
+        "da": "Få styr på din kahoot music quiz eller musikaften: opsætning, de første ti minutter, kliplængde og hvad du gør, når energien falder.",
+        "hu": "Beállítás, első tíz perc, és mit csinálj, amikor a figyelem a negyvenedik kártya körül esik. Hangszóró, részletek és mindentudók."
       },
       "imagePrompt": "A music night in full swing, seen from the doorway of a warm living room in the evening: in the sharp foreground a small fabric bluetooth speaker on a sideboard next to a stack of QR music cards, and a hand entering the frame holding one card up between two fingers. Beyond, softly out of focus with a little motion blur, a few friends dance and laugh under string lights and a coral paper lantern, glasses raised."
     },
@@ -706,7 +778,9 @@
         "cn": "-1",
         "jp": "how-to-pick-songs-for-a-music-game-jp",
         "sv": "sa-valjer-du-latar-till-ett-gissa-laten-spel",
-        "no": "slik-velger-du-sanger-til-gjett-sangen-musikk-quiz"
+        "no": "slik-velger-du-sanger-til-gjett-sangen-musikk-quiz",
+        "da": "sadan-vaelger-du-sange-til-en-kahoot-music-quiz",
+        "hu": "hogyan-valassz-dalokat-zenei-jatekhoz"
       },
       "titles": {
         "en": "How to pick songs for a music game",
@@ -720,7 +794,9 @@
         "cn": "如何为音乐游戏选歌",
         "jp": "音楽イベント企画のゲームで盛り上がる曲の選び方",
         "sv": "Så väljer du låtar till ett gissa låten-spel",
-        "no": "Slik velger du sanger til gjett sangen musikk quiz"
+        "no": "Slik velger du sanger til gjett sangen musikk quiz",
+        "da": "Sådan vælger du sange til en kahoot music quiz",
+        "hu": "Hogyan válassz dalokat zenei játékhoz"
       },
       "summaries": {
         "en": "The three ways a game playlist goes wrong: choosing songs you love, sticking to one era, and getting the count wrong. How many songs you need and why years break.",
@@ -734,7 +810,9 @@
         "cn": "音乐游戏歌单最常出错的三件事：只选自己爱听的歌、年代太集中、数量不合适。这里讲该准备多少首，以及为什么年份会坑你。",
         "jp": "音楽イベントの企画で使うゲーム用プレイリストの選び方。好きな曲だけにしない、年代を広げる、曲数を合わせるコツがわかります。",
         "sv": "Så väljer du låtar till ett gissa låten-spel: rätt antal, breda årtal och igenkänning före smak, så att musikquizet funkar på riktigt.",
-        "no": "Tre ting ødelegger en musikk quiz med lyd: egne favoritter, én epoke og feil antall låter. Her får du tallene som funker, og hvorfor årstall ofte ryker."
+        "no": "Tre ting ødelegger en musikk quiz med lyd: egne favoritter, én epoke og feil antall låter. Her får du tallene som funker, og hvorfor årstall ofte ryker.",
+        "da": "De tre fejl der ødelægger en musikquiz: sange kun du elsker, én tidsperiode og forkert antal. Få konkrete tal og undgå årstalsfælden.",
+        "hu": "Három tipikus hiba zenei játékoknál: a saját kedvencek, az egy korszakba ragadás és a rossz dalszám. Így lesz működő paklid."
       },
       "imagePrompt": "Seen from directly above on a warm wooden floor: a diagonal row of eight QR music cards lying back side up, their big release years running in order from the 1960s to the 2020s like a timeline across the frame. Around the row lie a few unsleeved black vinyl records with plain coral and teal labels, a cassette tape and a pencil, and a hand is sliding one more card into a gap in the row. Late afternoon sun rakes across the floorboards."
     },
@@ -757,7 +835,9 @@
         "jp": "qrsong-133",
         "cn": "qrsong-133-",
         "sv": "varfor-dold-uppspelning-spelar-roll-i-ett-gissa-laten-spel",
-        "no": "hvorfor-skjult-avspilling-er-viktig-i-en-musikkquiz-med-lyd"
+        "no": "hvorfor-skjult-avspilling-er-viktig-i-en-musikkquiz-med-lyd",
+        "da": "hvorfor-skjult-afspilning-betyder-noget-i-en-musikquiz",
+        "hu": "miert-fontos-a-rejtett-lejatszas-egy-zenei-jatekban"
       },
       "titles": {
         "en": "Why hidden playback matters in a music game",
@@ -771,7 +851,9 @@
         "jp": "音楽ゲームで曲名を隠して再生することが大事な理由",
         "cn": "为什么音乐游戏里的隐藏播放很重要",
         "sv": "Varför dold uppspelning spelar roll i ett gissa låten-spel",
-        "no": "Hvorfor skjult avspilling er viktig i en musikkquiz med lyd"
+        "no": "Hvorfor skjult avspilling er viktig i en musikkquiz med lyd",
+        "da": "Hvorfor skjult afspilning betyder noget i en musikquiz",
+        "hu": "Miért fontos a rejtett lejátszás egy zenei játékban"
       },
       "summaries": {
         "en": "Scanning with your phone camera shows the song title and ends the round. How hidden playback works, and which streaming services actually support it.",
@@ -785,7 +867,9 @@
         "jp": "スマホのカメラで音楽カードを読み取ると曲名が見えてしまいます。曲名を隠して再生する仕組みと、対応する音楽サービスがわかります。",
         "cn": "用手机相机扫音乐卡，会在链接预览里露出歌名，回合还没开始就结束。这里讲隐藏播放怎么保住猜歌体验，以及各流媒体服务实际支持到哪一步。",
         "sv": "Mobilkameran visar låttiteln och förstör rundan i ett gissa låten-spel. Här ser du hur dold uppspelning funkar och vilka tjänster som stöder det.",
-        "no": "I en musikkquiz med lyd må svaret holdes skjult. Se hvordan skjult avspilling fungerer i praksis, og hvilke strømmetjenester som faktisk støtter det."
+        "no": "I en musikkquiz med lyd må svaret holdes skjult. Se hvordan skjult avspilling fungerer i praksis, og hvilke strømmetjenester som faktisk støtter det.",
+        "da": "Når du scanner med kameraet, afslører linket sangtitlen. Se hvordan skjult afspilning virker, og hvilke tjenester der understøtter det.",
+        "hu": "Miért bukik le a dal címe kamerás beolvasásnál? Megmutatom, hogyan működik a rejtett lejátszás, és mely szolgáltatások támogatják."
       },
       "imagePrompt": "Suspense, shot low at table height in a dim room: a phone lies face down on a dark wooden table while a small bluetooth speaker beside it glows with the song that is playing. Next to them a single QR music card lies QR side up, its answer still hidden underneath, and a hand with its fingertips on the card's corner is about to flip it. A narrow warm beam of light picks out the phone, the card and the speaker; everything else falls into deep teal shadow, as if something is being kept secret on purpose."
     },
@@ -808,7 +892,9 @@
         "jp": "qrsong-1",
         "cn": "qrsong-",
         "sv": "sa-designar-du-dina-egna-musikkort",
-        "no": "slik-designer-du-egne-musikkort-til-musikkquiz"
+        "no": "slik-designer-du-egne-musikkort-til-musikkquiz",
+        "da": "sadan-designer-du-dine-egne-musikkort",
+        "hu": "hitster-qr-code-generator-igy-tervezz-sajat-zenekartyakat"
       },
       "titles": {
         "en": "How to design your own music cards",
@@ -822,7 +908,9 @@
         "jp": "自分だけの音楽カードとQRコードをデザインする方法",
         "cn": "如何设计自己的音乐卡片",
         "sv": "Så designar du dina egna musikkort",
-        "no": "Slik designer du egne musikkort til musikkquiz"
+        "no": "Slik designer du egne musikkort til musikkquiz",
+        "da": "Sådan designer du dine egne musikkort",
+        "hu": "Hitster QR code generator: így tervezz saját zenekártyákat"
       },
       "summaries": {
         "en": "What actually matters on a music card and what is decoration: quiet zones, contrast, legible years, and where personalisation earns its keep.",
@@ -836,7 +924,9 @@
         "jp": "音楽カードで本当に大事なことを、QRコードの余白、コントラスト、読みやすい年代表示、写真やメッセージの使いどころまで解説します。",
         "cn": "了解音乐卡片设计真正重要的事：二维码留白区、对比度、远处也能看清的年份，以及照片和留言什么时候真的值得花心思。",
         "sv": "Vad som faktiskt spelar roll på ett musikkort: QR-kodens fria yta, kontrast, läsbara årtal och när personlig text gör kortleken bättre.",
-        "no": "Slik designer du musikkort som fungerer: QR-kode som skanner, god kontrast, tydelige årstall og personlig preg der det faktisk teller."
+        "no": "Slik designer du musikkort som fungerer: QR-kode som skanner, god kontrast, tydelige årstall og personlig preg der det faktisk teller.",
+        "da": "Se hvad der faktisk betyder noget på et musikkort: QR-kodens frizone, kontrast, læsbare årstal og personlig tekst der gør sættet til en gave.",
+        "hu": "Hitster QR code generator helyett: mi számít egy zenekártyán, hogy jól szkenneljen, olvasható legyen, és ajándéknak is személyes maradjon."
       },
       "imagePrompt": "A designer's desk seen from directly above, arranged like a mood board: a neat three-by-three grid of QR music cards, each front with a different personalised design in the manner of reference 3 (a holiday photo of a mountain lake, a teal guitar pattern, gold sparkles, a hand-drawn coral doodle pattern, a city skyline at dusk, a retro sunburst), plus two card backs set apart in different colours and fonts. Around the grid lie a fan of paint colour swatches in teal, coral and cream, a pencil, a craft knife and the edge of a green cutting mat. Soft daylight from one side with gentle shadows.",
       "referenceImages": [
@@ -865,7 +955,9 @@
         "jp": "qr",
         "cn": "printed-cards-or-print-at-home-which-to-pick-cn",
         "sv": "tryckta-kort-eller-skriv-ut-hemma-vad-ska-du-valja-till-ditt-musikquiz",
-        "no": "trykte-kort-eller-print-hjemme-hva-bor-du-velge-til-musikkquizen"
+        "no": "trykte-kort-eller-print-hjemme-hva-bor-du-velge-til-musikkquizen",
+        "da": "printede-musikquiz-kort-eller-print-selv-hvad-skal-du-vaelge",
+        "hu": "nyomtatott-kartyak-vagy-otthoni-nyomtatas-melyiket-valaszd"
       },
       "titles": {
         "en": "Printed cards or print at home: which to pick",
@@ -879,7 +971,9 @@
         "jp": "世界中でフィジカルQRミュージックカードが販売開始！",
         "cn": "印刷卡牌还是在家打印：该怎么选",
         "sv": "Tryckta kort eller skriv ut hemma: vad ska du välja till ditt musikquiz",
-        "no": "Trykte kort eller print hjemme: hva bør du velge til musikkquizen"
+        "no": "Trykte kort eller print hjemme: hva bør du velge til musikkquizen",
+        "da": "Printede musikquiz-kort eller print selv: hvad skal du vælge",
+        "hu": "Nyomtatott kártyák vagy otthoni nyomtatás: melyiket válaszd?"
       },
       "summaries": {
         "en": "The real difference is paper weight. What goes wrong printing music cards at home, what 350 gsm fixes, and how to decide which one your deck needs.",
@@ -893,7 +987,9 @@
         "jp": "あなたのSpotifyプレイリストで高品質なQRミュージックカードを注文しよう！世界中どこでも素早く発送します。物理カードとA4セルフカットのオプションも選べます。",
         "cn": "真正的区别在纸张厚度。了解在家打印音乐卡牌会遇到什么问题，350 gsm 能解决什么，以及你的牌组该怎么选。",
         "sv": "Läs den ärliga skillnaden mellan att skriva ut hemma och beställa tryckta musikkort, vad 350 g/m² löser och när varje val passar bäst för ditt musikquiz.",
-        "no": "Forskjellen er papirtykkelsen. Se hva som går galt når du printer musikkort hjemme, hva 350 g/m² løser, og hva du bør velge til musikkquizen."
+        "no": "Forskjellen er papirtykkelsen. Se hva som går galt når du printer musikkort hjemme, hva 350 g/m² løser, og hva du bør velge til musikkquizen.",
+        "da": "Få den ærlige forskel på print selv og trykte musikquiz-kort: papirtykkelse, fejl ved hjemmeprint, 350 gsm og hvornår du bør vælge hvad.",
+        "hu": "Megmutatom, mikor elég az otthoni nyomtatás, mit javít a 350 g/m²-es papír, és mikor éri meg nyomtatott QR-kódos zenekártyát kérni."
       },
       "imagePrompt": "A macro product comparison on a pale wooden desk, shot at a low angle so the card edges are the story: on the left a QR music card cut by hand from thin home-printer paper, slightly curling, its edge a little ragged and the print faintly banded; on the right the same card professionally printed on thick 350 gsm stock, lying perfectly flat with a crisp, visibly thick edge catching the light. A home inkjet printer sits out of focus behind them, with scissors and paper offcuts beside the thin card."
     },
@@ -916,7 +1012,9 @@
         "jp": "qrsong",
         "cn": "qrsong",
         "sv": "sa-borjade-qrsong-ett-musikquizspel-du-bygger-sjalv",
-        "no": "hvordan-qrsong-startet-gjett-sangen-med-en-kortstokk-du-lager-selv"
+        "no": "hvordan-qrsong-startet-gjett-sangen-med-en-kortstokk-du-lager-selv",
+        "da": "sadan-startede-qrsong-lav-dine-egne-hitster-kort",
+        "hu": "hogyan-indult-a-qrsong-egy-pakli-amit-te-raksz-ossze"
       },
       "titles": {
         "en": "How QRSong! started: a deck you build yourself",
@@ -930,7 +1028,9 @@
         "jp": "QRSong!がアイデアを音楽体験に変えた方法",
         "cn": "QRSong！如何把一个想法变成音乐体验",
         "sv": "Så började QRSong!: ett musikquizspel du bygger själv",
-        "no": "Hvordan QRSong! startet: gjett sangen med en kortstokk du lager selv"
+        "no": "Hvordan QRSong! startet: gjett sangen med en kortstokk du lager selv",
+        "da": "Sådan startede QRSong!: lav dine egne Hitster kort",
+        "hu": "Hogyan indult a QRSong!: egy pakli, amit te raksz össze"
       },
       "summaries": {
         "en": "It began because I lost an argument about a song. The homemade version, the three things that went wrong with it, and why the release year turned out to be the hard part.",
@@ -944,7 +1044,9 @@
         "jp": "QRSong!がシンプルな音楽ゲームから、世界中で楽しめるインタラクティブなプレイリスト体験へと進化したストーリーをチェックしよう。",
         "cn": "了解 QRSong! 是如何从一个简单的音乐游戏，发展成为全球互动歌单体验的。",
         "sv": "Här får du historien bakom QRSong!: ett musikquizspel med egna låtar, vad som gick fel hemma och varför rätt utgivningsår blev svårast för en egen kortlek.",
-        "no": "Les hvordan QRSong! ble til: en hjemmelaget musikkquiz med lyd, tre ting som gikk galt, og hvorfor utgivelsesår ble vanskeligst."
+        "no": "Les hvordan QRSong! ble til: en hjemmelaget musikkquiz med lyd, tre ting som gikk galt, og hvorfor utgivelsesår ble vanskeligst.",
+        "da": "Det begyndte med et skænderi om en sang. Her får du den hjemmelavede udgave, fejlene undervejs og hvorfor årstallene blev den svære del.",
+        "hu": "Egy elvesztett vita indította el a QRSong! történetét: házi pakli, három buktató, és miért lett a megjelenési év a legnehezebb rész."
       },
       "imagePrompt": "Where it started: a maker's desk late at night, seen from above in the warm pool of a single desk lamp. A freshly printed home-printer sheet of QR music cards like reference 3 lies half cut out, with a pair of scissors across it, a rough stack of hand-cut cards, a pencil, a mug of tea gone cold and an unsleeved vinyl record at the edge of the frame. The feeling of a homemade first version that worked.",
       "referenceImages": [

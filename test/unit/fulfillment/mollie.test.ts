@@ -478,6 +478,15 @@ describe('filterMethodsByCurrency', () => {
     ]);
   });
 
+  it('keeps only card, Apple Pay and PayPal for HUF', () => {
+    expect(
+      mollie.filterMethodsByCurrency(
+        ['creditcard', 'applepay', 'paypal', 'klarna', 'directdebit', 'trustly'],
+        'HUF'
+      )
+    ).toEqual(['creditcard', 'applepay', 'paypal']);
+  });
+
   it('treats unmapped methods as EUR-only', () => {
     expect(
       mollie.filterMethodsByCurrency(['banktransfer'], 'SEK')
@@ -584,6 +593,27 @@ describe('resolveMollieMethods', () => {
         currency: 'EUR',
       }).locale
     ).toBe('de_CH');
+  });
+
+  it('gives a Hungarian visitor the Hungarian checkout and the HUF-capable methods', () => {
+    const result = mollie.resolveMollieMethods({
+      language: 'hu',
+      viewerCountry: 'HU',
+      currency: 'HUF',
+    });
+    expect(result.country).toBe('HU');
+    expect(result.locale).toBe('hu_HU');
+    expect(result.methods).toEqual(['creditcard', 'applepay', 'paypal']);
+  });
+
+  it('gives a Danish visitor the Danish checkout', () => {
+    const result = mollie.resolveMollieMethods({
+      language: 'da',
+      viewerCountry: 'DK',
+      currency: 'DKK',
+    });
+    expect(result.locale).toBe('da_DK');
+    expect(result.methods[0]).toBe('klarna');
   });
 
   it('ignores malformed country codes (length !== 2) and uses ip as last resort', () => {
@@ -2560,6 +2590,46 @@ describe('createRefund', () => {
       paymentId: 'tr_1',
       refundRequest: {
         amount: { currency: 'SEK', value: '115.00' }, // 10 * 11.5
+        description: 'QRSong! refund tr_1',
+        metadata: null,
+      },
+    });
+  });
+
+  it('rounds a partial HUF refund down to whole forints', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({
+      currency: 'HUF',
+      exchangeRate: 418.37,
+      totalPrice: 30.98, // EUR
+      totalPricePresentment: 13000, // HUF
+    });
+
+    await mollie.createRefund('tr_1', 6.99); // 6.99/30.98 * 13000 = 2933.18
+
+    expect(mollieApi.liveClient.refunds.create).toHaveBeenCalledWith({
+      paymentId: 'tr_1',
+      refundRequest: {
+        amount: { currency: 'HUF', value: '2933.00' },
+        description: 'QRSong! refund tr_1',
+        metadata: null,
+      },
+    });
+  });
+
+  it('refunds a whole HUF payment in full despite float error', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({
+      currency: 'HUF',
+      exchangeRate: 418.37,
+      totalPrice: 30.98,
+      totalPricePresentment: 13000,
+    });
+
+    await mollie.createRefund('tr_1', 30.98);
+
+    expect(mollieApi.liveClient.refunds.create).toHaveBeenCalledWith({
+      paymentId: 'tr_1',
+      refundRequest: {
+        amount: { currency: 'HUF', value: '13000.00' },
         description: 'QRSong! refund tr_1',
         metadata: null,
       },

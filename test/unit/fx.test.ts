@@ -33,6 +33,7 @@ const ECB_XML = `
       <Cube currency='USD' rate='1.10'/>
       <Cube currency='NOK' rate='11.50'/>
       <Cube currency='GBP' rate='0.84'/>
+      <Cube currency='HUF' rate='398.45'/>
       <Cube currency='JPY' rate='170.1'/>
     </Cube>
   </Cube>
@@ -69,6 +70,13 @@ describe('Fx', () => {
     expect(res.rate).toBeCloseTo(11.5 * 1.05, 10);
     expect(res.amount).toBe(1210);
     expect(res.amount % 5).toBe(0);
+  });
+
+  it('converts to HUF in whole 100 Ft steps, which Mollie still gets with two decimals', async () => {
+    // 30.98 EUR → HUF: 30.98 * 398.45 * 1.05 = 12961.1 → snapped to 100
+    const res = await fx.convert(30.98, 'HUF');
+    expect(res.amount).toBe(13000);
+    expect(await fx.convertAndFormat(30.98, 'HUF')).toEqual({ value: '13000.00', currency: 'HUF' });
   });
 
   it('convert to EUR is identity', async () => {

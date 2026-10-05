@@ -6,6 +6,9 @@ const SNAP_INCREMENTS: Record<SupportedCurrency, number> = {
   SEK: 5,
   DKK: 5,
   CZK: 5,
+  // ~420 Ft to the euro, and nobody prices in fillér: 100 Ft (≈ €0.24) is the
+  // step CZK and PLN have.
+  HUF: 100,
   PLN: 1,
   GBP: 0.5,
   CHF: 0.5,

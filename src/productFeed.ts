@@ -224,6 +224,8 @@ export function getTracksLabel(
     cn: `包含${numberOfTracks}首音乐曲目`,
     sv: `Innehåller ${numberOfTracks} musikspår`,
     no: `Inneholder ${numberOfTracks} musikkspor`,
+    da: `Indeholder ${numberOfTracks} musiknumre`,
+    hu: `${numberOfTracks} zeneszámot tartalmaz`,
   };
   return tracksLabel[locale] || tracksLabel['en'];
 }
