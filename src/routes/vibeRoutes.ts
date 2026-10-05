@@ -1,3 +1,4 @@
+import { DELIVERY_FIELDS, pickDeliveryFields } from '../deliveryAddress';
 import { FastifyInstance } from 'fastify';
 import * as crypto from 'crypto';
 import { verifyToken } from '../auth';
@@ -542,6 +543,8 @@ export default async function vibeRoutes(
         contactphone,
         locale,
         message,
+        // Only the delivery fields that are in the body; others stay as they are.
+        ...pickDeliveryFields(request.body || {}),
       });
 
       if (!result.success) {
@@ -775,6 +778,7 @@ export default async function vibeRoutes(
         'specialNotes',
         'internalNotes',
         'printer',
+        ...DELIVERY_FIELDS,
         ...descriptionFields,
       ];
       const numberFields = [
@@ -795,6 +799,8 @@ export default async function vibeRoutes(
         'addBirthdayNumber1',
         'hideBirthdayNumber1',
         'personalizedApp',
+        'useCompanyDeliveryAddress',
+        'deliveryAsap',
       ] as const;
 
       const allowedStatuses = [

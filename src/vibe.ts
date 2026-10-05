@@ -1,3 +1,4 @@
+import { DELIVERY_FIELDS, effectiveDeliveryAddress } from './deliveryAddress';
 import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
 import { resolveVatRegion } from './services/vat';
 import * as auth from './auth';
@@ -845,6 +846,11 @@ class Vibe {
           forceTemplate: true,
           addBirthdayNumber1: true,
           hideBirthdayNumber1: true,
+          // Delivery: the toggle and the list's own address (src/deliveryAddress.ts)
+          useCompanyDeliveryAddress: true,
+          ...Object.fromEntries(DELIVERY_FIELDS.map((f) => [f, true])),
+          desiredDeliveryDate: true,
+          deliveryAsap: true,
         };
         // Add all description fields for each locale
         for (const locale of availableLocales) {
@@ -1095,6 +1101,7 @@ class Vibe {
         'calculation',
         'calculationTromp',
         'calculationSchneider',
+        ...DELIVERY_FIELDS,
       ];
 
       // Filter out invalid fields
@@ -1402,7 +1409,7 @@ class Vibe {
       const list: any = await (this.prisma as any).companyList.findUnique({
         where: { id: listId },
         include: {
-          Company: { select: { id: true, name: true } },
+          Company: { select: { id: true, name: true, ...Object.fromEntries(DELIVERY_FIELDS.map((f) => [f, true])) } },
           CompanyListDeliveryAddress: { orderBy: { id: 'asc' } },
           CompanyFile: { where: { category: 'design' }, orderBy: { createdAt: 'asc' } },
         },
@@ -1459,7 +1466,11 @@ class Vibe {
 
       // Desired delivery date in Dutch
       let deliveryDateText = '';
-      if (list.desiredDeliveryDate) {
+      // "z.s.m." on the list wins over a date (the list settings offer one or the other).
+      const deliveryAsap = list.deliveryAsap === true;
+      if (deliveryAsap) {
+        deliveryDateText = 'z.s.m.';
+      } else if (list.desiredDeliveryDate) {
         const months = [
           'januari', 'februari', 'maart', 'april', 'mei', 'juni',
           'juli', 'augustus', 'september', 'oktober', 'november', 'december',
@@ -1487,9 +1498,25 @@ class Vibe {
           boxes: index === 0 ? totalBoxes : 0,
         })
       );
+      // No separate addresses on the list: the delivery address from the list
+      // settings (the company's default, or the list's own when switched off).
+      if (addresses.length === 0) {
+        const delivery = effectiveDeliveryAddress(list.Company, list);
+        if (delivery) {
+          addresses.push({
+            name: list.Company?.name ?? '',
+            lines: [
+              ...(delivery.name ? [`t.a.v. ${delivery.name}`] : []),
+              ...delivery.lines,
+              ...(delivery.phone ? [`Tel. ${delivery.phone}`] : []),
+            ],
+            boxes: totalBoxes,
+          });
+        }
+      }
       if (addresses.length === 0) {
         warnings.push(
-          'Geen leveradressen bij deze lijst. Alleen het QRSong! adres staat in de mail: vul het adres van de klant zelf aan.'
+          'Geen leveradressen bij deze lijst en geen leveradres bij het bedrijf. Alleen het QRSong! adres staat in de mail: vul het adres van de klant zelf aan.'
         );
       }
       addresses.push({
@@ -1523,7 +1550,9 @@ class Vibe {
         `We willen graag een order plaatsen voor in totaal ${totalBoxes || '[AANTAL]'} x ${productDescription}`
       );
       textParts.push(
-        `De wens is dat het uiterlijk ${deliveryDateText} geleverd wordt.`
+        deliveryAsap
+          ? 'De wens is dat het zo snel mogelijk (z.s.m.) geleverd wordt.'
+          : `De wens is dat het uiterlijk ${deliveryDateText} geleverd wordt.`
       );
       textParts.push(
         'De bestanden voor de kaartjes en het doosje zijn als bijlage toegevoegd.'
@@ -1555,9 +1584,11 @@ class Vibe {
         }</strong> x ${esc(productDescription)}</p>`
       );
       htmlParts.push(
-        `<p>De wens is dat het uiterlijk <strong>${esc(
-          deliveryDateText
-        )}</strong> geleverd wordt.</p>`
+        deliveryAsap
+          ? '<p>De wens is dat het <strong>zo snel mogelijk (z.s.m.)</strong> geleverd wordt.</p>'
+          : `<p>De wens is dat het uiterlijk <strong>${esc(
+              deliveryDateText
+            )}</strong> geleverd wordt.</p>`
       );
       htmlParts.push(
         '<p>De bestanden voor de kaartjes en het doosje zijn als bijlage toegevoegd.</p>'

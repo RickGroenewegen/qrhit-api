@@ -447,6 +447,60 @@ describe('getOrderEmail', () => {
     });
   });
 
+  it('falls back on the company delivery address when the list has no addresses', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue(
+      baseList({
+        CompanyListDeliveryAddress: [],
+        Company: {
+          id: 1,
+          name: 'By Acte',
+          deliveryName: 'Sandra Kusters',
+          deliveryAddress: 'Ambachtweg',
+          deliveryHousenumber: '73',
+          deliveryZipcode: '5731 AE',
+          deliveryCity: 'Mierlo',
+          deliveryCountrycode: 'NL',
+          deliveryPhone: '040 20 60 100',
+        },
+      })
+    );
+    const d = (await vibe.getOrderEmail(1, 2)).data;
+    expect(d.warnings).toEqual([]);
+    expect(d.addressCount).toBe(2);
+    expect(d.text).toContain('Adres 1: 5 stuks');
+    expect(d.text).toContain('By Acte\nt.a.v. Sandra Kusters\nAmbachtweg 73\n5731 AE Mierlo\nTel. 040 20 60 100');
+  });
+
+  it('uses the list\'s own delivery address when the default is switched off', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue(
+      baseList({
+        CompanyListDeliveryAddress: [],
+        useCompanyDeliveryAddress: false,
+        deliveryName: 'Receptie',
+        deliveryAddress: 'Hoofdstraat',
+        deliveryHousenumber: '1',
+        deliveryZipcode: '2000',
+        deliveryCity: 'Antwerpen',
+        deliveryCountrycode: 'BE',
+        Company: { id: 1, name: 'Van Haren', deliveryAddress: 'Elders', deliveryCity: 'Utrecht' },
+      })
+    );
+    const d = (await vibe.getOrderEmail(1, 2)).data;
+    expect(d.text).toContain('Van Haren\nt.a.v. Receptie\nHoofdstraat 1\n2000 Antwerpen\nBE');
+    expect(d.text).not.toContain('Utrecht');
+  });
+
+  it('asks for delivery as soon as possible when the list says z.s.m.', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue(
+      baseList({ deliveryAsap: true, desiredDeliveryDate: null })
+    );
+    const d = (await vibe.getOrderEmail(1, 2)).data;
+    expect(d.warnings).toEqual([]);
+    expect(d.text).toContain('De wens is dat het zo snel mogelijk (z.s.m.) geleverd wordt.');
+    expect(d.html).toContain('<strong>zo snel mogelijk (z.s.m.)</strong>');
+    expect(d.text).not.toContain('[LEVERDATUM]');
+  });
+
   it('builds a complete Schneider order mail without warnings', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(baseList());
     const res = await vibe.getOrderEmail(1, 2);

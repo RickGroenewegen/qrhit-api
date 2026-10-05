@@ -1059,6 +1059,15 @@ model Company {
   contact              String?
   contactemail         String?
   contactphone         String?
+  // Default delivery address for the company's lists, separate from the
+  // company's own address above (src/deliveryAddress.ts).
+  deliveryName         String?
+  deliveryAddress      String?
+  deliveryHousenumber  String?
+  deliveryZipcode      String?
+  deliveryCity         String?
+  deliveryCountrycode  String?
+  deliveryPhone        String?
   locale               String?        @default("nl")
   message              String?        @db.Text
   calculation          String?        @db.Text
@@ -1264,6 +1273,18 @@ model CompanyList {
   intakeToken             String?   @unique
   meetingDate             DateTime?
   desiredDeliveryDate     DateTime?
+  // Deliver as soon as possible ("z.s.m.") instead of on desiredDeliveryDate.
+  deliveryAsap            Boolean   @default(false)
+  // On (default): deliver to the company's delivery address. Off: to the
+  // delivery* fields below (src/deliveryAddress.ts).
+  useCompanyDeliveryAddress Boolean @default(true)
+  deliveryName            String?
+  deliveryAddress         String?
+  deliveryHousenumber     String?
+  deliveryZipcode         String?
+  deliveryCity            String?
+  deliveryCountrycode     String?
+  deliveryPhone           String?
   musicWishes             String?   @db.Text
   designResponsibility    String?
   gameExplanation         String?
