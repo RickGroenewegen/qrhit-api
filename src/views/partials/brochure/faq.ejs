@@ -1,0 +1,53 @@
+<!--
+    The questions clients asked us most often by mail in 2026, with the
+    answer we give. Samples and "fewer than 100" differ per edition: the
+    client edition never points to our website or our shop.
+-->
+<%
+    var sampleAnswer = { retail: 'faqSampleA', reseller: 'faqSampleResellerA', client: 'faqSampleClientA' }[edition];
+    var smallAnswer = { retail: 'faqSmallA', reseller: 'faqSmallResellerA', client: null }[edition];
+    var faq = [
+        ['faqSubQ', 'faqSubA'],
+        ['faqLicQ', 'faqLicA'],
+        ['faqAppQ', 'faqAppA'],
+        ['faqGoneQ', 'faqGoneA'],
+        ['faqDeleteQ', 'faqDeleteA'],
+        ['faqAbroadQ', 'faqAbroadA'],
+        ['faqReorderQ', 'faqReorderA'],
+        ['faqWrapQ', 'faqWrapA'],
+        ['faqMadeQ', 'faqMadeA'],
+        ['faqSampleQ', sampleAnswer]
+    ];
+    if (smallAnswer) faq.push(['faqSmallQ', smallAnswer]);
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body spread">
+        <div>
+            <div class="section-title">
+                <h2><%= t('faqTitle') %></h2>
+                <div class="bar"></div>
+            </div>
+
+            <div class="b-faq">
+                <% faq.forEach(function (item) { %>
+                <div class="b-faq-item">
+                    <div class="b-faq-q"><%= t(item[0]) %></div>
+                    <div class="b-faq-a"><%= t(item[1]) %></div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+
+        <div class="b-panel disco b-faq-more">
+            <div class="b-art" style="right: 6mm; top: -9mm; width: 30mm;">
+                <img src="<%= baseUrl %>/assets/images/brand/note8_pop.png" alt="" />
+            </div>
+            <div class="b-h3"><%= t('faqMoreTitle') %></div>
+            <div class="b-copy" style="position: relative; z-index: 2;"><%= neutral ? t('faqMoreClientCopy') : t('faqMoreCopy', { email: contactEmail }) %></div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>

@@ -1,0 +1,100 @@
+<!--
+    The price table. Retail and client editions show what an end client pays
+    (the recommended price); the reseller edition shows the purchase price
+    large with the recommended price under it. Under the table: how the tiers
+    work, with a worked example taken from the table itself, because clients
+    read the tiers as fixed order sizes ("can we only order 200 or 250?").
+-->
+<%
+    var reseller = edition === 'reseller';
+    var priceOf = function (cell) { return reseller ? cell.purchase : cell.advice; };
+    var exampleRow = priceList.rows.find(function (r) { return r.quantity === 250; }) || priceList.rows[0];
+    var exampleCards = 96;
+    var examplePrice = priceOf(exampleRow.cells[exampleCards]);
+    var exampleTotal = Math.round(examplePrice * exampleRow.quantity * 100) / 100;
+    var tierRules = [
+        t('tier1', { example: formatNumber(210), tier: formatNumber(200) }),
+        t('tier2'),
+        t('tier3', {
+            qty: formatNumber(exampleRow.quantity),
+            cards: exampleCards,
+            price: formatCurrency(examplePrice),
+            total: formatCurrency(exampleTotal)
+        }),
+        t('tier4'),
+        t('tier5'),
+        t('tier6', { date: formatDate(new Date()) })
+    ];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body b-prices<%= reseller ? ' reseller' : '' %>">
+        <div class="section-title">
+            <h2><%= t(reseller ? 'priceTitleReseller' : 'priceTitle') %></h2>
+            <div class="bar"></div>
+            <div class="section-meta"><%= t('priceMeta', { vat: formatPercent(21) }) %></div>
+        </div>
+
+        <div class="price-panel">
+            <table class="pricing-table">
+                <thead>
+                    <tr>
+                        <th class="qty-header"><%= t('thQuantity') %></th>
+                        <% priceList.sizes.forEach(function (cards) { %>
+                        <th>
+                            <span class="col-name"><%= cards %> <%= t('variantCards') %></span>
+                            <span class="col-sub"><%= t('perBox') %></span>
+                        </th>
+                        <% }); %>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% priceList.rows.forEach(function (row) { %>
+                    <tr>
+                        <td class="qty-cell">
+                            <%= formatNumber(row.quantity) %>
+                            <span class="qty-unit"><%= t('boxesUnit') %></span>
+                        </td>
+                        <% priceList.sizes.forEach(function (cards) { var cell = row.cells[cards]; %>
+                        <td class="price-cell">
+                            <% if (reseller) { %>
+                            <span class="b-buy"><%= formatCurrency(cell.purchase) %></span>
+                            <span class="b-rrp"><%= t('stackRecommended') %> <%= formatCurrency(cell.advice) %><% if (priceList.uniformMarkupPercent === null) { %> <span class="pct">+<%= formatPercent(cell.markupPercent) %></span><% } %></span>
+                            <% } else { %>
+                            <%= formatCurrency(cell.advice) %>
+                            <% } %>
+                        </td>
+                        <% }); %>
+                    </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="b-tiers">
+            <% if (reseller) { %>
+            <div class="b-panel disco b-markup">
+                <div class="b-markup-line">
+                    <% if (priceList.uniformMarkupPercent !== null) { %>
+                    <%= t('priceMarkup', { percent: formatPercent(priceList.uniformMarkupPercent) }) %>
+                    <% } else { %>
+                    <%= t('priceMarkupVaries') %>
+                    <% } %>
+                </div>
+                <div class="b-small" style="position: relative; z-index: 2;"><%= t('priceAdviceNote') %></div>
+            </div>
+            <% } %>
+            <div class="b-panel tint">
+                <div class="b-h3"><%= t('tierTitle') %></div>
+                <ul class="b-checks b-tiers-cols">
+                    <% tierRules.forEach(function (rule) { %>
+                    <li><%= rule %></li>
+                    <% }); %>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', { footNote: t('priceDisclaimer') }) %>
+</div>

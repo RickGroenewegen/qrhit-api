@@ -1,0 +1,86 @@
+<!--
+    How it works: the card, the game, the app and the music. The service
+    notes say exactly how each service plays, because "do players need
+    Spotify?" and "who pays for the music?" were the most common questions
+    after price.
+-->
+<%
+    var gameSteps = [1, 2, 3, 4];
+    var services = [
+        { name: 'Spotify Premium', note: t('svcHidden') },
+        { name: 'Spotify Free', note: t('svcSpotifyFree') },
+        { name: 'Apple Music', note: t('svcHidden') },
+        { name: 'Deezer', note: t('svcHidden') },
+        { name: 'Tidal', note: t('svcHidden') },
+        { name: 'YouTube Music', note: t('svcYoutube') }
+    ];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body spread">
+        <div class="b-how-top">
+            <p class="b-lead">
+                <strong><%= t('howLeadStrong') %></strong>
+                <%= t('howLeadBody') %>
+            </p>
+            <div class="b-cards">
+                <div class="b-card">
+                    <div class="b-card-face front">
+                        <div class="b-qr"><img src="<%= baseUrl %>/assets/images/qr_example.png" alt="" /></div>
+                    </div>
+                    <div class="b-card-caption"><%= t('howCardFront') %></div>
+                </div>
+                <div class="b-card">
+                    <div class="b-card-face back">
+                        <div class="b-card-artist">The Police</div>
+                        <div class="b-card-year">1979</div>
+                        <div class="b-card-title">Message In A Bottle</div>
+                    </div>
+                    <div class="b-card-caption"><%= t('howCardBack') %></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                <h2><%= t('howGameTitle') %></h2>
+                <div class="bar"></div>
+            </div>
+            <div class="b-game">
+                <% gameSteps.forEach(function (n) { %>
+                <div class="b-game-step">
+                    <span class="b-num">0<%= n %></span>
+                    <div class="b-h3"><%= t('howStep' + n + 'Title') %></div>
+                    <div class="b-copy"><%= t('howStep' + n + 'Copy') %></div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+
+        <div class="b-how-bottom">
+            <div class="b-panel disco b-app">
+                <div class="b-art" style="right: -6mm; bottom: -8mm; width: 30mm;">
+                    <img src="<%= baseUrl %>/assets/images/brand/note8_pop.png" alt="" />
+                </div>
+                <div class="b-h3"><%= t('howAppTitle') %></div>
+                <div class="b-copy" style="position: relative; z-index: 2;"><%= t('howAppCopy') %></div>
+            </div>
+            <div class="b-panel line b-music">
+                <div class="b-h3"><%= t('howMusicTitle') %></div>
+                <div class="b-copy"><%= t('howMusicCopy') %></div>
+                <table class="b-services">
+                    <% services.forEach(function (s) { %>
+                    <tr>
+                        <td class="svc"><%= s.name %></td>
+                        <td class="note"><%= s.note %></td>
+                    </tr>
+                    <% }); %>
+                </table>
+                <div class="b-small" style="margin-top: 6px;"><%= t('svcNote') %></div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>

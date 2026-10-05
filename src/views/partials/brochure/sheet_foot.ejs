@@ -1,0 +1,18 @@
+<!--
+    Footer of a brochure page: tagline (or a page-specific note) and the page
+    number. Our web address is left out of the neutral (client) edition.
+
+    Expects: neutral, pageNo, pageCount; optional footNote
+-->
+<div class="sheet-foot">
+    <div>
+        <% if (locals.footNote) { %>
+        <%= footNote %>
+        <% } else { %>
+        <strong>QRSong! Box</strong> &nbsp;<%= t('productFootNote') %>
+        <% } %>
+    </div>
+    <div class="b-page-no">
+        <% if (!neutral) { %>www.qrsong.io &nbsp;&nbsp;<% } %><%= String(pageNo).padStart(2, '0') %> / <%= String(pageCount).padStart(2, '0') %>
+    </div>
+</div>

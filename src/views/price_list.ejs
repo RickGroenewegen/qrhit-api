@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <%
+        // One brochure, three editions (see src/priceList.ts):
+        //   retail   - companies ordering from us: recommended prices
+        //   reseller - purchase and recommended prices, plus how we work together
+        //   client   - what a reseller forwards: informative only, no prices at
+        //              all, no wordmark, none of our contact details and no
+        //              route to our shop
+        var neutral = edition === 'client';
+        var editionName = t({ retail: 'editionRetail', reseller: 'editionReseller', client: 'editionClient' }[edition]);
+        var docTitle = t(neutral ? 'docTitleClient' : 'docTitle');
+        var sectionKeys = {
+            partner: 'sheetPartner',
+            how: 'sheetHow',
+            formats: 'sheetFormats',
+            included: 'sheetIncluded',
+            who: 'sheetWho',
+            planning: 'sheetPlanning',
+            prices: 'sheetPrices',
+            faq: 'sheetFaq'
+        };
+        var sections = ['how', 'formats', 'included', 'who', 'planning', 'prices', 'faq'];
+        if (edition === 'reseller') sections.unshift('partner');
+        if (neutral) sections = sections.filter(function (s) { return s !== 'prices'; });
+        var noteKey = function (s) {
+            return neutral && s === 'included' ? 'sheetIncludedNoteClient' : sectionKeys[s] + 'Note';
+        };
+        var pageCount = sections.length + 2;
+        var checklist = {
+            title: t('nextTitle'),
+            items: [t('next1'), t('next2'), t('next3'), t('next4'), t('next5'), t('next6')]
+        };
+    %>
+    <title><%= edition === 'reseller' ? t('docTitleReseller') : docTitle %> - <%= formatDate(new Date()) %></title>
+
+    <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
+    <%- include('partials/brochure/styles') %>
+</head>
+<body>
+
+    <%- include('partials/front_page', {
+        baseUrl: baseUrl,
+        formatDate: formatDate,
+        title: docTitle,
+        subtitle: '',
+        editionName: editionName,
+        version: version,
+        neutral: neutral,
+        promises: [t('coverPromise1'), t('coverPromise2'), t(neutral ? 'coverPromise3Client' : 'coverPromise3')],
+        contents: sections.map(function (s) {
+            return { name: t(sectionKeys[s]), note: t(noteKey(s)) };
+        })
+    }) %>
+
+    <% sections.forEach(function (section, i) { %>
+    <%- include('partials/brochure/' + section, {
+        neutral: neutral,
+        editionName: editionName,
+        sheetTitle: t(sectionKeys[section]),
+        pageNo: i + 2,
+        pageCount: pageCount
+    }) %>
+    <% }); %>
+
+    <% if (neutral) { %>
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName,
+        neutral: true,
+        title: t('clientClosingTitle'),
+        copy: t('clientClosingCopy'),
+        checklist: checklist,
+        contacts: []
+    }) %>
+    <% } else { %>
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName,
+        checklist: checklist,
+        contacts: [
+            { label: t('closingEmail'), value: contactEmail },
+            { label: t('closingWebsite'), value: 'www.qrsong.io' },
+            { label: t('closingSample'), value: t('closingSampleFree') }
+        ]
+    }) %>
+    <% } %>
+
+</body>
+</html>

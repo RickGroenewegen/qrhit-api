@@ -42,7 +42,20 @@ const bundles = [
       'throughout: German must use the Sie form and never du; Dutch must use ' +
       'the u form. Use each language\'s standard commercial vocabulary ' +
       '(Angebot, Rechnung, zzgl. MwSt., Gültig bis, Mit freundlichen Grüßen). ' +
-      'Preserve any HTML tags and {{placeholders}} exactly as they appear. ',
+      'Preserve any HTML tags and {{placeholders}} exactly as they appear. ' +
+      // One word per thing across the price-list brochure, so a translation
+      // never calls the same box a doos, a box and a doosje on one page.
+      'Use this fixed vocabulary. Dutch: the product box is "doos" (plural ' +
+      '"dozen"; "doosje" only for the small 48-card box); sample boxes are ' +
+      '"proefdoosjes"; shipping cartons are "omdozen"; a playlist is ' +
+      '"playlist", never "afspeellijst"; the digital proof is "digitale ' +
+      'proef"; a release year is "jaartal"; resellers are "resellers"; ' +
+      'setup costs are "opstartkosten"; templates are "sjablonen"; VAT is ' +
+      '"btw". German: the product ' +
+      'box is "Box" (plural "Boxen"); sample boxes are "Musterboxen"; ' +
+      'shipping cartons are "Umkartons"; a playlist is "Playlist"; the ' +
+      'digital proof is "digitaler Proof"; resellers are "Wiederverkäufer"; ' +
+      'VAT is "MwSt.". ',
   },
 ];
 

@@ -1,0 +1,17 @@
+<!--
+    Running header of a brochure page. The neutral (client) edition carries
+    no wordmark, only a credit, because a reseller forwards it as theirs.
+
+    Expects: baseUrl, neutral, sheetTitle, editionName
+-->
+<div class="sheet-head">
+    <% if (neutral) { %>
+    <div class="b-powered">powered by <strong>QRSong!</strong></div>
+    <% } else { %>
+    <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
+    <% } %>
+    <div class="sheet-head-right">
+        <div class="sheet-head-title"><%= sheetTitle %></div>
+        <div class="sticker"><%= editionName %></div>
+    </div>
+</div>

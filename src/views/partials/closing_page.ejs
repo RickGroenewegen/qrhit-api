@@ -1,9 +1,17 @@
 <!--
-    Closing page - shared between the Reseller and Retail PDFs.
+    Closing page - shared between the price-list brochure and the playlist
+    suggestions brochure.
     Mirrors the cover: one DISCO panel on OFF WHITE paper, with the
     beamed-note asset bleeding off the corner.
 
     Expects: baseUrl, editionName
+    Optional:
+      title, copy  replace closingTitle / closingCopy
+      checklist    { title, items: [string] } printed under the copy
+      contacts     [{ label, value }]; default e-mail (zakelijk@ in Dutch,
+                   business@ otherwise), website and sample box
+      neutral      true for the edition a reseller forwards: a "powered by"
+                   credit instead of our wordmark
 -->
 <style>
     .closing {
@@ -146,8 +154,66 @@
         height: 32px;
         width: auto;
     }
+
+    .closing-checklist {
+        margin-top: 12mm;
+        max-width: 120mm;
+    }
+
+    .closing-checklist-title {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pop);
+        padding-bottom: 8px;
+        margin-bottom: 3px;
+        border-bottom: 1px solid var(--off-20);
+    }
+
+    .closing-check {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--off-20);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--off);
+    }
+
+    .closing-check-num {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.07em;
+        color: var(--pop);
+        width: 18px;
+        flex-shrink: 0;
+    }
+
+    .closing-powered {
+        font-size: 11px;
+        color: var(--off-70);
+    }
+
+    .closing-powered strong {
+        font-family: var(--display);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: var(--off);
+    }
 </style>
 
+<%
+    var closingNeutral = !!locals.neutral;
+    var closingContacts = locals.contacts || [
+        { label: t('closingEmail'), value: locals.locale === 'nl' ? 'zakelijk@qrsong.io' : 'business@qrsong.io' },
+        { label: t('closingWebsite'), value: 'www.qrsong.io' },
+        { label: t('closingSample'), value: t('closingSampleValue') }
+    ];
+%>
 <div class="closing">
     <div class="closing-panel">
         <div class="closing-texture"></div>
@@ -157,27 +223,39 @@
 
         <div class="closing-inner">
             <div class="closing-kicker"><%= t('closingKicker') %></div>
-            <div class="closing-title"><%= t('closingTitle') %></div>
+            <div class="closing-title"><%= locals.title || t('closingTitle') %></div>
             <div class="closing-rule"></div>
-            <div class="closing-copy"><%= t('closingCopy') %></div>
+            <div class="closing-copy"><%= locals.copy || t('closingCopy') %></div>
 
-            <div class="closing-contacts">
-                <div class="closing-contact">
-                    <div class="closing-contact-label"><%= t('closingEmail') %></div>
-                    <div class="closing-contact-value">zakelijk@qrsong.io</div>
+            <% if (locals.checklist) { %>
+            <div class="closing-checklist">
+                <div class="closing-checklist-title"><%= checklist.title %></div>
+                <% checklist.items.forEach(function (item, i) { %>
+                <div class="closing-check">
+                    <span class="closing-check-num"><%= String(i + 1).padStart(2, '0') %></span>
+                    <span><%= item %></span>
                 </div>
-                <div class="closing-contact">
-                    <div class="closing-contact-label"><%= t('closingWebsite') %></div>
-                    <div class="closing-contact-value">www.qrsong.io</div>
-                </div>
-                <div class="closing-contact">
-                    <div class="closing-contact-label"><%= t('closingSample') %></div>
-                    <div class="closing-contact-value"><%= t('closingSampleValue') %></div>
-                </div>
+                <% }); %>
             </div>
+            <% } %>
+
+            <% if (closingContacts.length) { %>
+            <div class="closing-contacts">
+                <% closingContacts.forEach(function (contact) { %>
+                <div class="closing-contact">
+                    <div class="closing-contact-label"><%= contact.label %></div>
+                    <div class="closing-contact-value"><%= contact.value %></div>
+                </div>
+                <% }); %>
+            </div>
+            <% } %>
 
             <div class="closing-foot">
+                <% if (closingNeutral) { %>
+                <div class="closing-powered">powered by <strong>QRSong!</strong></div>
+                <% } else { %>
                 <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="closing-logo" />
+                <% } %>
                 <div class="sticker"><%= editionName %></div>
             </div>
         </div>

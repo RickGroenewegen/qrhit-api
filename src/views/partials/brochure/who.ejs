@@ -1,0 +1,90 @@
+<!--
+    Who does what. Designers and agencies kept asking whether they had to lay
+    out 48 cards themselves and who adds the QR codes; this page answers that
+    in one sentence and two lists, then the ways to design and to choose the
+    music.
+-->
+<%
+    // Design and music are choices, not steps: no numbers, a choice mark on
+    // each card (Rick, 2026-10-05: numbered they read as a timeline).
+    var musicRoutes = [1, 2, 3, 4];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body spread">
+        <div class="b-panel disco b-statement">
+            <div class="b-art" style="right: 4mm; top: -10mm; width: 36mm;">
+                <img src="<%= baseUrl %>/assets/images/brand/note2_pop.png" alt="" />
+            </div>
+            <div class="b-statement-text"><%= t('whoStatement') %></div>
+        </div>
+
+        <div class="b-split">
+            <div class="b-panel line">
+                <div class="b-h3"><%= t('whoYouTitle') %></div>
+                <ol class="b-steps-list">
+                    <% [1, 2, 3, 4].forEach(function (n) { %>
+                    <li><%= t('whoYou' + n) %></li>
+                    <% }); %>
+                </ol>
+                <div class="b-small" style="margin-top: 9px;"><%= t('whoYouNote') %></div>
+            </div>
+            <div class="b-panel tint">
+                <div class="b-h3"><%= t('whoWeTitle') %></div>
+                <ul class="b-checks">
+                    <% [1, 2, 3, 4].forEach(function (n) { %>
+                    <li><%= t('whoWe' + n) %></li>
+                    <% }); %>
+                </ul>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                <h2><%= t('whoDesignTitle') %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= t('whoChooseOne') %></div>
+            </div>
+            <div class="b-choices">
+                <div class="b-choice popular">
+                    <div class="b-choice-head">
+                        <span class="b-choice-mark"></span>
+                        <span class="b-choice-name"><%= t('whoDesign1Name') %></span>
+                        <span class="b-choice-badge"><%= t('whoDesignPopular') %></span>
+                    </div>
+                    <div class="b-copy"><%= t(neutral ? 'whoDesign1CopyClient' : 'whoDesign1Copy') %></div>
+                </div>
+                <div class="b-or"><%= t('whoOr') %></div>
+                <div class="b-choice">
+                    <div class="b-choice-head">
+                        <span class="b-choice-mark"></span>
+                        <span class="b-choice-name"><%= t('whoDesign2Name') %></span>
+                    </div>
+                    <div class="b-copy"><%= neutral ? t('whoDesign2CopyClient') : t('whoDesign2Copy', { price: formatEuros(options.designService) }) %></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                <h2><%= t('whoMusicTitle') %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= t('whoChooseOne') %></div>
+            </div>
+            <div class="b-choices four">
+                <% musicRoutes.forEach(function (n) { %>
+                <div class="b-choice">
+                    <div class="b-choice-head">
+                        <span class="b-choice-mark"></span>
+                        <span class="b-choice-name"><%= t('whoMusic' + n + 'Name') %></span>
+                    </div>
+                    <div class="b-copy"><%= neutral && n === 4 ? t('whoMusic4CopyClient') : t('whoMusic' + n + 'Copy', { price: formatEuros(options.votingPortal) }) %></div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>

@@ -1,0 +1,37 @@
+<!--
+    Reseller edition only: how we work with resellers, and a product text
+    they can paste into their own offers. Every point here is a question a
+    reseller asked us by mail in 2026.
+-->
+<% var partnerItems = ['Margin', 'Clients', 'Forward', 'Samples', 'Neutral', 'Delivery']; %>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body spread">
+        <div class="b-partner-head">
+            <div class="b-partner-title"><%= t('partnerTitle') %></div>
+            <p class="b-intro"><%= t('partnerIntro') %></p>
+        </div>
+
+        <div class="b-partner-grid">
+            <% partnerItems.forEach(function (item, i) { %>
+            <div class="b-partner-item">
+                <span class="b-num"><%= String(i + 1).padStart(2, '0') %></span>
+                <div class="b-h3"><%= t('partner' + item + 'Title') %></div>
+                <div class="b-copy"><%= t('partner' + item + 'Copy') %></div>
+            </div>
+            <% }); %>
+        </div>
+
+        <div class="b-panel tint">
+            <div class="section-title">
+                <h2><%= t('partnerTextTitle') %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= t('partnerTextMeta') %></div>
+            </div>
+            <div class="b-quote"><%= t('partnerText') %></div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>

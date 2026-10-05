@@ -1,0 +1,1061 @@
+<!--
+    Page components of the price-list brochure (price_list.ejs). The brand
+    tokens, sheet, running header, section title, pricing table and footer
+    come from pricing_theme.ejs; everything here is prefixed b- so it never
+    collides with them or with the playlist suggestions brochure.
+-->
+<style>
+    /* --- Running header in the neutral edition: no wordmark, just a credit */
+    .b-powered {
+        font-size: 8.5px;
+        color: var(--disco-70);
+        letter-spacing: 0.02em;
+    }
+
+    .b-powered strong {
+        font-family: var(--display);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: var(--disco);
+    }
+
+    .b-page-no {
+        font-family: var(--display);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        color: var(--disco);
+        font-size: 8.5px;
+    }
+
+    /* --- Type ------------------------------------------------------- */
+    .b-lead {
+        font-size: 14.5px;
+        line-height: 1.6;
+        color: var(--disco-70);
+    }
+
+    .b-lead strong {
+        display: block;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 24px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.08;
+        color: var(--disco);
+        margin-bottom: 9px;
+    }
+
+    .b-intro {
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: var(--disco-70);
+        max-width: 160mm;
+    }
+
+    .b-block + .b-block {
+        margin-top: 8mm;
+    }
+
+    .b-h3 {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 10.5px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--disco);
+        margin-bottom: 5px;
+    }
+
+    .b-copy {
+        font-size: 10px;
+        line-height: 1.55;
+        color: var(--disco-70);
+    }
+
+    .b-small {
+        font-size: 8.5px;
+        line-height: 1.5;
+        color: var(--disco-70);
+    }
+
+    .b-num {
+        font-family: var(--display);
+        font-weight: 900;
+        color: var(--pop);
+        letter-spacing: 0.04em;
+    }
+
+    /* --- Panels ----------------------------------------------------- */
+    .b-panel {
+        border-radius: var(--radius-sm);
+        padding: 14px 16px;
+    }
+
+    .b-panel.tint {
+        background: var(--disco-09);
+    }
+
+    .b-panel.line {
+        border: 2px solid var(--disco);
+    }
+
+    .b-panel.disco {
+        background: var(--disco);
+        color: var(--off);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .b-panel.disco .b-h3,
+    .b-panel.disco .b-copy,
+    .b-panel.disco .b-small {
+        color: var(--off);
+    }
+
+    .b-panel.disco .b-copy,
+    .b-panel.disco .b-small {
+        color: var(--off-70);
+    }
+
+    .b-panel.pop {
+        background: var(--pop);
+    }
+
+    .b-art {
+        position: absolute;
+        pointer-events: none;
+        opacity: 0.85;
+    }
+
+    .b-art img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .b-row {
+        display: flex;
+        gap: 9px;
+    }
+
+    .b-row > * {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* --- Check list: POP discs with a drawn tick --------------------- */
+    .b-checks {
+        list-style: none;
+    }
+
+    .b-checks li {
+        position: relative;
+        padding-left: 24px;
+        font-size: 10.5px;
+        line-height: 1.45;
+        color: var(--disco);
+        margin-bottom: 8px;
+    }
+
+    .b-checks li:last-child {
+        margin-bottom: 0;
+    }
+
+    .b-checks li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 15px;
+        height: 15px;
+        border-radius: 99px;
+        background: var(--pop);
+    }
+
+    .b-checks li::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 3px;
+        width: 4px;
+        height: 7px;
+        border: solid var(--disco);
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .b-panel.disco .b-checks li {
+        color: var(--off);
+    }
+
+    /* Numbered list, numbers in POP */
+    .b-steps-list {
+        list-style: none;
+        counter-reset: b-step;
+    }
+
+    .b-steps-list li {
+        counter-increment: b-step;
+        position: relative;
+        padding-left: 22px;
+        font-size: 10.5px;
+        line-height: 1.45;
+        margin-bottom: 7px;
+    }
+
+    .b-steps-list li:last-child {
+        margin-bottom: 0;
+    }
+
+    .b-steps-list li::before {
+        content: counter(b-step, decimal-leading-zero);
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        color: var(--pop);
+    }
+
+    /* =================================================================
+       Working together (reseller)
+    ================================================================= */
+    .b-partner-title {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 34px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        line-height: 1.05;
+        color: var(--disco);
+        margin-bottom: 12px;
+        max-width: 160mm;
+    }
+
+    .b-partner-head .b-intro {
+        font-size: 14px;
+    }
+
+    .b-partner-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 14px;
+    }
+
+    .b-partner-item {
+        border-top: 3px solid var(--pop);
+        padding: 13px 2px 4px;
+    }
+
+    .b-partner-item .b-num {
+        font-size: 28px;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .b-partner-item .b-h3 {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .b-partner-item .b-copy {
+        font-size: 11.5px;
+    }
+
+    .b-quote {
+        position: relative;
+        border-left: 4px solid var(--pop);
+        padding: 4px 0 4px 16px;
+        font-size: 12px;
+        line-height: 1.65;
+        color: var(--disco);
+    }
+
+    /* =================================================================
+       How it works
+    ================================================================= */
+    .b-how-top {
+        display: flex;
+        gap: 12mm;
+        align-items: center;
+    }
+
+    .b-how-top .b-lead {
+        flex: 1;
+        font-size: 15px;
+    }
+
+    .b-how-top .b-lead strong {
+        font-size: 24px;
+    }
+
+    .b-game .b-copy,
+    .b-how-bottom .b-copy {
+        font-size: 11px;
+    }
+
+    .b-cards {
+        display: flex;
+        gap: 9px;
+        flex-shrink: 0;
+    }
+
+    .b-card {
+        width: 46mm;
+        text-align: center;
+    }
+
+    .b-card-face {
+        width: 46mm;
+        height: 46mm;
+        border-radius: 3.5mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2mm 5mm rgba(24, 86, 94, 0.22);
+    }
+
+    .b-card-face.front {
+        background: var(--disco);
+    }
+
+    .b-card-face.front .b-qr {
+        width: 29mm;
+        height: 29mm;
+        background: #fff;
+        border-radius: 2mm;
+        padding: 2mm;
+    }
+
+    .b-card-face.front .b-qr img {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .b-card-face.back {
+        background: var(--pop);
+        color: var(--disco);
+        padding: 0 3mm;
+    }
+
+    .b-card-year {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 32px;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        margin: 5px 0 6px;
+    }
+
+    .b-card-title {
+        font-size: 10.5px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .b-card-artist {
+        font-size: 9.5px;
+        margin-bottom: 1px;
+    }
+
+    .b-card-caption {
+        margin-top: 8px;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 7px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--disco-70);
+    }
+
+    .b-game {
+        display: flex;
+        gap: 10px;
+    }
+
+    .b-game-step {
+        flex: 1;
+        border-top: 3px solid var(--disco);
+        padding-top: 9px;
+    }
+
+    .b-game-step .b-num {
+        font-size: 34px;
+        line-height: 1;
+        display: block;
+        margin-bottom: 7px;
+    }
+
+    .b-how-bottom {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .b-how-bottom .b-app {
+        flex: 0 0 64mm;
+        padding: 16px 18px;
+    }
+
+    .b-how-bottom .b-music {
+        flex: 1;
+    }
+
+    .b-services {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 9px;
+    }
+
+    .b-services td {
+        padding: 6px 0;
+        border-top: 1px solid var(--disco-18);
+        font-size: 10.5px;
+        vertical-align: top;
+    }
+
+    .b-services td.svc {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 8.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--disco);
+        width: 34mm;
+        white-space: nowrap;
+    }
+
+    .b-services td.note {
+        color: var(--disco-70);
+    }
+
+    /* =================================================================
+       The box (formats)
+    ================================================================= */
+    .b-formats {
+        display: flex;
+        gap: 11px;
+    }
+
+    .b-format {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .b-format-shot {
+        height: 56mm;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: var(--disco-09);
+        margin-bottom: 10px;
+    }
+
+    .b-format-shot img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .b-format-head {
+        display: flex;
+        align-items: baseline;
+        gap: 7px;
+        margin-bottom: 4px;
+    }
+
+    .b-format-count {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 24px;
+        letter-spacing: 0.05em;
+        color: var(--disco);
+    }
+
+    .b-format-unit {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 8px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--pop);
+    }
+
+    .b-format-spec {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--disco);
+        line-height: 1.4;
+        margin-bottom: 7px;
+    }
+
+    .b-facts {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 7px;
+    }
+
+    .b-facts td {
+        font-size: 9px;
+        padding: 4px 0;
+        border-top: 1px solid var(--disco-18);
+        vertical-align: top;
+    }
+
+    .b-facts td.label {
+        color: var(--disco-45);
+        font-weight: 600;
+        width: 22mm;
+    }
+
+    .b-facts td.value {
+        color: var(--disco);
+        font-weight: 600;
+    }
+
+    .b-specs {
+        display: flex;
+        gap: 9px;
+    }
+
+    .b-spec {
+        flex: 1;
+        background: var(--pop);
+        border-radius: var(--radius-sm);
+        padding: 11px 13px;
+    }
+
+    .b-spec-label {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 7px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--disco-70);
+        margin-bottom: 4px;
+    }
+
+    .b-spec-value {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--disco);
+        line-height: 1.35;
+    }
+
+    /* =================================================================
+       What you get (included + options)
+    ================================================================= */
+    .b-inc-main {
+        padding: 22px 24px 20px;
+    }
+
+    .b-inc-main .b-h3 {
+        font-size: 14px;
+        margin-bottom: 16px;
+        color: var(--off);
+    }
+
+    .b-inc-list {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 22px;
+        max-width: 160mm;
+    }
+
+    .b-inc-list li {
+        font-size: 12.5px;
+        margin-bottom: 0;
+    }
+
+    .b-options-block {
+        margin-top: 12mm;
+    }
+
+    .b-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .b-option {
+        border: 2px solid var(--disco);
+        border-radius: var(--radius-sm);
+        padding: 16px 17px;
+    }
+
+    .b-option .b-copy {
+        font-size: 11px;
+    }
+
+    .b-option-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .b-option-name {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--disco);
+    }
+
+    .b-option-price {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 11px;
+        letter-spacing: 0.03em;
+        color: var(--pop);
+        white-space: nowrap;
+    }
+
+
+    /* =================================================================
+       Who does what
+    ================================================================= */
+    .b-statement {
+        padding: 20px 22px;
+    }
+
+    .b-statement-text {
+        position: relative;
+        z-index: 2;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 22px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.12;
+        color: var(--off);
+        max-width: 135mm;
+    }
+
+    .b-split {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .b-split > * {
+        flex: 1;
+    }
+
+    .b-split .b-h3 {
+        margin-bottom: 9px;
+    }
+
+    /* Choices, not steps: a radio-style mark, and "or" between two options */
+    .b-choices {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .b-choice {
+        flex: 1;
+        min-width: 0;
+        background: var(--disco-09);
+        border: 2px solid transparent;
+        border-radius: var(--radius-sm);
+        padding: 12px 13px;
+    }
+
+    .b-choice.popular {
+        background: transparent;
+        border-color: var(--disco);
+    }
+
+    .b-choice-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5px;
+    }
+
+    .b-choice-mark {
+        flex-shrink: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 99px;
+        border: 2px solid var(--disco);
+        position: relative;
+    }
+
+    .b-choice.popular .b-choice-mark::after {
+        content: '';
+        position: absolute;
+        inset: 2px;
+        border-radius: 99px;
+        background: var(--pop);
+    }
+
+    .b-choice-name {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--disco);
+        line-height: 1.3;
+    }
+
+    .b-choice-badge {
+        margin-left: auto;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 7px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--disco);
+        background: var(--pop);
+        border-radius: 99px;
+        padding: 3px 8px;
+        white-space: nowrap;
+    }
+
+    .b-or {
+        flex: 0 0 auto;
+        align-self: center;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--disco-70);
+    }
+
+
+    /* =================================================================
+       Planning
+    ================================================================= */
+    .b-plan {
+        display: flex;
+        gap: 12mm;
+        align-items: flex-start;
+    }
+
+    .b-timeline {
+        flex: 1;
+        list-style: none;
+        position: relative;
+    }
+
+    .b-timeline::before {
+        content: '';
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        bottom: 14px;
+        width: 2px;
+        background: var(--disco-18);
+    }
+
+    .b-tl-step {
+        position: relative;
+        display: flex;
+        gap: 14px;
+        padding-bottom: 22px;
+    }
+
+    .b-tl-body .b-copy {
+        font-size: 11px;
+    }
+
+    .b-tl-step:last-child {
+        padding-bottom: 0;
+    }
+
+    .b-tl-dot {
+        position: relative;
+        z-index: 2;
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 99px;
+        background: var(--disco);
+        color: var(--off);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+    }
+
+    .b-tl-step.production .b-tl-dot {
+        background: var(--pop);
+        color: var(--disco);
+    }
+
+    .b-tl-body {
+        padding-top: 3px;
+    }
+
+    .b-tl-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 3px;
+    }
+
+    .b-tl-title {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 11.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--disco);
+    }
+
+    .b-who {
+        font-size: 7.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--disco-70);
+        border: 1px solid var(--disco-45);
+        border-radius: 99px;
+        padding: 1px 7px;
+        white-space: nowrap;
+    }
+
+    .b-plan-side {
+        flex: 0 0 70mm;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .b-deadline {
+        padding: 18px 18px 16px;
+    }
+
+    .b-deadline .b-h3 {
+        font-size: 12px;
+        margin-bottom: 12px;
+        color: var(--pop);
+    }
+
+    .b-deadline-line {
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+        color: var(--off);
+        padding: 8px 0;
+        border-top: 1px solid var(--off-20);
+    }
+
+    .b-deadline .b-small {
+        margin-top: 8px;
+    }
+
+    .b-good li {
+        font-size: 10px;
+        color: var(--disco);
+    }
+
+    .b-calendar-block {
+        margin-top: 12mm;
+    }
+
+    .b-calendar {
+        display: flex;
+    }
+
+    .b-cal-step {
+        flex: 1;
+        position: relative;
+        padding: 12px 22px 12px 14px;
+        background: var(--disco-09);
+        margin-right: 4px;
+        clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+    }
+
+    .b-cal-step:first-child {
+        clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+        border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    }
+
+    .b-cal-step:not(:first-child) {
+        padding-left: 22px;
+    }
+
+    .b-cal-step.last {
+        background: var(--pop);
+        margin-right: 0;
+    }
+
+    .b-cal-when {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--disco);
+        margin-bottom: 3px;
+    }
+
+    .b-cal-what {
+        font-size: 10px;
+        line-height: 1.4;
+        color: var(--disco-70);
+    }
+
+    .b-cal-step.last .b-cal-what {
+        color: var(--disco);
+    }
+
+    /* =================================================================
+       Prices
+    ================================================================= */
+    .b-prices .pricing-table td {
+        padding: 7px 13px;
+    }
+
+    .b-prices .pricing-table thead th {
+        padding: 11px 13px;
+    }
+
+    .b-prices .pricing-table td.price-cell {
+        font-size: 14px;
+    }
+
+    .b-prices.reseller .pricing-table td {
+        padding: 5px 13px;
+    }
+
+    .b-buy {
+        display: block;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 13px;
+        letter-spacing: 0.03em;
+        color: var(--disco);
+        line-height: 1.2;
+    }
+
+    .b-rrp {
+        display: block;
+        font-family: var(--body);
+        font-weight: 600;
+        font-size: 8.5px;
+        letter-spacing: 0;
+        color: var(--disco-70);
+        margin-top: 1px;
+    }
+
+    .b-rrp .pct {
+        color: var(--pop);
+        font-weight: 700;
+    }
+
+    .b-tiers {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .b-tiers .b-panel.tint {
+        flex: 1;
+    }
+
+    .b-tiers .b-checks li {
+        font-size: 9.5px;
+        margin-bottom: 5px;
+    }
+
+    .b-tiers-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 14px;
+    }
+
+    .b-markup {
+        flex: 0 0 52mm;
+    }
+
+    .b-markup-line {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.3;
+        color: var(--off);
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* =================================================================
+       Questions
+    ================================================================= */
+    .b-faq {
+        columns: 2;
+        column-gap: 12mm;
+    }
+
+    .b-faq-item {
+        break-inside: avoid;
+        padding: 12px 0 14px;
+        border-top: 2px solid var(--disco);
+    }
+
+    .b-faq-q {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--disco);
+        margin-bottom: 5px;
+        line-height: 1.35;
+    }
+
+    .b-faq-a {
+        font-size: 11px;
+        line-height: 1.55;
+        color: var(--disco-70);
+    }
+
+    .b-faq-more {
+        padding: 16px 18px;
+    }
+
+    .b-faq-more .b-copy {
+        font-size: 11.5px;
+    }
+
+    /* =================================================================
+       Closing page: the quotation checklist
+    ================================================================= */
+    .b-next {
+        margin-top: 12mm;
+        max-width: 120mm;
+        position: relative;
+        z-index: 2;
+    }
+
+    .b-next-title {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pop);
+        margin-bottom: 10px;
+    }
+
+    .b-next .b-steps-list li {
+        color: var(--off);
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+</style>

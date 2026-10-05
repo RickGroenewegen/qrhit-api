@@ -1,0 +1,61 @@
+<!--
+    What you get: everything the price per box includes, then the one-off
+    options with their prices. "Are there setup costs?" and "is the app in
+    the price?" were asked so often that the answer gets a page of its own.
+    Shipping is included to one address in the Netherlands only, and the
+    design service is the only design work we sell: most clients design the
+    box themselves (Rick, 2026-10-05).
+-->
+<%
+    // The client edition shows no prices or costs at all: no amounts on the
+    // options, and no "no setup costs" line (Rick, 2026-10-05).
+    var included = neutral ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 7];
+    var optionCards = [
+        { name: t('optAppName'), price: formatEuros(options.customApp), copy: t('optAppCopy') },
+        { name: t('optPortalName'), price: formatEuros(options.votingPortal), copy: t('optPortalCopy') },
+        { name: t('optDesignName'), price: formatEuros(options.designService), copy: t('optDesignCopy') },
+        { name: t('optShipName'), price: t('optOnQuote'), copy: t('optShipCopy') }
+    ];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body">
+        <div class="b-panel disco b-inc-main">
+            <div class="b-art" style="right: -6mm; bottom: -14mm; width: 40mm; opacity: 0.5;">
+                <img src="<%= baseUrl %>/assets/images/brand/clef_pop.png" alt="" />
+            </div>
+            <div class="b-h3"><%= t(neutral ? 'incTitleClient' : 'incTitle') %></div>
+            <ul class="b-checks b-inc-list">
+                <% included.forEach(function (n) { %>
+                <li><%= t('inc' + n) %></li>
+                <% }); %>
+            </ul>
+        </div>
+
+        <div class="b-options-block">
+            <div class="section-title">
+                <h2><%= t('optTitle') %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= t('optMeta') %></div>
+            </div>
+            <div class="b-options">
+                <% optionCards.forEach(function (o) { %>
+                <div class="b-option">
+                    <div class="b-option-head">
+                        <span class="b-option-name"><%= o.name %></span>
+                        <% if (!neutral) { %><span class="b-option-price"><%= o.price %></span><% } %>
+                    </div>
+                    <div class="b-copy"><%= o.copy %></div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+
+    <% if (neutral) { %>
+    <%- include('sheet_foot', {}) %>
+    <% } else { %>
+    <%- include('sheet_foot', { footNote: t('orderingFootNote', { vat: formatPercent(21) }) }) %>
+    <% } %>
+</div>

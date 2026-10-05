@@ -1,10 +1,16 @@
 <!--
-    Cover page - shared between the Reseller and Retail PDFs.
+    Cover page - shared between the price-list brochure and the playlist
+    suggestions brochure.
     A single DISCO panel on OFF WHITE paper, carrying the brand kit's
     teal/coral line texture, with the grain-textured treble clef bleeding
     off the right edge.
 
     Expects: baseUrl, formatDate, title, subtitle, editionName, version
+    Optional:
+      contents  [{ name, note }] for the tracklist; default coverTrack1-3
+      promises  [string] printed under the tagline
+      neutral   true for the edition a reseller forwards: no wordmark, no
+                web address, a "powered by" credit instead
 -->
 <style>
     .cover {
@@ -191,8 +197,56 @@
     .cover-foot-value.pop {
         color: var(--pop);
     }
+
+    .cover-promises {
+        list-style: none;
+        margin-top: 18px;
+        max-width: 110mm;
+    }
+
+    .cover-promises li {
+        position: relative;
+        padding-left: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.4;
+        color: var(--off);
+        margin-bottom: 7px;
+    }
+
+    .cover-promises li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 9px;
+        height: 9px;
+        border-radius: 99px;
+        background: var(--pop);
+    }
+
+    .cover-powered {
+        font-size: 10px;
+        color: var(--off-70);
+        letter-spacing: 0.02em;
+    }
+
+    .cover-powered strong {
+        font-family: var(--display);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: var(--off);
+    }
 </style>
 
+<%
+    var coverNeutral = !!locals.neutral;
+    var coverContents = locals.contents || [
+        { name: t('coverTrack1'), note: t('coverTrack1Note') },
+        { name: t('coverTrack2'), note: t('coverTrack2Note') },
+        { name: t('coverTrack3'), note: t('coverTrack3Note') }
+    ];
+%>
 <div class="cover">
     <div class="cover-panel">
         <div class="cover-texture"></div>
@@ -202,7 +256,11 @@
 
         <div class="cover-inner">
             <div class="cover-top">
+                <% if (coverNeutral) { %>
+                <div class="cover-powered">powered by <strong>QRSong!</strong></div>
+                <% } else { %>
                 <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="cover-logo" />
+                <% } %>
                 <div class="sticker"><%= editionName %></div>
             </div>
 
@@ -211,23 +269,23 @@
             <div class="cover-rule"></div>
             <div class="cover-tagline"><%= t('coverTagline') %></div>
 
+            <% if (locals.promises) { %>
+            <ul class="cover-promises">
+                <% promises.forEach(function (promise) { %>
+                <li><%= promise %></li>
+                <% }); %>
+            </ul>
+            <% } %>
+
             <div class="cover-tracks">
                 <div class="cover-tracks-label"><%= t('coverContents') %></div>
+                <% coverContents.forEach(function (item, i) { %>
                 <div class="cover-track">
-                    <span class="cover-track-num">01</span>
-                    <span class="cover-track-name"><%= t('coverTrack1') %></span>
-                    <span class="cover-track-note"><%= t('coverTrack1Note') %></span>
+                    <span class="cover-track-num"><%= String(i + 1).padStart(2, '0') %></span>
+                    <span class="cover-track-name"><%= item.name %></span>
+                    <span class="cover-track-note"><%= item.note %></span>
                 </div>
-                <div class="cover-track">
-                    <span class="cover-track-num">02</span>
-                    <span class="cover-track-name"><%= t('coverTrack2') %></span>
-                    <span class="cover-track-note"><%= t('coverTrack2Note') %></span>
-                </div>
-                <div class="cover-track">
-                    <span class="cover-track-num">03</span>
-                    <span class="cover-track-name"><%= t('coverTrack3') %></span>
-                    <span class="cover-track-note"><%= t('coverTrack3Note') %></span>
-                </div>
+                <% }); %>
             </div>
 
             <div class="cover-foot">
@@ -239,10 +297,12 @@
                     <div class="cover-foot-label"><%= t('coverVersion') %></div>
                     <div class="cover-foot-value"><%= version %></div>
                 </div>
+                <% if (!coverNeutral) { %>
                 <div class="cover-foot-item">
                     <div class="cover-foot-label"><%= t('coverContact') %></div>
                     <div class="cover-foot-value pop">www.qrsong.io</div>
                 </div>
+                <% } %>
             </div>
         </div>
     </div>

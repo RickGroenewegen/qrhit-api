@@ -10,6 +10,8 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
+import { PriceListEdition, priceListQuery } from '../../src/priceList';
+import { PROFIT_TIERS } from '../../src/services/boxOptionsPricing';
 
 /**
  * Vibe pricing persistence (company/list calculations), quotation HTML
@@ -494,86 +496,88 @@ describe('vibe pricing and quotation views', () => {
       expect(res.statusCode).toBe(404);
     });
 
-    it('renders the reseller pricing tables', async () => {
-      const profitMatrix = encodeURIComponent(
-        JSON.stringify({ 'schneider-48': { 100: { reseller: 2, qrsong: 1 } } })
-      );
-      const res = await app.inject({
+    // The price-list views only render from a URL the PDF route signed
+    // (priceListQuery); every tier needs a margin of ours.
+    const priceListMatrix = () => {
+      const m: Record<string, Record<string, { qrsong: number; reseller: number }>> = {};
+      for (const id of ['schneider-48', 'schneider-96', 'schneider-192']) {
+        m[id] = {};
+        for (const q of PROFIT_TIERS) m[id][String(q)] = { qrsong: 25, reseller: 30 };
+      }
+      return m;
+    };
+    const priceListUrl = (edition: PriceListEdition, locale: string) =>
+      `/vibe/${edition}-pricing?${priceListQuery(edition, locale, priceListMatrix())}`;
+
+    it('refuses to render a price list without a valid signature', async () => {
+      // Without the signature anyone could render it with an empty matrix
+      // and read the printer's cost per box.
+      const unsigned = await app.inject({ method: 'GET', url: '/vibe/retail-pricing' });
+      expect(unsigned.statusCode).toBe(403);
+
+      const signed = new URLSearchParams(priceListQuery('retail', 'nl', priceListMatrix()));
+      signed.set('profitMatrix', JSON.stringify({ 'schneider-48': {} }));
+      const tampered = await app.inject({
         method: 'GET',
-        url: `/vibe/reseller-pricing?profitMatrix=${profitMatrix}`,
+        url: `/vibe/retail-pricing?${signed.toString()}`,
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.headers['content-type']).toContain('text/html');
+      expect(tampered.statusCode).toBe(403);
     });
 
-    it('renders the retail pricing tables', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/retail-pricing',
-      });
+    it('renders the reseller edition in German, formal and with purchase prices', async () => {
+      const res = await app.inject({ method: 'GET', url: priceListUrl('reseller', 'de') });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
-    });
-
-    it('renders the reseller price list in the requested language', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/reseller-pricing?locale=de',
-      });
-      expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="de"');
       expect(res.body).toContain('Händlerausgabe');
-      expect(res.body).toContain('Einkauf, Empfehlung');
       expect(res.body).toContain('QRSong! für Unternehmen');
-      // Product column names come from the route, not the template.
       expect(res.body).toContain('48 Karten');
+      expect(res.body).toContain('class="b-buy"');
+      expect(res.body).toContain('business@qrsong.io');
       // Formal register only.
       expect(res.body).not.toMatch(/>\s*Inkoop\s*</);
     });
 
-    it('renders the retail price list in the requested language', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/retail-pricing?locale=de',
-      });
+    it('renders the retail edition with recommended prices only', async () => {
+      const res = await app.inject({ method: 'GET', url: priceListUrl('retail', 'nl') });
       expect(res.statusCode).toBe(200);
-      expect(res.body).toContain('lang="de"');
-      expect(res.body).toContain('Preisliste');
-      expect(res.body).toContain('Empfohlene Preise pro Box');
-      expect(res.body).toContain('zzgl. 21 % MwSt.');
+      expect(res.body).toContain('lang="nl"');
+      expect(res.body).toContain('Prijslijst');
+      expect(res.body).toContain('48 kaarten');
+      expect(res.body).toContain('zakelijk@qrsong.io');
+      expect(res.body).not.toContain('class="b-buy"');
+    });
+
+    it('leaves every price and our contact details out of the client brochure', async () => {
+      const res = await app.inject({ method: 'GET', url: priceListUrl('client', 'nl') });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('powered by');
+      expect(res.body).toContain('Brochure');
+      expect(res.body).not.toContain('€');
+      expect(res.body).not.toContain('pricing-table');
+      expect(res.body).not.toContain('zakelijk@qrsong.io');
+      expect(res.body).not.toContain('business@qrsong.io');
+      expect(res.body).not.toContain('www.qrsong.io');
     });
 
     it('falls back to English for a language we do not produce price lists in', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/retail-pricing?locale=fr',
-      });
+      const res = await app.inject({ method: 'GET', url: priceListUrl('retail', 'fr') });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="en"');
-      expect(res.body).toContain('Recommended prices per box');
+      expect(res.body).toContain('Price per box');
     });
 
-    it('defaults the price list to English when no language is given', async () => {
-      // These routes carry no company context, so there is nothing to infer
-      // from; the caller has to say which language it wants.
+    it('refuses a price list PDF while the profit table is empty', async () => {
+      // The PDF routes fall back to the saved table, which the test Redis
+      // does not have: a clear 400 instead of a list at the printer's cost.
       const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/retail-pricing',
+        method: 'POST',
+        url: '/vibe/retail-pricing/pdf',
+        headers,
+        payload: { locale: 'nl' },
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toContain('lang="en"');
-    });
-
-    it('still renders the Dutch price list unchanged', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/reseller-pricing?locale=nl',
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toContain('lang="nl"');
-      expect(res.body).toContain('Inkoop, advies');
-      expect(res.body).toContain('Reseller editie');
-      expect(res.body).toContain('48 kaarten');
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toContain('profit table');
     });
 
     it('renders the vibe poster page', async () => {

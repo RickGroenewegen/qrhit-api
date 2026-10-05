@@ -1,0 +1,68 @@
+<!--
+    The box: the three sizes with their outer measurements (asked for by
+    resellers planning shipments and showrooms), the card specification, and
+    the three questions that came with every first order: other numbers of
+    songs, game rules, and how it arrives.
+-->
+<%
+    var formats = [
+        { cards: 48, image: '1x1.jpeg', size: '60 x 60 x 20', stacks: t('fmtStackOne'), printed: t('fmtPrintedOutside') },
+        { cards: 96, image: '2x1.jpeg', size: '120 x 60 x 20', stacks: t('fmtStacks', { count: 2 }), printed: t('fmtPrintedInside') },
+        { cards: 192, image: '2x2.jpeg', size: '120 x 120 x 20', stacks: t('fmtStacks', { count: 4 }), printed: t('fmtPrintedInside') }
+    ];
+    var specs = [
+        ['specCardFormat', 'specCardFormatValue'],
+        ['specMaterial', 'specMaterialValue'],
+        ['specPrint', 'specPrintValue'],
+        ['specMade', 'specMadeValue']
+    ];
+    var notes = ['Count', 'Rules', 'Pack'];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body spread">
+        <p class="b-intro"><%= t('fmtIntro') %></p>
+
+        <div class="b-formats">
+            <% formats.forEach(function (f) { %>
+            <div class="b-format">
+                <div class="b-format-shot">
+                    <img src="<%= baseUrl %>/assets/images/<%= f.image %>" alt="<%= t('variantAlt', { count: f.cards }) %>" />
+                </div>
+                <div class="b-format-head">
+                    <span class="b-format-count"><%= f.cards %></span>
+                    <span class="b-format-unit"><%= t('variantCards') %></span>
+                </div>
+                <div class="b-format-spec"><%= t('fmt' + f.cards + 'Spec') %></div>
+                <table class="b-facts">
+                    <tr><td class="label"><%= t('fmtSize') %></td><td class="value"><%= t('fmtSizeValue', { size: f.size }) %></td></tr>
+                    <tr><td class="label"><%= t('fmtCards') %></td><td class="value"><%= f.stacks %></td></tr>
+                    <tr><td class="label"><%= t('fmtPrinted') %></td><td class="value"><%= f.printed %></td></tr>
+                </table>
+                <div class="b-copy"><%= t('fmt' + f.cards + 'Copy') %></div>
+            </div>
+            <% }); %>
+        </div>
+
+        <div class="b-specs">
+            <% specs.forEach(function (s) { %>
+            <div class="b-spec">
+                <div class="b-spec-label"><%= t(s[0]) %></div>
+                <div class="b-spec-value"><%- t(s[1]) %></div>
+            </div>
+            <% }); %>
+        </div>
+
+        <div class="b-row">
+            <% notes.forEach(function (n) { %>
+            <div class="b-panel tint">
+                <div class="b-h3"><%= t('fmt' + n + 'Title') %></div>
+                <div class="b-copy"><%= t('fmt' + n + 'Copy') %></div>
+            </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>

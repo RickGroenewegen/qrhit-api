@@ -61,11 +61,11 @@ from a separate bundle instead:
 
 - `src/locales/business/{en,nl,de}.json` — flat dotted keys under the
   `quotation.*`, `instructions.*`, `invoice_lines.*`, `pricing.*` and
-  `suggestions.*` prefixes (`pricing.*` covers the retail/reseller price lists
-  and the brochure partials `front_page`, `product_info` and `closing_page`
-  they share; `suggestions.*` is the playlist suggestions brochure, which
-  reuses those partials through a translator that falls back to `pricing.*`
-  for any key it does not define itself).
+  `suggestions.*` prefixes (`pricing.*` covers the price-list brochure and
+  the partials `front_page` and `closing_page`; `suggestions.*` is the
+  playlist suggestions brochure, which reuses those two partials through a
+  translator that falls back to `pricing.*` for any key it does not define
+  itself).
 - Only these three languages are produced. `Translation.resolveBusinessLocale()`
   is the single fallback point: any other `Company.locale` becomes `en`. Missing
   keys fall back to the English string, never to `undefined`.
@@ -73,6 +73,12 @@ from a separate bundle instead:
   were written in) and `de.json` is hand-written German. Both are pre-seeded in
   `src/locales/business/translated.cache`, so `translate.js` will not overwrite
   them; only newly added keys get generated, using the bundle's formal prompt.
+  That prompt carries a fixed vocabulary (Dutch "doos/dozen", "proefdoosjes",
+  "omdozen", "playlist", "digitale proef", "jaartal", "sjablonen", "btw"), so
+  one box is never a doos, a box and a doosje on one page.
+  `_scripts/remove-from-cache.sh` cleans this bundle's cache too. A key removed
+  from `en.json` has to leave `nl.json`/`de.json` as well: `translate.js` never
+  prunes, and an orphan with a `{{placeholder}}` fails the translation test.
 - **The Algemene Voorwaarden / IP clauses in this bundle are contract text.**
   Have any change to `quotation.terms*` / `quotation.ip*` reviewed before it
   reaches a customer.
@@ -95,6 +101,39 @@ Where the language comes from differs per document:
 The price-list PDF routes name the download from the bundle and return it in
 `Content-Disposition`; the frontend reads the name from that header rather
 than duplicating the mapping.
+
+### The price-list brochure (rebuilt 2026-10-05)
+
+One brochure, `src/views/price_list.ejs` with one partial per page in
+`src/views/partials/brochure/`, in three editions (`src/priceList.ts`):
+
+| edition | for | prices |
+|---|---|---|
+| `retail` | companies ordering from us | recommended price per box |
+| `reseller` | resellers; adds a "Working together" page | purchase price, RRP under it |
+| `client` | what a reseller forwards to their client | **none**: no amounts, no VAT, no costs, no wordmark, none of our contact details |
+
+The pages answer what business clients asked by mail in 2026 (how it works and
+the music, the box, what is included and the options, who does what, planning,
+prices, questions). Rick's rules for the copy: never mention removing duplicate
+songs, no free box design (only the design service, and most clients design
+themselves), lead time "about 15 working days, a little longer during the
+holidays", shipping included to one address in the Netherlands only, sample
+boxes are in the standard QRSong! design, the Deezer/Tidal preview without a
+subscription only as a small footnote.
+
+- Prices come from `buildPriceList`: the printer cost, the saved profit table
+  and `priceFromCost`, the same rounding as a three-size quotation, and it
+  refuses a tier without our margin (never a list at the printer's cost).
+- The GET views (`/vibe/{edition}-pricing`) render only from a URL the PDF
+  route signed (`priceListQuery`, HMAC on `JWT_SECRET`); unsigned they answer
+  403. Before 2026-10-05 anyone could render them with an empty matrix and
+  read the cost per box.
+- The PDF routes take `profitMatrix` only from the Pricing Tables page (unsaved
+  numbers can be printed); everything else uses the saved table. The company
+  Documents tab sends just the language. The client edition needs no table.
+- One-off option prices (custom app, voting portal, design service) are
+  `src/businessOptions.ts`; `vibe.ts` still prices quotations with literals.
 
 ## Print&Bind (physical card printing)
 

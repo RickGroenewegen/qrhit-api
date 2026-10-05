@@ -607,10 +607,6 @@
     "nl",
     "de"
   ],
-  "pricing.subtitleReseller": [
-    "nl",
-    "de"
-  ],
   "pricing.coverKicker": [
     "nl",
     "de"
@@ -623,30 +619,6 @@
     "nl",
     "de"
   ],
-  "pricing.coverTrack1": [
-    "nl",
-    "de"
-  ],
-  "pricing.coverTrack1Note": [
-    "nl",
-    "de"
-  ],
-  "pricing.coverTrack2": [
-    "nl",
-    "de"
-  ],
-  "pricing.coverTrack2Note": [
-    "nl",
-    "de"
-  ],
-  "pricing.coverTrack3": [
-    "nl",
-    "de"
-  ],
-  "pricing.coverTrack3Note": [
-    "nl",
-    "de"
-  ],
   "pricing.coverEdition": [
     "nl",
     "de"
@@ -656,34 +628,6 @@
     "de"
   ],
   "pricing.coverContact": [
-    "nl",
-    "de"
-  ],
-  "pricing.productSheetTitle": [
-    "nl",
-    "de"
-  ],
-  "pricing.howItWorks": [
-    "nl",
-    "de"
-  ],
-  "pricing.leadStrong": [
-    "nl",
-    "de"
-  ],
-  "pricing.leadBody": [
-    "nl",
-    "de"
-  ],
-  "pricing.serviceSpotifyNote": [
-    "nl",
-    "de"
-  ],
-  "pricing.serviceAllPlans": [
-    "nl",
-    "de"
-  ],
-  "pricing.productIntro": [
     "nl",
     "de"
   ],
@@ -703,55 +647,7 @@
     "nl",
     "de"
   ],
-  "pricing.specMinimumOrder": [
-    "nl",
-    "de"
-  ],
-  "pricing.specMinimumOrderValue": [
-    "nl",
-    "de"
-  ],
-  "pricing.specLeadTime": [
-    "nl",
-    "de"
-  ],
-  "pricing.specLeadTimeValue": [
-    "nl",
-    "de"
-  ],
-  "pricing.threeFormats": [
-    "nl",
-    "de"
-  ],
   "pricing.variantCards": [
-    "nl",
-    "de"
-  ],
-  "pricing.variantAlt": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant48Spec": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant48Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant96Spec": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant96Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant192Spec": [
-    "nl",
-    "de"
-  ],
-  "pricing.variant192Copy": [
     "nl",
     "de"
   ],
@@ -759,203 +655,7 @@
     "nl",
     "de"
   ],
-  "pricing.orderingSheetTitle": [
-    "nl",
-    "de"
-  ],
-  "pricing.extraOptions": [
-    "nl",
-    "de"
-  ],
-  "pricing.oneOffCosts": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonAppName": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonAppCopy": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonPortalName": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonPortalCopy": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonDesignName": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonDesignPrice": [
-    "nl",
-    "de"
-  ],
-  "pricing.addonDesignCopy": [
-    "nl",
-    "de"
-  ],
-  "pricing.orderProcess": [
-    "nl",
-    "de"
-  ],
-  "pricing.fiveSteps": [
-    "nl",
-    "de"
-  ],
-  "pricing.step1Title": [
-    "nl",
-    "de"
-  ],
-  "pricing.step1Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.step2Title": [
-    "nl",
-    "de"
-  ],
-  "pricing.step2Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.step3Title": [
-    "nl",
-    "de"
-  ],
-  "pricing.step3Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.step4Title": [
-    "nl",
-    "de"
-  ],
-  "pricing.step4Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.step5Title": [
-    "nl",
-    "de"
-  ],
-  "pricing.step5Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.designAndPlaylist": [
-    "nl",
-    "de"
-  ],
-  "pricing.choosePerItem": [
-    "nl",
-    "de"
-  ],
-  "pricing.designOptions": [
-    "nl",
-    "de"
-  ],
-  "pricing.design1Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.design1Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.design2Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.design2Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.design3Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.design3Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlistOptions": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist1Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist1Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist2Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist2Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist3Name": [
-    "nl",
-    "de"
-  ],
-  "pricing.playlist3Copy": [
-    "nl",
-    "de"
-  ],
-  "pricing.deliveryLabel": [
-    "nl",
-    "de"
-  ],
-  "pricing.deliveryValue": [
-    "nl",
-    "de"
-  ],
-  "pricing.orderingFootLabel": [
-    "nl",
-    "de"
-  ],
-  "pricing.orderingFootNote": [
-    "nl",
-    "de"
-  ],
-  "pricing.retailSectionTitle": [
-    "nl",
-    "de"
-  ],
-  "pricing.retailSectionMeta": [
-    "nl",
-    "de"
-  ],
-  "pricing.retailFootTitle": [
-    "nl",
-    "de"
-  ],
-  "pricing.resellerSectionTitle": [
-    "nl",
-    "de"
-  ],
-  "pricing.resellerSectionMeta": [
-    "nl",
-    "de"
-  ],
   "pricing.thQuantity": [
-    "nl",
-    "de"
-  ],
-  "pricing.perBox": [
-    "nl",
-    "de"
-  ],
-  "pricing.boxesUnit": [
     "nl",
     "de"
   ],
@@ -964,10 +664,6 @@
     "de"
   ],
   "pricing.stackRecommended": [
-    "nl",
-    "de"
-  ],
-  "pricing.stackMargin": [
     "nl",
     "de"
   ],
@@ -983,19 +679,11 @@
     "nl",
     "de"
   ],
-  "pricing.closingCopy": [
-    "nl",
-    "de"
-  ],
   "pricing.closingEmail": [
     "nl",
     "de"
   ],
   "pricing.closingWebsite": [
-    "nl",
-    "de"
-  ],
-  "pricing.closingSample": [
     "nl",
     "de"
   ],
@@ -1184,6 +872,938 @@
     "de"
   ],
   "quotation.optionsPiDelivered": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverPromise1": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverPromise2": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverPromise3": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPartner": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPartnerNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetHow": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetHowNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetFormats": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetFormatsNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetIncluded": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetIncludedNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetWho": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPlanning": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPlanningNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPrices": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetPricesNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetFaq": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetFaqNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerIntro": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerMarginTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerMarginCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerClientsTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerClientsCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerForwardTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerSamplesTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerNeutralTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerNeutralCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerDeliveryTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerDeliveryCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerTextTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerTextMeta": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerText": [
+    "nl",
+    "de"
+  ],
+  "pricing.howLeadStrong": [
+    "nl",
+    "de"
+  ],
+  "pricing.howLeadBody": [
+    "nl",
+    "de"
+  ],
+  "pricing.howCardFront": [
+    "nl",
+    "de"
+  ],
+  "pricing.howCardBack": [
+    "nl",
+    "de"
+  ],
+  "pricing.howGameTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep1Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep2Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep3Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep4Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.howStep4Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.howAppTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.howAppCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.howMusicTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.howMusicCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.svcHidden": [
+    "nl",
+    "de"
+  ],
+  "pricing.svcYoutube": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtIntro": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt48Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt48Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt96Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt96Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt192Spec": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmt192Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtSize": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtSizeValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtCards": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtStackOne": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtStacks": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtPrinted": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtPrintedOutside": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtPrintedInside": [
+    "nl",
+    "de"
+  ],
+  "pricing.specPrint": [
+    "nl",
+    "de"
+  ],
+  "pricing.specPrintValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMade": [
+    "nl",
+    "de"
+  ],
+  "pricing.specMadeValue": [
+    "nl",
+    "de"
+  ],
+  "pricing.variantAlt": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtCountTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtCountCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtRulesTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtRulesCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtPackTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.fmtPackCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.incTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc1": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc2": [
+    "nl",
+    "de"
+  ],
+  "pricing.optTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.optMeta": [
+    "nl",
+    "de"
+  ],
+  "pricing.optAppName": [
+    "nl",
+    "de"
+  ],
+  "pricing.optAppCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.optPortalName": [
+    "nl",
+    "de"
+  ],
+  "pricing.optPortalCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.optShipName": [
+    "nl",
+    "de"
+  ],
+  "pricing.optShipCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.optOnQuote": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoStatement": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYouTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYou1": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYou2": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYou3": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYou4": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoYouNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoWeTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoWe1": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesignTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign1Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusicTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic1Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic2Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic3Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic4Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic4Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.planWhoYou": [
+    "nl",
+    "de"
+  ],
+  "pricing.planWhoWe": [
+    "nl",
+    "de"
+  ],
+  "pricing.planWhoBoth": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep1Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep2Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep3Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep4Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep4Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep5Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep6Title": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep6Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planDeadlineTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.planDeadline1": [
+    "nl",
+    "de"
+  ],
+  "pricing.planDeadline2": [
+    "nl",
+    "de"
+  ],
+  "pricing.planDeadline3": [
+    "nl",
+    "de"
+  ],
+  "pricing.planDeadlineNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGoodTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGood1": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGood2": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGood3": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGood4": [
+    "nl",
+    "de"
+  ],
+  "pricing.planGood5": [
+    "nl",
+    "de"
+  ],
+  "pricing.planExampleTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx1When": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx1": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx2When": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx2": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx3When": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx3": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx4When": [
+    "nl",
+    "de"
+  ],
+  "pricing.planEx4": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceTitleReseller": [
+    "nl",
+    "de"
+  ],
+  "pricing.perBox": [
+    "nl",
+    "de"
+  ],
+  "pricing.boxesUnit": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceMarkup": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceMarkupVaries": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceAdviceNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.tierTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier1": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier2": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier3": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier4": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier5": [
+    "nl",
+    "de"
+  ],
+  "pricing.tier6": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSubQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqLicQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqLicA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqAppQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqAppA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqGoneQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqDeleteQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqDeleteA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqAbroadQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqAbroadA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqReorderQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqReorderA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqWrapQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqWrapA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqMadeQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqMadeA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSampleQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSmallQ": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSmallA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSmallResellerA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqMoreTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqMoreCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqMoreClientCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.nextTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.next1": [
+    "nl",
+    "de"
+  ],
+  "pricing.next2": [
+    "nl",
+    "de"
+  ],
+  "pricing.next3": [
+    "nl",
+    "de"
+  ],
+  "pricing.next4": [
+    "nl",
+    "de"
+  ],
+  "pricing.next5": [
+    "nl",
+    "de"
+  ],
+  "pricing.next6": [
+    "nl",
+    "de"
+  ],
+  "pricing.clientClosingTitle": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingSample": [
+    "nl",
+    "de"
+  ],
+  "pricing.orderingFootNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.priceMeta": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc3": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetWhoNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc4": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc5": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc6": [
+    "nl",
+    "de"
+  ],
+  "pricing.inc7": [
+    "nl",
+    "de"
+  ],
+  "pricing.optDesignName": [
+    "nl",
+    "de"
+  ],
+  "pricing.optDesignCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoChooseOne": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoOr": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesignPopular": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign2Name": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign2Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep3Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.planStep5Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerSamplesCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.svcSpotifyFree": [
+    "nl",
+    "de"
+  ],
+  "pricing.svcNote": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSubA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqGoneA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSampleA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSampleResellerA": [
+    "nl",
+    "de"
+  ],
+  "pricing.faqSampleClientA": [
+    "nl",
+    "de"
+  ],
+  "pricing.closingSampleFree": [
+    "nl",
+    "de"
+  ],
+  "pricing.clientClosingCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.docTitleClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.editionClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.fileClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.coverPromise3Client": [
+    "nl",
+    "de"
+  ],
+  "pricing.sheetIncludedNoteClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.partnerForwardCopy": [
+    "nl",
+    "de"
+  ],
+  "pricing.incTitleClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign2CopyClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoMusic4CopyClient": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoWe2": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoWe3": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoWe4": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign1Copy": [
+    "nl",
+    "de"
+  ],
+  "pricing.whoDesign1CopyClient": [
     "nl",
     "de"
   ]

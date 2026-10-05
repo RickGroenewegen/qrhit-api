@@ -35,6 +35,17 @@ import {
   recordListInvoice,
 } from '../listInvoices';
 import { markListSold } from '../businessSales';
+import {
+  PRICE_LIST_EDITIONS,
+  PriceListEdition,
+  PriceListError,
+  assertProfitTable,
+  buildPriceList,
+  priceListQuery,
+  resolveProfitMatrix,
+  verifyPriceListSignature,
+} from '../priceList';
+import { BUSINESS_OPTION_PRICES, businessContactEmail } from '../businessOptions';
 
 export default async function vibeRoutes(
   fastify: FastifyInstance,
@@ -2812,400 +2823,110 @@ export default async function vibeRoutes(
     });
   });
 
-  // Reseller pricing HTML view (for PDF generation)
-  fastify.get(
-    '/vibe/reseller-pricing',
-    async (request: any, reply: any) => {
+  // Business price lists: the brochure view the Lambda prints, one per
+  // edition (retail, reseller, client). Unauthenticated because the Lambda
+  // carries no session, so the language and the profit matrix travel in the
+  // query string, signed by the PDF route (priceListQuery). Without a valid
+  // signature anyone could render it with an empty matrix and read the
+  // printer's cost per box.
+  const renderPriceList =
+    (edition: PriceListEdition) => async (request: any, reply: any) => {
       try {
-        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+        const query = request.query || {};
+        const matrixJson = typeof query.profitMatrix === 'string' ? query.profitMatrix : '';
+        const requestedLocale = typeof query.locale === 'string' ? query.locale : '';
+        if (!verifyPriceListSignature(edition, requestedLocale, matrixJson, query.sig)) {
+          reply.status(403).send({ error: 'Invalid or missing signature' });
+          return;
+        }
 
-        // Get profit matrix from query params (passed as JSON)
-        // Structure: productId -> quantity -> { reseller, qrsong }
-        const profitMatrixParam = request.query.profitMatrix;
-        const profitMatrix: Record<string, Record<number, { reseller: number; qrsong: number }>> = profitMatrixParam
-          ? JSON.parse(decodeURIComponent(profitMatrixParam))
-          : {};
-
-        // Helper to get profit for a specific product and quantity
-        const getProfit = (productId: string, qty: number): { reseller: number; qrsong: number } => {
-          return profitMatrix[productId]?.[qty] || { reseller: 0, qrsong: 0 };
-        };
-
-        // Lambda screenshots this route to produce the PDF and carries no
-        // session, so the language arrives in the query string.
-        const locale = translation.resolveBusinessLocale(request.query.locale);
+        const locale = translation.resolveBusinessLocale(requestedLocale);
         const intlTag = translation.getIntlTag(locale);
-        const pricingT = await translation.getBusinessTranslator(
-          locale,
-          'pricing'
-        );
+        const t = await translation.getBusinessTranslator(locale, 'pricing');
+        // The client edition is an informative brochure without any prices.
+        const priceList =
+          edition === 'client'
+            ? null
+            : await buildPriceList(JSON.parse(matrixJson), (params) =>
+                vibe.calculateSchneiderPricing(params)
+              );
 
-        // Format helpers
-        const formatCurrency = (value: number) => {
-          return new Intl.NumberFormat(intlTag, {
+        const formatCurrency = (value: number) =>
+          new Intl.NumberFormat(intlTag, { style: 'currency', currency: 'EUR' }).format(value);
+        // The one-off options are whole euros: "€ 350", not "€ 350,00".
+        const formatEuros = (value: number) =>
+          new Intl.NumberFormat(intlTag, {
             style: 'currency',
             currency: 'EUR',
+            maximumFractionDigits: 0,
           }).format(value);
-        };
-
-        const formatNumber = (value: number) => {
-          return new Intl.NumberFormat(intlTag).format(value);
-        };
-
-        // German writes 39,3 % (comma, non-breaking space before the sign).
-        const formatPercent = (value: number) => {
-          return new Intl.NumberFormat(intlTag, {
+        const formatNumber = (value: number) => new Intl.NumberFormat(intlTag).format(value);
+        // German writes 30 % (non-breaking space before the sign).
+        const formatPercent = (value: number) =>
+          new Intl.NumberFormat(intlTag, {
             style: 'percent',
-            minimumFractionDigits: 1,
             maximumFractionDigits: 1,
           }).format(value / 100);
-        };
-
-        const formatDate = (date: Date) => {
-          return new Intl.DateTimeFormat(intlTag, {
+        const formatDate = (date: Date) =>
+          new Intl.DateTimeFormat(intlTag, {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
           }).format(date);
-        };
 
-        // Product configurations
-        const quantities = [100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500, 5000, 10000];
-
-        const groups = [
-          {
-            name: 'QRSong! Box',
-            products: [
-              { id: 'schneider-48', name: `48 ${pricingT('variantCards')}`, cardCount: 48 },
-              { id: 'schneider-96', name: `96 ${pricingT('variantCards')}`, cardCount: 96 },
-              { id: 'schneider-192', name: `192 ${pricingT('variantCards')}`, cardCount: 192 },
-            ],
-          },
-        ];
-
-        // Calculate prices for all products and quantities
-        const prices: Record<string, Record<number, { resellerPrice: number; retailPrice: number; qrsongProfitPercent: string; resellerProfitPercent: string }>> = {};
-
-        for (const group of groups) {
-          for (const product of group.products) {
-            prices[product.id] = {};
-
-            for (const qty of quantities) {
-              try {
-                if (group.name === 'Standaard') {
-                  // Get per-product, per-tier profit settings
-                  const settings = getProfit(product.id, qty);
-                  const result = await vibe.calculateTrompPricing({
-                    quantity: qty,
-                    printingType: (product as any).printingType,
-                    includeStansmestekening: false,
-                    includeStansvorm: false,
-                    includeCustomApp: false,
-                    profitMargin: 0,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const pricePerSet = result.calculation.pricePerSet;
-                    // Apply profit percentages
-                    const qrsongProfit = pricePerSet * (settings.qrsong / 100);
-                    const resellerPrice = pricePerSet + qrsongProfit;
-                    // Reseller profit is calculated over resellerPrice (what they pay), not inkoop
-                    const resellerProfit = resellerPrice * (settings.reseller / 100);
-                    const retailPrice = resellerPrice + resellerProfit;
-
-                    prices[product.id][qty] = {
-                      resellerPrice,
-                      retailPrice,
-                      qrsongProfitPercent: settings.qrsong.toFixed(1) + '%',
-                      resellerProfitPercent: settings.reseller.toFixed(1) + '%',
-                    };
-                  }
-                } else if (group.name === 'QRSong! Box') {
-                  // Get per-product, per-tier profit settings
-                  const settings = getProfit(product.id, qty);
-                  const result = await vibe.calculateSchneiderPricing({
-                    quantity: qty,
-                    cardCount: (product as any).cardCount,
-                    includeStansmes: false,
-                    includeCustomApp: false,
-                    profitMargin: 0,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const pricePerBox = result.calculation.pricePerBox;
-                    // Apply profit percentages
-                    const qrsongProfit = pricePerBox * (settings.qrsong / 100);
-                    const resellerPrice = pricePerBox + qrsongProfit;
-                    // Reseller profit is calculated over resellerPrice (what they pay), not inkoop
-                    const resellerProfit = resellerPrice * (settings.reseller / 100);
-                    const retailPrice = resellerPrice + resellerProfit;
-
-                    prices[product.id][qty] = {
-                      resellerPrice,
-                      retailPrice,
-                      qrsongProfitPercent: settings.qrsong.toFixed(1) + '%',
-                      resellerProfitPercent: settings.reseller.toFixed(1) + '%',
-                    };
-                  }
-                }
-              } catch (error) {
-                console.error(`Error calculating price for ${product.id} qty ${qty}:`, error);
-              }
-            }
-          }
-        }
-
-        const version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
-
-        await reply.view('reseller_pricing.ejs', {
+        await reply.view('price_list.ejs', {
+          edition,
           locale,
-          t: pricingT,
-          groups,
-          quantities,
-          prices,
-          profitMatrix,
+          t,
+          priceList,
+          options: BUSINESS_OPTION_PRICES,
+          contactEmail: businessContactEmail(locale),
           formatCurrency,
+          formatEuros,
           formatNumber,
           formatPercent,
           formatDate,
-          baseUrl,
-          version,
+          baseUrl: process.env['API_URI'] || 'http://localhost:3004',
+          version: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
         });
       } catch (error) {
-        console.error('Error rendering reseller pricing view:', error);
-        reply.status(500).send({ error: 'Failed to render reseller pricing' });
+        if (error instanceof PriceListError) {
+          reply.status(400).send({ error: error.message });
+          return;
+        }
+        console.error(`Error rendering ${edition} price list view:`, error);
+        reply.status(500).send({ error: `Failed to render ${edition} price list` });
       }
-    }
-  );
+    };
 
-  // Generate reseller pricing PDF
-  fastify.post(
-    '/vibe/reseller-pricing/pdf',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
+  // Download name per edition, from the business bundle.
+  const PRICE_LIST_FILE_KEYS: Record<PriceListEdition, string> = {
+    retail: 'editionRetail',
+    reseller: 'editionReseller',
+    client: 'fileClient',
+  };
+
+  // `locale` is sent by the company Documents tab (the company's own
+  // language) and by the pricing-tables page (an explicit choice). Only the
+  // pricing-tables page sends a `profitMatrix`, so it can print numbers it
+  // has not saved yet; everyone else gets the saved table.
+  const priceListPdf =
+    (edition: PriceListEdition) => async (request: any, reply: any) => {
       try {
+        const { profitMatrix, locale: requestedLocale } = request.body || {};
+        const locale = translation.resolveBusinessLocale(requestedLocale);
+        // The client edition shows no prices, so it needs no profit table.
+        const matrix = edition === 'client' ? {} : await resolveProfitMatrix(profitMatrix);
+        if (edition !== 'client') assertProfitTable(matrix);
+
         const PDF = require('../pdf').default;
         const pdfManager = new PDF();
         const path = require('path');
         const fs = require('fs').promises;
-
-        // Get profit matrix from request body (per-product, per-tier percentages)
-        // `locale` is sent by the company Documents tab (the company's own
-        // language) and by the pricing-tables page (an explicit choice).
-        const { profitMatrix, locale: requestedLocale } = request.body || {};
-        const locale = translation.resolveBusinessLocale(requestedLocale);
-
-        const tempDir = '/tmp';
-        const fileName = `reseller_pricing_${Date.now()}.pdf`;
-        const filePath = path.join(tempDir, fileName);
-
-        // Create the URL for the HTML rendering with profit matrix
-        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const params = new URLSearchParams({ locale });
-        if (profitMatrix) params.set('profitMatrix', JSON.stringify(profitMatrix));
-        const htmlUrl = `${baseUrl}/vibe/reseller-pricing?${params.toString()}`;
-
-        // Generate PDF - let CSS @page rules control orientation
-        await pdfManager.generateFromUrl(htmlUrl, filePath, {
-          format: 'a4',
-          marginTop: 0,
-          marginBottom: 0,
-          marginLeft: 0,
-          marginRight: 0,
-        });
-
-        // Read the generated PDF
-        const pdfBuffer = await fs.readFile(filePath);
-
-        // Clean up temp file
-        try {
-          await fs.unlink(filePath);
-        } catch (unlinkError) {
-          console.warn('Failed to delete temp file:', unlinkError);
-        }
-
-        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
-        const downloadFilename = `${pricingT('editionReseller').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-        // Set response headers for PDF download
-        reply.header('Content-Type', 'application/pdf');
-        reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
-
-        reply.send(pdfBuffer);
-      } catch (error) {
-        console.error('Error generating reseller pricing PDF:', error);
-        reply.status(500).send({ error: 'Failed to generate reseller pricing PDF' });
-      }
-    }
-  );
-
-  // Retail pricing HTML view (for PDF generation) - only shows retail prices
-  fastify.get(
-    '/vibe/retail-pricing',
-    async (request: any, reply: any) => {
-      try {
-        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-
-        // Get profit matrix from query params (passed as JSON)
-        const profitMatrixParam = request.query.profitMatrix;
-        const profitMatrix: Record<string, Record<number, { reseller: number; qrsong: number }>> = profitMatrixParam
-          ? JSON.parse(decodeURIComponent(profitMatrixParam))
-          : {};
-
-        // Helper to get profit for a specific product and quantity
-        const getProfit = (productId: string, qty: number): { reseller: number; qrsong: number } => {
-          return profitMatrix[productId]?.[qty] || { reseller: 0, qrsong: 0 };
-        };
-
-        // Lambda screenshots this route to produce the PDF and carries no
-        // session, so the language arrives in the query string.
-        const locale = translation.resolveBusinessLocale(request.query.locale);
-        const intlTag = translation.getIntlTag(locale);
-        const pricingT = await translation.getBusinessTranslator(
-          locale,
-          'pricing'
-        );
-
-        // Format helpers
-        const formatCurrency = (value: number) => {
-          return new Intl.NumberFormat(intlTag, {
-            style: 'currency',
-            currency: 'EUR',
-          }).format(value);
-        };
-
-        const formatNumber = (value: number) => {
-          return new Intl.NumberFormat(intlTag).format(value);
-        };
-
-        // German writes 39,3 % (comma, non-breaking space before the sign).
-        const formatPercent = (value: number) => {
-          return new Intl.NumberFormat(intlTag, {
-            style: 'percent',
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          }).format(value / 100);
-        };
-
-        const formatDate = (date: Date) => {
-          return new Intl.DateTimeFormat(intlTag, {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          }).format(date);
-        };
-
-        // Product configurations
-        const quantities = [100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500, 5000, 10000];
-
-        const groups = [
-          {
-            name: 'QRSong! Box',
-            products: [
-              { id: 'schneider-48', name: `48 ${pricingT('variantCards')}`, cardCount: 48 },
-              { id: 'schneider-96', name: `96 ${pricingT('variantCards')}`, cardCount: 96 },
-              { id: 'schneider-192', name: `192 ${pricingT('variantCards')}`, cardCount: 192 },
-            ],
-          },
-        ];
-
-        // Calculate retail prices only
-        const prices: Record<string, Record<number, { retailPrice: number }>> = {};
-
-        for (const group of groups) {
-          for (const product of group.products) {
-            prices[product.id] = {};
-
-            for (const qty of quantities) {
-              try {
-                if (group.name === 'Standaard') {
-                  const settings = getProfit(product.id, qty);
-                  const result = await vibe.calculateTrompPricing({
-                    quantity: qty,
-                    printingType: (product as any).printingType,
-                    includeStansmestekening: false,
-                    includeStansvorm: false,
-                    includeCustomApp: false,
-                    profitMargin: 0,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const pricePerSet = result.calculation.pricePerSet;
-                    const qrsongProfit = pricePerSet * (settings.qrsong / 100);
-                    const resellerPrice = pricePerSet + qrsongProfit;
-                    // Reseller profit is calculated over resellerPrice (what they pay), not inkoop
-                    const resellerProfit = resellerPrice * (settings.reseller / 100);
-                    const retailPrice = resellerPrice + resellerProfit;
-                    prices[product.id][qty] = { retailPrice };
-                  }
-                } else if (group.name === 'QRSong! Box') {
-                  const settings = getProfit(product.id, qty);
-                  const result = await vibe.calculateSchneiderPricing({
-                    quantity: qty,
-                    cardCount: (product as any).cardCount,
-                    includeStansmes: false,
-                    includeCustomApp: false,
-                    profitMargin: 0,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const pricePerBox = result.calculation.pricePerBox;
-                    const qrsongProfit = pricePerBox * (settings.qrsong / 100);
-                    const resellerPrice = pricePerBox + qrsongProfit;
-                    // Reseller profit is calculated over resellerPrice (what they pay), not inkoop
-                    const resellerProfit = resellerPrice * (settings.reseller / 100);
-                    const retailPrice = resellerPrice + resellerProfit;
-                    prices[product.id][qty] = { retailPrice };
-                  }
-                }
-              } catch (error) {
-                console.error(`Error calculating retail price for ${product.id} qty ${qty}:`, error);
-              }
-            }
-          }
-        }
-
-        await reply.view('retail_pricing.ejs', {
-          locale,
-          t: pricingT,
-          groups,
-          quantities,
-          prices,
-          formatCurrency,
-          formatNumber,
-          formatPercent,
-          formatDate,
-          baseUrl,
-        });
-      } catch (error) {
-        console.error('Error rendering retail pricing view:', error);
-        reply.status(500).send({ error: 'Failed to render retail pricing' });
-      }
-    }
-  );
-
-  // Retail pricing PDF download
-  fastify.post(
-    '/vibe/retail-pricing/pdf',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const PDF = require('../pdf').default;
-        const pdfManager = new PDF();
-        const path = require('path');
-        const fs = require('fs').promises;
-
-        const { profitMatrix, locale: requestedLocale } = request.body || {};
-        const locale = translation.resolveBusinessLocale(requestedLocale);
-
-        const tempDir = '/tmp';
-        const fileName = `retail_pricing_${Date.now()}.pdf`;
-        const filePath = path.join(tempDir, fileName);
+        const filePath = path.join('/tmp', `${edition}_pricing_${Date.now()}.pdf`);
 
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const params = new URLSearchParams({ locale });
-        if (profitMatrix) params.set('profitMatrix', JSON.stringify(profitMatrix));
-        const htmlUrl = `${baseUrl}/vibe/retail-pricing?${params.toString()}`;
+        const htmlUrl = `${baseUrl}/vibe/${edition}-pricing?${priceListQuery(edition, locale, matrix)}`;
 
         // Generate PDF - let CSS @page rules control orientation
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -3224,27 +2945,36 @@ export default async function vibeRoutes(
           console.warn('Failed to delete temp file:', unlinkError);
         }
 
-        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
-        const downloadFilename = `${pricingT('editionRetail').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const t = await translation.getBusinessTranslator(locale, 'pricing');
+        const downloadFilename = `${t(PRICE_LIST_FILE_KEYS[edition]).replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
         reply.header('Content-Type', 'application/pdf');
         reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
 
         reply.send(pdfBuffer);
       } catch (error) {
-        console.error('Error generating retail pricing PDF:', error);
-        reply.status(500).send({ error: 'Failed to generate retail pricing PDF' });
+        if (error instanceof PriceListError) {
+          reply.status(400).send({ error: error.message });
+          return;
+        }
+        console.error(`Error generating ${edition} price list PDF:`, error);
+        reply.status(500).send({ error: `Failed to generate ${edition} price list PDF` });
       }
-    }
-  );
+    };
+
+  for (const edition of PRICE_LIST_EDITIONS) {
+    fastify.get(`/vibe/${edition}-pricing`, renderPriceList(edition));
+    fastify.post(`/vibe/${edition}-pricing/pdf`, getAuthHandler(['admin']), priceListPdf(edition));
+  }
 
   // ============================================
   // Playlist suggestions (featured playlists brochure)
   // ============================================
 
-  // HTML view, screenshotted by Lambda for the PDF. Unauthenticated like the
-  // price lists: the Lambda carries no session, so every filter travels in
-  // the query string and is validated by parsePlaylistSuggestionOptions.
+  // HTML view, screenshotted by Lambda for the PDF. Unauthenticated: the
+  // Lambda carries no session, so every filter travels in the query string
+  // and is validated by parsePlaylistSuggestionOptions. It shows no prices,
+  // so unlike the price lists it needs no signature.
   fastify.get(
     '/vibe/playlist-suggestions',
     async (request: any, reply: any) => {

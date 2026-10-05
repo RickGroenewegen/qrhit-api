@@ -1,0 +1,82 @@
+<!--
+    Planning: who does what when, and the date everything has to be in. In
+    2026 clients were told the lead time in seven different ways; this page
+    is the one statement (about 15 working days after the proof is approved,
+    20 to 25 from October to December).
+-->
+<%
+    var steps = [
+        { n: 1, who: t('planWhoWe') },
+        { n: 2, who: t('planWhoYou') },
+        { n: 3, who: t('planWhoYou') },
+        { n: 4, who: t('planWhoBoth') },
+        { n: 5, who: t('planWhoWe'), production: true },
+        { n: 6, who: t('planWhoWe') }
+    ];
+%>
+<div class="sheet">
+    <%- include('sheet_head', { sheetTitle: sheetTitle }) %>
+
+    <div class="sheet-body">
+        <div class="section-title">
+            <h2><%= t('planTitle') %></h2>
+            <div class="bar"></div>
+        </div>
+
+        <div class="b-plan">
+            <ol class="b-timeline">
+                <% steps.forEach(function (s) { %>
+                <li class="b-tl-step<%= s.production ? ' production' : '' %>">
+                    <div class="b-tl-dot">0<%= s.n %></div>
+                    <div class="b-tl-body">
+                        <div class="b-tl-head">
+                            <span class="b-tl-title"><%= t('planStep' + s.n + 'Title') %></span>
+                            <span class="b-who"><%= s.who %></span>
+                        </div>
+                        <div class="b-copy"><%= t('planStep' + s.n + 'Copy') %></div>
+                    </div>
+                </li>
+                <% }); %>
+            </ol>
+
+            <div class="b-plan-side">
+                <div class="b-panel disco b-deadline">
+                    <div class="b-art" style="right: -8mm; bottom: -10mm; width: 32mm; opacity: 0.35;">
+                        <img src="<%= baseUrl %>/assets/images/brand/note8_pop.png" alt="" />
+                    </div>
+                    <div class="b-h3"><%= t('planDeadlineTitle') %></div>
+                    <% [1, 2, 3].forEach(function (n) { %>
+                    <div class="b-deadline-line"><%= t('planDeadline' + n) %></div>
+                    <% }); %>
+                    <div class="b-small"><%= t('planDeadlineNote') %></div>
+                </div>
+
+                <div class="b-panel tint">
+                    <div class="b-h3"><%= t('planGoodTitle') %></div>
+                    <ul class="b-checks b-good">
+                        <% [1, 2, 3, 4, 5].forEach(function (n) { %>
+                        <li><%= t('planGood' + n) %></li>
+                        <% }); %>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="b-calendar-block">
+            <div class="section-title">
+                <h2><%= t('planExampleTitle') %></h2>
+                <div class="bar"></div>
+            </div>
+            <div class="b-calendar">
+                <% [1, 2, 3, 4].forEach(function (n) { %>
+                <div class="b-cal-step<%= n === 4 ? ' last' : '' %>">
+                    <div class="b-cal-when"><%= t('planEx' + n + 'When') %></div>
+                    <div class="b-cal-what"><%= t('planEx' + n) %></div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('sheet_foot', {}) %>
+</div>
