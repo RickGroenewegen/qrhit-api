@@ -1,0 +1,188 @@
+{
+  "_comment": "Source of truth for countries in qrhit-api, qrhit and qrhit-app. Edit it here, in qrhit-api/src/data/shared/, then run `node scripts/sync-shared-data.mjs`; the copies in the other repos are generated. Fields: see NEW_LANGUAGE.md.",
+  "fallback": {
+    "paymentMethods": ["creditcard", "paypal", "applepay", "klarna"]
+  },
+  "markets": [
+    {
+      "code": "NL",
+      "name": "Netherlands",
+      "locales": ["nl", "en"],
+      "paymentMethods": ["ideal", "applepay", "creditcard", "paypal", "klarna", "in3"],
+      "occasions": true,
+      "feed": "nl"
+    },
+    {
+      "code": "BE",
+      "name": "Belgium",
+      "locales": ["nl", "fr", "en"],
+      "paymentMethods": ["bancontact", "applepay", "creditcard", "paypal", "klarna", "belfius"],
+      "occasions": true,
+      "feed": "nl"
+    },
+    {
+      "code": "DE",
+      "name": "Germany",
+      "locales": ["de", "en"],
+      "paymentMethods": ["paypal", "directdebit", "klarna", "creditcard", "applepay", "riverty", "trustly", "paysafecard"],
+      "notOnBadges": ["riverty", "trustly", "paysafecard"],
+      "occasions": true,
+      "feed": "de"
+    },
+    {
+      "code": "AT",
+      "name": "Austria",
+      "locales": ["de", "en"],
+      "paymentMethods": ["eps", "klarna", "paypal", "creditcard", "applepay", "directdebit", "trustly", "paysafecard"],
+      "notOnBadges": ["directdebit", "trustly", "paysafecard"],
+      "occasions": true,
+      "feed": "de"
+    },
+    {
+      "code": "FR",
+      "name": "France",
+      "locales": ["fr", "en"],
+      "paymentMethods": ["creditcard", "paypal", "applepay", "klarna"],
+      "occasions": true
+    },
+    {
+      "code": "ES",
+      "name": "Spain",
+      "locales": ["es", "en"],
+      "paymentMethods": ["creditcard", "paypal", "applepay", "satispay", "klarna"],
+      "occasions": true,
+      "feed": "es"
+    },
+    {
+      "code": "IT",
+      "name": "Italy",
+      "locales": ["it", "en"],
+      "paymentMethods": ["creditcard", "paypal", "satispay", "bancomatpay", "applepay", "klarna"],
+      "occasions": true
+    },
+    {
+      "code": "PT",
+      "name": "Portugal",
+      "locales": ["pt", "en"],
+      "paymentMethods": ["multibanco", "mbway", "creditcard", "paypal", "applepay"],
+      "occasions": true
+    },
+    {
+      "code": "PL",
+      "name": "Poland",
+      "locales": ["pl", "en"],
+      "paymentMethods": ["blik", "creditcard", "applepay", "paypal", "klarna"],
+      "occasions": true
+    },
+    {
+      "code": "SE",
+      "name": "Sweden",
+      "currency": "SEK",
+      "locales": ["sv", "no", "en"],
+      "paymentMethods": ["swish", "klarna", "creditcard", "applepay"],
+      "occasions": true,
+      "feed": "sv"
+    },
+    {
+      "code": "NO",
+      "name": "Norway",
+      "currency": "NOK",
+      "locales": ["no", "sv", "en"],
+      "paymentMethods": ["klarna", "creditcard", "applepay", "paypal"],
+      "occasions": true,
+      "feed": "no"
+    },
+    {
+      "code": "DK",
+      "name": "Denmark",
+      "currency": "DKK",
+      "locales": ["da", "no", "sv", "en"],
+      "paymentMethods": ["klarna", "creditcard", "applepay", "paypal"],
+      "occasions": true
+    },
+    {
+      "code": "HU",
+      "name": "Hungary",
+      "currency": "HUF",
+      "locales": ["hu", "en"],
+      "paymentMethods": ["creditcard", "applepay", "paypal"],
+      "occasions": true
+    },
+    {
+      "code": "US",
+      "name": "United States",
+      "currency": "USD",
+      "locales": ["en"],
+      "occasions": true,
+      "feed": "en"
+    },
+    {
+      "code": "GB",
+      "name": "United Kingdom",
+      "currency": "GBP",
+      "locales": ["en"],
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"],
+      "occasions": true,
+      "feed": "en"
+    },
+    {
+      "code": "JP",
+      "name": "Japan",
+      "locales": ["jp", "en"],
+      "occasions": true
+    },
+    {
+      "code": "CN",
+      "name": "China",
+      "locales": ["cn", "en"],
+      "occasions": true
+    },
+    {
+      "code": "AU",
+      "name": "Australia",
+      "currency": "AUD",
+      "locales": ["en"],
+      "feed": "en"
+    },
+    {
+      "code": "CA",
+      "name": "Canada",
+      "currency": "CAD",
+      "locales": ["en", "fr"],
+      "feed": "en"
+    },
+    {
+      "code": "CH",
+      "name": "Switzerland",
+      "currency": "CHF",
+      "locales": ["de", "fr", "it", "en"],
+      "paymentMethods": ["twint", "creditcard", "paypal", "applepay", "klarna"],
+      "feed": "de"
+    },
+    {
+      "code": "IE",
+      "name": "Ireland",
+      "locales": ["en"],
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"]
+    },
+    { "code": "CZ", "name": "Czechia", "currency": "CZK" },
+    { "code": "LI", "name": "Liechtenstein", "locales": ["de", "en"] },
+    { "code": "LU", "name": "Luxembourg", "locales": ["de", "fr", "en"] },
+    { "code": "MC", "name": "Monaco", "locales": ["fr", "en"] },
+    { "code": "BR", "name": "Brazil", "locales": ["pt", "en"] },
+    { "code": "MX", "name": "Mexico", "locales": ["es", "en"] },
+    { "code": "AR", "name": "Argentina", "locales": ["es", "en"] },
+    { "code": "CL", "name": "Chile", "locales": ["es", "en"] },
+    { "code": "CO", "name": "Colombia", "locales": ["es", "en"] },
+    { "code": "PE", "name": "Peru", "locales": ["es", "en"] },
+    { "code": "SM", "name": "San Marino", "locales": ["it", "en"] },
+    { "code": "VA", "name": "Vatican City", "locales": ["it", "en"] },
+    { "code": "FI", "name": "Finland", "locales": ["sv", "en"] },
+    { "code": "IS", "name": "Iceland", "locales": ["no", "sv", "en"] },
+    { "code": "HK", "name": "Hong Kong", "locales": ["cn", "en"] },
+    { "code": "TW", "name": "Taiwan", "locales": ["cn", "en"] },
+    { "code": "SG", "name": "Singapore", "locales": ["cn", "en"] },
+    { "code": "NZ", "name": "New Zealand", "locales": ["en"] },
+    { "code": "ZA", "name": "South Africa", "locales": ["en"] }
+  ]
+}

@@ -1,176 +1,130 @@
-# Adding a language (and a currency)
+# Adding a language (and a country or a currency)
 
 What it takes to add a language to QRSong!: the website (`/Users/rick/Sites/qrhit`),
 this API, and the scan app (`/Users/rick/Sites/qrhit-app`). Written while adding
-Danish (`da`) and Hungarian (`hu`) in October 2026, the first languages added
-after the i18n bundle split, the markdown blog and the reviews file. A new
-currency has its own section at the end (HUF came with Hungarian).
+Danish (`da`) and Hungarian (`hu`) with the forint in October 2026, after which
+the language, country and currency tables of all three repos were folded into
+one source.
 
 Use the 2-letter ISO 639-1 code unless the site already spells the language
 otherwise: `jp` (Japanese), `cn` (Chinese) and `no` (Norwegian) are route
-codes, not language tags; `htmlLang` maps them to `ja`, `zh` and `nb`.
+codes, not language tags; `htmlLang` maps them to `ja`, `zh` and `nb`, and
+`aliases` to what browsers and devices send (`nb`, `nn`, `ja`, `zh`).
 
-The facts about a language are still kept in several hand-written tables in
-each repo. Every one is listed below; when one is missed nothing fails, the
-new language just quietly falls back to English or to another market there.
-(Folding them into shared data files is planned; see the frontend CLAUDE.md.)
+## The source: `src/data/shared/` in this repo
+
+| file | holds | read by |
+|---|---|---|
+| `locales.json` | every language: English and native name, flag, html/og tags, mail greeting, Apple storefront, the market it buys from (`country`) and its occasion market, the currency its pages pin, shipping suggestions, Mollie locale, hyphenation package, playlist-prompt description, feed number, `site` / `app` | `LOCALE_DATA`, Mollie, occasions, hyphenation, the playlist prompt, product feeds, all three `translate.js`; the site's `SUPPORTED_LANGUAGES`, og:locale, currency pins, payment badges, shipping page, i18n tooling; the app's languages, device mapping and website links |
+| `markets.json` | every country: its automatic currency, the playlist languages /playlists shows there, the Mollie methods in checkout order (and the ones the homepage badges leave out), occasion market, product feed language | Mollie, currency detection, occasion prefill, product feeds; the site's country locales, payment badges, admin calendar |
+| `currencies.json` | every currency in switcher order: decimals, snap step, the Mollie methods that take it | currency maps and rounding on both sides, Mollie's method filter, price formatting |
+
+Edit only these three, here, then:
+
+```bash
+node scripts/sync-shared-data.mjs
+```
+
+It copies the JSON into `qrhit/src/data/shared/` and
+`qrhit-app/src/app/shared-data/` and writes `shared-data.generated.ts` in all
+three repos: the typed accessors (`LOCALES`, `SITE_LOCALES`, `APP_LOCALES`,
+`MARKETS`, `CURRENCIES`) and the code unions (`LocaleCode`, `MarketCode`,
+`CurrencyCode`, so `SupportedCurrency` stays a literal type). Never edit a copy.
+`--check` changes nothing and fails on drift; `test/unit/shared-data.test.ts`
+runs it (and checks every site language has its database columns, every
+reference resolves and feed numbers are unique). It also fails when
+`qrhit/growth.config.json` lacks a site language in `pillars.blog.locales` or
+`pillars.ux.locales`.
+
+Commit all three repos together: a copy that differs from the source fails the
+API's tests.
 
 ## Order of work
 
-1. Start the translation runs first: they take the longest (section 1, 2, 3).
-2. Code in all three repos.
-3. Content that lives in files (blog, reviews) before the deploy.
-4. Deploy the API, then the frontend, then publish the CloudFront function.
-5. Database content after the deploy (Translate Fields, calendar prefill).
-6. App release once the site serves the new language.
+1. The entry in `locales.json` (and `markets.json` for its country), sync.
+2. Start the translation runs: they take the longest.
+3. The few hand-written pieces below, in all three repos.
+4. Content that lives in files (blog, reviews) before the deploy.
+5. Deploy the API (its `prisma db push` adds the columns), then the frontend,
+   then publish the CloudFront function.
+6. Database content after the deploy (Translate Fields, calendar prefill).
+7. App release once the site serves the new language.
 
-## 1. Frontend (`qrhit`)
+## 1. The entry
 
-### Translations
+A language for site and app sets `site` and `app` to true. Copy a similar
+entry and check every field; the generated interface documents them. Notes:
 
-- `translate.js`: add the code to `languages` and the English name to
-  `languagesFull`, at the same index.
-- `_scripts/i18n-lib.mjs`: `LOCALES`. The i18n check, split, crawl and the
-  bundle hashes (`?v=` cache busting) read this list; without it the new
-  language is not checked and its files are never re-fetched after a change.
-- Core `src/assets/i18n/en.json`: the language name under `langs`
-  (`"danish": "Danish"`). A brand-new key needs no `remove-from-cache.sh`.
-- Do NOT create empty `<lang>.json` files: `translate.js` creates every
-  bundle's file itself. `i18n-cache-busting.json` and
-  `src/app/i18n/*.generated.ts` are regenerated by `node cache.js`; do not edit
-  them.
-- Run it. A new language is the whole catalogue (about 4,500 keys in 58
-  bundles, three keys per call), so a single run takes hours. Split it with
-  `--only=<bundle,...>` over disjoint bundle sets and run them in parallel:
-  `node translate.js --dry-run` lists the work per bundle. Two runs must never
-  share a bundle. Stopping a run is safe: the cache is written at the end of a
-  bundle, so an interrupted bundle is simply done again.
-- A batch that fails leaves its keys untranslated; `--dry-run` shows them and a
-  rerun of that bundle fills them in.
-- Done when `node translate.js --dry-run` says 0 to translate, 0 stranded,
-  then `node cache.js` and `node _scripts/i18n-check.mjs` pass. For a new
-  language the check prints `fatal: path ... exists on disk, but not in
-  'main'` per new file: that is its lossless comparison finding nothing on
-  `main`, not a failure.
-- `translate.js` asks for every language any key in a batch of three lacks.
-  Until 2026-10-05 it also wrote the answer for languages a key already had,
-  so changing one English key re-translated its two neighbours everywhere
-  (the check's `[lossless]` failure). It now only writes what a key was
-  missing.
+- `name` is English: the LLM prompts and `translate.js` use it, and the site
+  shows the `langs.<name in lower case>` key from the core `en.json`. Add that
+  key there (`"danish": "Danish"`).
+- `currency` pins the currency of the language's pages whoever crawls them
+  (Googlebot fetches from US IPs). Give one when the language has one market;
+  leave it null for English (GB/US/AU/CA) and Polish (Mollie takes no cards in
+  PLN).
+- `country` drives the payment methods a speaker sees; `occasionCountry` only
+  when the occasion pages should follow another market (English → US for
+  Thanksgiving).
+- `hyphenation`: an npm `hyphenation.<lang>` package for card titles; install
+  it with `npm i <pkg> --before=<a week ago>` and check the lockfile.
+- `feedNumber` only for a language with a product feed; it is part of the
+  offer id, so never renumber one.
+- A new country in `markets.json`: `currency` only when visitors from there
+  should pay in it automatically; `locales` (its own language first, then
+  neighbours it reads, then `en`); `paymentMethods` most popular first, and
+  `notOnBadges` for niche ones the homepage strip leaves out; `occasions` for
+  an occasion-calendar market (its Father's Day may need a rule in
+  `src/data/giftOccasions.ts` `FATHERS_DAY` when `date-holidays` has none:
+  check with `new Holidays('DK', { languages: ['en'] }).getHolidays(2026)`);
+  `feed` for a Merchant Center / Channable feed.
 
-### The language itself
+## 2. Translations
 
-- `src/app/shared/languages.util.ts`:
-  - `SUPPORTED_LANGUAGES`: `{ code, name, nativeName, flag }`, plus `htmlLang`
-    only when the code is not a valid BCP-47 tag. `name` is the `langs.*` key.
-    Routes, `server.ts`, hreflang, the switcher, the admin pages and the
-    sitemap regex all follow from this list.
-  - `OG_LOCALE_MAP`: `language_TERRITORY` for `og:locale` (`da_DK`).
-- `_scripts/cloudfront/root-locale-redirect.js`: `SUPPORTED` (plain script,
-  CloudFront cannot import). Add a case to `root-locale-redirect.test.mjs`.
-  After the frontend deploy the function is **published by hand in AWS**;
-  verify with `node _scripts/cloudfront/root-locale-redirect.test.mjs --live`.
-- The core `<lang>.json` must exist before the language goes live: `server.ts`
-  caches an empty catalogue for a missing core file, and the core has no
-  English fallback.
+- **Website** (`qrhit`): `translate.js` reads the languages from the shared
+  file; do not create empty files, it writes each bundle's `<lang>.json`.
+  A new language is the whole catalogue (about 4,500 keys in 58 bundles, three
+  per call): hours in one run. Split it with `--only=<bundle,...>` over
+  disjoint bundle sets and run those in parallel (`node translate.js --dry-run`
+  lists the work per bundle). Two runs must never share a bundle. Stopping a
+  run is safe: the cache is written at the end of a bundle. A batch that fails
+  leaves its keys untranslated; a rerun of that bundle fills them in.
+  Done when `--dry-run` says 0 to translate, 0 stranded, and `node cache.js`
+  and `node _scripts/i18n-check.mjs` pass. For a new language the check prints
+  `fatal: path ... exists on disk, but not in 'main'` per new file: its
+  lossless comparison finding nothing on `main`, not a failure.
+- **API**: `node translate.js` writes `src/locales/<lang>.json` (about 700
+  keys, minutes). It must be complete before the deploy: `/qr/:trackId` takes
+  the locale from the phone's Accept-Language.
+- **App**: `node translate.js` writes `src/assets/i18n/<lang>.json` (about
+  150 keys).
+- The core `<lang>.json` of the website must exist before the language goes
+  live: `server.ts` caches an empty catalogue for a missing core file.
 
-### Hand-kept tables
+## 3. Still by hand
 
-| file | what | without it |
+| where | what | guarded by |
 |---|---|---|
-| `src/data/country-locales.ts` | which playlist languages a country sees on /playlists (`DK: ['da','no','sv','en']`) | the country sees another market's lists |
-| `src/data/currency-map.ts` | `LANGUAGE_TO_CURRENCY`, the currency a language pins (`da: 'DKK'`) | crawlers from the US index USD prices |
-| `src/data/payment-methods.ts` | `LANGUAGE_IMPLIES_COUNTRY`, `METHODS_BY_COUNTRY` (mirror of the API's `mollie.ts`) | the payment badges of the fallback list |
-| `src/app/shipping-info/shipping-info.component.ts` | `SUGGESTED_BY_LANGUAGE` | English-market suggestions |
-| `src/app/shared/calendar-countries.ts` | the occasion markets, mirror of the API's `TARGET_COUNTRIES` | the market is missing in the admin calendar |
-| `src/app/shared/box-presets.util.ts` | `LOCAL_SONGS_BY_LANGUAGE`: three current local hits for the homepage box, each verified on Spotify (id, artist, title, release year) | the international songs |
-| `src/app/shared/app-phone-preview/app-preview.data.ts` | `APP_LANGUAGE_NAMES`, mirror of the app's languages | the preview phone shows English |
-| `admin-company-lists.component.ts`, `list-detail/list-detail.types.ts` | typed `description_<lang>` | nothing at runtime (the save sends every language) |
-| `growth.config.json` | `pillars.ux.locales`, `pillars.blog.locales` (also drives reviews) | PostHog paths unnormalised; no blog/review translations |
-| `public/llms.txt`, `music-quiz/en.json` (`multiLanguageDesc`), CLAUDE.md | the number of languages in copy | a wrong count |
-
-Optional: localized landing slugs in `src/app/config/language-specific-routes.json`
-(add them to `_scripts/routes/i18n.txt` for the crawl). The Norway lander's
-copy is about Norway and NOK; a lander on that component needs hand-edited
-copy in the new language's bundle file.
+| `prisma/schema.prisma` | `genre.name_<lang>`, `Playlist.description_<lang>`, `CompanyList.description_<lang>`, `EventBase.name_/description_/body_<lang>` (copy the `_no` lines). Not `Blog` or `TrustPilot`: unread. | `shared-data.test.ts` |
+| `qrhit/_scripts/cloudfront/root-locale-redirect.js` | the `SUPPORTED` list (CloudFront cannot import); after the frontend deploy the function is **published by hand in AWS**, verify with `--live` | its test asserts it equals the site languages |
+| `qrhit/growth.config.json` | `pillars.blog.locales`, `pillars.ux.locales` | `sync-shared-data.mjs --check` |
+| growl (`/Users/rick/Sites/growl`) | `src/pillars/blog/translate.ts` `LANGUAGE_NAMES`, `html-to-markdown.ts` `KNOWN_LOCALES`, `opportunities.ts` `LOCALE_MARKETS` (Search Console country, DataForSEO location) | - |
+| `qrhit/src/app/shared/box-presets.util.ts` | `LOCAL_SONGS_BY_LANGUAGE`: three current local hits for the homepage box, each verified on Spotify (id, artist, title, release year) | its spec (exactly three) |
+| `src/productFeed.ts` `getTracksLabel`, `src/_data/chat.json` | copy in the language / the language list the chat widget names | - |
+| `qrhit-app/src/app/app.component.ts` `LANGUAGES_ONCE_UNMATCHED` | add the language, so users who got English as the fallback before it existed switch once | - |
+| `qrhit/public/llms.txt`, `music-quiz/en.json` `multiLanguageDesc` | the number of languages in copy (`remove-from-cache.sh` after changing the latter) | - |
+| `qrhit/src/app/config/language-specific-routes.json` | optional localized landing slugs (add them to `_scripts/routes/i18n.txt` for the crawl); the Norway lander's copy is about Norway and NOK, so a lander on that component needs hand-edited copy | - |
 
 Needs nothing: fonts (Google Fonts serves latin-ext; the app bundles it),
 locale data (formatting uses `Intl`), flags (flagcdn.com), the countries
-bundle, VAT rates, sitemaps.
-
-### Growl (`/Users/rick/Sites/growl`)
-
-- `src/pillars/blog/translate.ts`: `LANGUAGE_NAMES`.
-- `src/pillars/blog/html-to-markdown.ts`: `KNOWN_LOCALES`.
-- `src/pillars/blog/opportunities.ts`: `LOCALE_MARKETS` (Search Console
-  country, DataForSEO location), which the keyword briefs use.
-
-## 2. API (this repo)
-
-### The language itself
-
-- `src/translation.ts` `LOCALE_DATA`: `{ code, name, greeting, storefront }`
-  (English name for prompts, mail greeting, Apple Music storefront). Sitemaps,
-  the SEO/description translators, language detection, mail, EmailOctopus
-  locale tags, featured SQL, quiz and bingo follow from it.
-  `BUSINESS_LOCALES` (quotations, invoices) stays nl/de/en.
-- `translate.js`: `languages` + `languagesFull` of the `main` bundle (not
-  `business`). `node translate.js` writes `src/locales/<lang>.json` (about 700
-  keys, minutes). It must be complete before the deploy: `/qr/:trackId` takes
-  the locale from the phone's Accept-Language, and a missing file throws.
-
-### Database columns
-
-Copy every `_no` line in `prisma/schema.prisma`:
-
-- `genre.name_<lang>`
-- `Playlist.description_<lang>`
-- `CompanyList.description_<lang>` (the admin save sends it for every
-  language, so a missing column breaks saving a list)
-- `EventBase.name_<lang>`, `description_<lang>`, `body_<lang>`
-
-Not `Blog` or `TrustPilot`: both tables are unread (blog and reviews are files).
-This repo uses `prisma db push`, not migrations: `deploy_api` runs it before
-the build and restart. Locally `npx prisma generate`; the test database
-`npm run test:db:push`.
-
-### Hand-kept tables
-
-| file | what |
-|---|---|
-| `src/data/giftOccasions.ts` | `TARGET_COUNTRIES`, `LOCALE_PRIMARY_COUNTRY` (without it `/<lang>/occasion` shows US dates), `FATHERS_DAY` when `date-holidays` has none for the country (check with `new Holidays('DK', { languages: ['en'] }).getHolidays(2026)`) |
-| `src/mollie.ts` | `LANGUAGE_IMPLIES_COUNTRY`, the Mollie locale map in `resolveMollieLocale` (`hu_HU`), `METHODS_BY_COUNTRY` |
-| `src/aiPlaylist.ts` | `describeLocale` |
-| `src/data/hyphenate.ts` | pattern module for card titles (`hyphenation.<lang>`, `npm i` with `--before` a week back) |
-| `src/productFeed.ts` | `getTracksLabel`; the feed tables (`COUNTRY_ALLOWED_LOCALES`, `LOCALE_COUNTRY_PAIRS`, `LOCALE_NUMBERS`, never renumber) only when the country gets a Merchant Center feed |
-| `src/_data/chat.json` | the chat widget's language list |
-| `test/unit/translation.test.ts`, `gift-occasions.test.ts` | the exact locale list, the market count |
-
-## 3. Scan app (`qrhit-app`)
-
-- `translate.js`: `languages` + `languagesFull`; `node translate.js` writes
-  `src/assets/i18n/<lang>.json` (about 150 keys).
-- `src/app/languages.ts`: `APP_LANGUAGES` (code and native name, in the
-  settings picker's alphabetical order), `WEBSITE_LANGUAGES` (links to
-  qrsong.io in any other language open English), `DEVICE_LANGUAGE_ALIASES`
-  when the device code differs from ours (`nb` → `no`).
-- `src/app/app.component.ts` `LANGUAGES_ONCE_UNMATCHED`: add the new language,
-  so users who installed before it and got English as a fallback switch to it
-  once. A language picked in settings is never overridden.
-- No native change: the app has no `.lproj` or `values-xx` resources.
-- Release: bump `package.json`, `android/app/build.gradle` `versionName` and
-  both `MARKETING_VERSION`s in `ios/App/App.xcodeproj/project.pbxproj`, write
-  `_changelogs/<version>.txt`, then `npm run ios:testflight` and
-  `npm run android:play`. Only after the website serves the language.
-- Also: `src/app/shared/app-phone-preview/app-preview.data.ts` in the frontend.
+bundle, VAT rates, sitemaps, hreflang, the language menu.
 
 ## 4. Content
 
 Before the deploy (files in this repo):
 
-- **Blog**: `npm run growth -- blog keywords` (per-market briefs from Search
-  Console; thin for a new market), `npm run growth -- blog translate`,
-  `npm run growth -- blog lint`.
+- **Blog**: `npm run growth -- blog keywords` in the website (per-market briefs
+  from Search Console; thin for a new market), `npm run growth -- blog
+  translate`, `npm run growth -- blog lint`.
 - **Reviews**: `npm run growth -- reviews translate`, then `reviews lint`,
   which fails until every visible review has the new locale.
 
@@ -182,57 +136,55 @@ After the deploy (production database; ask first):
   for word for a kept description, plain translation otherwise; the row is
   marked for Merchant Center and its product page cache cleared), company list
   descriptions and occasion names, descriptions and pages. One call per row for
-  all ticked languages. Progress is in the API log. Genre names also fill
+  all ticked languages; progress is in the API log. Genre names also fill
   themselves overnight.
-- **Admin › Bulk actions › Prefill Event Calendar** for the new markets (or
-  wait for the monthly run).
+- **Admin › Bulk actions › Prefill Event Calendar** for new occasion markets
+  (or wait for the monthly run).
 
 ## 5. Verification
 
-- API: `npx tsc --noEmit`, `npx vitest run test/unit`. Never the integration
-  tests against the live database host.
-- Frontend: `node translate.js --dry-run`, `node cache.js`,
-  `node _scripts/i18n-check.mjs`, `npx ng build --configuration=development`
-  (never `npm run build`), serve it and run `node _scripts/i18n-crawl.mjs`,
-  plus the `ng serve` pass (see the frontend CLAUDE.md). Open `/<lang>` home,
-  a product page, pricing and checkout; the language menu on a phone.
-- App: `npx ng build`, then the app in a browser with the device language set.
+- API: `node scripts/sync-shared-data.mjs --check`, `npx tsc --noEmit`,
+  `npx vitest run test/unit`. Never the integration tests against the live
+  database host.
+- Website: `node translate.js --dry-run`, `node cache.js`,
+  `node _scripts/i18n-check.mjs`, `node _scripts/cloudfront/root-locale-redirect.test.mjs`,
+  `npx ng test --watch=false`, `npx ng build --configuration=development`
+  (never `npm run build`), serve it (`PORT=4311 node dist/<out>/server/server.mjs`)
+  and run `node _scripts/i18n-crawl.mjs` (it runs without the API; routes that
+  need a slug from it are skipped), plus the `ng serve` pass (see the website's
+  CLAUDE.md). A development build has unhashed file names served with a
+  one-year cache, so a browser that saw an earlier build keeps its old
+  `main.js` and `styles.css` until they are fetched with `cache: 'reload'`.
+  Open `/<lang>` home, a product page, pricing and checkout; the language menu
+  on a phone.
+- App: `npx ng test --watch=false`, `npx ng build`, then the app in a browser
+  with the device language set.
 
 ## 6. A new currency
 
-Everything is keyed on `SupportedCurrency`; adding the code to the two
-`SUPPORTED_CURRENCIES` lists makes the compiler ask for the snap step. What the
-compiler does not ask for:
+One entry in `currencies.json` (and `currency` on the markets that should get
+it automatically, `currency` on a language that should pin it): `decimals` (0
+for a currency without cents in practice, like HUF), `snap` (every converted
+amount rounds to a multiple of it; pick a step worth about €0.20-0.50) and
+`methods`, the Mollie methods that take it, from
+https://docs.mollie.com/docs/multicurrency (a method no currency lists is
+EUR-only). Then sync.
 
-**Frontend**
+In code, nothing to add, but keep to the rules that made HUF work:
 
-- `src/data/currency-map.ts`: `SUPPORTED_CURRENCIES` (the switcher's order),
-  `COUNTRY_TO_CURRENCY`, `LANGUAGE_TO_CURRENCY`, `SNAP_INCREMENTS` (every
-  converted amount snaps to it; pick a step worth about €0.20-0.50) and
-  `CURRENCY_DECIMALS` (0 for a currency without cents in practice, like HUF).
-- `src/data/payment-methods.ts`: its own `SupportedCurrency` copy, and
-  `METHODS_BY_COUNTRY` for the country.
-- Format money with `formatPrice` / `CurrencyService.formatEur` /
-  `PricePipe`, never a local `Intl.NumberFormat` with fixed digits. A unit
-  price (per card) goes through `convertEurUnit`, which does not snap.
-- Fixtures: `src/testing/mock-services.ts`, `e2e/fixtures/data/currency-rates.json`.
-- Currency names come from `Intl.DisplayNames`: no translation key.
-
-**API**
-
-- `src/data/currency-map.ts`: `SUPPORTED_CURRENCIES`, `COUNTRY_TO_CURRENCY`.
-- `src/services/currency-format.ts`: `SNAP_INCREMENTS`, same value as the
-  frontend.
-- `src/mollie.ts` `METHOD_CURRENCY_SUPPORT`: a `Partial`, so the compiler is
-  silent; a currency missing there gets no payment methods at all. Check
-  Mollie's table (https://docs.mollie.com/docs/multicurrency) for the methods
-  and the decimals. Amounts go to Mollie as `toFixed(2)` whatever the
-  currency's decimals ("13000.00").
-- `createRefund`: a partial refund is a proportional share and has cents; round
-  it to what the currency allows (HUF: down to whole forints).
-- ECB rates (`services/fx.ts`) cover every currency ECB publishes.
-- Nothing in Prisma (currency is a string), MoneyBird or the reports (they
-  book EUR), or the invoice (its formatter takes the currency's own decimals).
+- Format money with `formatPrice` / `CurrencyService.formatEur` / `PricePipe`,
+  never a local `Intl.NumberFormat` with fixed digits. A unit price (per card)
+  goes through `convertEurUnit`, which does not snap.
+- Amounts go to Mollie as `toFixed(2)` whatever the currency's decimals
+  ("13000.00"); a partial refund is a proportional share and has cents, so
+  `createRefund` rounds it for a currency without them (HUF: down to whole
+  forints).
+- ECB rates (`services/fx.ts`) cover every currency ECB publishes. Currency
+  names come from `Intl.DisplayNames`: no translation key.
+- Nothing in Prisma (currency is a string), MoneyBird or the reports (they book
+  EUR), or the invoice (its formatter takes the currency's own decimals).
+- Fixtures: `qrhit/src/testing/mock-services.ts` (`supported`) and
+  `qrhit/e2e/fixtures/data/currency-rates.json`.
 
 **Mollie dashboard**: enable the currency for each method on the profile before
 the deploy, or payments in it are refused.

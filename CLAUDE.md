@@ -45,6 +45,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Usage: `./_scripts/ro-query.sh [--vertical|--batch] "SELECT …"`; anything but SELECT/SHOW/DESCRIBE/EXPLAIN/WITH is refused (`--batch` is tab-separated with a header, for scripts)
    - Keep it narrow (indexed ids, LIMIT): it is the live database
 
+### Languages, countries, currencies: `src/data/shared/`
+
+`locales.json`, `markets.json` and `currencies.json` are the one source for the
+API, the website and the scan app. Edit them here, then run
+`node scripts/sync-shared-data.mjs`: it copies them into `qrhit` and
+`qrhit-app` and writes `shared-data.generated.ts` in all three (typed accessors
+plus the `LocaleCode` / `MarketCode` / `CurrencyCode` unions). `LOCALE_DATA`,
+the currency maps and snap steps, the Mollie method/locale/currency tables,
+the occasion markets, hyphenation, the playlist prompt's language names and
+the product feed tables all derive from them; a new hand-written list of
+language or country codes is a regression. `test/unit/shared-data.test.ts`
+fails on drift, on a site language without its database columns, and on a
+dangling reference. Adding a language or currency: `NEW_LANGUAGE.md`.
+
 ### Translation Files
 - Translations are stored in `src/locales/*.json` (en.json, nl.json, de.json, etc.)
 - Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`

@@ -5,6 +5,10 @@ const path = require('path');
 const colors = require('colors');
 require('dotenv').config();
 
+const SITE_TARGETS = require('./src/data/shared/locales.json').locales.filter(
+  (l) => l.site && l.code !== 'en'
+);
+
 // Translation bundles. The `main` bundle drives the app's own (informal)
 // copy; `business` holds the formal B2B document copy used by quotations,
 // technical instructions and MoneyBird invoice lines, which has to be written
@@ -14,22 +18,9 @@ const bundles = [
   {
     name: 'main',
     baseDir: path.join(__dirname, '/src/locales'),
-    languages: ['nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no', 'da', 'hu'],
-    languagesFull: [
-      'Dutch',
-      'German',
-      'French',
-      'Spanish',
-      'Italian',
-      'Portuguese',
-      'Polish',
-      'Japanese',
-      'Chinese', // (Simplified)
-      'Swedish',
-      'Norwegian',
-      'Danish',
-      'Hungarian',
-    ],
+    // Every language qrsong.io is served in, from src/data/shared/locales.json.
+    languages: SITE_TARGETS.map((l) => l.code),
+    languagesFull: SITE_TARGETS.map((l) => l.name),
     style:
       '. Be informal. ',
   },

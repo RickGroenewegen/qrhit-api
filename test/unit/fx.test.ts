@@ -79,6 +79,21 @@ describe('Fx', () => {
     expect(await fx.convertAndFormat(30.98, 'HUF')).toEqual({ value: '13000.00', currency: 'HUF' });
   });
 
+  it('fetches again when the cached day lacks a supported currency, at most every ten minutes', async () => {
+    // A day cached before HUF existed. (Fx is a singleton: earlier tests have
+    // already used up its ten minutes.)
+    (fx as any).lastIncompleteRefresh = 0;
+    cacheStore.set('fx:rates:latest', JSON.stringify({ asOf: '2026-06-09', rates: { EUR: 1, NOK: 11.5 } }));
+    const rates = await fx.getRates();
+    expect(axiosGet).toHaveBeenCalledTimes(1);
+    expect(rates?.rates.HUF).toBe(398.45);
+
+    // Still incomplete (the fixture lacks SEK and others): no second fetch yet.
+    axiosGet.mockClear();
+    await fx.getRates();
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
   it('convert to EUR is identity', async () => {
     expect(await fx.convert(12.345, 'EUR')).toEqual({ amount: 12.35, rate: 1 });
     expect(axiosGet).not.toHaveBeenCalled();

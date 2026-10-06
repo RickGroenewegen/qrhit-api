@@ -36,6 +36,7 @@ import {
   MAX_CARDS_PHYSICAL,
   APP_DESIGN_PRICE,
   PRICE_TABLE_QUANTITIES,
+  productTakesQuantity,
 } from '../config/constants';
 import {
   CardProduct,
@@ -128,16 +129,19 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // quantity); the finished table is cached for an hour so the SSR pass
   // costs a single request.
   fastify.get('/api/pricing/tiers', async (_request: any, reply: any) => {
-    const cacheKey = 'pricingTiers_v1';
+    const cacheKey = 'pricingTiers_v2';
     const cached = await cache.get(cacheKey);
     if (cached) {
       return reply.send(JSON.parse(cached));
     }
 
+    // A size above a product's cap (printed cards and sheets stop at
+    // MAX_CARDS_PHYSICAL) has no price: null, not an error.
     const priceFor = async (
       quantity: number,
       product: CardProduct
     ): Promise<number | null> => {
+      if (!productTakesQuantity(product, quantity)) return null;
       try {
         return await cardPrice(quantity, product);
       } catch (e: any) {
@@ -164,8 +168,10 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
 
     const payload = { success: true, data: { currency: 'EUR', rows } };
-    const complete = rows.every(
-      (row) => row.digital && row.sheets && row.physical
+    const complete = rows.every((row) =>
+      (['digital', 'sheets', 'physical'] as const).every(
+        (product) => row[product] || !productTakesQuantity(product, row.quantity)
+      )
     );
     if (complete) {
       await cache.set(cacheKey, JSON.stringify(payload), 3600);

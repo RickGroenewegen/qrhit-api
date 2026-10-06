@@ -1,0 +1,17 @@
+{
+  "_comment": "Source of truth for currencies in qrhit-api, qrhit and qrhit-app. Edit it here, in qrhit-api/src/data/shared/, then run `node scripts/sync-shared-data.mjs`; the copies in the other repos are generated. snap: every converted amount rounds to a multiple of it (0 = cents); methods: the Mollie methods that accept the currency, see https://docs.mollie.com/docs/multicurrency (a method no currency lists is taken as EUR-only). The order is the currency switcher's.",
+  "currencies": [
+    { "code": "EUR", "decimals": 2, "snap": 0, "methods": ["ideal", "bancontact", "belfius", "kbc", "eps", "creditcard", "applepay", "paypal", "klarna", "in3", "twint", "satispay", "bancomatpay", "multibanco", "mbway", "blik", "przelewy24", "riverty", "trustly", "directdebit", "paysafecard"] },
+    { "code": "NOK", "decimals": 2, "snap": 5, "methods": ["creditcard", "applepay", "paypal", "klarna", "riverty", "trustly"] },
+    { "code": "SEK", "decimals": 2, "snap": 5, "methods": ["creditcard", "applepay", "paypal", "klarna", "riverty", "trustly", "swish"] },
+    { "code": "DKK", "decimals": 2, "snap": 5, "methods": ["creditcard", "applepay", "paypal", "klarna", "riverty", "trustly"] },
+    { "code": "GBP", "decimals": 2, "snap": 0.5, "methods": ["creditcard", "applepay", "paypal", "klarna", "riverty", "trustly", "paybybank"] },
+    { "code": "CHF", "decimals": 2, "snap": 0.5, "methods": ["creditcard", "applepay", "paypal", "klarna", "riverty", "twint"] },
+    { "code": "PLN", "decimals": 2, "snap": 1, "methods": ["paypal", "blik", "przelewy24"] },
+    { "code": "CZK", "decimals": 2, "snap": 5, "methods": ["creditcard", "applepay", "paypal"] },
+    { "code": "HUF", "decimals": 0, "snap": 100, "methods": ["creditcard", "applepay", "paypal"] },
+    { "code": "USD", "decimals": 2, "snap": 0.5, "methods": ["creditcard", "applepay", "paypal"] },
+    { "code": "CAD", "decimals": 2, "snap": 0.5, "methods": ["creditcard", "applepay", "paypal"] },
+    { "code": "AUD", "decimals": 2, "snap": 0.5, "methods": ["creditcard", "applepay", "paypal"] }
+  ]
+}

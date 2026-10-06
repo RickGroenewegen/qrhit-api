@@ -17,8 +17,15 @@ export function maxCardsFor(digital: boolean): number {
 export const DIGITAL_CARDS_BASE_PRICE = 13;
 
 // Sample deck sizes of the price table on /pricing (GET /api/pricing/tiers)
-// and of the blog price tokens `cards.<type>.<quantity>` (src/priceTokens.ts).
-export const PRICE_TABLE_QUANTITIES = [50, 100, 150, 200, 300, 500] as const;
+// and of the blog price tokens `cards.<type>.<quantity>` (src/priceTokens.ts),
+// up to the largest deck. A size above a product's cap (printed cards and
+// sheets stop at MAX_CARDS_PHYSICAL) has no price for that product.
+export const PRICE_TABLE_QUANTITIES = [50, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000] as const;
+
+/** Whether a deck of `quantity` cards can be ordered as `product` at all. */
+export function productTakesQuantity(product: string, quantity: number): boolean {
+  return quantity <= maxCardsFor(product === 'digital');
+}
 
 // Redis key of GET /api/shipping/info-by-country's answer (production days
 // and message, delivery times, shipping costs; 1 hour). Bumped when the

@@ -11,6 +11,7 @@ import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
 import { LLM_MODEL_FAST } from './llmModels';
+import { LOCALES } from './data/shared/shared-data.generated';
 import {
   ArtistBalance,
   ArtistIntent,
@@ -1727,23 +1728,9 @@ class AIPlaylistGenerator {
    * ("English-only 90s hits"), and the LLM is told as much.
    */
   private describeLocale(locale: string): string {
-    const map: Record<string, string> = {
-      nl: 'Dutch (Netherlands / Flanders)',
-      de: 'German (Germany / Austria / Switzerland)',
-      fr: 'French (France / Belgium / Switzerland)',
-      es: 'Spanish (Spain and Latin America)',
-      it: 'Italian (Italy)',
-      pt: 'Portuguese (Portugal / Brazil)',
-      pl: 'Polish (Poland)',
-      sv: 'Swedish (Sweden)',
-      no: 'Norwegian (Norway)',
-      da: 'Danish (Denmark)',
-      hu: 'Hungarian (Hungary)',
-      jp: 'Japanese (Japan)',
-      cn: 'Chinese (Mainland China / Taiwan / Hong Kong)',
-      en: 'English (UK / US / global)',
-    };
-    const display = map[locale] || `the "${locale}" locale`;
+    // `aiDescription` in src/data/shared/locales.json.
+    const display =
+      LOCALES.find((l) => l.code === locale)?.aiDescription || `the "${locale}" locale`;
     if (locale === 'en') {
       // English: no localization bias — keep the catalog global by default.
       return `The user's UI is set to ${display}. Treat this as the default global catalog. Do not over-rotate to UK or US artists.`;

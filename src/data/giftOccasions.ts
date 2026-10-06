@@ -16,31 +16,25 @@
  * "Martin Luther King Jr. Day" or "Day after Thanksgiving Day".
  */
 
-// ISO-3166 alpha-2 store markets the calendar is prefilled for.
-export const TARGET_COUNTRIES = [
-  'NL', 'BE', 'DE', 'AT', 'FR', 'ES', 'IT', 'PT', 'PL', 'SE', 'NO', 'DK', 'HU', 'GB', 'US', 'JP', 'CN',
-] as const;
+import { MARKETS, SITE_LOCALES } from './shared/shared-data.generated';
+
+// ISO-3166 alpha-2 store markets the calendar is prefilled for: the markets
+// with `occasions` in src/data/shared/markets.json.
+export const TARGET_COUNTRIES: readonly string[] = MARKETS.filter((m) => m.occasions).map(
+  (m) => m.code
+);
 
 // The store market whose occasion date drives each locale's public occasion
-// landing page (landing pages are per-language; see the seasonal plan). `en→US`
+// landing page (landing pages are per-language; see the seasonal plan): a
+// language's `occasionCountry` in locales.json, else its `country`. `en→US`
 // so US-only occasions (Thanksgiving) and Father's Day get an English page; GB
 // shares the same Father's Day date.
-export const LOCALE_PRIMARY_COUNTRY: Record<string, string> = {
-  en: 'US',
-  nl: 'NL',
-  de: 'DE',
-  fr: 'FR',
-  es: 'ES',
-  it: 'IT',
-  pt: 'PT',
-  pl: 'PL',
-  sv: 'SE',
-  no: 'NO',
-  da: 'DK',
-  hu: 'HU',
-  jp: 'JP',
-  cn: 'CN',
-};
+export const LOCALE_PRIMARY_COUNTRY: Record<string, string> = Object.fromEntries(
+  SITE_LOCALES.filter((l) => l.occasionCountry ?? l.country).map((l) => [
+    l.code,
+    (l.occasionCountry ?? l.country)!,
+  ])
+);
 
 /**
  * Canonical localised occasion slug, with English/key fallbacks (so CJK names

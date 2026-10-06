@@ -11,6 +11,8 @@
  * so it stays trivially testable and safe to import from anywhere.
  */
 
+import { LOCALES, MARKETS } from './data/shared/shared-data.generated';
+
 // Genre groupings for PMax campaign segmentation (custom_label_1)
 export const GENRE_GROUPS: Record<string, string> = {
   // Pop & Hits
@@ -44,48 +46,28 @@ export const GENRE_GROUPS: Record<string, string> = {
 // this allowed set. This is the SAME "localised + international" rule the
 // website uses, ported here so the product feeds match it instead of doing a
 // stricter single-locale exact match.
-export const COUNTRY_ALLOWED_LOCALES: Record<string, string[]> = {
-  US: ['en'],
-  GB: ['en'],
-  AU: ['en'],
-  CA: ['en', 'fr'],
-  NL: ['nl', 'en'],
-  BE: ['nl', 'fr', 'en'],
-  DE: ['de', 'en'],
-  AT: ['de', 'en'],
-  CH: ['de', 'fr', 'it', 'en'],
-  ES: ['es', 'en'],
-  SE: ['sv', 'no', 'en'],
-  NO: ['no', 'sv', 'en'],
-};
+// The feed countries are the markets with a `feed` language in
+// src/data/shared/markets.json, and a country's allowed locales are its
+// `locales` there: the same list the website's /playlists uses.
+const FEED_MARKETS = MARKETS.filter((m) => m.feed);
 
-// Mapping of locale-country combinations we publish products for.
-// Multiple countries can use the same language content.
+export const COUNTRY_ALLOWED_LOCALES: Record<string, string[]> = Object.fromEntries(
+  FEED_MARKETS.map((m) => [m.code, [...(m.locales ?? [m.feed!])]])
+);
+
+// The locales we generate content for, in the order their id suffix implies:
+// `feedNumber` in locales.json. Never renumber one.
+export const LOCALE_NUMBERS: Record<string, number> = Object.fromEntries(
+  LOCALES.filter((l) => l.feedNumber).map((l) => [l.code, l.feedNumber!])
+);
+
+// Mapping of locale-country combinations we publish products for. Multiple
+// countries can use the same language content (Belgium the Dutch, Austria and
+// Switzerland the German), each in its own currency.
 export const LOCALE_COUNTRY_PAIRS: Array<{ locale: string; country: string }> =
-  [
-    { locale: 'en', country: 'US' },
-    { locale: 'en', country: 'GB' }, // UK — English content, GBP
-    { locale: 'en', country: 'AU' }, // Australia — English content, AUD
-    { locale: 'en', country: 'CA' }, // Canada — English content, CAD
-    { locale: 'nl', country: 'NL' },
-    { locale: 'nl', country: 'BE' }, // Belgium using Dutch content
-    { locale: 'de', country: 'DE' },
-    { locale: 'de', country: 'AT' }, // Austria using German content
-    { locale: 'de', country: 'CH' }, // Switzerland using German content, CHF
-    { locale: 'es', country: 'ES' },
-    { locale: 'sv', country: 'SE' },
-    { locale: 'no', country: 'NO' },
-  ];
-
-// The locales we generate content for, in the order their id suffix implies.
-export const LOCALE_NUMBERS: Record<string, number> = {
-  en: 1,
-  nl: 2,
-  de: 3,
-  es: 4,
-  sv: 5,
-  no: 6,
-};
+  FEED_MARKETS.map((m) => ({ locale: m.feed!, country: m.code })).sort(
+    (a, b) => LOCALE_NUMBERS[a.locale] - LOCALE_NUMBERS[b.locale]
+  );
 
 export const TYPE_NUMBERS: Record<string, number> = {
   digital: 1,

@@ -1,6 +1,12 @@
 import { ApiResult } from './interfaces/ApiResult';
 import { Client, HTTPClient } from 'mollie-api-typescript';
 import { MollieLocale, MollieMethod } from './data/mollie-types';
+import {
+  CURRENCIES,
+  LOCALES,
+  MARKETS,
+  PAYMENT_FALLBACK,
+} from './data/shared/shared-data.generated';
 import { Payment, Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import { color, white } from 'console-log-colors';
@@ -1439,69 +1445,23 @@ class Mollie {
   }
 
   /**
-   * Per-country payment method order, most popular first. Mollie renders
-   * methods in array order, so the first item is the highlighted choice on
-   * the checkout page. Only methods activated in our Mollie account should
-   * appear here (see CLAUDE.md / mollie dashboard for the live list).
+   * Per-country payment method order, most popular first, from `paymentMethods`
+   * in src/data/shared/markets.json. Mollie renders methods in array order, so
+   * the first item is the highlighted choice on the checkout page. Only
+   * methods activated in our Mollie account belong there (see the Mollie
+   * dashboard for the live list). The order is by local popularity: in DE
+   * PayPal and SEPA dominate and Riverty/Trustly/paysafecard are niche; EPS
+   * is Austria's favourite; TWINT dominates in Switzerland; Riverty is left
+   * out in AT and CH, where Klarna fills the pay-later slot; HUF only works
+   * on the card rails and PayPal.
    */
-  private static readonly METHODS_BY_COUNTRY: Record<string, MollieMethod[]> = {
-    NL: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'in3'],
-    BE: ['bancontact', 'applepay', 'creditcard', 'paypal', 'klarna', 'belfius'],
-    DE: [
-      // Ordered by German consumer popularity (PayPal + SEPA dominate;
-      // Klarna/card/ApplePay tier next; Riverty/Trustly/paysafecard niche).
-      'paypal',
-      'directdebit',
-      'klarna',
-      'creditcard',
-      'applepay',
-      'riverty',
-      'trustly',
-      'paysafecard',
-    ],
-    AT: [
-      // EPS is the Austrian local favourite, then the same DE tiers.
-      // Riverty intentionally omitted: very low penetration in AT
-      // (Klarna dominates the BNPL slot here).
-      'eps',
-      'klarna',
-      'paypal',
-      'creditcard',
-      'applepay',
-      'directdebit',
-      'trustly',
-      'paysafecard',
-    ],
-    CH: [
-      // TWINT is by far the dominant Swiss method.
-      // Riverty intentionally omitted: very low Swiss penetration
-      // (Klarna fills the BNPL slot here).
-      'twint',
-      'creditcard',
-      'paypal',
-      'applepay',
-      'klarna',
-    ],
-    FR: ['creditcard', 'paypal', 'applepay', 'klarna'],
-    ES: ['creditcard', 'paypal', 'applepay', 'satispay', 'klarna'],
-    IT: [
-      'creditcard',
-      'paypal',
-      'satispay',
-      'bancomatpay',
-      'applepay',
-      'klarna',
-    ],
-    PT: ['multibanco', 'mbway', 'creditcard', 'paypal', 'applepay'],
-    PL: ['blik', 'creditcard', 'applepay', 'paypal', 'klarna'],
-    SE: ['swish', 'klarna', 'creditcard', 'applepay'],
-    NO: ['klarna', 'creditcard', 'applepay', 'paypal'],
-    DK: ['klarna', 'creditcard', 'applepay', 'paypal'],
-    // Mollie takes HUF on the card rails and PayPal only.
-    HU: ['creditcard', 'applepay', 'paypal'],
-    GB: ['creditcard', 'applepay', 'paypal', 'klarna'],
-    IE: ['creditcard', 'applepay', 'paypal', 'klarna'],
-  };
+  private static readonly METHODS_BY_COUNTRY: Record<string, MollieMethod[]> =
+    Object.fromEntries(
+      MARKETS.filter((m) => m.paymentMethods).map((m) => [
+        m.code,
+        m.paymentMethods as MollieMethod[],
+      ])
+    );
 
   /**
    * Fallback when no country signal is available. Card-first because it works
@@ -1509,35 +1469,35 @@ class Mollie {
    * device-gated.
    */
   private static readonly METHODS_FALLBACK: MollieMethod[] = [
-    'creditcard',
-    'paypal',
-    'applepay',
-    'klarna',
-  ];
+    ...PAYMENT_FALLBACK,
+  ] as MollieMethod[];
 
   /**
-   * Language → country fallback. Two roles: (1) additive when the country
+   * Language → country fallback, from `country` (and its `aliases`) in
+   * src/data/shared/locales.json. Two roles: (1) additive when the country
    * signal differs from the language country (a Swedish-speaker in Germany
    * still gets Swish/Klarna), and (2) sole signal when no country header is
    * available (CSR/dev — no SSR injection). Ambiguous Western languages map
    * to their largest market — country signal still wins when present, so
    * production behaviour with CloudFront-Viewer-Country is unchanged.
    */
-  private static readonly LANGUAGE_IMPLIES_COUNTRY: Record<string, string> = {
-    nl: 'NL',
-    sv: 'SE',
-    nb: 'NO',
-    no: 'NO',
-    da: 'DK',
-    hu: 'HU',
-    pl: 'PL',
-    pt: 'PT',
-    it: 'IT',
-    en: 'GB',
-    de: 'DE',
-    fr: 'FR',
-    es: 'ES',
-  };
+  private static readonly LANGUAGE_IMPLIES_COUNTRY: Record<string, string> =
+    Object.fromEntries(
+      LOCALES.filter((l) => l.country).flatMap((l) =>
+        [l.code, ...(l.aliases ?? [])].map((code) => [code, l.country!])
+      )
+    );
+
+  /** `mollieLocale` per language and alias, from locales.json. */
+  private static readonly MOLLIE_LOCALES: Record<string, MollieLocale> =
+    Object.fromEntries(
+      LOCALES.filter((l) => l.mollieLocale).flatMap((l) =>
+        [l.code, ...(l.aliases ?? [])].map((code) => [
+          code,
+          l.mollieLocale as MollieLocale,
+        ])
+      )
+    );
 
   /**
    * Mollie locale resolution. Some locales depend on the country (de_DE vs
@@ -1564,64 +1524,20 @@ class Mollie {
       return 'nl_NL';
     }
 
-    const map: Record<string, MollieLocale> = {
-      en: 'en_US',
-      es: 'es_ES',
-      it: 'it_IT',
-      pt: 'pt_PT',
-      pl: 'pl_PL',
-      sv: 'sv_SE',
-      nb: 'nb_NO',
-      no: 'nb_NO',
-      da: 'da_DK',
-      hu: 'hu_HU',
-      hin: 'en_US',
-      hi: 'en_US',
-    };
-    return map[lang] || 'en_US';
+    return Mollie.MOLLIE_LOCALES[lang] || 'en_US';
   }
 
   /**
-   * Currencies for which each method is accepted by Mollie. Method is
-   * filtered out if the presentment currency isn't in its list. Methods not
-   * in this map are treated as EUR-only, and the compiler does not ask about
-   * a new currency here: add it to every method that takes it.
-   * See https://docs.mollie.com/docs/multicurrency
+   * Currencies each method is accepted in by Mollie, from `methods` in
+   * src/data/shared/currencies.json (https://docs.mollie.com/docs/multicurrency).
+   * A method is filtered out when the presentment currency isn't among them.
+   * A method no currency lists is treated as EUR-only.
    */
-  private static readonly METHOD_CURRENCY_SUPPORT: Partial<
-    Record<MollieMethod, ReadonlyArray<SupportedCurrency>>
-  > = {
-    creditcard: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD',
-    ],
-    applepay: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD',
-    ],
-    paypal: [
-      'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'HUF', 'USD', 'CAD', 'AUD', 'PLN',
-    ],
-    klarna: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
-    riverty: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
-    trustly: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP'],
-    twint: ['EUR', 'CHF'],
-    swish: ['SEK'],
-    blik: ['EUR', 'PLN'],
-    przelewy24: ['EUR', 'PLN'],
-    paybybank: ['GBP'],
-    // EUR-only methods (explicit so future readers don't have to dig):
-    ideal: ['EUR'],
-    bancontact: ['EUR'],
-    belfius: ['EUR'],
-    kbc: ['EUR'],
-    eps: ['EUR'],
-    satispay: ['EUR'],
-    bancomatpay: ['EUR'],
-    multibanco: ['EUR'],
-    mbway: ['EUR'],
-    in3: ['EUR'],
-    directdebit: ['EUR'],
-    paysafecard: ['EUR'],
-  };
+  private static readonly METHOD_CURRENCY_SUPPORT: Record<string, SupportedCurrency[]> =
+    CURRENCIES.reduce<Record<string, SupportedCurrency[]>>((support, c) => {
+      for (const m of c.methods) (support[m] ??= []).push(c.code);
+      return support;
+    }, {});
 
   public filterMethodsByCurrency(
     methods: MollieMethod[],

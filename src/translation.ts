@@ -5,6 +5,7 @@ import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
 import Logger from './logger';
 import { sanitizeBrandName } from './brandName';
+import { SITE_LOCALES } from './data/shared/shared-data.generated';
 import { color, white } from 'console-log-colors';
 
 interface LocaleInfo {
@@ -14,22 +15,13 @@ interface LocaleInfo {
   storefront: string; // Apple Music storefront code
 }
 
-const LOCALE_DATA: LocaleInfo[] = [
-  { code: 'en', name: 'English', greeting: 'Hello', storefront: 'us' },
-  { code: 'nl', name: 'Dutch', greeting: 'Hallo', storefront: 'nl' },
-  { code: 'de', name: 'German', greeting: 'Hallo', storefront: 'de' },
-  { code: 'fr', name: 'French', greeting: 'Bonjour', storefront: 'fr' },
-  { code: 'es', name: 'Spanish', greeting: 'Hola', storefront: 'es' },
-  { code: 'it', name: 'Italian', greeting: 'Ciao', storefront: 'it' },
-  { code: 'pt', name: 'Portuguese', greeting: 'Olá', storefront: 'pt' },
-  { code: 'pl', name: 'Polish', greeting: 'Cześć', storefront: 'pl' },
-  { code: 'jp', name: 'Japanese', greeting: 'こんにちは', storefront: 'jp' },
-  { code: 'cn', name: 'Chinese', greeting: '你好', storefront: 'cn' },
-  { code: 'sv', name: 'Swedish', greeting: 'Hej', storefront: 'se' },
-  { code: 'no', name: 'Norwegian', greeting: 'Hei', storefront: 'no' },
-  { code: 'da', name: 'Danish', greeting: 'Hej', storefront: 'dk' },
-  { code: 'hu', name: 'Hungarian', greeting: 'Szia', storefront: 'hu' },
-];
+// The languages qrsong.io is served in, from src/data/shared/locales.json.
+const LOCALE_DATA: LocaleInfo[] = SITE_LOCALES.map((l) => ({
+  code: l.code,
+  name: l.name,
+  greeting: l.greeting ?? 'Hello',
+  storefront: l.storefront ?? 'nl',
+}));
 
 /**
  * Locales we produce formal B2B documents in (quotations, technical

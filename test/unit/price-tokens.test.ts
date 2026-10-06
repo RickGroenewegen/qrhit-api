@@ -15,6 +15,7 @@ import {
 import {
   APP_DESIGN_PRICE,
   BOX_PRICE,
+  MAX_CARDS_PHYSICAL,
   PRICE_TABLE_QUANTITIES,
 } from '../../src/config/constants';
 import { QRGAMES_UPGRADE_PRICE } from '../../src/game';
@@ -25,10 +26,19 @@ describe('priceTokenNames', () => {
     expect(names).toEqual(expect.arrayContaining(['appDesign', 'box', 'box.from', 'games']));
     for (const quantity of PRICE_TABLE_QUANTITIES) {
       expect(names).toContain(`cards.digital.${quantity}`);
-      expect(names).toContain(`cards.sheets.${quantity}`);
-      expect(names).toContain(`cards.physical.${quantity}`);
+      if (quantity <= MAX_CARDS_PHYSICAL) {
+        expect(names).toContain(`cards.sheets.${quantity}`);
+        expect(names).toContain(`cards.physical.${quantity}`);
+      }
     }
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('names no printed deck above the printed-card cap', () => {
+    const names = priceTokenNames();
+    expect(names).toContain('cards.digital.3000');
+    expect(names).not.toContain('cards.physical.3000');
+    expect(names).not.toContain('cards.sheets.3000');
   });
 });
 

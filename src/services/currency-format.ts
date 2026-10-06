@@ -1,21 +1,12 @@
 import type { SupportedCurrency } from '../data/currency-map';
+import { CURRENCIES } from '../data/shared/shared-data.generated';
 
-const SNAP_INCREMENTS: Record<SupportedCurrency, number> = {
-  EUR: 0,
-  NOK: 5,
-  SEK: 5,
-  DKK: 5,
-  CZK: 5,
-  // ~420 Ft to the euro, and nobody prices in fillér: 100 Ft (≈ €0.24) is the
-  // step CZK and PLN have.
-  HUF: 100,
-  PLN: 1,
-  GBP: 0.5,
-  CHF: 0.5,
-  USD: 0.5,
-  CAD: 0.5,
-  AUD: 0.5,
-};
+// Every converted amount rounds to a multiple of the currency's `snap` in
+// src/data/shared/currencies.json (0: to the cent). HUF snaps to 100 Ft: ~420
+// Ft to the euro and nobody prices in fillér, the step CZK and PLN have.
+const SNAP_INCREMENTS: Record<string, number> = Object.fromEntries(
+  CURRENCIES.map((c) => [c.code, c.snap])
+);
 
 export function roundTotal(
   amount: number,
@@ -28,4 +19,3 @@ export function roundTotal(
   const rounded = Math.round(amount / increment) * increment;
   return Number(rounded.toFixed(2));
 }
-

@@ -1,21 +1,12 @@
+import { LOCALES } from './shared/shared-data.generated';
+
 const Hypher = require('hypher');
 
-const patternModules: Record<string, string> = {
-  en: 'hyphenation.en-us',
-  de: 'hyphenation.de',
-  nl: 'hyphenation.nl',
-  fr: 'hyphenation.fr',
-  es: 'hyphenation.es',
-  it: 'hyphenation.it',
-  pt: 'hyphenation.pt',
-  sv: 'hyphenation.sv',
-  pl: 'hyphenation.pl',
-  ru: 'hyphenation.ru',
-  hin: 'hyphenation.hi',
-  no: 'hyphenation.da',
-  da: 'hyphenation.da',
-  hu: 'hyphenation.hu',
-};
+// `hyphenation` per language in src/data/shared/locales.json (Norwegian uses
+// the Danish patterns).
+const patternModules: Record<string, string> = Object.fromEntries(
+  LOCALES.filter((l) => l.hyphenation).map((l) => [l.code, l.hyphenation!])
+);
 
 const hyphenatorCache = new Map<string, any | null>();
 

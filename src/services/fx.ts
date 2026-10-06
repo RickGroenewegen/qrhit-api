@@ -27,6 +27,7 @@ class Fx {
   private logger = new Logger();
   private utils = new Utils();
   private cronStarted = false;
+  private lastIncompleteRefresh = 0;
 
   private constructor() {
     this.maybeStartCron();
@@ -85,7 +86,18 @@ class Fx {
     const cached = await this.cache.get(CACHE_KEY);
     if (cached) {
       try {
-        return JSON.parse(cached) as FxRates;
+        const rates = JSON.parse(cached) as FxRates;
+        // The cached day only holds the currencies supported when it was
+        // parsed. A currency added since (HUF on deploy) would have no rate
+        // until the 16:30 refresh, and the site would show EUR amounts
+        // labelled with it, so such a day is fetched again at once. At most
+        // every ten minutes, in case ECB itself stops publishing one.
+        const complete = SUPPORTED_CURRENCIES.every((code) => rates.rates?.[code]);
+        if (complete || Date.now() - this.lastIncompleteRefresh < 10 * 60 * 1000) {
+          return rates;
+        }
+        this.lastIncompleteRefresh = Date.now();
+        return (await this.refreshRates()) ?? rates;
       } catch {}
     }
     return await this.refreshRates();

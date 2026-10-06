@@ -1,36 +1,23 @@
-export const SUPPORTED_CURRENCIES = [
-  'EUR',
-  'NOK',
-  'SEK',
-  'DKK',
-  'GBP',
-  'CHF',
-  'PLN',
-  'CZK',
-  'HUF',
-  'USD',
-  'CAD',
-  'AUD',
-] as const;
+import {
+  CURRENCIES,
+  MARKETS,
+  type CurrencyCode,
+} from './shared/shared-data.generated';
 
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+// Currencies, their order and the countries that get one automatically come
+// from src/data/shared/currencies.json and markets.json.
+export const SUPPORTED_CURRENCIES: readonly CurrencyCode[] = CURRENCIES.map((c) => c.code);
 
-// Country-to-currency auto-detect map. Poland is deliberately omitted:
-// Mollie does not accept cards in PLN, so auto-charging Polish IPs in PLN
-// would strip out credit card / Apple Pay. Polish customers can still pick
-// PLN via the switcher (which then restricts methods to PayPal + Przelewy24).
-const COUNTRY_TO_CURRENCY: Record<string, SupportedCurrency> = {
-  NO: 'NOK',
-  SE: 'SEK',
-  DK: 'DKK',
-  GB: 'GBP',
-  CH: 'CHF',
-  CZ: 'CZK',
-  HU: 'HUF',
-  US: 'USD',
-  CA: 'CAD',
-  AU: 'AUD',
-};
+export type SupportedCurrency = CurrencyCode;
+
+// Country-to-currency auto-detect map. Poland deliberately has no currency in
+// markets.json: Mollie does not accept cards in PLN, so auto-charging Polish
+// IPs in PLN would strip out credit card / Apple Pay. Polish customers can
+// still pick PLN via the switcher (which then restricts methods to PayPal +
+// Przelewy24).
+const COUNTRY_TO_CURRENCY: Record<string, SupportedCurrency> = Object.fromEntries(
+  MARKETS.filter((m) => m.currency).map((m) => [m.code, m.currency!])
+);
 
 export function getCurrencyForCountry(
   countryCode: string | null | undefined

@@ -36,7 +36,7 @@ describe('public routes', () => {
   });
 
   describe('GET /api/pricing/tiers', () => {
-    const CACHE_KEY = 'pricingTiers_v1';
+    const CACHE_KEY = 'pricingTiers_v2';
 
     beforeEach(async () => {
       await Cache.getInstance().executeCommand('del', CACHE_KEY);
@@ -50,7 +50,7 @@ describe('public routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.currency).toBe('EUR');
       expect(body.data.rows.map((r: any) => r.quantity)).toEqual([
-        50, 100, 150, 200, 300, 500,
+        50, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000,
       ]);
       expect(body.data.rows.every((r: any) => r.digital === null)).toBe(true);
       expect(await Cache.getInstance().get(CACHE_KEY)).toBeFalsy();
@@ -78,8 +78,11 @@ describe('public routes', () => {
       const rows = res.json().data.rows;
       expect(rows[0]).toEqual({ quantity: 50, digital: 13, sheets: 16, physical: 25 });
       expect(rows[5]).toEqual({ quantity: 500, digital: 13, sheets: 25, physical: 70 });
-      // Each cell is its own printer lookup: 6 sizes x 3 formats.
-      expect(outbound.calls('PrintEnBind', 'getOrderType').length).toBe(18);
+      // Printed cards and sheets stop at MAX_CARDS_PHYSICAL: no price, and no lookup.
+      expect(rows[10]).toEqual({ quantity: 3000, digital: 13, sheets: null, physical: null });
+      // Each cell is its own printer lookup: 11 sizes x 3 formats, minus the
+      // two printed formats of the 3000-card deck.
+      expect(outbound.calls('PrintEnBind', 'getOrderType').length).toBe(31);
 
       // A complete table is cached, so the next request skips the printer.
       outbound.reset();

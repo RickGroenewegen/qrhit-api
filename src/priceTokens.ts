@@ -3,6 +3,7 @@ import {
   BOX_PRICE,
   BOX_TIER_PRICES,
   PRICE_TABLE_QUANTITIES,
+  productTakesQuantity,
 } from './config/constants';
 import { QRGAMES_UPGRADE_PRICE } from './game';
 
@@ -46,7 +47,9 @@ export function priceTokenNames(): string[] {
   return [
     ...Object.keys(fixedPrices()),
     ...CARD_PRODUCTS.flatMap((product) =>
-      PRICE_TABLE_QUANTITIES.map((quantity) => `cards.${product}.${quantity}`)
+      PRICE_TABLE_QUANTITIES.filter((quantity) => productTakesQuantity(product, quantity)).map(
+        (quantity) => `cards.${product}.${quantity}`
+      )
     ),
   ];
 }
@@ -78,7 +81,7 @@ export async function priceTokenValues(
   const values: Record<string, number> = { ...fixedPrices() };
   await Promise.all(
     CARD_PRODUCTS.flatMap((product) =>
-      PRICE_TABLE_QUANTITIES.map(async (quantity) => {
+      PRICE_TABLE_QUANTITIES.filter((quantity) => productTakesQuantity(product, quantity)).map(async (quantity) => {
         try {
           const amount = await priceOfDeck(quantity, product);
           if (amount !== null) values[`cards.${product}.${quantity}`] = amount;
