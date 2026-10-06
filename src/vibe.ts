@@ -31,6 +31,11 @@ import {
   paymentAmounts,
   variantCalculationColumn,
 } from './listPricing';
+import {
+  estimateBusinessShipping,
+  shippingExtraKeyVars,
+  shippingLineText,
+} from './businessShipping';
 
 class Vibe {
   private static instance: Vibe;
@@ -3726,6 +3731,11 @@ class Vibe {
    * - 192 cards (4x48 in banderol): Fixed €1350 + €3.73 per piece, 4-vaks box
    * - Stansmes 2-vaks (144 cards): €325 one-time
    * - Stansmes 4-vaks (192 cards): €375 one-time
+   * - Shipping (src/businessShipping.ts): included within the Netherlands;
+   *   abroad an estimate, or `forceShippingPrice` (0 = free), added as the
+   *   one-off extra `shipping`. Schneiders bills it, so it counts in both the
+   *   Schneider cost and the client price. `calculation.shipping` always
+   *   carries the estimate's details.
    * @param params Calculation parameters
    * @returns Object with calculation results
    */
@@ -3736,6 +3746,10 @@ class Vibe {
     includeCustomApp?: boolean;
     includeVotingPortal?: boolean;
     profitMargin: number;
+    /** ISO 3166-1 alpha-2 (or a name); absent or null is the Netherlands. */
+    deliveryCountry?: string | null;
+    /** Total excl. VAT; null/undefined uses the estimate, 0 is free. */
+    forceShippingPrice?: number | null;
   }): Promise<any> {
     try {
       const {
@@ -3745,6 +3759,8 @@ class Vibe {
         includeCustomApp = false,
         includeVotingPortal = false,
         profitMargin,
+        deliveryCountry = null,
+        forceShippingPrice = null,
       } = params;
 
       // Validate input
@@ -3867,6 +3883,24 @@ class Vibe {
         extrasTotal += stansmesPrice;
       }
 
+      // Shipping abroad is a one-off extra like the cutting die: Schneiders
+      // bills it, we pass it on at cost.
+      const shipping = estimateBusinessShipping({
+        cardCount,
+        quantity,
+        country: deliveryCountry,
+        forceShippingPrice,
+      });
+      if (shipping && shipping.price > 0) {
+        extras.push({
+          key: 'shipping',
+          keyVars: shippingExtraKeyVars(shipping),
+          name: 'Verzending',
+          price: shipping.price,
+        });
+        extrasTotal += shipping.price;
+      }
+
       // Calculate cost per box (without extras, as they're one-time)
       const round2 = (n: number) => Math.round(n * 100) / 100;
       const costPerBox = round2(subtotal / quantity);
@@ -3903,13 +3937,14 @@ class Vibe {
           pricePerPiece,
           subtotal,
           extras,
-          extrasTotal: extrasTotal + customAppFee + votingPortalFee,
+          extrasTotal: round2(extrasTotal + customAppFee + votingPortalFee),
           schneiderCost,
           ourProfit,
           pricePerBox,
           clientPrice,
           customAppFee,
           votingPortalFee,
+          shipping,
         },
       };
     } catch (error) {
@@ -4388,9 +4423,31 @@ class Vibe {
           price: pricing.unitPrice.toFixed(2),
         },
       ];
+      // Shipping names its country and what goes ("Verzending naar
+      // Duitsland (34 omdozen op 1 pallet)"), the other extras are one-off.
+      let countryNames: Record<string, string> | null = null;
+      if (pricing.extras.some((e) => e.key === 'shipping')) {
+        try {
+          countryNames = await this.translation.getTranslationsByPrefix(
+            locale,
+            'countries'
+          );
+        } catch {
+          countryNames = null; // the ISO code stands in for the name
+        }
+      }
       for (const e of pricing.extras) {
+        let description: string;
+        if (e.key === 'shipping') {
+          const text = shippingLineText(tExtra, e.keyVars, countryNames);
+          description = text.details
+            ? t('shipping', { name: text.description, details: text.details })
+            : text.description;
+        } else {
+          description = t('extraOneOff', { name: extraName(e) });
+        }
         items.push({
-          description: t('extraOneOff', { name: extraName(e) }),
+          description,
           amount: '1',
           price: e.price.toFixed(2),
         });

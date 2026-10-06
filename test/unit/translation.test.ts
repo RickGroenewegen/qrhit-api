@@ -378,7 +378,7 @@ describe('business locales', () => {
     expect(Object.keys(t).some((k) => k.startsWith('quotation.'))).toBe(false);
   });
 
-  const PREFIXES = ['quotation', 'instructions', 'invoice_lines', 'pricing'];
+  const PREFIXES = ['quotation', 'instructions', 'invoice_lines', 'pricing', 'extras'];
 
   it.each(PREFIXES)(
     'keeps German formal in the %s bundle: no informal du/dein',

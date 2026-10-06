@@ -46,6 +46,7 @@ import {
   verifyPriceListSignature,
 } from '../priceList';
 import { BUSINESS_OPTION_PRICES, businessContactEmail } from '../businessOptions';
+import { shippingLineText } from '../businessShipping';
 
 export default async function vibeRoutes(
   fastify: FastifyInstance,
@@ -1843,7 +1844,9 @@ export default async function vibeRoutes(
             }
           }
 
-          // Use the Vibe calculateSchneiderPricing method
+          // Use the Vibe calculateSchneiderPricing method. The delivery
+          // country and a forced shipping price come from the calculator, so
+          // the shipping line matches what it showed.
           const pricingResult = await vibe.calculateSchneiderPricing({
             quantity: calculation.quantity || 100,
             cardCount: calculation.cardCount || 48,
@@ -1851,6 +1854,8 @@ export default async function vibeRoutes(
             includeCustomApp: calculation.includeCustomApp || false,
             includeVotingPortal: calculation.includeVotingPortal || false,
             profitMargin: calculation.profitMargin || 0,
+            deliveryCountry: calculation.deliveryCountry ?? null,
+            forceShippingPrice: calculation.forceShippingPrice ?? null,
           });
 
           if (pricingResult.success) {
@@ -1962,6 +1967,11 @@ export default async function vibeRoutes(
         // Use the appropriate template - use tromp_quotation for both qrsong and schneider
         const template = (type === 'qrsong' || type === 'schneider') ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
 
+        // The shipping extra's line: "Versand nach Deutschland" with
+        // "34 Umkartons auf 1 Palette" instead of "one-off cost".
+        const describeShipping = (keyVars: Record<string, any> | undefined) =>
+          shippingLineText(extrasT, keyVars, countryNames);
+
         await reply.view(template, {
           locale,
           t: quotationT,
@@ -1985,6 +1995,7 @@ export default async function vibeRoutes(
           license,
           vatContext,
           companyCountryName,
+          describeShipping,
         });
       } catch (error) {
         console.error('Error rendering quotation view:', error);
@@ -2788,7 +2799,10 @@ export default async function vibeRoutes(
     }
   );
 
-  // Calculate Schneider pricing (admin only)
+  // Calculate Schneider pricing (admin only). The body goes in as is:
+  // quantity, cardCount, includeStansmes, includeCustomApp,
+  // includeVotingPortal, profitMargin, and for shipping deliveryCountry and
+  // forceShippingPrice (see calculateSchneiderPricing).
   fastify.post(
     '/vibe/calculate-schneider',
     getAuthHandler(['admin']),

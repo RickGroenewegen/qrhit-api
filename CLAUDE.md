@@ -853,6 +853,19 @@ so no invoice matched the quotation or the Sell column.
   its own ids, so a company in `qrhit_dev` can resolve to a real customer's
   contact in the shared administration (dev company 53 finds contact
   `qrhit-53`). An invoice created from a local API is a real invoice.
+- **Schneider shipping abroad** (added 2026-10-06, `src/businessShipping.ts`).
+  Schneiders ships with DHL; within the Netherlands it is in the box price.
+  The calculator sends `deliveryCountry` (ISO code, absent = NL) and
+  `forceShippingPrice` (excl. VAT, null = estimate, 0 = free), stores both
+  in `calculationSchneider`, and gets `calculation.shipping` back (cartons,
+  pallets, parcel and pallet totals, mode, estimate, price). A price above 0
+  is the one-off extra `key: 'shipping'`, counted in the Schneider cost and
+  the client price, so the snapshot, quotation and invoice carry it like the
+  cutting die; the quotation and invoice name it "Versand nach Deutschland
+  (34 Umkartons auf 1 Palette)" (`extras.shipping*` in the business bundle,
+  with `extras.shippingTo.<ISO>` for countries that need an article). The
+  rates are InTime's 2026 DHL list prices, an estimate: Schneiders' own
+  rates are unknown, and the only pallet rate is DE.
 
 ## Business quote requests, the company asset store, three-size quotations
 

@@ -400,6 +400,138 @@ describe('calculateSchneiderPricing', () => {
     expect(c.clientPrice).toBe(1322); // 472 + 850
     expect(c.ourProfit).toBe(950); // 100 + 850
   });
+
+  describe('shipping', () => {
+    // 600 boxes of 192 cards: 34 cartons of 18, one pallet in Germany.
+    const germany = (over: Record<string, any> = {}) =>
+      schneider({
+        cardCount: 192,
+        quantity: 600,
+        profitMargin: 0,
+        includeStansmes: true,
+        deliveryCountry: 'DE',
+        ...over,
+      });
+
+    it('within the Netherlands it is included: no line, nothing added', async () => {
+      for (const deliveryCountry of [undefined, null, 'NL', 'nl']) {
+        const res = await germany({ deliveryCountry });
+        const c = res.calculation;
+        expect(c.extras.map((e: any) => e.key)).toEqual(['cuttingDieBox']);
+        expect(c.shipping).toMatchObject({
+          country: 'NL',
+          included: true,
+          mode: 'included',
+          estimate: 0,
+          forced: false,
+          price: 0,
+        });
+        expect(c.schneiderCost).toBe(3963); // 1350 + 600 * 3.73 + 375
+        expect(c.clientPrice).toBe(3963);
+      }
+    });
+
+    it('abroad the estimate is a one-off extra in the cost and the client price', async () => {
+      const res = await germany();
+      const c = res.calculation;
+      expect(c.extras).toEqual([
+        {
+          key: 'cuttingDieBox',
+          keyVars: { compartments: 4 },
+          name: 'Stansmes 4-vaks doosje',
+          price: 375,
+        },
+        {
+          key: 'shipping',
+          keyVars: { country: 'DE', cartons: 34, pallets: 1, mode: 'pallet' },
+          name: 'Verzending',
+          price: 200,
+        },
+      ]);
+      expect(c.shipping).toMatchObject({
+        country: 'DE',
+        included: false,
+        cartons: 34,
+        pallets: 1,
+        parcelTotal: 380.29,
+        palletTotal: 200,
+        mode: 'pallet',
+        estimate: 200,
+        forced: false,
+        price: 200,
+      });
+      expect(c.extrasTotal).toBe(575);
+      expect(c.schneiderCost).toBe(4163); // 3963 + 200
+      expect(c.pricePerBox).toBe(5.98); // shipping never lands in the box price
+      expect(c.clientPrice).toBe(4163);
+      expect(c.ourProfit).toBe(0); // passed on at cost
+    });
+
+    it('a small order goes as parcels: no pallets on the line', async () => {
+      const res = await germany({ quantity: 20, includeStansmes: false });
+      const c = res.calculation;
+      expect(c.extras).toEqual([
+        {
+          key: 'shipping',
+          keyVars: { country: 'DE', cartons: 2, pallets: 0, mode: 'parcel' },
+          name: 'Verzending',
+          price: 20.93, // 11.23 for the full carton + 9.70 for the 2 boxes
+        },
+      ]);
+      expect(c.schneiderCost).toBe(1445.53); // 1350 + 20 * 3.73 + 20.93
+    });
+
+    it('a forced price replaces the estimate', async () => {
+      const res = await germany({ forceShippingPrice: 350 });
+      const c = res.calculation;
+      expect(c.shipping).toMatchObject({ estimate: 200, forced: true, price: 350 });
+      expect(c.extras[1]).toMatchObject({ key: 'shipping', price: 350 });
+      expect(c.extrasTotal).toBe(725);
+      expect(c.clientPrice).toBe(4313);
+    });
+
+    it('a forced 0 is free shipping: no line, nothing added', async () => {
+      const res = await germany({ forceShippingPrice: 0 });
+      const c = res.calculation;
+      expect(c.shipping).toMatchObject({ estimate: 200, forced: true, price: 0 });
+      expect(c.extras.map((e: any) => e.key)).toEqual(['cuttingDieBox']);
+      expect(c.schneiderCost).toBe(3963);
+      expect(c.clientPrice).toBe(3963);
+    });
+
+    it('a country without rates has no estimate until the price is forced', async () => {
+      const unknown = await germany({ deliveryCountry: 'CH' });
+      expect(unknown.calculation.shipping).toMatchObject({
+        country: 'CH',
+        mode: 'unknown',
+        estimate: null,
+        price: 0,
+      });
+      expect(unknown.calculation.extras.map((e: any) => e.key)).toEqual(['cuttingDieBox']);
+
+      const forced = await germany({ deliveryCountry: 'CH', forceShippingPrice: 480 });
+      expect(forced.calculation.extras[1]).toEqual({
+        key: 'shipping',
+        keyVars: { country: 'CH', cartons: 34, pallets: 0, mode: 'unknown' },
+        name: 'Verzending',
+        price: 480,
+      });
+      expect(forced.calculation.clientPrice).toBe(4443); // 3963 + 480
+    });
+
+    it('accepts a country name and puts shipping before the app and portal', async () => {
+      const res = await germany({
+        deliveryCountry: 'Duitsland',
+        includeStansmes: false,
+        includeCustomApp: true,
+        includeVotingPortal: true,
+      });
+      const c = res.calculation;
+      expect(c.extras.map((e: any) => e.key)).toEqual(['shipping', 'customApp', 'votingPortal']);
+      expect(c.extrasTotal).toBe(1050); // 200 + 350 + 500
+      expect(c.ourProfit).toBe(850); // app and portal only
+    });
+  });
 });
 
 describe('buildInvoiceLineItems', () => {
@@ -673,6 +805,70 @@ describe('buildInvoiceLineItems', () => {
       },
     ]);
     expect(res.totals!.total).toBe(1725);
+  });
+
+  describe('shipping extra', () => {
+    const shippingList = (keyVars: Record<string, unknown>, price = 200) =>
+      listWith(
+        'calculationSchneider',
+        {
+          cardCount: 192,
+          deliveryCountry: keyVars['country'],
+          pricing: snapshot({
+            quantity: 600,
+            unitPrice: 7.5,
+            customAppFee: 0,
+            discountPercent: 0,
+            extras: [{ key: 'shipping', keyVars, name: 'Verzending', price }],
+          }),
+        },
+        'Lijst'
+      );
+    const pallet = { country: 'DE', cartons: 34, pallets: 1, mode: 'pallet' };
+
+    it('names the country and the cartons in Dutch, not "eenmalige kosten"', async () => {
+      shippingList(pallet);
+      h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      expect(res.items).toEqual([
+        { description: 'QRSong! Box - 192 kaarten', amount: '600', price: '7.50' },
+        {
+          description: 'Verzending naar Duitsland (34 omdozen op 1 pallet)',
+          amount: '1',
+          price: '200.00',
+        },
+      ]);
+      expect(res.totals!.total).toBe(4700); // 4500 + 200
+    });
+
+    it('in German, formal and with the German country name', async () => {
+      shippingList(pallet);
+      h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Muster GmbH', locale: 'de' });
+
+      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      expect(res.items![1]).toEqual({
+        description: 'Versand nach Deutschland (34 Umkartons auf 1 Palette)',
+        amount: '1',
+        price: '200.00',
+      });
+    });
+
+    it('parcels without a pallet, and the article where the language needs one', async () => {
+      shippingList({ country: 'CH', cartons: 2, pallets: 0, mode: 'unknown' }, 95);
+      h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Muster AG', locale: 'de' });
+      const de = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      expect(de.items![1].description).toBe('Versand in die Schweiz (2 Umkartons)');
+
+      shippingList({ country: 'DE', cartons: 2, pallets: 0, mode: 'parcel' }, 20.93);
+      h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme Ltd', locale: 'en' });
+      const en = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      expect(en.items![1]).toEqual({
+        description: 'Shipping to Germany (2 outer cartons)',
+        amount: '1',
+        price: '20.93',
+      });
+    });
   });
 
   it('voting portal at the saved fee, and no discount line without a discount', async () => {

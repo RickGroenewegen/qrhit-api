@@ -441,6 +441,56 @@ describe('vibe pricing and quotation views', () => {
       expect(res.body).toContain('Algemene Voorwaarden');
       expect(res.body).toContain('KVK');
     });
+
+    it('shows shipping abroad as its own line, from the list calculation', async () => {
+      // What the Schneider calculator stores: 600 boxes of 192 cards to
+      // Germany, 34 cartons on one pallet (estimate €200).
+      const before = await prisma().companyList.findUnique({ where: { id: listId } });
+      const store = (extra: Record<string, unknown>) =>
+        prisma().companyList.update({
+          where: { id: listId },
+          data: {
+            calculationSchneider: JSON.stringify({
+              quantity: 600,
+              cardCount: 192,
+              profitMargin: 0,
+              deliveryCountry: 'DE',
+              ...extra,
+            }),
+          },
+        });
+      try {
+        await store({});
+        const de = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/schneider/${companyId}/Q-2026-120?listId=${listId}&locale=de`,
+        });
+        expect(de.statusCode).toBe(200);
+        expect(de.body).toContain('Versand nach Deutschland');
+        expect(de.body).toContain('34 Umkartons auf 1 Palette');
+
+        const nl = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/schneider/${companyId}/Q-2026-121?listId=${listId}&locale=nl`,
+        });
+        expect(nl.body).toContain('Verzending naar Duitsland');
+        expect(nl.body).toContain('34 omdozen op 1 pallet');
+
+        // A forced 0 is free shipping: no line.
+        await store({ forceShippingPrice: 0 });
+        const free = await app.inject({
+          method: 'GET',
+          url: `/vibe/quotation/schneider/${companyId}/Q-2026-122?listId=${listId}&locale=nl`,
+        });
+        expect(free.statusCode).toBe(200);
+        expect(free.body).not.toContain('Verzending naar');
+      } finally {
+        await prisma().companyList.update({
+          where: { id: listId },
+          data: { calculationSchneider: before?.calculationSchneider ?? null },
+        });
+      }
+    });
   });
 
   describe('technical instructions HTML view', () => {

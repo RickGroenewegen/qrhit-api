@@ -232,11 +232,25 @@ export function translationModule() {
     }
     return out;
   };
+  // The main bundle's flat prefixed keys (country names for the shipping
+  // line), read from the real locales/<locale>.json the same way.
+  const readMain = (locale: string, prefix: string) => {
+    const raw = JSON.parse(
+      readFileSync(joinPath(process.env['APP_ROOT']!, 'locales', `${locale}.json`), 'utf-8')
+    ) as Record<string, string>;
+    const out: Record<string, string> = {};
+    for (const key of Object.keys(raw)) {
+      if (key.startsWith(`${prefix}.`)) out[key.slice(prefix.length + 1)] = raw[key]!;
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  };
 
   return {
     default: class {
       allLocales = TEST_LOCALES;
       isValidLocale = (locale: string) => TEST_LOCALES.includes(locale);
+      getTranslationsByPrefix = async (locale: string, prefix: string) =>
+        readMain(locale, prefix);
       resolveBusinessLocale = resolve;
       getIntlTag = (locale?: string | null) => intlTags[resolve(locale)]!;
       getBusinessTranslations = async (locale: string, prefix: string) => {

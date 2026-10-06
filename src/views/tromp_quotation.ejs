@@ -521,10 +521,12 @@
                         <%# App and voting portal have their own rows below, so they are
                             filtered out here by key rather than by matching Dutch text. %>
                         <% calculationResult.extras.filter(extra => extra.key !== 'customApp' && extra.key !== 'votingPortal').forEach(function(extra) { %>
+                        <%# Shipping names its country and the cartons instead of "one-off". %>
+                        <% const shippingText = extra.key === 'shipping' && typeof describeShipping === 'function' ? describeShipping(extra.keyVars) : null; %>
                         <tr>
                             <td>
-                                <span class="item-description"><%= extra.key ? tExtra(extra.key, extra.keyVars) : extra.name %></span>
-                                <span class="item-details"><%= t('itemOneOff') %></span>
+                                <span class="item-description"><%= shippingText ? shippingText.description : (extra.key ? tExtra(extra.key, extra.keyVars) : extra.name) %></span>
+                                <span class="item-details"><%= shippingText ? shippingText.details : t('itemOneOff') %></span>
                             </td>
                             <td>1</td>
                             <td><%= formatCurrency(extra.price) %></td>

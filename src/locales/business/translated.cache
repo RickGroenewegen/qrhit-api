@@ -1806,5 +1806,57 @@
   "pricing.whoDesign1CopyClient": [
     "nl",
     "de"
+  ],
+  "extras.shipping": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingGeneric": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.NL": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.CH": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.CZ": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.SK": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.GB": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingTo.US": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingCartonOne": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingCartons": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingCartonsOnePallet": [
+    "nl",
+    "de"
+  ],
+  "extras.shippingCartonsPallets": [
+    "nl",
+    "de"
+  ],
+  "invoice_lines.shipping": [
+    "nl",
+    "de"
   ]
 }
