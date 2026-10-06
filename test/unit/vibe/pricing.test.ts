@@ -612,6 +612,7 @@ describe('buildInvoiceLineItems', () => {
     expect(res.totals).toEqual({
       productTotal: 12500,
       extrasTotal: 0,
+      shippingTotal: 0,
       subtotal: 12850,
       discountAmount: 1285,
       total: 11565,
@@ -868,6 +869,46 @@ describe('buildInvoiceLineItems', () => {
         amount: '1',
         price: '20.93',
       });
+    });
+
+    it('the discount leaves shipping out, and shipping follows the discount line', async () => {
+      // Rick, 2026-10-06: shipping is passed on at cost, never discounted.
+      listWith(
+        'calculationSchneider',
+        {
+          cardCount: 192,
+          deliveryCountry: 'DE',
+          pricing: snapshot({
+            quantity: 600,
+            unitPrice: 7.5,
+            customAppFee: 0,
+            discountPercent: 10,
+            extras: [
+              { key: 'cuttingDieBox', keyVars: { compartments: 4 }, name: 'Stansmes 4-vaks doosje', price: 375 },
+              { key: 'shipping', keyVars: pallet, name: 'Verzending', price: 200 },
+            ],
+          }),
+        },
+        'Lijst'
+      );
+      h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
+
+      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      expect(res.items).toEqual([
+        { description: 'QRSong! Box - 192 kaarten', amount: '600', price: '7.50' },
+        { description: 'Stansmes 4-vaks doosje (eenmalige kosten)', amount: '1', price: '375.00' },
+        // 10% of 4500 + 375, not of the 200 shipping
+        { description: 'Korting (10%)', amount: '1', price: '-487.50' },
+        {
+          description: 'Verzending naar Duitsland (34 omdozen op 1 pallet)',
+          amount: '1',
+          price: '200.00',
+        },
+      ]);
+      expect(res.totals).toMatchObject({ subtotal: 5075, shippingTotal: 200, discountAmount: 487.5, total: 4587.5 });
+      const sum = res.items!.reduce((s, i) => s + Number(i.amount) * Number(i.price), 0);
+      expect(Math.round(sum * 100) / 100).toBe(4587.5);
+      expect(res.amounts).toEqual({ full: 4587.5, down: 1376.25, remaining: 3211.25 });
     });
   });
 

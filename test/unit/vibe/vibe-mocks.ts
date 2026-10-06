@@ -146,6 +146,18 @@ export function cacheModule() {
           h.cacheDel(key);
           h.cacheStore.delete(key);
         },
+        delPatternNonBlocking: async (pattern: string) => {
+          h.cacheDel(pattern);
+          const prefix = pattern.replace(/\*$/, '');
+          let deleted = 0;
+          for (const key of [...h.cacheStore.keys()]) {
+            if (key.startsWith(prefix)) {
+              h.cacheStore.delete(key);
+              deleted++;
+            }
+          }
+          return deleted;
+        },
       }),
     },
   };

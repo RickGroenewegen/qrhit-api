@@ -14,19 +14,18 @@ import {
   saveCompanyFile,
   toFileDto,
 } from './companyFiles';
-import { MIN_BOX_OPTIONS_QUANTITY } from './services/boxOptionsPricing';
-import {
-  createBoxOptionsQuotation,
-  quotationOptionsSummary,
-} from './boxOptionsQuotation';
+import { MIN_BUSINESS_BOXES } from './services/boxPricing';
 
 /**
  * Quote requests from the /business form: the visitor leaves their details,
- * website and brand kit and is promised a box design and a three-size
- * quotation within 24 hours. A request lives on the lead's company; boxd
- * (skill-box-designer) lists the open ones, starts one (status in_progress,
- * quotation made), uploads the designs (design_ready), and the admin mails
- * design and quotation from the company's Assets tab (sent).
+ * website and brand kit and is promised a box design and a quotation within
+ * 24 hours. A request lives on the lead's company; boxd (skill-box-designer)
+ * lists the open ones, starts one (status in_progress), uploads the designs
+ * (design_ready), and the admin mails design and quotation from the
+ * company's Assets tab (sent). The quotations are made per box size with
+ * qquote. The three-size quotation the API used to make for a request
+ * (POST /vibe/quote-requests/:id/quotation) was removed on 2026-10-06 at
+ * Rick's request; `quotationId` still points at the ones made before.
  */
 
 export const QUOTE_REQUEST_STATUSES = [
@@ -124,8 +123,8 @@ export function validateQuoteRequest(
     throw new QuoteRequestError('missing_fields', 'Name, company and a valid e-mail are required');
   }
   const quantity = Number(form.quantity);
-  if (!Number.isInteger(quantity) || quantity < MIN_BOX_OPTIONS_QUANTITY) {
-    throw new QuoteRequestError('quantity_min', `The minimum is ${MIN_BOX_OPTIONS_QUANTITY} boxes`);
+  if (!Number.isInteger(quantity) || quantity < MIN_BUSINESS_BOXES) {
+    throw new QuoteRequestError('quantity_min', `The minimum is ${MIN_BUSINESS_BOXES} boxes`);
   }
   if (files.length > BRAND_KIT_MAX_FILES) {
     throw new QuoteRequestError('too_many_files', `At most ${BRAND_KIT_MAX_FILES} files`);
@@ -426,35 +425,6 @@ export class QuoteRequests {
     if (status === 'sent' && !row.sentAt) data.sentAt = now;
     await this.prisma.companyQuoteRequest.update({ where: { id }, data });
     return this.get(id);
-  }
-
-  /** The three-size quotation for the request's quantity, made once unless asked again. */
-  public async ensureQuotation(
-    id: number,
-    regenerate: boolean,
-    createdBy: string | null
-  ): Promise<{ created: boolean; quotation: any }> {
-    const request = await this.prisma.companyQuoteRequest.findUnique({ where: { id } });
-    if (!request) throw new QuoteRequestError('not_found', 'Quote request not found', 404);
-
-    if (request.quotationId && !regenerate) {
-      const existing = await this.prisma.quotation.findUnique({ where: { id: request.quotationId } });
-      if (existing) return { created: false, quotation: quotationOptionsSummary(existing) };
-    }
-
-    const { quotation } = await createBoxOptionsQuotation({
-      companyId: request.companyId,
-      quantity: request.quantity,
-      contactUserId: request.userId,
-      listId: request.listId,
-      createdBy,
-      quoteRequestId: request.id,
-    });
-    await this.prisma.companyQuoteRequest.update({
-      where: { id },
-      data: { quotationId: quotation.id },
-    });
-    return { created: true, quotation: quotationOptionsSummary(quotation) };
   }
 
   private async toDtos(rows: any[]): Promise<any[]> {

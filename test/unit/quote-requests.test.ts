@@ -65,10 +65,6 @@ vi.mock('../../src/translation', () => ({
   },
 }));
 vi.mock('../../src/logger', () => ({ default: class { log() {} } }));
-vi.mock('../../src/boxOptionsQuotation', () => ({
-  createBoxOptionsQuotation: vi.fn(),
-  quotationOptionsSummary: (q: any) => q,
-}));
 vi.mock('../../src/companyFiles', async (importOriginal) => ({
   ...(await importOriginal<any>()),
   saveCompanyFile: h.saveCompanyFile,

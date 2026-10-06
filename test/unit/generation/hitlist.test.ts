@@ -256,7 +256,6 @@ describe('Hitlist.submit', () => {
       'VHASH32',
       'en',
       'acme-list',
-      true,
     ]);
   });
 

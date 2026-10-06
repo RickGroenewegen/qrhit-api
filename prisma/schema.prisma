@@ -1090,9 +1090,11 @@ model Company {
   @@map("companies")
 }
 
-// A request from the /business form: design + three-size quotation promised
-// within 24 hours. boxd lists the open ones (GET /vibe/quote-requests) and
-// moves them along; see "Business quote requests" in the frontend CLAUDE.md.
+// A request from the /business form: design + quotation promised within 24
+// hours. boxd lists the open ones (GET /vibe/quote-requests) and moves them
+// along; see "Business quote requests" in the frontend CLAUDE.md.
+// quotationId is the three-size quotation the API made for a request until
+// 2026-10-06 (removed); quotations are now made per box size with qquote.
 model CompanyQuoteRequest {
   id            Int       @id @default(autoincrement())
   companyId     Int

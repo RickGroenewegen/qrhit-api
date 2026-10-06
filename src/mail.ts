@@ -2561,28 +2561,24 @@ ${params.html}
     companyName: string,
     verificationHash: string,
     locale: string,
-    slug?: string,
-    isQrvote: boolean = false
+    slug?: string
   ): Promise<void> {
     if (!this.ses) return;
 
-    // Choose logo and template based on isQrvote flag
-    const logoPath = isQrvote
-      ? `${process.env['ASSETS_DIR']}/images/logo.png`
-      : `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
-    const logoContentId = isQrvote ? 'qrsong_logo' : 'onzevibe_logo';
-    const templatePrefix = isQrvote
-      ? 'mails/qrvote_verification'
-      : 'mails/verification';
-    const brandName = isQrvote ? 'QRSong!' : 'OnzeVibe';
+    // The voting page is part of the site (/:lang/v/:slug) since the OnzeVibe
+    // portal was retired, so every voter gets the QRSong! mail, whatever the
+    // list's qrvote flag says.
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const templatePrefix = 'mails/qrvote_verification';
+    const brandName = process.env['PRODUCT_NAME'];
 
-    // Use the company domain if provided, otherwise fall back to FRONTEND_URI
-    const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
+    const verificationLink = `${process.env['FRONTEND_URI']}/${locale}/v/${slug}/verify/${verificationHash}`;
 
-    const translations = await this.translation.getTranslationsByPrefix(
-      locale,
-      'verification'
-    );
+    // The closing every other mail ends with (partials/mail-closing).
+    const translations = {
+      ...(await this.translation.getTranslationsByPrefix(locale, 'verification')),
+      greetings: this.translation.translate('mail.greetings', locale),
+    };
 
     const mailParams = {
       fullname: fullname || email.split('@')[0],
@@ -2615,10 +2611,10 @@ ${params.html}
       const attachments: Attachment[] = [
         {
           contentType: 'image/png',
-          filename: isQrvote ? 'qrsong_logo.png' : 'onzevibe_logo.png',
+          filename: 'logo.png',
           data: logoBase64,
           isInline: true,
-          cid: logoContentId,
+          cid: 'logo',
         },
       ];
 

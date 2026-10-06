@@ -115,17 +115,6 @@ vi.mock('../../../src/quoteRequests', () => {
   };
 });
 
-vi.mock('../../../src/boxOptionsQuotation', () => ({
-  boxOptionsQuotationView: vi.fn(),
-  createBoxOptionsQuotation: vi.fn(),
-  quotationOptionsSummary: vi.fn(),
-  verifyQuotationSignature: () => false,
-}));
-
-vi.mock('../../../src/services/boxOptionsPricing', () => ({
-  BoxOptionsError: class extends Error {},
-}));
-
 import businessRoutes from '../../../src/routes/businessRoutes';
 import { QuoteRequestError } from '../../../src/quoteRequests';
 
@@ -478,5 +467,18 @@ describe('public quote request', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().code).toBe('too_many_files');
     expect(h.createFromForm).not.toHaveBeenCalled();
+  });
+});
+
+describe('three-size quotation (removed 2026-10-06)', () => {
+  it('has no routes any more', async () => {
+    for (const [method, url] of [
+      ['POST', '/vibe/quotation/1/box-options'],
+      ['GET', '/vibe/quotation-options/QRS12345678?sig=x'],
+      ['POST', '/vibe/quote-requests/1/quotation'],
+    ] as const) {
+      const res = await app.inject({ method, url });
+      expect(res.statusCode, `${method} ${url}`).toBe(404);
+    }
   });
 });

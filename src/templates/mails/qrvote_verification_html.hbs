@@ -1,4 +1,4 @@
-{{#> mail-layout title=(concat productName " - " translations.title) preheader=translations.title logoCid="qrsong_logo" }}
+{{#> mail-layout title=(concat productName " - " translations.title) preheader=translations.title }}
 <p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }} {{ fullname }},</p>
 <p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.thankYou }} {{ companyName }}. {{ translations.toComplete }}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 4px 0 24px;">
@@ -8,6 +8,6 @@
 </table>
 <p style="margin: 0 0 8px; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.buttonFallback }}</p>
 <p style="margin: 0 0 20px; font-size: 13px; line-height: 20px; color: #3d6d74; word-break: break-all;"><a href="{{ verificationLink }}" style="color: #18565e; text-decoration: underline;">{{ verificationLink }}</a></p>
-<p style="margin: 0 0 24px; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.ignoreMessage }}</p>
-<p style="margin: 0; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.thanks }},<br><strong style="color: #0b2c31;">{{ translations.team }}</strong></p>
+<p style="margin: 0; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.ignoreMessage }}</p>
+{{> mail-closing }}
 {{/mail-layout}}

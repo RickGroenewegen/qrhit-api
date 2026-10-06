@@ -123,7 +123,6 @@ class Hitlist {
             },
           },
           slug: true, // Select slug for verification email link
-          qrvote: true, // Select qrvote flag for email template selection
         },
       });
 
@@ -288,8 +287,7 @@ class Hitlist {
           companyList.Company.name,
           submission.verificationHash,
           submission.locale || 'nl', // Use the provided locale or default to 'nl'
-          companyList.slug!,
-          companyList.qrvote // Pass qrvote flag for template selection
+          companyList.slug!
         );
       }
 

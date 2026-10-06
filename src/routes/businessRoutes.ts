@@ -24,20 +24,14 @@ import QuoteRequests, {
   BRAND_KIT_MAX_FILES,
   QuoteRequestError,
 } from '../quoteRequests';
-import {
-  boxOptionsQuotationView,
-  createBoxOptionsQuotation,
-  quotationOptionsSummary,
-  verifyQuotationSignature,
-} from '../boxOptionsQuotation';
-import { BoxOptionsError } from '../services/boxOptionsPricing';
 
 /**
  * Business quote requests and the company asset store: the public /business
- * form, the admin store behind the company Assets tab, the three-size
- * quotation, mailing files to a company contact, and the song-year lookup
- * boxd uses for the sample cards on its flyer. Machine clients (boxd, qquote)
- * use the same admin bearer token as the dashboard.
+ * form, the admin store behind the company Assets tab, mailing files to a
+ * company contact, and the song-year lookup boxd uses for the sample cards on
+ * its flyer. Machine clients (boxd, qquote) use the same admin bearer token as
+ * the dashboard. The three-size quotation (48, 96 and 192 side by side) and
+ * its routes were removed on 2026-10-06 at Rick's request.
  */
 export default async function businessRoutes(
   fastify: FastifyInstance,
@@ -48,7 +42,6 @@ export default async function businessRoutes(
   const translation = new Translation();
   const chatgpt = new ChatGPT();
   const staff = getAuthHandler(['admin', 'vibeadmin']);
-  const adminOnly = getAuthHandler(['admin']);
 
   const companyIdOf = (request: any): number => parseInt(request.params.companyId, 10);
 
@@ -68,10 +61,6 @@ export default async function businessRoutes(
   function sendQuoteRequestError(reply: any, error: unknown): void {
     if (error instanceof QuoteRequestError) {
       reply.status(error.statusCode).send({ success: false, error: error.message, code: error.code });
-      return;
-    }
-    if (error instanceof BoxOptionsError) {
-      reply.status(422).send({ success: false, error: error.message });
       return;
     }
     console.error('Quote request error:', error);
@@ -363,19 +352,6 @@ export default async function businessRoutes(
     }
   });
 
-  fastify.post('/vibe/quote-requests/:id/quotation', adminOnly, async (request: any, reply: any) => {
-    try {
-      const result = await quoteRequests.ensureQuotation(
-        parseInt(request.params.id, 10),
-        request.query.regenerate === '1',
-        request.user?.userId ? String(request.user.userId) : null
-      );
-      reply.send({ success: true, ...result });
-    } catch (error) {
-      sendQuoteRequestError(reply, error);
-    }
-  });
-
   fastify.get(
     '/vibe/companies/:companyId/quote-requests',
     staff,
@@ -385,56 +361,6 @@ export default async function businessRoutes(
       reply.send({ success: true, requests: await quoteRequests.listForCompany(company.id) });
     }
   );
-
-  // ---- The three-size quotation ----
-
-  fastify.post(
-    '/vibe/quotation/:companyId/box-options',
-    adminOnly,
-    async (request: any, reply: any) => {
-      const company = await findCompany(companyIdOf(request), reply);
-      if (!company) return;
-      const { quantity, contactUserId, listId, isReseller } = request.body || {};
-      try {
-        const result = await createBoxOptionsQuotation({
-          companyId: company.id,
-          quantity: Number(quantity),
-          contactUserId: contactUserId ? Number(contactUserId) : null,
-          listId: listId ? Number(listId) : null,
-          isReseller: !!isReseller,
-          createdBy: request.user?.userId ? String(request.user.userId) : null,
-        });
-        if (request.query.format === 'json') {
-          reply.send({ success: true, quotation: quotationOptionsSummary(result.quotation) });
-          return;
-        }
-        reply
-          .header('Content-Type', 'application/pdf')
-          .header('Content-Disposition', contentDisposition(result.filename))
-          .header('X-Quotation-Id', String(result.quotation.id))
-          .header('X-Quotation-Number', result.quotation.quotationNumber)
-          .send(result.pdf);
-      } catch (error) {
-        sendQuoteRequestError(reply, error);
-      }
-    }
-  );
-
-  // Rendered by the PDF Lambda, which has no session: the signature stands
-  // in for the login and makes the numbers impossible to walk through.
-  fastify.get('/vibe/quotation-options/:quotationNumber', async (request: any, reply: any) => {
-    const { quotationNumber } = request.params;
-    if (!verifyQuotationSignature(quotationNumber, request.query.sig)) {
-      reply.status(404).send({ error: 'Not found' });
-      return;
-    }
-    const view = await boxOptionsQuotationView(quotationNumber);
-    if (!view) {
-      reply.status(404).send({ error: 'Not found' });
-      return;
-    }
-    await reply.view('box_options_quotation.ejs', view);
-  });
 
   // ---- Mail files and a quotation to a company contact ----
 

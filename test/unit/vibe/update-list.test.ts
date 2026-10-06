@@ -167,8 +167,8 @@ describe('updateCompanyList — field coercion', () => {
     expect(res.data.backgroundFilename).toBeNull();
     expect(res.data.background2Filename).toBeNull();
 
-    // Cache invalidated by slug
-    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:old-slug');
+    // Every visitor's cached copy of the list goes
+    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:old-slug:*');
   });
 
   it('parses valid numbers and dates, nulls unparseable dates', async () => {
@@ -216,6 +216,27 @@ describe('updateCompanyList — file uploads', () => {
 
     // The unknown file stream is consumed so the request cannot hang
     expect(stray.toBuffer).toHaveBeenCalled();
+  });
+
+  it('refuses a file that is not a raster image, so nothing scriptable lands in public', async () => {
+    const page = file('votingLogo', 'logo.html');
+    const res = await vibe.updateCompanyList(1, 2, makeRequest([page]));
+    expect(res.success).toBe(true);
+    expect(page.toBuffer).toHaveBeenCalled();
+    expect(h.prisma.companyList.update).not.toHaveBeenCalled();
+    expect(res.data.votingLogoFilename).toBeNull(); // still the list's own (none)
+  });
+
+  it('clears the voting logo and background on an empty value', async () => {
+    const res = await vibe.updateCompanyList(
+      1,
+      2,
+      makeRequest([field('votingLogo', ''), field('votingBackground', '')])
+    );
+    const data = h.prisma.companyList.update.mock.calls[0][0].data;
+    expect(data).toEqual({ votingLogo: null, votingBackground: null });
+    expect(res.data.votingLogoFilename).toBeNull();
+    expect(res.data.votingBackgroundFilename).toBeNull();
   });
 
   it('handles all four image slots', async () => {

@@ -502,6 +502,20 @@
                             : calculationResult.pricePerSet;
                         const quantity = calculationResult.quantity;
                         const lineTotal = pricePerUnit * quantity;
+
+                        // Shipping abroad is passed on at cost: the discount is a
+                        // percentage of everything else and shipping is added after it
+                        // (Rick, 2026-10-06). With a discount the shipping line moves
+                        // under the discount in the totals, so the rows read in the
+                        // order they are summed; without one it is the last item row.
+                        const allExtras = calculationResult.extras || [];
+                        const shippingExtras = allExtras.filter(extra => extra.key === 'shipping');
+                        const manualDiscountPct = calculation.manualDiscountPercent || 0;
+                        const shippingAfterDiscount = manualDiscountPct > 0 && shippingExtras.length > 0;
+                        // Names the country and the cartons instead of "one-off".
+                        const shippingLabel = (extra) => typeof describeShipping === 'function'
+                            ? describeShipping(extra.keyVars)
+                            : { description: tExtra(extra.key, extra.keyVars), details: '' };
                     %>
                     <!-- Main product line -->
                     <tr>
@@ -517,16 +531,15 @@
                     </tr>
 
                     <!-- Extras (filter out custom app and voting portal as they're shown separately) -->
-                    <% if (calculationResult.extras && calculationResult.extras.length > 0) { %>
+                    <% if (allExtras.length > 0) { %>
                         <%# App and voting portal have their own rows below, so they are
-                            filtered out here by key rather than by matching Dutch text. %>
-                        <% calculationResult.extras.filter(extra => extra.key !== 'customApp' && extra.key !== 'votingPortal').forEach(function(extra) { %>
-                        <%# Shipping names its country and the cartons instead of "one-off". %>
-                        <% const shippingText = extra.key === 'shipping' && typeof describeShipping === 'function' ? describeShipping(extra.keyVars) : null; %>
+                            filtered out here by key rather than by matching Dutch text.
+                            Shipping comes last, see shippingExtras. %>
+                        <% allExtras.filter(extra => extra.key !== 'customApp' && extra.key !== 'votingPortal' && extra.key !== 'shipping').forEach(function(extra) { %>
                         <tr>
                             <td>
-                                <span class="item-description"><%= shippingText ? shippingText.description : (extra.key ? tExtra(extra.key, extra.keyVars) : extra.name) %></span>
-                                <span class="item-details"><%= shippingText ? shippingText.details : t('itemOneOff') %></span>
+                                <span class="item-description"><%= extra.key ? tExtra(extra.key, extra.keyVars) : extra.name %></span>
+                                <span class="item-details"><%= t('itemOneOff') %></span>
                             </td>
                             <td>1</td>
                             <td><%= formatCurrency(extra.price) %></td>
@@ -556,6 +569,20 @@
                         <td><%= formatCurrency(500) %></td>
                     </tr>
                     <% } %>
+                    <% if (!shippingAfterDiscount) { %>
+                        <% shippingExtras.forEach(function(extra) { %>
+                        <% const shippingText = shippingLabel(extra); %>
+                        <tr>
+                            <td>
+                                <span class="item-description"><%= shippingText.description %></span>
+                                <span class="item-details"><%= shippingText.details %></span>
+                            </td>
+                            <td>1</td>
+                            <td><%= formatCurrency(extra.price) %></td>
+                            <td><%= formatCurrency(extra.price) %></td>
+                        </tr>
+                        <% }); %>
+                    <% } %>
                 </tbody>
             </table>
         </div>
@@ -567,17 +594,19 @@
                 ? calculatedPrices.clientPricePerUnit * calculationResult.quantity
                 : calculationResult.pricePerSet * calculationResult.quantity;
             // Filter out app and voting portal from extras to avoid double counting (they're shown separately)
-            const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
-                ? calculationResult.extras.filter(extra => extra.key !== 'customApp' && extra.key !== 'votingPortal').reduce((sum, extra) => sum + extra.price, 0)
-                : 0;
+            const extrasTotal = allExtras.filter(extra => extra.key !== 'customApp' && extra.key !== 'votingPortal').reduce((sum, extra) => sum + extra.price, 0);
+            const shippingTotal = shippingExtras.reduce((sum, extra) => sum + extra.price, 0);
             const customAppFeeTotal = calculationResult.customAppFee || 0;
             const votingPortalFeeTotal = calculationResult.votingPortalFee || 0;
             const subtotal = mainProductTotal + extrasTotal + customAppFeeTotal + votingPortalFeeTotal;
 
-            // Apply manual discount percentage
-            const manualDiscountPct = calculation.manualDiscountPercent || 0;
-            const discountAmount = subtotal * (manualDiscountPct / 100);
+            // Apply the manual discount percentage (manualDiscountPct, above) to
+            // everything except shipping, like listPricingTotals does for the invoice.
+            const discountAmount = (subtotal - shippingTotal) * (manualDiscountPct / 100);
             const totalAfterDiscount = subtotal - discountAmount;
+            // The subtotal row sums the rows above it: without shipping when
+            // shipping follows the discount.
+            const subtotalShown = shippingAfterDiscount ? subtotal - shippingTotal : subtotal;
 
             const vatCtx = (typeof vatContext !== 'undefined' && vatContext) ? vatContext : { region: 'nl', rate: 21, reverseCharge: false };
             const vat = Math.round(totalAfterDiscount * (vatCtx.rate / 100) * 100) / 100; // Round VAT to 2 decimals
@@ -587,7 +616,7 @@
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3"><%= t('subtotal') %></td>
-                    <td><%= formatCurrency(subtotal) %></td>
+                    <td><%= formatCurrency(subtotalShown) %></td>
                 </tr>
 
                 <% if (manualDiscountPct > 0) { %>
@@ -595,6 +624,16 @@
                     <td colspan="3"><%= t('discount', { percent: manualDiscountPct }) %></td>
                     <td><%= formatCurrency(-(discountAmount)) %></td>
                 </tr>
+                <% } %>
+
+                <% if (shippingAfterDiscount) { %>
+                    <% shippingExtras.forEach(function(extra) { %>
+                    <% const shippingText = shippingLabel(extra); %>
+                <tr class="total-row shipping">
+                    <td colspan="3"><%= shippingText.description %><% if (shippingText.details) { %><span class="item-details"><%= shippingText.details %></span><% } %></td>
+                    <td><%= formatCurrency(extra.price) %></td>
+                </tr>
+                    <% }); %>
                 <% } %>
 
                 <tr class="total-row grand-total">

@@ -125,6 +125,7 @@ describe('listPricingTotals', () => {
     ).toEqual({
       productTotal: 1707.5,
       extrasTotal: 425,
+      shippingTotal: 0,
       subtotal: 2982.5,
       discountAmount: 298.25,
       total: 2684.25,
@@ -136,6 +137,46 @@ describe('listPricingTotals', () => {
     // 2557.50 * 7.5% = 191.8125
     expect(t.discountAmount).toBe(191.81);
     expect(t.total).toBe(2365.69);
+  });
+
+  describe('shipping (Rick, 2026-10-06: the discount never applies to it)', () => {
+    const shipping = { key: 'shipping', keyVars: { country: 'DE', cartons: 34, pallets: 1 }, name: 'Verzending', price: 200 };
+
+    it('takes the discount off everything but shipping, then adds shipping', () => {
+      expect(
+        listPricingTotals({
+          ...base,
+          extras: [{ name: 'Stansvorm', price: 425 }, shipping],
+          discountPercent: 10,
+        })
+      ).toEqual({
+        productTotal: 1707.5,
+        extrasTotal: 625,
+        shippingTotal: 200,
+        subtotal: 3182.5,
+        // 10% of 2982.50, the same discount as without shipping
+        discountAmount: 298.25,
+        // 2684.25 + 200
+        total: 2884.25,
+      });
+    });
+
+    it('rounds the discount on the part without shipping', () => {
+      const t = listPricingTotals({
+        ...base,
+        extras: [{ ...shipping, price: 123.45 }],
+        discountPercent: 7.5,
+      });
+      // (2680.95 - 123.45) * 7.5% = 191.8125
+      expect(t.subtotal).toBe(2680.95);
+      expect(t.discountAmount).toBe(191.81);
+      expect(t.total).toBe(2489.14);
+    });
+
+    it('changes nothing without a discount', () => {
+      const t = listPricingTotals({ ...base, extras: [shipping] });
+      expect(t).toMatchObject({ shippingTotal: 200, subtotal: 2757.5, discountAmount: 0, total: 2757.5 });
+    });
   });
 });
 

@@ -379,41 +379,22 @@ describe('account & verification mails', () => {
     expect(raw).toContain('424242');
   });
 
-  it('sendVerificationEmail (qrvote brand) uses the qrsong logo and brand suffix', async () => {
+  it('sendVerificationEmail is a QRSong! mail linking to the voting page on the site', async () => {
     await mail.sendVerificationEmail(
       'vote@example.com',
       'Voter',
       'ACME',
       'vhash',
-      'en',
-      'acme-list',
-      true
+      'de',
+      'acme-list'
     );
     const raw = lastRaw();
     expect(raw).toContain('From: QRSong! <noreply@qrsong.io>');
-    expect(raw).toContain(
-      'Subject: Verify Your Hitlist Submission - QRSong!'
-    );
-    expect(raw).toContain(
-      'http://localhost:4300/hitlist/acme-list/verify/vhash'
-    );
-    expect(raw).toContain('filename="qrsong_logo.png"');
-  });
-
-  it('sendVerificationEmail (OnzeVibe brand) uses the onzevibe logo', async () => {
-    await mail.sendVerificationEmail(
-      'vote2@example.com',
-      'Voter2',
-      'ACME',
-      'vhash2',
-      'en',
-      'acme-list',
-      false
-    );
-    const raw = lastRaw();
-    expect(raw).toContain('From: OnzeVibe <noreply@qrsong.io>');
-    expect(raw).toContain('- OnzeVibe');
-    expect(raw).toContain('filename="onzevibe_logo.png"');
+    expect(raw).toMatch(/Subject: .* - QRSong!/);
+    expect(raw).toContain('/de/v/acme-list/verify/vhash');
+    expect(raw).toContain('filename="logo.png"');
+    expect(raw).not.toContain('OnzeVibe');
+    expect(raw).not.toContain('onzevibe');
   });
 
   it('sendQRVoteWelcomeEmail sends a fixed subject with the verify url', async () => {

@@ -339,7 +339,7 @@ describe('finalizeList', () => {
       status: 'spotify_list_generated',
       spotifyRefreshRequired: false,
     });
-    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst-slug');
+    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst-slug:*');
 
     // Result payload
     expect(res.data.companyName).toBe('Acme');

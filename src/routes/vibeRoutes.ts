@@ -171,6 +171,8 @@ export default async function vibeRoutes(
           pricing: built.success
             ? {
                 subtotal: built.totals!.subtotal,
+                // Part of the subtotal; the discount is never taken of it.
+                shippingTotal: built.totals!.shippingTotal,
                 discountPercent: built.pricing!.discountPercent,
                 discountAmount: built.totals!.discountAmount,
                 total: built.totals!.total,
@@ -911,6 +913,17 @@ export default async function vibeRoutes(
         }
       }
 
+      // The voting page's button colours (#rrggbb).
+      for (const field of ['buttonBackgroundColor', 'buttonTextColor'] as const) {
+        if (body[field] !== undefined) {
+          if (typeof body[field] !== 'string' || !/^#[0-9a-f]{6}$/i.test(body[field])) {
+            reply.status(400).send({ error: `${field} must be a colour like #1a2b3c` });
+            return;
+          }
+          updateData[field] = body[field].toLowerCase();
+        }
+      }
+
       if (Object.keys(updateData).length === 0) {
         reply.status(400).send({ error: 'No fields to update' });
         return;
@@ -937,6 +950,10 @@ export default async function vibeRoutes(
         where: { id: listId },
         data: updateData,
       });
+
+      // The voting page caches the list; a renamed slug leaves the old copies too.
+      await vibe.clearCompanyListCache(list.slug);
+      if (updated.slug !== list.slug) await vibe.clearCompanyListCache(updated.slug);
 
       reply.send({ success: true, list: updated });
     }

@@ -137,8 +137,9 @@ boxes are in the standard QRSong! design, the Deezer/Tidal preview without a
 subscription only as a small footnote.
 
 - Prices come from `buildPriceList`: the printer cost, the saved profit table
-  and `priceFromCost`, the same rounding as a three-size quotation, and it
-  refuses a tier without our margin (never a list at the printer's cost).
+  and `priceFromCost` (`src/services/boxPricing.ts`, the Schneider
+  calculator's tier pick and rounding), and it refuses a tier without our
+  margin (never a list at the printer's cost).
 - The GET views (`/vibe/{edition}-pricing`) render only from a URL the PDF
   route signed (`priceListQuery`, HMAC on `JWT_SECRET`); unsigned they answer
   403. Before 2026-10-05 anyone could render them with an empty matrix and
@@ -866,15 +867,35 @@ so no invoice matched the quotation or the Sell column.
   with `extras.shippingTo.<ISO>` for countries that need an article). The
   rates are InTime's 2026 DHL list prices, an estimate: Schneiders' own
   rates are unknown, and the only pallet rate is DE.
+  **The discount never applies to shipping** (Rick, 2026-10-06): the
+  list's discount % is taken of the subtotal without the shipping extra(s),
+  and shipping is added after it. `listPricingTotals`:
+  `discountAmount = round2((subtotal − shippingTotal) × pct / 100)`,
+  `total = round2(subtotal − discountAmount)`; `subtotal` still sums
+  everything and `shippingTotal` is returned too (the frontend's
+  `list-pricing.util.ts` mirrors it). Without shipping nothing changed. The
+  invoice puts the shipping line after the discount line; the quotation,
+  when there is a discount, shows subtotal (without shipping), discount,
+  shipping, total excl. VAT, and without one keeps shipping as the last
+  item row.
 
-## Business quote requests, the company asset store, three-size quotations
+## Business quote requests and the company asset store
 
-The /business form, the private file store behind a company's Assets tab,
-mailing files to a contact and the 48/96/192 quotation all live in
-`src/routes/businessRoutes.ts` (`quoteRequests.ts`, `companyFiles.ts`,
-`boxOptionsQuotation.ts`, `services/boxOptionsPricing.ts`). The frontend
-CLAUDE.md, "Business quote requests", explains the flow and its rules. Two
-things to know here:
+The /business form, the private file store behind a company's Assets tab and
+mailing files to a contact all live in `src/routes/businessRoutes.ts`
+(`quoteRequests.ts`, `companyFiles.ts`). The frontend CLAUDE.md, "Business
+quote requests", explains the flow and its rules. Things to know here:
+
+- **The three-size quotation (48, 96 and 192 cards side by side) was removed
+  on 2026-10-06 at Rick's request**: `POST /vibe/quotation/:companyId/box-options`,
+  the Lambda view `GET /vibe/quotation-options/:number`, the quote request's
+  `POST /vibe/quote-requests/:id/quotation`, `boxOptionsQuotation.ts`,
+  `box_options_quotation.ejs` and its `quotation.options*` keys. Quotations
+  are made per box size (`qquote quote`). Rows with variant
+  `schneider-options` and their archived PDFs stay, and a request's
+  `quotationId` still points at one made before. The shared pricing
+  (`priceFromCost`, `PROFIT_TIERS`, the profit table) moved to
+  `src/services/boxPricing.ts` for the price-list brochure.
 
 - boxd and qquote call these routes with the admin bearer token
   (`QRSONG_API_TOKEN` in their `.env`), like the dashboard.
@@ -1411,6 +1432,21 @@ The server routes have been refactored into logical modules for better maintaina
 The OnzeVibe company portal (`qrhit-vibe`) is no longer worked on: its
 folder was removed on 2026-10-03 (Rick). The `/vibe/*` routes stay, the
 frontend's admin dashboard (companies, lists, quotations) uses them.
+
+Its voting page moved to the site on 2026-10-06: `https://www.qrsong.io/v/<slug>`
+(`/:lang/v/:slug`, see "Voting page" in the frontend's CLAUDE.md), still on the
+`/hitlist/*` routes. Every link the API builds to it uses `FRONTEND_URI`
+(the verification mail, `/:lang/v/:slug/verify/:hash`, always QRSong!-branded;
+the list welcome mail). `FRONTEND_VOTING_URI` is now only the admin URL in the
+OnzeVibe welcome mail, which no current form triggers.
+
+- **The list cache is per visitor**: `companyListByDomain:<slug>:<hash>`
+  (`Hitlist.getCompanyListByDomain`, 24 hours). `Vibe.clearCompanyListCache`
+  deletes the pattern; until 2026-10-06 it deleted the key without a hash,
+  which matched nothing, so a returning voter saw a changed list up to a day
+  late. `/vibe/companies/:id/lists/:id/info` clears it too now.
+- `processAndSaveImage` keeps only `.png .jpg .jpeg .webp .gif`: the file
+  lands in the public folder as uploaded.
 
 ### Frontend-Backend Integration
 The frontend consumes this API through the following key endpoints:

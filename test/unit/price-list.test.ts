@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 
 /**
- * The price-list brochures (retail, reseller, client): priced like a
- * three-size quotation, never at the printer's cost, and only rendered from a
- * signed URL.
+ * The price-list brochures (retail, reseller, client): priced like the
+ * Schneider calculator (priceFromCost), never at the printer's cost, and only
+ * rendered from a signed URL.
  */
 
 vi.mock('../../src/cache', () => ({
@@ -20,10 +20,12 @@ import {
   verifyPriceListSignature,
 } from '../../src/priceList';
 import {
+  BOX_SIZES,
   PROFIT_TIERS,
   ProfitMatrix,
-  priceBoxOptions,
-} from '../../src/services/boxOptionsPricing';
+  priceFromCost,
+  profitFor,
+} from '../../src/services/boxPricing';
 
 const fullMatrix = (entry = { qrsong: 25, reseller: 30 }): ProfitMatrix => {
   const m: ProfitMatrix = {};
@@ -48,17 +50,14 @@ describe('buildPriceList', () => {
     expect(Object.keys(list.rows[0].cells).map(Number)).toEqual([48, 96, 192]);
   });
 
-  it('prints the same cents as a three-size quotation for that quantity', async () => {
+  it('prints the calculator\'s cents for that quantity', async () => {
     const matrix = fullMatrix();
     const list = await buildPriceList(matrix, calculate);
     const row = list.rows.find((r) => r.quantity === 300)!;
-    const retail = await priceBoxOptions(300, { matrix, calculate });
-    const reseller = await priceBoxOptions(300, { matrix, calculate, isReseller: true });
-    for (const option of retail) {
-      expect(row.cells[option.cards].advice).toBe(option.pricePerBox);
-    }
-    for (const option of reseller) {
-      expect(row.cells[option.cards].purchase).toBe(option.pricePerBox);
+    for (const cards of BOX_SIZES) {
+      const profit = profitFor(matrix, cards, 300)!;
+      expect(row.cells[cards].advice).toBe(priceFromCost(cards, 300, costs[cards], profit, false).pricePerBox);
+      expect(row.cells[cards].purchase).toBe(priceFromCost(cards, 300, costs[cards], profit, true).pricePerBox);
     }
   });
 

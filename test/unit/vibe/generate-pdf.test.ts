@@ -87,7 +87,7 @@ describe('generatePDF — queued early return', () => {
       where: { id: 5 },
       data: { status: 'generating_pdf' },
     });
-    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst');
+    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst:*');
 
     // 100% discount at the fixed €100 price point
     expect(h.discount.createDiscountCode).toHaveBeenCalledWith(10000, '', '');
@@ -249,7 +249,7 @@ describe('generatePDF — full (non-queued) path', () => {
     });
 
     // Cache cleared for both the initial and the final status flips
-    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst');
+    expect(h.cacheDel).toHaveBeenCalledWith('companyListByDomain:lijst:*');
     expect(h.cacheDel.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 

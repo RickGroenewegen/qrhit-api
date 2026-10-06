@@ -48,12 +48,20 @@ export interface ListPricing {
 
 export interface ListPricingTotals {
   productTotal: number;
+  /** All one-off extras, shipping included. */
   extrasTotal: number;
+  /** The shipping extra(s) (`key: 'shipping'`), part of extrasTotal. */
+  shippingTotal: number;
+  /** Everything: product, extras (shipping included), app and portal. */
   subtotal: number;
+  /** The discount %, of the subtotal without shipping. */
   discountAmount: number;
   /** Excl. VAT, after discount: what the full invoice adds up to. */
   total: number;
 }
+
+/** The shipping extra; the discount never applies to it (Rick, 2026-10-06). */
+export const SHIPPING_EXTRA_KEY = 'shipping';
 
 export interface PaymentAmounts {
   full: number;
@@ -149,17 +157,30 @@ export function listPricingFromCalculation(
   }
 }
 
+/**
+ * The discount is a percentage of everything except shipping: shipping is
+ * passed on at cost and added after the discount (Rick, 2026-10-06). Without
+ * shipping the sums are exactly what they were before.
+ */
 export function listPricingTotals(p: ListPricing): ListPricingTotals {
   const productTotal = round2(p.quantity * p.unitPrice);
   const extrasTotal = round2(p.extras.reduce((s, e) => s + e.price, 0));
+  const shippingTotal = round2(
+    p.extras
+      .filter((e) => e.key === SHIPPING_EXTRA_KEY)
+      .reduce((s, e) => s + e.price, 0)
+  );
   const subtotal = round2(
     productTotal + extrasTotal + p.customAppFee + p.votingPortalFee
   );
   const discountAmount =
-    p.discountPercent > 0 ? round2((subtotal * p.discountPercent) / 100) : 0;
+    p.discountPercent > 0
+      ? round2(((subtotal - shippingTotal) * p.discountPercent) / 100)
+      : 0;
   return {
     productTotal,
     extrasTotal,
+    shippingTotal,
     subtotal,
     discountAmount,
     total: round2(subtotal - discountAmount),

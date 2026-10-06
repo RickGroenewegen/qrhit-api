@@ -11,7 +11,7 @@ import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
 import { PriceListEdition, priceListQuery } from '../../src/priceList';
-import { PROFIT_TIERS } from '../../src/services/boxOptionsPricing';
+import { PROFIT_TIERS } from '../../src/services/boxPricing';
 
 /**
  * Vibe pricing persistence (company/list calculations), quotation HTML

@@ -25,6 +25,7 @@ import {
   PaymentAmounts,
   ListPricing,
   ListPricingTotals,
+  SHIPPING_EXTRA_KEY,
   listPricingFromCalculation,
   listPricingTotals,
   listPrinterVariant,
@@ -36,6 +37,9 @@ import {
   shippingExtraKeyVars,
   shippingLineText,
 } from './businessShipping';
+
+// Card backgrounds and the voting page's logo and background (processAndSaveImage).
+const UPLOAD_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 
 class Vibe {
   private static instance: Vibe;
@@ -307,8 +311,8 @@ class Vibe {
       // Welcome mail follows the language the form was filled in.
       const locale = formLocale;
 
-      // Construct the portal URL (example, adjust as needed)
-      const portalUrl = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}`;
+      // The list's voting page on the site; the site picks the language.
+      const portalUrl = `${process.env['FRONTEND_URI']}/v/${slug}`;
       const adminUrl = process.env['FRONTEND_VOTING_URI'];
 
       try {
@@ -993,6 +997,18 @@ class Vibe {
       // Determine file extension from the uploaded file's name
       const fileExtension =
         path.extname(fileData.filename).toLowerCase() || '.png'; // Default to png if no extension
+
+      // The file lands in the public folder as it is, so only raster images:
+      // an .html or .svg there would run script on the API's domain.
+      if (!UPLOAD_IMAGE_EXTENSIONS.includes(fileExtension)) {
+        await fileData.toBuffer(); // drain the stream so the request can finish
+        this.logger.log(
+          color.yellow.bold(
+            `Refused ${type} upload with extension ${color.white.bold(fileExtension)} for list ${listId}`
+          )
+        );
+        return null;
+      }
 
       // Generate unique filename using utils.generateRandomString
       const uniqueId = this.utils.generateRandomString(32);
@@ -2046,6 +2062,12 @@ class Vibe {
       if (fields.background2 === '') {
         updateData.background2 = null;
       }
+      if (fields.votingBackground === '') {
+        updateData.votingBackground = null;
+      }
+      if (fields.votingLogo === '') {
+        updateData.votingLogo = null;
+      }
 
       if (fields.numberOfCards !== undefined) {
         const numCards = Number(fields.numberOfCards);
@@ -2226,13 +2248,14 @@ class Vibe {
   }
 
   /**
-   * Centralized cache clearing for a company list by slug.
+   * Centralized cache clearing for a company list by slug. The voting page
+   * caches the list per visitor (`companyListByDomain:<slug>:<hash>`, see
+   * Hitlist.getCompanyListByDomain), so every visitor's copy goes.
    * @param slug The slug of the company list.
    */
-  private async clearCompanyListCache(slug: string) {
+  public async clearCompanyListCache(slug: string | null | undefined) {
     if (!slug) return;
-    const cacheKey = `companyListByDomain:${slug}`;
-    await this.cache.del(cacheKey);
+    await this.cache.delPatternNonBlocking(`companyListByDomain:${slug}:*`);
   }
 
   /**
@@ -4320,7 +4343,8 @@ class Vibe {
    * computes the VAT.
    *
    * paymentOption:
-   *   - 'full': every line, plus a discount line when there is a discount
+   *   - 'full': every line, plus a discount line when there is a discount;
+   *     shipping comes after the discount line, which never includes it
    *   - 'down': one line, 30% of the total
    *   - 'remaining': one line, the total minus `downPaymentExclVat` (the
    *     down payment actually invoiced), or minus 30% when there is none
@@ -4423,31 +4447,10 @@ class Vibe {
           price: pricing.unitPrice.toFixed(2),
         },
       ];
-      // Shipping names its country and what goes ("Verzending naar
-      // Duitsland (34 omdozen op 1 pallet)"), the other extras are one-off.
-      let countryNames: Record<string, string> | null = null;
-      if (pricing.extras.some((e) => e.key === 'shipping')) {
-        try {
-          countryNames = await this.translation.getTranslationsByPrefix(
-            locale,
-            'countries'
-          );
-        } catch {
-          countryNames = null; // the ISO code stands in for the name
-        }
-      }
-      for (const e of pricing.extras) {
-        let description: string;
-        if (e.key === 'shipping') {
-          const text = shippingLineText(tExtra, e.keyVars, countryNames);
-          description = text.details
-            ? t('shipping', { name: text.description, details: text.details })
-            : text.description;
-        } else {
-          description = t('extraOneOff', { name: extraName(e) });
-        }
+      const isShipping = (e: { key?: string }) => e.key === SHIPPING_EXTRA_KEY;
+      for (const e of pricing.extras.filter((x) => !isShipping(x))) {
         items.push({
-          description,
+          description: t('extraOneOff', { name: extraName(e) }),
           amount: '1',
           price: e.price.toFixed(2),
         });
@@ -4467,13 +4470,39 @@ class Vibe {
         });
       }
       // A negative line, excl. VAT, so MoneyBird computes the VAT on the
-      // discounted total like the quotation does.
+      // discounted total like the quotation does. The discount is a
+      // percentage of the lines above it: never of shipping, which follows.
       if (totals.discountAmount > 0) {
         items.push({
           description: t('discount', { percent: pricing.discountPercent }),
           amount: '1',
           price: (-totals.discountAmount).toFixed(2),
         });
+      }
+      // Shipping names its country and what goes ("Verzending naar
+      // Duitsland (34 omdozen op 1 pallet)") and comes last, after the
+      // discount (Rick, 2026-10-06).
+      const shippingExtras = pricing.extras.filter(isShipping);
+      if (shippingExtras.length > 0) {
+        let countryNames: Record<string, string> | null = null;
+        try {
+          countryNames = await this.translation.getTranslationsByPrefix(
+            locale,
+            'countries'
+          );
+        } catch {
+          countryNames = null; // the ISO code stands in for the name
+        }
+        for (const e of shippingExtras) {
+          const text = shippingLineText(tExtra, e.keyVars, countryNames);
+          items.push({
+            description: text.details
+              ? t('shipping', { name: text.description, details: text.details })
+              : text.description,
+            amount: '1',
+            price: e.price.toFixed(2),
+          });
+        }
       }
 
       const reference = `${list.name}`;

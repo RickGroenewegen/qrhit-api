@@ -1,21 +1,21 @@
 import crypto from 'crypto';
 import {
-  BOX_OPTION_CARDS,
-  BoxOptionCards,
+  BOX_SIZES,
+  BoxSize,
   CostCalculator,
   PROFIT_TIERS,
   ProfitMatrix,
   loadProfitMatrix,
   priceFromCost,
   profitFor,
-} from './services/boxOptionsPricing';
+} from './services/boxPricing';
 
 /**
  * The business price lists (admin → Pricing Tables, a company's Documents
- * tab), priced exactly like a three-size quotation: the printer's cost per
+ * tab), priced exactly like the Schneider calculator: the printer's cost per
  * box, the shared profit table and the calculator's rounding at every step
- * (priceFromCost). A price list and a quotation for the same quantity show
- * the same cents.
+ * (priceFromCost). A price list and the calculator for the same quantity
+ * show the same cents.
  *
  * - retail: advice prices, for companies ordering from us directly
  * - reseller: purchase and advice prices
@@ -36,11 +36,11 @@ export interface PriceListCell {
 
 export interface PriceListRow {
   quantity: number;
-  cells: Record<BoxOptionCards, PriceListCell>;
+  cells: Record<BoxSize, PriceListCell>;
 }
 
 export interface PriceList {
-  sizes: readonly BoxOptionCards[];
+  sizes: readonly BoxSize[];
   rows: PriceListRow[];
   /** The mark-up when every tier uses the same one, so the list can say it once. */
   uniformMarkupPercent: number | null;
@@ -57,7 +57,7 @@ export function assertProfitTable(matrix: ProfitMatrix | null | undefined): void
     throw new PriceListError('The profit table is empty: fill admin → Pricing Tables');
   }
   for (const quantity of PROFIT_TIERS) {
-    for (const cards of BOX_OPTION_CARDS) {
+    for (const cards of BOX_SIZES) {
       const profit = profitFor(matrix, cards, quantity);
       if (!profit || !(profit.qrsong > 0)) {
         throw new PriceListError(
@@ -96,8 +96,8 @@ export async function buildPriceList(
   const rows: PriceListRow[] = [];
   const markups = new Set<number>();
   for (const quantity of PROFIT_TIERS) {
-    const cells = {} as Record<BoxOptionCards, PriceListCell>;
-    for (const cards of BOX_OPTION_CARDS) {
+    const cells = {} as Record<BoxSize, PriceListCell>;
+    for (const cards of BOX_SIZES) {
       const result = await calc({
         quantity,
         cardCount: cards,
@@ -128,7 +128,7 @@ export async function buildPriceList(
   }
 
   return {
-    sizes: BOX_OPTION_CARDS,
+    sizes: BOX_SIZES,
     rows,
     uniformMarkupPercent: markups.size === 1 ? [...markups][0] : null,
   };

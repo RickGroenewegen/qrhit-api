@@ -8,7 +8,8 @@ import { estimateBusinessShipping, shippingExtraKeyVars, shippingLineText } from
  * Renders src/views/tromp_quotation.ejs straight through EJS with what the
  * quotation route hands it for a Schneider list shipped abroad: the shipping
  * extra gets its own description and carton details instead of "one-off
- * cost", and counts in the subtotal.
+ * cost", and counts in the subtotal. The discount never applies to shipping
+ * (Rick, 2026-10-06): with a discount, shipping follows it in the totals.
  */
 
 const TEMPLATE = path.resolve('src/views/tromp_quotation.ejs');
@@ -30,7 +31,7 @@ const translator = (locale: string, prefix: string) => {
     );
 };
 
-function render(locale: 'nl' | 'de' | 'en', country: string, quantity = 600): string {
+function render(locale: 'nl' | 'de' | 'en', country: string, quantity = 600, discountPercent = 0): string {
   const intlTag = { nl: 'nl-NL', de: 'de-DE', en: 'en-GB' }[locale];
   const t = translator(locale, 'quotation');
   const tExtra = translator(locale, 'extras');
@@ -50,7 +51,7 @@ function render(locale: 'nl' | 'de' | 'en', country: string, quantity = 600): st
       t,
       tExtra,
       company: { name: 'Medienwerft GmbH', countrycode: 'DE' },
-      calculation: { cardCount: 192, quantity, manualDiscountPercent: 0 },
+      calculation: { cardCount: 192, quantity, manualDiscountPercent: discountPercent },
       calculationResult: {
         quantity,
         pricePerSet: 7.5,
@@ -114,5 +115,50 @@ describe('tromp_quotation.ejs shipping line', () => {
     const html = render('nl', 'NL');
     expect(html).not.toContain('Verzending');
     expect(html).toMatch(/€\s*4\.875,00/); // 600 x 7.50 + 375
+  });
+});
+
+describe('tromp_quotation.ejs discount and shipping', () => {
+  // The totals block only: the item table above it also holds amounts.
+  const totalsOf = (html: string) => html.slice(html.indexOf('<table class="totals-table">'));
+  const amountIn = (row: string) => row.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Totals rows carry a class, so they open with '<tr ' rather than '<tr>'.
+  const totalsRow = (totals: string, text: string) => {
+    const at = totals.indexOf(text);
+    expect(at, `"${text}" in the totals`).toBeGreaterThan(-1);
+    return totals.slice(totals.lastIndexOf('<tr', at), totals.indexOf('</tr>', at));
+  };
+
+  it('takes the discount off everything but shipping, and lists shipping after it', () => {
+    const html = render('de', 'DE', 600, 10);
+    const totals = totalsOf(html);
+    // 600 x 7.50 + 375 = 4875; 10% = 487.50; + 200 shipping = 4587.50
+    expect(amountIn(totalsRow(totals, 'Zwischensumme'))).toMatch(/4\.875,00\s*€/);
+    expect(amountIn(totalsRow(totals, 'Rabatt (10 %)'))).toMatch(/-487,50\s*€/);
+    const shipping = totalsRow(totals, 'Versand nach Deutschland');
+    expect(shipping).toContain('34 Umkartons auf 1 Palette');
+    expect(amountIn(shipping)).toMatch(/200,00\s*€/);
+    expect(amountIn(totalsRow(totals, 'Gesamtbetrag netto'))).toMatch(/4\.587,50\s*€/);
+
+    // In the order they are summed, and shipping only once on the page.
+    const at = (text: string) => totals.indexOf(text);
+    expect(at('Zwischensumme')).toBeLessThan(at('Rabatt'));
+    expect(at('Rabatt')).toBeLessThan(at('Versand nach Deutschland'));
+    expect(at('Versand nach Deutschland')).toBeLessThan(at('Gesamtbetrag netto'));
+    expect(html.split('Versand nach Deutschland')).toHaveLength(2);
+  });
+
+  it('without shipping the discount is what it always was', () => {
+    const totals = totalsOf(render('nl', 'NL', 600, 10));
+    expect(amountIn(totalsRow(totals, 'Subtotaal'))).toMatch(/€\s*4\.875,00/);
+    expect(amountIn(totalsRow(totals, 'Korting (10%)'))).toMatch(/€\s*-487,50/);
+    expect(amountIn(totalsRow(totals, 'Totaal excl. BTW'))).toMatch(/€\s*4\.387,50/);
+    expect(totals).not.toContain('Verzending');
+  });
+
+  it('without a discount shipping stays in the item table and the subtotal', () => {
+    const html = render('nl', 'DE');
+    expect(totalsOf(html)).not.toContain('Verzending naar');
+    expect(amountIn(totalsRow(totalsOf(html), 'Subtotaal'))).toMatch(/€\s*5\.075,00/);
   });
 });

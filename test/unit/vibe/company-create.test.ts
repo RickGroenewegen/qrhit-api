@@ -28,6 +28,7 @@ import Vibe from '../../../src/vibe';
 const vibe = Vibe.getInstance();
 
 process.env['FRONTEND_VOTING_URI'] = 'https://vote.test';
+process.env['FRONTEND_URI'] = 'https://site.test';
 
 const GOOD_PASSWORD = 'Abcdefg1!';
 
@@ -203,14 +204,14 @@ describe('handleCompanyListCreate — happy path (companyadmin)', () => {
       }),
     });
 
-    // Welcome mail with the portal URL built from the slug
+    // Welcome mail with the list's voting page on the site
     const mails = outbound.calls('Mail', 'sendPortalWelcomeEmail');
     expect(mails).toHaveLength(1);
     expect(mails[0].args).toEqual([
       'rick@acme.test',
       'Rick Tester',
       'Acme & Co!',
-      'https://vote.test/hitlist/acme-co',
+      'https://site.test/v/acme-co',
       'rick@acme.test',
       GOOD_PASSWORD,
       'nl',

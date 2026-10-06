@@ -1,20 +1,24 @@
 import Cache from '../cache';
 
 /**
- * The client price of a QRSong! Box (Schneider) for 48, 96 and 192 cards at
- * one quantity, worked out exactly as the admin calculator does it
+ * The client price of a QRSong! Box (Schneider) for 48, 96 and 192 cards,
+ * worked out exactly as the admin calculator does it
  * (qrhit admin-calculator-schneider.component.ts `calculatedPrices`, mirrored
  * in skill-qrsong-quotation src/pricing.ts): the printer's cost per box from
  * calculateSchneiderPricing, then the shared profit table in Redis, with the
- * calculator's tier pick and its rounding at every step. A three-size
- * quotation made here prints the prices the calculator would have shown.
+ * calculator's tier pick and its rounding at every step. The price-list
+ * brochure (priceList.ts) prints these prices.
+ *
+ * Until 2026-10-06 this was services/boxOptionsPricing.ts and also priced
+ * the three-size quotation (48, 96 and 192 side by side), which was removed
+ * at Rick's request.
  */
 
-export const BOX_OPTION_CARDS = [48, 96, 192] as const;
-export type BoxOptionCards = (typeof BOX_OPTION_CARDS)[number];
+export const BOX_SIZES = [48, 96, 192] as const;
+export type BoxSize = (typeof BOX_SIZES)[number];
 
 /** Business boxes are sold from 100. */
-export const MIN_BOX_OPTIONS_QUANTITY = 100;
+export const MIN_BUSINESS_BOXES = 100;
 
 /** The calculator's tier steps (the profit table also has 75; the calculator never uses it). */
 export const PROFIT_TIERS = [
@@ -27,8 +31,8 @@ export interface ProfitEntry {
 }
 export type ProfitMatrix = Record<string, Record<string, ProfitEntry>>;
 
-export interface BoxOption {
-  cards: BoxOptionCards;
+export interface BoxPrice {
+  cards: BoxSize;
   quantity: number;
   printerCost: number;
   profit: ProfitEntry;
@@ -69,12 +73,12 @@ export function profitFor(
 
 /** One box size priced from the printer's cost per box. */
 export function priceFromCost(
-  cards: BoxOptionCards,
+  cards: BoxSize,
   quantity: number,
   printerCost: number,
   profit: ProfitEntry,
   isReseller: boolean
-): BoxOption {
+): BoxPrice {
   const qrsongProfitAmount = round2(printerCost * (profit.qrsong / 100));
   const resellerPrice = round2(printerCost + qrsongProfitAmount);
   const resellerProfitAmount = round2(resellerPrice * (profit.reseller / 100));
@@ -107,64 +111,3 @@ export type CostCalculator = (params: {
   includeStansmes: boolean;
   profitMargin: number;
 }) => Promise<any>;
-
-export class BoxOptionsError extends Error {}
-
-/**
- * The three options for `quantity` boxes. Throws a BoxOptionsError below the
- * minimum or when the profit table has no margin for a size, so a quotation is
- * never printed at the printer's cost. No cutting die, like the calculator.
- */
-export async function priceBoxOptions(
-  quantity: number,
-  opts: {
-    isReseller?: boolean;
-    matrix?: ProfitMatrix | null;
-    calculate?: CostCalculator;
-  } = {}
-): Promise<BoxOption[]> {
-  if (!Number.isInteger(quantity) || quantity < MIN_BOX_OPTIONS_QUANTITY) {
-    throw new BoxOptionsError(
-      `The minimum is ${MIN_BOX_OPTIONS_QUANTITY} boxes (asked: ${quantity})`
-    );
-  }
-  const matrix = opts.matrix !== undefined ? opts.matrix : await loadProfitMatrix();
-  if (!matrix) {
-    throw new BoxOptionsError('The profit table is empty: fill admin → Pricing Tables');
-  }
-  const calculate: CostCalculator =
-    opts.calculate ??
-    (async (params) => {
-      const Vibe = (await import('../vibe')).default;
-      return Vibe.getInstance().calculateSchneiderPricing(params);
-    });
-
-  const options: BoxOption[] = [];
-  for (const cards of BOX_OPTION_CARDS) {
-    const result = await calculate({
-      quantity,
-      cardCount: cards,
-      includeStansmes: false,
-      profitMargin: 0,
-    });
-    if (!result?.success) {
-      throw new BoxOptionsError(result?.error || `No printer price for ${cards} cards`);
-    }
-    const profit = profitFor(matrix, cards, quantity);
-    if (!profit || (profit.qrsong <= 0 && profit.reseller <= 0)) {
-      throw new BoxOptionsError(
-        `The profit table has no margin for ${cards} cards at ${profitTier(quantity)} boxes`
-      );
-    }
-    options.push(
-      priceFromCost(
-        cards,
-        quantity,
-        result.calculation.pricePerBox || 0,
-        profit,
-        !!opts.isReseller
-      )
-    );
-  }
-  return options;
-}
