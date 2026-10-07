@@ -11,6 +11,7 @@ import HitsterDetector, { HitsterClass } from './hitsterDetector';
 import { hitsterHoldThreshold } from './hitsterThresholds';
 import { IMAGE_FILENAME } from './cardDesigns';
 import { measureDrift } from './designDrift';
+import { isCardLink, readQr } from './qrRead';
 
 /**
  * The last check of a physical order before it goes to the printer: is there
@@ -47,7 +48,8 @@ export type FinalCheckFailureReason =
   | 'design-mismatch'
   | 'hitster'
   | 'unreadable'
-  | 'picture-unchecked';
+  | 'picture-unchecked'
+  | 'qr-unreadable';
 
 export interface FinalCheckFlaggedImage {
   // i18n label key, resolved to a human name in the design-alter mail
@@ -308,7 +310,10 @@ class FinalCheck {
     }
 
     // Did the design drift since the PDF was made?
-    const drift = await this.driftProblems(payment, php, pdfPath);
+    const storedPdf = await fs.readFile(pdfPath);
+    const drift = await this.driftProblems(payment, php, storedPdf);
+    // Does the QR code on the print read, and lead to this order line?
+    const qr = await this.qrProblems(payment, php, storedPdf);
 
     // The pictures, each through the model once (one file can sit in
     // several places)
@@ -381,7 +386,7 @@ class FinalCheck {
     const textProblems = await this.textProblems(payment.paymentId, php, pdfPath);
     problems.push(...textProblems);
 
-    if (problems.length === 0 && unchecked.length === 0 && drift.length === 0) {
+    if (problems.length === 0 && unchecked.length === 0 && drift.length === 0 && qr.length === 0) {
       this.log(payment.paymentId, php.id, 'design as stored, no Hitster material ✓');
       return { ok: true };
     }
@@ -389,10 +394,10 @@ class FinalCheck {
     // Nothing Hitster, but the design drifted or not everything could be
     // looked at: on hold for a person to look, without a mail to the customer
     if (problems.length === 0) {
-      const held = [...drift, ...unchecked];
+      const held = [...drift, ...qr, ...unchecked];
       return {
         ok: false,
-        reason: drift.length ? 'design-mismatch' : 'picture-unchecked',
+        reason: drift.length ? 'design-mismatch' : qr.length ? 'qr-unreadable' : 'picture-unchecked',
         userActionable: false,
         details: held.map(describeFinalCheckProblem).join(' | '),
         ...failBase,
@@ -405,7 +410,7 @@ class FinalCheck {
     // the correction tab when both are at fault.
     const onCard = problems.some((p) => p.place.startsWith('card'));
     const correctionTab: FinalCheckCorrectionTab = onCard ? 'card' : 'box';
-    const all = [...problems, ...drift, ...unchecked];
+    const all = [...problems, ...drift, ...qr, ...unchecked];
     return {
       ok: false,
       reason: 'hitster',
@@ -427,14 +432,9 @@ class FinalCheck {
   private async driftProblems(
     payment: { paymentId: string; qrSubDir: string | null },
     php: any,
-    pdfPath: string
+    storedPdf: Buffer
   ): Promise<FinalCheckProblem[]> {
-    const designCount = 1 + (php.extraDesigns?.length ?? 0);
-    const isSheets = (php.subType || 'none') === 'sheets';
-    // A printer PDF opens with the how-to card when there is one; sheets
-    // never carry it.
-    const firstCardPage = !isSheets && php.addHowToCard ? 3 : 1;
-
+    const { designCount, isSheets, firstCardPage } = this.layout(php);
     let live: Buffer;
     try {
       live = await this.renderLivePdf(payment, php, isSheets, designCount, firstCardPage);
@@ -442,7 +442,7 @@ class FinalCheck {
       this.log(payment.paymentId, php.id, `live render failed (${(e as Error).message}), design comparison skipped`, 'yellow');
       return [];
     }
-    const stored = await this.designPages(await fs.readFile(pdfPath), isSheets, designCount, firstCardPage);
+    const stored = await this.designPages(storedPdf, isSheets, designCount, firstCardPage);
     const fresh = await this.designPages(live, isSheets, designCount, firstCardPage);
 
     const problems: FinalCheckProblem[] = [];
@@ -473,15 +473,55 @@ class FinalCheck {
   }
 
   /**
+   * The QR code on the front of every design's first card, as it prints: it
+   * has to read (light on dark too, as the app scans it) and lead to this
+   * order line (generator.ts: /qr2/<track>/<php>). Rendered at three times
+   * the size of the comparison, so the modules are several pixels wide.
+   * Rick, 2026-10-07: a code that does not read on the print holds the
+   * order, without a mail to the customer.
+   */
+  private async qrProblems(payment: { paymentId: string }, php: any, storedPdf: Buffer): Promise<FinalCheckProblem[]> {
+    const { designCount, isSheets, firstCardPage } = this.layout(php);
+    const pages = await this.designPages(storedPdf, isSheets, designCount, firstCardPage, 3);
+    const problems: FinalCheckProblem[] = [];
+    for (const page of pages) {
+      const text = await readQr(page.front);
+      const label = page.design ? `design ${page.design} ` : '';
+      if (text && isCardLink(text, php.id)) {
+        this.log(payment.paymentId, php.id, `QR code ${label}front reads ✓`);
+        continue;
+      }
+      const message = text
+        ? `the QR code reads as ${text.slice(0, 80)}, not a card link of this order line`
+        : 'the QR code on the card does not scan';
+      this.log(payment.paymentId, php.id, `QR code ${label}front: ${message}`, 'yellow');
+      problems.push({ check: 'qr-unreadable', design: page.design, place: 'card-front', message });
+    }
+    return problems;
+  }
+
+  /** How many designs, sheet or printer PDF, and where the first card starts. */
+  private layout(php: any): { designCount: number; isSheets: boolean; firstCardPage: number } {
+    const isSheets = (php.subType || 'none') === 'sheets';
+    return {
+      designCount: 1 + (php.extraDesigns?.length ?? 0),
+      isSheets,
+      // A printer PDF opens with the how-to card when there is one; sheets
+      // never carry it.
+      firstCardPage: !isSheets && php.addHowToCard ? 3 : 1,
+    };
+  }
+
+  /**
    * The front and back of the first card of every design, as PNGs. A printer
    * PDF has one card per page pair; a sheet holds twelve cards per page,
    * fronts on page 1 and backs on page 2, so a deck with several designs gets
    * each design's card cut out of the sheet.
    */
-  private async designPages(pdf: Buffer, isSheets: boolean, designCount: number, firstCardPage: number): Promise<DesignPages[]> {
+  private async designPages(pdf: Buffer, isSheets: boolean, designCount: number, firstCardPage: number, scale = 1): Promise<DesignPages[]> {
     const numberOf = (index: number) => (designCount > 1 ? index + 1 : null);
     if (isSheets) {
-      const [front, back] = await this.screenshots(pdf, [1, 2]);
+      const [front, back] = await this.screenshots(pdf, [1, 2], scale);
       if (designCount === 1) return [{ design: null, front, back }];
       const pages: DesignPages[] = [];
       for (let card = 0; card < Math.min(designCount, SHEET.perPage); card++) {
@@ -497,7 +537,7 @@ class FinalCheck {
       return pages;
     }
     const fronts = Array.from({ length: designCount }, (_, index) => firstCardPage + 2 * index);
-    const images = await this.screenshots(pdf, fronts.flatMap((front) => [front, front + 1]));
+    const images = await this.screenshots(pdf, fronts.flatMap((front) => [front, front + 1]), scale);
     return fronts.map((_, index) => ({ design: numberOf(index), front: images[2 * index], back: images[2 * index + 1] }));
   }
 
@@ -518,10 +558,10 @@ class FinalCheck {
   }
 
   /** The (1-based) pages of a PDF as PNGs, in the order asked. */
-  private async screenshots(pdf: Buffer, pageNumbers: number[]): Promise<Buffer[]> {
+  private async screenshots(pdf: Buffer, pageNumbers: number[], scale = 1): Promise<Buffer[]> {
     const parser = new PDFParse({ data: new Uint8Array(pdf) });
     try {
-      const result = await parser.getScreenshot({ partial: pageNumbers, scale: 1.0, imageBuffer: true, imageDataUrl: false });
+      const result = await parser.getScreenshot({ partial: pageNumbers, scale, imageBuffer: true, imageDataUrl: false });
       return pageNumbers.map((pageNumber) => {
         const page = (result.pages || []).find((p) => p.pageNumber === pageNumber);
         if (!page?.data) {

@@ -586,6 +586,13 @@ retraining, is `ml/hitster/README.md`. It is used twice:
   (Lambda) skips the comparison. Every comparison logs its two numbers, so
   the thresholds can be tuned from the logs. Readability is no longer
   checked after payment: the card designer gives a contrast tip instead.
+- **The QR code on the print** (2026-10-07): finalCheck reads the code on
+  the front of every design's first card from the stored PDF, rendered at
+  3x (`src/qrRead.ts`, jsQR, light on dark tried too: the app scans
+  inverted codes). It must read and lead to this order line
+  (`/qr2/<track>/<php>`). If not, the order is held as `qr-unreadable`
+  without a mail (Rick: unusable cards never print). The designer warns
+  first, with the same kind of scan in the browser.
 
 - **What counts as Hitster** (Rick, 2026-10-06): the word in any lettering,
   near-spellings included ("HITSER", "Hitstor", "HITSTAR"), and the look on

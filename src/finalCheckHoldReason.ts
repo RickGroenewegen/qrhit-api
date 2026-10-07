@@ -38,7 +38,8 @@ export type FinalCheckHoldReason =
   | 'unreadable'
   | 'pdf-missing'
   | 'design-mismatch'
-  | 'picture-unchecked';
+  | 'picture-unchecked'
+  | 'qr-unreadable';
 
 export function finalCheckHoldReason(
   check: Extract<FinalCheckResult, { ok: false }>
