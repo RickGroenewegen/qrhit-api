@@ -270,6 +270,19 @@ describe('payment routes', () => {
     });
   });
 
+  describe('GET /ordertype/:numberOfTracks/:digital/:subType/:playlistId', () => {
+    it('refuses a track count that is not a number instead of querying with NaN', async () => {
+      for (const count of ['null', 'undefined', 'NaN', '-5']) {
+        const res = await app.inject({
+          method: 'GET',
+          url: `/ordertype/${count}/0/sheets/`,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toEqual({ success: false, error: 'Invalid number of tracks' });
+      }
+    });
+  });
+
   describe('POST /order/calculate', () => {
     const digitalItem = {
       productType: 'cards',

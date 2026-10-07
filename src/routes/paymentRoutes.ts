@@ -96,8 +96,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/ordertype/:numberOfTracks/:digital/:subType/:playlistId',
     async (request: any, _reply) => {
+      // "null", "undefined" or "NaN" would reach Prisma as `gte: NaN` and
+      // throw a PrismaClientValidationError on every call.
+      const numberOfTracks = parseInt(request.params.numberOfTracks);
+      if (!Number.isFinite(numberOfTracks) || numberOfTracks < 0) {
+        return { success: false, error: 'Invalid number of tracks' };
+      }
       const orderType = await order.getOrderType(
-        parseInt(request.params.numberOfTracks),
+        numberOfTracks,
         utils.parseBoolean(request.params.digital),
         'cards',
         request.params.playlistId,

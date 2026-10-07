@@ -234,9 +234,10 @@ class PrintEnBindV2 {
               maxCards: 'asc',
             },
           ],
-        });} catch(e) {
-          console.log(111,numberOfTracks,digital,productType,playlistId, subType);
-          console.log(222, e)
+        });
+        } catch {
+          // Callers treat null as "cannot be priced"; a feed or checkout
+          // must not throw on one bad track count.
         }
 
       this.cache.set(cacheKey, JSON.stringify(orderType));
