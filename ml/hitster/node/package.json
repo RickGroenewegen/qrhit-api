@@ -1,0 +1,15 @@
+{
+  "name": "hitster-detector-node",
+  "private": true,
+  "description": "The detector in Node (onnxruntime-node + sharp), and the check that it answers what the Python pipeline answers",
+  "scripts": {
+    "parity": "tsx parity.ts"
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.30.0",
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
+  }
+}

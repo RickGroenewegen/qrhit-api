@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hitster detector</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #16181d; --muted: #667085; --line: #e3e6eb;
+    --flag: #d92d20; --flag-bg: #fef3f2; --clean: #079455; --clean-bg: #ecfdf3;
+    --word: #16a34a; --rings: #c026d3; --speaker: #0284c7; --pill: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a21; --ink: #e9ecf1; --muted: #98a2b3; --line: #2a2f3a;
+      --flag: #f97066; --flag-bg: #3a1714; --clean: #47cd89; --clean-bg: #0f2e1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+  h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  label { color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  button { cursor: pointer; }
+  input[type=range] { width: 140px; }
+  .spacer { flex: 1; }
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  #drop { border: 2px dashed var(--line); border-radius: 14px; padding: 36px 16px; text-align: center; color: var(--muted); background: var(--panel); cursor: pointer; transition: border-color .15s, background .15s; }
+  #drop.over { border-color: var(--rings); background: color-mix(in srgb, var(--rings) 6%, var(--panel)); }
+  #drop strong { color: var(--ink); }
+  #summary { margin: 18px 2px 10px; color: var(--muted); min-height: 1.4em; }
+  #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .card.flagged { border-color: color-mix(in srgb, var(--flag) 55%, var(--line)); }
+  .stage { position: relative; background: repeating-conic-gradient(#8881 0 25%, transparent 0 50%) 0 0 / 16px 16px; aspect-ratio: 1; display: grid; place-items: center; }
+  .stage canvas { max-width: 100%; max-height: 100%; display: block; }
+  .meta { padding: 12px 14px 14px; display: grid; gap: 10px; }
+  .top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .name { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip { font-size: 12px; font-weight: 650; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .chip.flag { color: var(--flag); background: var(--flag-bg); }
+  .chip.clean { color: var(--clean); background: var(--clean-bg); }
+  .chip.wait { color: var(--muted); background: var(--bg); }
+  .bars { display: grid; gap: 5px; }
+  .bar { display: grid; grid-template-columns: 62px 1fr 42px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .track { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; position: relative; }
+  .fill { height: 100%; border-radius: 4px; }
+  .tick { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink); opacity: .35; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .time { font-size: 12px; color: var(--muted); }
+  .error { color: var(--flag); font-size: 12px; }
+  .legend { display: inline-flex; gap: 12px; color: var(--muted); font-size: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hitster detector</h1>
+  <label>Model <select id="model"></select></label>
+  <label>Threshold <input id="threshold" type="range" min="0.05" max="0.95" step="0.05" value="0.5"> <span id="thresholdValue">0.50</span></label>
+  <label><input id="overlay" type="checkbox" checked> Show cells</label>
+  <span class="legend"><span><i style="background:var(--word)"></i>word</span><span><i style="background:var(--rings)"></i>rings</span><span><i style="background:var(--speaker)"></i>speaker</span><span><i style="background:var(--pill)"></i>pill</span></span>
+  <span class="spacer"></span>
+  <button id="clear">Clear</button>
+</header>
+<main>
+  <div id="drop"><strong>Drop pictures here</strong>, click to pick, or paste one (⌘V)<br><small>Card backgrounds, logos, box art: any png, jpg or webp</small></div>
+  <input id="picker" type="file" accept="image/*" multiple hidden>
+  <div id="summary"></div>
+  <div id="results"></div>
+</main>
+<script>
+const CLASSES = ['word', 'rings', 'speaker', 'pill'];
+const COLOURS = { word: '#16a34a', rings: '#c026d3', speaker: '#0284c7', pill: '#d97706' };
+const $ = (id) => document.getElementById(id);
+const items = [];
+
+async function loadModels() {
+  const models = await (await fetch('/models')).json();
+  $('model').innerHTML = models.map((m) => `<option value="${m.name}">${m.name} (${m.mb} MB, ${new Date(m.modified).toLocaleString()})</option>`).join('');
+}
+
+function threshold() { return Number($('threshold').value); }
+
+function verdictOf(result) {
+  const best = Math.max(...CLASSES.map((c) => result.scores[c]));
+  return best >= threshold();
+}
+
+function draw(item) {
+  const { canvas, image, result } = item;
+  const max = 560;
+  const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  if (!result || !$('overlay').checked) return;
+  const { grid, gridSize, stride, letterbox } = result;
+  const k = scale / letterbox.scale;
+  CLASSES.forEach((cls, c) => {
+    grid[c].forEach((p, i) => {
+      if (p < 0.15) return;
+      const x = (i % gridSize) * stride - letterbox.offsetX;
+      const y = Math.floor(i / gridSize) * stride - letterbox.offsetY;
+      ctx.fillStyle = COLOURS[cls];
+      ctx.globalAlpha = Math.min(0.6, p * 0.65);
+      ctx.fillRect(x * k, y * k, stride * k, stride * k);
+      if (p >= threshold()) {
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = COLOURS[cls];
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x * k + 0.75, y * k + 0.75, stride * k - 1.5, stride * k - 1.5);
+      }
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+
+function render(item) {
+  const { el, result, error } = item;
+  const chip = el.querySelector('.chip');
+  const bars = el.querySelector('.bars');
+  const time = el.querySelector('.time');
+  if (error) {
+    chip.className = 'chip wait'; chip.textContent = 'error';
+    bars.innerHTML = `<div class="error">${error}</div>`;
+    return;
+  }
+  if (!result) { chip.className = 'chip wait'; chip.textContent = 'checking…'; return; }
+  const flagged = verdictOf(result);
+  el.classList.toggle('flagged', flagged);
+  chip.className = `chip ${flagged ? 'flag' : 'clean'}`;
+  chip.textContent = flagged ? 'Hitster' : 'Clean';
+  bars.innerHTML = CLASSES.map((cls) => {
+    const v = result.scores[cls];
+    return `<div class="bar"><span>${cls}</span><div class="track"><div class="fill" style="width:${(v * 100).toFixed(1)}%;background:${COLOURS[cls]}"></div><div class="tick" style="left:${threshold() * 100}%"></div></div><span class="num">${v.toFixed(2)}</span></div>`;
+  }).join('');
+  time.textContent = `${result.model} · prepare ${result.ms.preprocess} ms · model ${result.ms.model} ms`;
+  draw(item);
+}
+
+function summary() {
+  const done = items.filter((i) => i.result);
+  const flagged = done.filter((i) => verdictOf(i.result)).length;
+  $('summary').textContent = items.length ? `${done.length} of ${items.length} checked · ${flagged} flagged at ${threshold().toFixed(2)}` : '';
+}
+
+async function check(item) {
+  item.result = null; item.error = null; render(item);
+  try {
+    const response = await fetch(`/check?model=${encodeURIComponent($('model').value)}`, { method: 'POST', body: item.file });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || response.statusText);
+    item.result = data;
+  } catch (e) {
+    item.error = e.message;
+  }
+  render(item); summary();
+}
+
+function add(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `<div class="stage"><canvas></canvas></div><div class="meta"><div class="top"><span class="name"></span><span class="chip wait">checking…</span></div><div class="bars"></div><div class="time"></div></div>`;
+    el.querySelector('.name').textContent = file.name || 'pasted picture';
+    el.querySelector('.name').title = file.name || '';
+    $('results').prepend(el);
+    const image = new Image();
+    const item = { file, el, image, canvas: el.querySelector('canvas'), result: null };
+    items.unshift(item);
+    image.onload = () => { draw(item); check(item); };
+    image.src = URL.createObjectURL(file);
+  }
+  summary();
+}
+
+const drop = $('drop');
+drop.addEventListener('click', () => $('picker').click());
+$('picker').addEventListener('change', (e) => { add(e.target.files); e.target.value = ''; });
+['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); if (t === 'drop' || e.target === drop) drop.classList.remove('over'); }));
+document.addEventListener('drop', (e) => add(e.dataTransfer.files));
+document.addEventListener('paste', (e) => add([...e.clipboardData.items].filter((i) => i.kind === 'file').map((i) => i.getAsFile())));
+$('threshold').addEventListener('input', () => { $('thresholdValue').textContent = threshold().toFixed(2); items.forEach(render); summary(); });
+$('overlay').addEventListener('change', () => items.forEach(draw));
+$('model').addEventListener('change', () => items.forEach(check));
+$('clear').addEventListener('click', () => { items.length = 0; $('results').innerHTML = ''; summary(); });
+loadModels();
+</script>
+</body>
+</html>

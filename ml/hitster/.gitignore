@@ -1,0 +1,10 @@
+# Customer uploads, Hitster material, renders and trained weights stay on
+# this machine: only code goes into git.
+data/
+runs/
+.venv/
+node/node_modules/
+__pycache__/
+*.onnx
+*.pt
+.env

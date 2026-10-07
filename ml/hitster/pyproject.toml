@@ -1,0 +1,23 @@
+[project]
+name = "hitster-detector"
+version = "0.1.0"
+description = "Small detector for Hitster brand marks and the word Hitster in card and box designs"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "torch",
+  "torchvision",
+  "numpy",
+  "pillow",
+  "opencv-python-headless",
+  "onnx",
+  "onnxscript",
+  "onnxruntime",
+  "tqdm",
+]
+
+[tool.uv]
+# Supply-chain age gate, the same rule as npm's --before: nothing published in
+# the last 7 days is resolved, transitive dependencies included. Move the date
+# forward when updating.
+exclude-newer = "2026-09-29T00:00:00Z"
+package = false

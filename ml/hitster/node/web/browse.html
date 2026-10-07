@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hitster uploads</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #16181d; --muted: #667085; --line: #e3e6eb;
+    --flag: #d92d20; --flag-bg: #fef3f2; --clean: #079455; --clean-bg: #ecfdf3; --accent: #c026d3;
+    --word: #16a34a; --rings: #c026d3; --speaker: #0284c7; --pill: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a21; --ink: #e9ecf1; --muted: #98a2b3; --line: #2a2f3a;
+      --flag: #f97066; --flag-bg: #3a1714; --clean: #47cd89; --clean-bg: #0f2e1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  a { color: var(--muted); }
+  label { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  select, button, input[type=search], input[type=number] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; }
+  input[type=number] { width: 80px; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type=range] { width: 120px; }
+  .spacer { flex: 1; }
+  .layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
+  .stage { position: relative; display: grid; place-items: center; padding: 20px; min-height: 0; background: repeating-conic-gradient(#8881 0 25%, transparent 0 50%) 0 0 / 18px 18px; }
+  .stage canvas { max-width: 100%; max-height: calc(100vh - 230px); display: block; box-shadow: 0 1px 2px #0002, 0 8px 24px #0001; }
+  .empty { color: var(--muted); }
+  aside { border-left: 1px solid var(--line); background: var(--panel); padding: 18px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .chip { font-size: 13px; font-weight: 650; padding: 4px 11px; border-radius: 999px; }
+  .chip.flag { color: var(--flag); background: var(--flag-bg); }
+  .chip.clean { color: var(--clean); background: var(--clean-bg); }
+  .chip.wait { color: var(--muted); background: var(--bg); }
+  .label { font-size: 13px; color: var(--muted); }
+  .label b { color: var(--ink); font-weight: 600; }
+  .bars { display: grid; gap: 7px; }
+  .bar { display: grid; grid-template-columns: 64px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .track { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; position: relative; }
+  .fill { height: 100%; border-radius: 4px; }
+  .tick { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink); opacity: .35; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions button { padding: 10px; font-weight: 600; }
+  .actions .pos { border-color: color-mix(in srgb, var(--flag) 50%, var(--line)); color: var(--flag); }
+  .actions .neg { border-color: color-mix(in srgb, var(--clean) 50%, var(--line)); color: var(--clean); }
+  .nav { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+  .count { color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+  dl { margin: 0; display: grid; grid-template-columns: 70px 1fr; gap: 4px 10px; font-size: 12px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-all; }
+  .keys { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--bg); color: var(--ink); }
+  .strip { display: flex; gap: 6px; padding: 10px 20px; border-top: 1px solid var(--line); background: var(--panel); overflow-x: auto; }
+  .thumb { flex: 0 0 auto; width: 74px; height: 74px; border-radius: 8px; border: 2px solid transparent; background: var(--bg) center / contain no-repeat; cursor: pointer; position: relative; }
+  .thumb.current { border-color: var(--accent); }
+  .thumb .dot { position: absolute; right: 4px; top: 4px; width: 9px; height: 9px; border-radius: 50%; }
+  .thumb .dot.flag { background: var(--flag); }
+  .thumb .dot.clean { background: var(--clean); }
+  .legend { display: inline-flex; gap: 10px; color: var(--muted); font-size: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside { border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hitster uploads</h1>
+  <a href="/">Test your own pictures</a>
+  <label>Model <select id="model"></select></label>
+  <label>Show <select id="filter">
+    <option value="all">all</option>
+    <option value="flagged">flagged</option>
+    <option value="clean">clean</option>
+    <option value="disagree">disagreements</option>
+    <option value="labelled-pos">labelled Hitster</option>
+    <option value="labelled-neg">labelled not Hitster</option>
+    <option value="unlabelled">not labelled</option>
+    <option value="unchecked">unchecked</option>
+  </select></label>
+  <label>Of <select id="kind"><option value="">cards and boxes</option><option value="card">cards</option><option value="box">boxes</option></select></label>
+  <label>Order <select id="order"><option value="desc">highest score first</option><option value="asc">lowest score first</option></select></label>
+  <label>Threshold <input id="threshold" type="range" min="0.05" max="0.95" step="0.05" value="0.5"> <span id="thresholdValue">0.50</span></label>
+  <span class="spacer"></span>
+  <input id="search" type="search" placeholder="file name">
+</header>
+<div class="layout">
+  <div class="stage"><canvas id="canvas"></canvas><div class="empty" id="empty" hidden>Nothing to show for this filter.</div></div>
+  <aside>
+    <div class="nav">
+      <button id="prev">← Previous</button>
+      <span class="count"><input id="jump" type="number" min="1" value="1"> / <span id="total">0</span></span>
+      <button id="next">Next →</button>
+    </div>
+    <div class="row"><span class="chip wait" id="verdict">…</span><span class="label" id="label"></span></div>
+    <div class="bars" id="bars"></div>
+    <div class="actions">
+      <button class="pos" id="markPos">Hitster <kbd>H</kbd></button>
+      <button class="neg" id="markNeg">Not Hitster <kbd>N</kbd></button>
+    </div>
+    <button id="markClear">Clear my label <kbd>C</kbd></button>
+    <dl id="meta"></dl>
+    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> step · <kbd>H</kbd> <kbd>N</kbd> label and go on · <kbd>C</kbd> clear · <kbd>O</kbd> cells on/off<br>
+      <span class="legend"><span><i style="background:var(--word)"></i>word</span><span><i style="background:var(--rings)"></i>rings</span><span><i style="background:var(--speaker)"></i>speaker</span><span><i style="background:var(--pill)"></i>pill</span></span></div>
+  </aside>
+</div>
+<div class="strip" id="strip"></div>
+<script>
+const CLASSES = ['word', 'rings', 'speaker', 'pill'];
+const COLOURS = { word: '#16a34a', rings: '#c026d3', speaker: '#0284c7', pill: '#d97706' };
+const $ = (id) => document.getElementById(id);
+let all = [];
+let view = [];
+let at = 0;
+let overlay = true;
+const grids = new Map();
+const images = new Map();
+
+const threshold = () => Number($('threshold').value);
+const flagged = (row) => row.score >= threshold();
+const isPos = (label) => ['your example', 'reviewed: Hitster', 'you: Hitster'].includes(label);
+const isNeg = (label) => ['reviewed: not Hitster', 'you: not Hitster'].includes(label);
+
+async function loadModels() {
+  const models = (await (await fetch('/models')).json()).filter((m) => m.scored);
+  $('model').innerHTML = models.map((m) => `<option value="${m.name}">${m.name}</option>`).join('');
+  await loadList();
+}
+
+async function loadList() {
+  const response = await fetch(`/uploads?model=${encodeURIComponent($('model').value)}`);
+  all = response.ok ? await response.json() : [];
+  grids.clear();
+  applyFilter(true);
+}
+
+function applyFilter(reset) {
+  const current = view[at]?.name;
+  const filter = $('filter').value;
+  const kind = $('kind').value;
+  const search = $('search').value.trim().toLowerCase();
+  view = all.filter((row) => {
+    if (kind && !row.kinds.includes(kind)) return false;
+    if (search && !row.name.includes(search)) return false;
+    switch (filter) {
+      case 'flagged': return flagged(row);
+      case 'clean': return !flagged(row);
+      case 'disagree': return (isPos(row.label) && !flagged(row)) || (isNeg(row.label) && flagged(row));
+      case 'labelled-pos': return isPos(row.label);
+      case 'labelled-neg': return isNeg(row.label);
+      case 'unlabelled': return !row.label;
+      case 'unchecked': return row.label === 'unchecked';
+      default: return true;
+    }
+  });
+  if ($('order').value === 'asc') view.reverse();
+  const keep = reset ? -1 : view.findIndex((r) => r.name === current);
+  at = keep >= 0 ? keep : 0;
+  $('total').textContent = view.length;
+  show();
+}
+
+function image(name) {
+  if (!images.has(name)) {
+    images.set(name, new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = `/image/${name}`;
+    }));
+    if (images.size > 80) images.delete(images.keys().next().value);
+  }
+  return images.get(name);
+}
+
+async function grid(row) {
+  if (!grids.has(row.name)) {
+    grids.set(row.name, (async () => {
+      const blob = await (await fetch(`/image/${row.name}`)).blob();
+      const response = await fetch(`/check?model=${encodeURIComponent($('model').value)}`, { method: 'POST', body: blob });
+      return response.json();
+    })());
+  }
+  return grids.get(row.name);
+}
+
+function draw(img, result) {
+  const canvas = $('canvas');
+  const max = 900;
+  const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (!result || !overlay) return;
+  const k = scale / result.letterbox.scale;
+  CLASSES.forEach((cls, c) => {
+    result.grid[c].forEach((p, i) => {
+      if (p < 0.15) return;
+      const x = (i % result.gridSize) * result.stride - result.letterbox.offsetX;
+      const y = Math.floor(i / result.gridSize) * result.stride - result.letterbox.offsetY;
+      ctx.globalAlpha = Math.min(0.55, p * 0.6);
+      ctx.fillStyle = COLOURS[cls];
+      ctx.fillRect(x * k, y * k, result.stride * k, result.stride * k);
+      if (p >= threshold()) {
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = COLOURS[cls];
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x * k + 1, y * k + 1, result.stride * k - 2, result.stride * k - 2);
+      }
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+
+function panel(row) {
+  const isFlag = flagged(row);
+  $('verdict').className = `chip ${isFlag ? 'flag' : 'clean'}`;
+  $('verdict').textContent = isFlag ? 'Hitster' : 'Clean';
+  $('label').innerHTML = row.label ? `label: <b>${row.label}</b>` : 'not labelled';
+  $('bars').innerHTML = CLASSES.map((cls, c) => {
+    const v = row.scores[c];
+    return `<div class="bar"><span>${cls}</span><div class="track"><div class="fill" style="width:${(v * 100).toFixed(1)}%;background:${COLOURS[cls]}"></div><div class="tick" style="left:${threshold() * 100}%"></div></div><span class="num">${v.toFixed(2)}</span></div>`;
+  }).join('');
+  $('meta').innerHTML = `<dt>file</dt><dd>${row.name}</dd><dt>used as</dt><dd>${row.fields.join(', ') || '–'}</dd><dt>order lines</dt><dd>${row.lines}</dd><dt>set</dt><dd>${row.group}</dd>`;
+}
+
+function strip() {
+  const from = Math.max(0, at - 3);
+  $('strip').innerHTML = view.slice(from, from + 16).map((row, i) =>
+    `<div class="thumb${from + i === at ? ' current' : ''}" data-i="${from + i}" style="background-image:url(/image/${row.name})"><span class="dot ${flagged(row) ? 'flag' : 'clean'}"></span></div>`).join('');
+}
+
+async function show() {
+  const row = view[at];
+  $('empty').hidden = !!row;
+  $('canvas').hidden = !row;
+  $('jump').value = row ? at + 1 : 0;
+  $('prev').disabled = at <= 0;
+  $('next').disabled = at >= view.length - 1;
+  strip();
+  if (!row) return;
+  panel(row);
+  const img = await image(row.name);
+  if (view[at] !== row) return;
+  draw(img, null);
+  const result = await grid(row);
+  if (view[at] !== row) return;
+  draw(img, result);
+  for (const next of view.slice(at + 1, at + 4)) { image(next.name); grid(next); }
+}
+
+function go(delta) {
+  const target = Math.min(view.length - 1, Math.max(0, at + delta));
+  if (target !== at) { at = target; show(); }
+}
+
+async function mark(label) {
+  const row = view[at];
+  if (!row) return;
+  await fetch('/label', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: row.name, label }) });
+  row.label = label === 'pos' ? 'you: Hitster' : label === 'neg' ? 'you: not Hitster' : '';
+  panel(row);
+  if (label !== 'clear') go(1);
+}
+
+$('prev').onclick = () => go(-1);
+$('next').onclick = () => go(1);
+$('markPos').onclick = () => mark('pos');
+$('markNeg').onclick = () => mark('neg');
+$('markClear').onclick = () => mark('clear');
+$('jump').onchange = () => { at = Math.min(view.length - 1, Math.max(0, Number($('jump').value) - 1)); show(); };
+$('strip').onclick = (e) => { const t = e.target.closest('.thumb'); if (t) { at = Number(t.dataset.i); show(); } };
+$('model').onchange = loadList;
+['filter', 'kind', 'order'].forEach((id) => ($(id).onchange = () => applyFilter(true)));
+$('search').oninput = () => applyFilter(true);
+$('threshold').oninput = () => { $('thresholdValue').textContent = threshold().toFixed(2); applyFilter(false); };
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'j') go(1);
+  else if (e.key === 'ArrowLeft' || e.key === 'k') go(-1);
+  else if (e.key === 'h') mark('pos');
+  else if (e.key === 'n') mark('neg');
+  else if (e.key === 'c') mark('clear');
+  else if (e.key === 'o') { overlay = !overlay; show(); }
+  else return;
+  e.preventDefault();
+});
+loadModels();
+</script>
+</body>
+</html>
