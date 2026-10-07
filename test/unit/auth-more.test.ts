@@ -590,18 +590,18 @@ describe('createOrUpdateAdminUser', () => {
     prismaMock.userGroup.findUnique.mockResolvedValue({ id: 1, name: 'admin' });
     await expect(
       createOrUpdateAdminUser('a@b.com', 'pw', 'A', undefined, 'admin', undefined, [
-        'vibeadmin',
+        'companyadmin',
       ])
     ).rejects.toThrow('Insufficient permissions');
 
     // Same group is also blocked
     prismaMock.userGroup.findUnique.mockResolvedValue({
       id: 2,
-      name: 'vibeadmin',
+      name: 'companyadmin',
     });
     await expect(
-      createOrUpdateAdminUser('a@b.com', 'pw', 'A', undefined, 'vibeadmin', undefined, [
-        'vibeadmin',
+      createOrUpdateAdminUser('a@b.com', 'pw', 'A', undefined, 'companyadmin', undefined, [
+        'companyadmin',
       ])
     ).rejects.toThrow('Insufficient permissions');
   });
@@ -634,7 +634,7 @@ describe('createOrUpdateAdminUser', () => {
       12,
       'companyadmin',
       undefined,
-      ['vibeadmin'],
+      ['admin'],
       '+31612345678'
     );
 

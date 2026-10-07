@@ -204,8 +204,6 @@ class AnalyticsClient {
       },
       where: {
         payment: {
-          vibe: false,
-          test: false,
           user: {
             email: {
               notIn: excludedEmails,

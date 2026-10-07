@@ -65,7 +65,7 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 15. User Suggestions & Crowdsourcing
 16. Card Designer & Customization
 17. Blog & CMS System
-18. Voting & Submission System (OnzeVibe)
+18. Voting & Submission System (business)
 19. Games System
 20. Hitlist Voting System
 21. Security & Protection
@@ -113,13 +113,13 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - **publicRoutes.ts** (619 lines) - Public-facing features, contact, newsletter, suggestions
 - **musicRoutes.ts** (434 lines) - Spotify integration, track management, QR links
 - **gameRoutes.ts** (169 lines) - Games system management
-- **vibeRoutes.ts** (973 lines) - B2B voting system (OnzeVibe)
+- **companyRoutes.ts** (3,213 lines) - QRSong! business: companies, lists, voting, quotations, invoices
 
 ### Core Service Classes
 - **mollie.ts** (1,304 lines) - Payment gateway integration
 - **mail.ts** (1,724 lines) - Email system (AWS SES)
 - **spotify.ts** (1,698 lines) - Music data integration
-- **vibe.ts** (3,127 lines) - B2B voting/submission system
+- **business.ts** (3,838 lines) - B2B companies, voting/submission system, quotations
 - **data.ts** (2,812 lines) - Core data operations
 - **generator.ts** (1,401 lines) - PDF generation pipeline
 - **shipping.ts** (1,187 lines) - Fulfillment & tracking
@@ -144,13 +144,13 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - Physical printed QR cards with customization
 - Digital PDF downloads
 - Sheet printing services
-- B2B voting system (OnzeVibe)
+- B2B voting system (QRSong! business)
 - Games licensing
 - Volume-based discounts
 
 ### Customer Segments
 - B2C: Individual music enthusiasts
-- B2B: Companies (OnzeVibe portal)
+- B2B: Companies (QRSong! business, voting page on qrsong.io)
 - Gamers: QRSong card game players
 
 ### Data Assets
@@ -203,7 +203,7 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - Password reset with token validation
 
 ### Authorization
-- 5 role types (admin, vibeadmin, companyadmin, users, qrvoteadmin)
+- 5 role types (admin, companyadmin, qrvoteadmin, users, api_users)
 - Company-scoped data access
 - Role-based endpoint protection
 
@@ -396,12 +396,6 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - Purpose: Public-facing QR code generation service
 - See: `/Users/rick/Sites/qrhit/CLAUDE.md`
 
-### Frontend: OnzeVibe Company Portal
-- Location: `/Users/rick/Sites/qrhit-vibe`
-- Framework: Angular 19
-- Purpose: B2B voting portal
-- See: `/Users/rick/Sites/qrhit-vibe/CLAUDE.md`
-
 ---
 
 ## Document Maintenance
@@ -427,7 +421,7 @@ For updates or corrections, maintain consistency between:
 | src/mollie.ts | Payment processing | 1,304 |
 | src/mail.ts | Email system | 1,724 |
 | src/spotify.ts | Music integration | 1,698 |
-| src/vibe.ts | B2B voting system | 3,127 |
+| src/business.ts | B2B business system | 3,838 |
 | src/data.ts | Core data layer | 2,812 |
 | prisma/schema.prisma | Database schema | 858 |
 | package.json | Dependencies | 101 |

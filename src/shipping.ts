@@ -989,8 +989,6 @@ class Shipping {
           shippingStartDateTime: {
             not: null,
           },
-          test: false,
-          vibe: false,
           shippingIgnore: false,
           countrycode: {
             not: null,

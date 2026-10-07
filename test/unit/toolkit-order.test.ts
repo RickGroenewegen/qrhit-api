@@ -16,7 +16,6 @@ const h = vi.hoisted(() => ({
   getPlaylistFromUrl: vi.fn(),
   storePlaylists: vi.fn(),
   getTracks: vi.fn(),
-  getOrderType: vi.fn(),
   queueGenerate: vi.fn(),
 }));
 
@@ -38,7 +37,7 @@ vi.mock('../../src/prisma', () => ({
 vi.mock('../../src/data', () => ({
   default: { getInstance: () => ({ storePlaylists: h.storePlaylists, getTracks: h.getTracks }) },
 }));
-vi.mock('../../src/order', () => ({ default: { getInstance: () => ({ getOrderType: h.getOrderType }) } }));
+vi.mock('../../src/order', () => ({ default: { getInstance: () => ({}) } }));
 vi.mock('../../src/generator', () => ({ default: { getInstance: () => ({ queueGenerate: h.queueGenerate }) } }));
 vi.mock('../../src/utils', () => ({ default: class Utils { generateRandomString = () => 'abcdefghijklmnop'; } }));
 vi.mock('../../src/services/MusicServiceRegistry', () => ({
@@ -91,12 +90,11 @@ describe('ToolkitOrder.create', () => {
       data: { name: 'Revant personeelsfeest 2026', trackCount: 48, imageUrl: 'https://i.scdn.co/x' },
     });
     h.storePlaylists.mockResolvedValue([555]);
-    h.getOrderType.mockResolvedValue({ id: 16 });
     h.paymentCreate.mockResolvedValue({ id: 9001, PaymentHasPlaylist: [{ id: 12001 }] });
     h.paymentUpdate.mockResolvedValue({});
   });
 
-  it('writes a paid, free order on printer hold, without marketing mail, and queues generation without mails', async () => {
+  it('writes a paid, free order without hold or marketing mail, and queues generation without mails', async () => {
     const result = await service.create({
       email: 'West14@gmail.com',
       playlistId: PLAYLIST,
@@ -119,10 +117,9 @@ describe('ToolkitOrder.create', () => {
     const data = h.paymentCreate.mock.calls[0][0].data;
     expect(data.status).toBe('paid');
     expect(data.totalPrice).toBe(0);
-    expect(data.printerHold).toBe(true);
-    expect(data.printerHoldReason).toBeUndefined(); // a hand-placed hold: nothing clears it
+    // No hold: sendToPrinter never sends a Schneiders or Tromp line.
+    expect(data.printerHold).toBeUndefined();
     expect(data.marketingEmails).toBe(false);
-    expect(data.vibe).toBe(false);
     expect(data.email).toBe('west14@gmail.com');
     expect(data.isBusinessOrder).toBe(true);
     const line = data.PaymentHasPlaylist.create[0];

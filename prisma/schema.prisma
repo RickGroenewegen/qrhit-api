@@ -86,6 +86,8 @@ model DiscountCodedUses {
   @@map("discount_codes_uses")
 }
 
+// Unread since 2026-10-07 (prices are calculated, see getOrderType); kept
+// only until the code that stopped reading it is deployed, then dropped.
 model OrderType {
   id                 Int                  @id @default(autoincrement())
   type               String               @default("cards")
@@ -196,9 +198,7 @@ model Payment {
   PaymentHasPlaylist       PaymentHasPlaylist[]
   OrderType                OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId              Int?
-  test                     Boolean              @default(false)
-  vibe                     Boolean              @default(false)
-  reviewMailSent           Boolean              @default(false)
+  reviewMailSent         Boolean              @default(false)
   // Defaults to true so orders that existed before this feature never
   // receive the gift box folding email; new orders are created with false.
   boxInstructionsMailSent  Boolean              @default(true)
@@ -245,16 +245,13 @@ model Payment {
   @@index([orderId])
   @@index([status])
   @@index([finalized])
-  @@index([test])
-  @@index([vibe])
   @@index([createdAt])
   @@index([printApiStatus])
   @@index([shippingStatus])
   @@index([shippingLastTrackedAt])
   // Composite indexes for common query patterns
-  @@index([vibe, test, createdAt])
-  @@index([vibe, test, status, createdAt])
-  @@index([vibe, test, finalized, createdAt])
+  @@index([status, createdAt])
+  @@index([finalized, createdAt])
   // Full-text search indexes for dashboard search
   @@fulltext([fullname, orderId, printApiOrderId, paymentId])
   @@map("payments")
@@ -693,7 +690,9 @@ model PaymentHasPlaylist {
   playlistId                 Int
   amount                     Int
   numberOfTracks             Int
-  orderTypeId                Int
+  // No longer written (2026-10-07): the price never came from order_types.
+  // Dropped together with the OrderType model once this code is deployed.
+  orderTypeId                Int?
   type                       String
   subType                    String?  @default("none")
   filename                   String?
@@ -813,7 +812,7 @@ model PaymentHasPlaylist {
   howToCardNumberColor     String?                  @db.VarChar(9) // Optional hex color for the numbers in the how-to card's list bullets (falls back to backgroundBackColor)
   appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
   aiPrompt                 String?                  @db.VarChar(250) // Original user prompt if this playlist was AI-generated
-  orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  orderType                OrderType?               @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                    PaymentHasPlaylistItem[]
   // Designs 2..10 when the cards alternate designs; design 1 is always the
   // columns above. See src/cardDesigns.ts.
@@ -1091,7 +1090,7 @@ model Company {
 }
 
 // A request from the /business form: design + quotation promised within 24
-// hours. boxd lists the open ones (GET /vibe/quote-requests) and moves them
+// hours. boxd lists the open ones (GET /business/quote-requests) and moves them
 // along; see "Business quote requests" in the frontend CLAUDE.md.
 // quotationId is the three-size quotation the API made for a request until
 // 2026-10-06 (removed); quotations are now made per box size with qquote.

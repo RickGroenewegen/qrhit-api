@@ -49,10 +49,6 @@ vi.mock('../../src/cache', () => ({
 
 // ─── Prisma (in-memory) ────────────────────────────────────────────────────
 const prismaMock = {
-  orderType: {
-    findMany: vi.fn(async () => []),
-    findFirst: vi.fn(async () => null),
-  },
   shippingCostNew: {
     findFirst: vi.fn(async () => null),
   },
@@ -283,38 +279,6 @@ describe('PrintEnBind.getShippingCosts', () => {
     await pnb.getShippingCosts('FR', 800, 'sheets');
     expect(prismaMock.shippingCostNew.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { country: 'FR', size: 80 } })
-    );
-  });
-});
-
-describe('PrintEnBind.getOrderTypes', () => {
-  beforeEach(() => {
-    cacheStore.clear();
-    prismaMock.orderType.findMany.mockReset();
-  });
-
-  it('returns order types from DB and caches them', async () => {
-    prismaMock.orderType.findMany.mockResolvedValue([
-      { id: 1, name: 'Small', maxCards: 100, amountWithMargin: 25 },
-    ]);
-    const result = await pnb.getOrderTypes('cards');
-    expect(result).toHaveLength(1);
-    expect(result[0].name).toBe('Small');
-
-    // Second call → cache hit
-    prismaMock.orderType.findMany.mockResolvedValue([]);
-    const cached = await pnb.getOrderTypes('cards');
-    expect(cached).toHaveLength(1);
-    expect(prismaMock.orderType.findMany).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses the type parameter as a filter', async () => {
-    prismaMock.orderType.findMany.mockResolvedValue([]);
-    await pnb.getOrderTypes('giftcard');
-    expect(prismaMock.orderType.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ type: 'giftcard' }),
-      })
     );
   });
 });

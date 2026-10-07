@@ -140,7 +140,7 @@ subscription only as a small footnote.
   and `priceFromCost` (`src/services/boxPricing.ts`, the Schneider
   calculator's tier pick and rounding), and it refuses a tier without our
   margin (never a list at the printer's cost).
-- The GET views (`/vibe/{edition}-pricing`) render only from a URL the PDF
+- The GET views (`/business/{edition}-pricing`) render only from a URL the PDF
   route signed (`priceListQuery`, HMAC on `JWT_SECRET`); unsigned they answer
   403. Before 2026-10-05 anyone could render them with an empty matrix and
   read the cost per box.
@@ -148,7 +148,7 @@ subscription only as a small footnote.
   numbers can be printed); everything else uses the saved table. The company
   Documents tab sends just the language. The client edition needs no table.
 - One-off option prices (custom app, voting portal, design service) are
-  `src/businessOptions.ts`; `vibe.ts` still prices quotations with literals.
+  `src/businessOptions.ts`; `business.ts` still prices quotations with literals.
 
 ## Print&Bind (physical card printing)
 
@@ -256,7 +256,7 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Analytics** (`src/analytics.ts`) - Usage tracking and reporting
 
 #### 5. User Features
-- **Authentication System** - JWT-based with multiple user roles (admin, vibeadmin, companyadmin, users)
+- **Authentication System** - JWT-based with multiple user roles (admin, companyadmin, users)
 - **Company Portal** - Business customers can create voting lists for their playlists
 - **Review System** - Customer feedback and Trustpilot integration
 - **Multi-language Support** - Full i18n with 12+ languages
@@ -289,7 +289,7 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 
 #### Authentication & Authorization
 - **JWT tokens** with role-based access control
-- **User groups**: admin, vibeadmin, companyadmin, users
+- **User groups**: admin, companyadmin, users
 - **Company-scoped permissions** for business features
 - **Token middleware** on protected routes
 
@@ -301,7 +301,7 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - `src/routes/` - Route definitions (organized by feature)
   - `accountRoutes.ts` - User authentication and account management
   - `adminRoutes.ts` - Admin panel and management routes
-  - `vibeRoutes.ts` - Company/business voting portal routes
+  - `companyRoutes.ts` - Companies, company lists, voting, quotations and calculators (`/business/*`; logic in `src/business.ts`)
   - `musicRoutes.ts` - Spotify integration and music-related routes
   - `paymentRoutes.ts` - Payment processing and order management
   - `publicRoutes.ts` - Public endpoints and general functionality
@@ -797,8 +797,9 @@ The day and month reports (`Mollie.getSalesReport`), the country report
 (`getPaymentsByMonth`), the tax and OSS report (`getPaymentsByTaxRate`) and
 the dashboard's Finance card (`/analytics` → `Mollie.getSalesTotals`, which
 adds the sales report's rows up) agree by construction; `analytics.ts` no
-longer sums payments itself. All of them take paid, non-vibe, non-test orders
-after 2024-12-05 only. Turnover "Combined €" is gross with refunds netted:
+longer sums payments itself. All of them take paid orders after 2024-12-05
+only. There is no test-order flag: `payments.test` was dropped on 2026-10-07
+(nothing had set it since February 2026). Turnover "Combined €" is gross with refunds netted:
 playlists' `totalPrice` (boxes and checkout add-ons ride inside it) plus
 games upgrades plus account App Designer. Profit "Profit €" is ex-VAT:
 `payments.profit` of the orders whose print cost is known (a physical order
@@ -811,7 +812,7 @@ way they do App Designer's; a (zone, country, rate) with only a games upgrade
 gets a row. Initial games rows (free with an order) are counted, never summed.
 
 **Business sales** are company lists switched to "Sold" on a company's Lists
-tab (`PUT /vibe/companies/:companyId/lists/:listId/sold`, admin only;
+tab (`PUT /business/companies/:companyId/lists/:listId/sold`, admin only;
 `company_lists.sold` + `soldAt`, stored at 12:00 UTC of the picked day).
 `src/businessSales.ts` reads them. A sold list adds what the Lists table
 shows: `sellPrice` (ex VAT, after discount) as turnover, gross at the VAT its
@@ -904,12 +905,13 @@ prices, and the API cannot redo that: it only knows the printer cost. Until
 inputs and billed Tromp and Schneider lists at roughly the printer's price,
 so no invoice matched the quotation or the Sell column.
 
-- Lists are printed by Tromp (`printer = 'qrsong'`) or Schneider. The
-  OnzeVibe list calculator was removed on 2026-09-22; `listPrinterVariant`
-  reads a list still stored with `printer = 'onzevibe'` (or none) as
-  Schneider, and the list update refuses any other printer. The OnzeVibe
-  portal (qrhit-vibe) still uses `/vibe/calculate`, the company-level
-  `calculation` endpoints and the OnzeVibe quotation, company-level only.
+- Lists are printed by Tromp (`printer = 'qrsong'`) or Schneider.
+  `listPrinterVariant` reads any other value (or none) as Schneider, and the
+  list update refuses any other printer. Quotations are `qrsong` (Tromp) or
+  `schneider`; the quotation routes refuse any other type.
+  `Company.calculation` is only read for the old company-wide discount that
+  Tromp and Schneider calculations saved before the discount moved onto the
+  list fall back to; nothing writes it any more.
 - Every calculator save carries a `pricing` snapshot inside the variant's
   calculation JSON (`calculationTromp` / `calculationSchneider`): quantity,
   unit price, one-off extras, app and portal fees, discount %. `src/listPricing.ts` parses it and does the sums;
@@ -983,9 +985,9 @@ mailing files to a contact all live in `src/routes/businessRoutes.ts`
 quote requests", explains the flow and its rules. Things to know here:
 
 - **The three-size quotation (48, 96 and 192 cards side by side) was removed
-  on 2026-10-06 at Rick's request**: `POST /vibe/quotation/:companyId/box-options`,
-  the Lambda view `GET /vibe/quotation-options/:number`, the quote request's
-  `POST /vibe/quote-requests/:id/quotation`, `boxOptionsQuotation.ts`,
+  on 2026-10-06 at Rick's request**: `POST /business/quotation/:companyId/box-options`,
+  the Lambda view `GET /business/quotation-options/:number`, the quote request's
+  `POST /business/quote-requests/:id/quotation`, `boxOptionsQuotation.ts`,
   `box_options_quotation.ejs` and its `quotation.options*` keys. Quotations
   are made per box size (`qquote quote`). Rows with variant
   `schneider-options` and their archived PDFs stay, and a request's
@@ -1049,7 +1051,7 @@ System → "Sync business lists", `POST /admin/mail-octopus/business-sync`,
 - **Language:** `company.locale`, nl → NL, de → DE, anything else → EN, NULL
   → NL (the column default; every NULL company was Dutch or Belgian). An
   address on several companies goes with the latest updated company. Users
-  in `admin`/`vibeadmin` are left out.
+  in `admin` are left out.
 - **Excluding a company:** "Exclude from business mailings" on the company's
   details (`Company.excludeFromMailing`). Its contacts are left out and the
   next run takes them off, unless they are also a contact of a company that
@@ -1086,14 +1088,24 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with
-  `skipMainMail`, and **printer hold on from the start** (reason null, a
-  hand-placed hold). The hourly printer pass does not look at `printerType`,
-  so without the hold such an order goes to Print&Bind. Print&Bind and the
-  reseller type are refused; `expectedTracks` refuses a playlist whose track
-  count differs. Approved by Rick on 2026-10-03.
+  `skipMainMail`, no printer hold (see "Only printnbind goes to Print&Bind").
+  Print&Bind and the reseller type are refused; `expectedTracks` refuses a
+  playlist whose track count differs. Approved by Rick on 2026-10-03.
 - `GET /admin/toolkit/order/:paymentId` (design, print files, every card with
   its year check), `PUT .../design`, `POST .../regenerate` (forced finalize,
-  no mail, only while on hold and not at a printer).
+  no mail; not once at a printer, and a Print&Bind order only while on hold).
+
+### Only printnbind goes to Print&Bind
+
+`Generator.sendToPrinter` sends a payment's physical lines whose
+`printerType` is `printnbind` and nothing else, whoever calls it (the hourly
+pass, the customer's approval, the dashboard); a payment without one is
+refused with `No Print&Bind playlists`. The hourly pass only selects payments
+with such a line, and the dashboard's "not sent to printer" attention flag
+only counts them. Until 2026-10-07 nothing looked at the printer type:
+Schneiders orders 8194 and 8237 went to Print&Bind once their 36-hour timer
+ran out, and toolkit orders were created on printer hold to keep them out.
+That hold is no longer set.
 - Finishing the year check (`POST /yearcheck`) still finalizes the order with
   the "finalized" mail to the order's address, as for any order; toolkit
   orders are booked on Rick's account.
@@ -1121,7 +1133,7 @@ first that applies wins:
 2. **The year mix.** Business clients often build their list from old to new,
    and Schneiders delivers the deck in that order: the first box compartment
    was all sixties. `storePlaylistData` gives a business deck (`isBusinessDeck`:
-   printer Schneiders or Tromp, or a vibe order) a `Playlist.trackMixSeed`, and
+   printer Schneiders or Tromp) a `Playlist.trackMixSeed`, and
    `storeTracks` then orders the cards with `src/trackMix.ts` after the years
    are known: every stack of 48 gets its share of every era, shuffled, with no
    two neighbours sharing a year or an artist where the deck allows it. The
@@ -1489,7 +1501,7 @@ or downgrades requests and bans nobody.
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
   - Account/auth routes → `accountRoutes.ts`
   - Admin functionality → `adminRoutes.ts`
-  - Company/business features → `vibeRoutes.ts`
+  - Company/business features → `companyRoutes.ts` (`/business/*`)
   - Music/Spotify features → `musicRoutes.ts`
   - Payment/order processing → `paymentRoutes.ts`
   - Public/general routes → `publicRoutes.ts`
@@ -1525,22 +1537,28 @@ The server routes have been refactored into logical modules for better maintaina
 - **Development Server**: `npm start` (localhost:4200)
 - **Build Command**: `npm run build` (builds into `dist/qrhit-build` and publishes into `dist/qrhit`; `deploy_frontend` then restarts and runs `npm run invalidate-cloudfront`, see "Deploys" in the frontend's CLAUDE.md)
 
-The OnzeVibe company portal (`qrhit-vibe`) is no longer worked on: its
-folder was removed on 2026-10-03 (Rick). The `/vibe/*` routes stay, the
-frontend's admin dashboard (companies, lists, quotations) uses them.
+The business platform (companies, company lists, voting, quotations,
+calculators, invoices, quote requests, company files) is `src/business.ts`
+(class `Business`) behind `/business/*` (`src/routes/companyRoutes.ts` and
+`src/routes/businessRoutes.ts`); the frontend's admin dashboard and the
+qquote, boxd and qrsong toolkits call it. Until 2026-10-07 the file was
+`vibe.ts` and the prefix `/vibe/`, after the OnzeVibe brand, which is gone
+with everything only it used: its portal and self sign-up
+(`/vibe/companylist/create`), its order generation (`/vibe/generate`, orders
+flagged `payments.vibe`), the HappiBox calculator and quotation, the poster
+and countdown views, the portal welcome mails and the `vibeadmin` group.
 
-Its voting page moved to the site on 2026-10-06: `https://www.qrsong.io/v/<slug>`
-(`/:lang/v/:slug`, see "Voting page" in the frontend's CLAUDE.md), still on the
+The voting page lives on the site since 2026-10-06: `https://www.qrsong.io/v/<slug>`
+(`/:lang/v/:slug`, see "Voting page" in the frontend's CLAUDE.md), on the
 `/hitlist/*` routes. Every link the API builds to it uses `FRONTEND_URI`
-(the verification mail, `/:lang/v/:slug/verify/:hash`, always QRSong!-branded;
-the list welcome mail). `FRONTEND_VOTING_URI` is now only the admin URL in the
-OnzeVibe welcome mail, which no current form triggers.
+(the verification mail, `/:lang/v/:slug/verify/:hash`, always QRSong!-branded).
+`FRONTEND_VOTING_URI` is read by nothing any more.
 
 - **The list cache is per visitor**: `companyListByDomain:<slug>:<hash>`
-  (`Hitlist.getCompanyListByDomain`, 24 hours). `Vibe.clearCompanyListCache`
+  (`Hitlist.getCompanyListByDomain`, 24 hours). `Business.clearCompanyListCache`
   deletes the pattern; until 2026-10-06 it deleted the key without a hash,
   which matched nothing, so a returning voter saw a changed list up to a day
-  late. `/vibe/companies/:id/lists/:id/info` clears it too now.
+  late. `/business/companies/:id/lists/:id/info` clears it too now.
 - `processAndSaveImage` keeps only `.png .jpg .jpeg .webp .gif`: the file
   lands in the public folder as uploaded.
 
@@ -1570,12 +1588,12 @@ The frontend consumes this API through the following key endpoints:
 - **POST** `/newsletter_subscribe` - Newsletter subscriptions
 - **GET** `/reviews/:locale/:amount/:landingPage` - Customer reviews
 
-#### Company/Business Features (OnzeVibe Portal)
-- **GET** `/vibe/companies` - List available companies for admin management
+#### Company/Business Features
+- **GET** `/business/companies` - List available companies for admin management
 - **GET** `/company-lists/:companyId` - Get company voting lists
 - **GET** `/list/:listId` - Get individual list details with submissions
-- **POST** `/vibe/submit` - Submit track suggestions to company voting lists
-- **GET** `/vibe/submissions/:companyId` - Get company submission data
+- **POST** `/business/submit` - Submit track suggestions to company voting lists
+- **GET** `/business/submissions/:companyId` - Get company submission data
 - **PUT** `/account/voting-portal/:id` - Update voting portal settings
 - **DELETE** `/account/voting-portal/:id` - Delete voting portals
 

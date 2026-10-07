@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
-import Vibe from './vibe';
+import Business from './business';
 import Utils from './utils';
 import Mail from './mail';
 import PushoverClient from './pushover';
@@ -24,7 +24,7 @@ import { MIN_BUSINESS_BOXES } from './services/boxPricing';
  * (design_ready), and the admin mails design and quotation from the
  * company's Assets tab (sent). The quotations are made per box size with
  * qquote. The three-size quotation the API used to make for a request
- * (POST /vibe/quote-requests/:id/quotation) was removed on 2026-10-06 at
+ * (POST /business/quote-requests/:id/quotation) was removed on 2026-10-06 at
  * Rick's request; `quotationId` still points at the ones made before.
  */
 
@@ -201,9 +201,9 @@ export class QuoteRequests {
       throw new QuoteRequestError('spam', 'Message detected as spam');
     }
 
-    const vibe = Vibe.getInstance();
+    const business = Business.getInstance();
     const company = await this.leadCompany(valid);
-    const user = await vibe.upsertLeadUser({
+    const user = await business.upsertLeadUser({
       email: valid.email,
       fullname: valid.fullname,
       phone: valid.phone ?? undefined,
@@ -279,7 +279,7 @@ export class QuoteRequests {
       if (!taken) break;
     }
 
-    const result = await Vibe.getInstance().createCompany({
+    const result = await Business.getInstance().createCompany({
       name,
       onlyForAdmin: true,
       contact: valid.fullname,
@@ -304,7 +304,7 @@ export class QuoteRequests {
         if (!taken) break;
         slug = `${base}-${n}`;
       }
-      const result = await Vibe.getInstance().createCompanyList(company.id, {
+      const result = await Business.getInstance().createCompanyList(company.id, {
         name: company.name,
         slug,
         numberOfCards: 200,

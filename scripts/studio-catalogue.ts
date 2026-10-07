@@ -82,7 +82,6 @@ async function list(prisma: PrismaClient, limit: number) {
     WHERE p.featured = 1
       AND p.featuredHidden = 0
       AND pay.status = 'paid'
-      AND pay.test = 0
       AND pay.createdAt >= DATE_SUB(NOW(), INTERVAL ${SALES_DAYS} DAY)
     GROUP BY p.id, p.name, p.featuredLocale
     ORDER BY sales DESC, p.id

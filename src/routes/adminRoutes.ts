@@ -121,7 +121,7 @@ export default async function adminRoutes(
   // Create/update admin user
   fastify.post(
     '/admin/create',
-    getAuthHandler(['admin', 'vibeadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { email, password, displayName, companyId, userGroup, id, phone } =
         request.body;
@@ -1230,7 +1230,7 @@ export default async function adminRoutes(
   );
 
   // Live "N matching playlists" count for the playlist suggestions modal.
-  // Same filters as GET /vibe/playlist-suggestions.
+  // Same filters as GET /business/playlist-suggestions.
   fastify.get(
     '/admin/playlist-suggestions/count',
     getAuthHandler(['admin']),
@@ -6175,7 +6175,7 @@ export default async function adminRoutes(
 
       const rawGroups = user.UserGroupUser.map((ugu: any) => ugu.UserGroup.name);
 
-      if (rawGroups.includes('admin') || rawGroups.includes('vibeadmin')) {
+      if (rawGroups.includes('admin')) {
         return reply.status(403).send({ success: false, error: 'Cannot impersonate admin users' });
       }
 

@@ -90,7 +90,6 @@ function makeDeps() {
       update: vi.fn(async () => ({})),
     },
     trackExtraInfo: { findMany: vi.fn(async () => []) },
-    orderType: { findFirst: vi.fn() },
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn(async (ops: any[]) => Promise.all(ops)),
@@ -596,26 +595,19 @@ describe('changePlaylistType', () => {
     });
   });
 
-  it('switches digital -> cards: picks the smallest fitting tier and resets printer state', async () => {
+  it('switches digital -> cards and resets printer state', async () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ ...php });
     prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
-    prisma.orderType.findFirst.mockResolvedValueOnce({ id: 5 });
 
     const res = await changePlaylistType(deps, 1, 'cards');
 
     expect(res).toEqual({ success: true, paymentId: 'tr_abc', changed: true });
-    expect(prisma.orderType.findFirst).toHaveBeenCalledWith({
-      where: { type: 'cards', digital: false, maxCards: { gte: 120 } },
-      orderBy: { maxCards: 'asc' },
-      select: { id: true },
-    });
     expect(prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: {
         type: 'physical',
         subType: 'none',
-        orderTypeId: 5,
         printApiUploaded: false,
         eligableForPrinter: false,
         eligableForPrinterAt: null,
@@ -625,28 +617,22 @@ describe('changePlaylistType', () => {
     });
   });
 
-  it('falls back to the largest physical tier when track count exceeds all tiers', async () => {
+  it('switches to sheets', async () => {
+    // order_types never had a sheets row, so this used to fail.
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ ...php });
     prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
-    prisma.orderType.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 6 });
 
     const res = await changePlaylistType(deps, 1, 'sheets');
 
     expect(res.changed).toBe(true);
-    expect(prisma.orderType.findFirst).toHaveBeenNthCalledWith(2, {
-      where: { type: 'sheets', digital: false },
-      orderBy: { maxCards: 'desc' },
-      select: { id: true },
+    expect(prisma.paymentHasPlaylist.update.mock.calls[0][0].data).toMatchObject({
+      type: 'physical',
+      subType: 'sheets',
     });
-    expect(prisma.paymentHasPlaylist.update.mock.calls[0][0].data.subType).toBe(
-      'sheets'
-    );
   });
 
-  it('switching to digital does not constrain on maxCards', async () => {
+  it('switches physical -> digital', async () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
       ...php,
@@ -654,28 +640,13 @@ describe('changePlaylistType', () => {
       subType: 'none',
     });
     prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
-    prisma.orderType.findFirst.mockResolvedValueOnce({ id: 2 });
 
     await changePlaylistType(deps, 1, 'digital');
 
-    expect(prisma.orderType.findFirst).toHaveBeenCalledWith({
-      where: { type: 'cards', digital: true },
-      orderBy: { maxCards: 'asc' },
-      select: { id: true },
+    expect(prisma.paymentHasPlaylist.update.mock.calls[0][0].data).toMatchObject({
+      type: 'digital',
+      subType: 'none',
     });
-  });
-
-  it('errors when no OrderType matches', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ ...php });
-    prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
-    prisma.orderType.findFirst.mockResolvedValue(null);
-
-    const res = await changePlaylistType(deps, 1, 'cards');
-
-    expect(res.success).toBe(false);
-    expect(res.error).toContain('No matching OrderType');
-    expect(prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
   });
 
   it('fails when the line item does not exist', async () => {
@@ -689,7 +660,6 @@ describe('changePlaylistType', () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ ...php });
     prisma.paymentHasPlaylist.findFirst.mockResolvedValue(null);
-    prisma.orderType.findFirst.mockResolvedValueOnce({ id: 5 });
     prisma.paymentHasPlaylist.update.mockRejectedValue(new Error('deadlock'));
 
     const res = await changePlaylistType(deps, 1, 'cards');

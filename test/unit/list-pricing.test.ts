@@ -44,8 +44,8 @@ describe('listPrinterVariant', () => {
   it('is Tromp for qrsong and Schneider for everything else', () => {
     expect(listPrinterVariant('qrsong')).toBe('qrsong');
     expect(listPrinterVariant('schneider')).toBe('schneider');
-    // The retired OnzeVibe printer and missing values fall back to Schneider.
-    expect(listPrinterVariant('onzevibe')).toBe('schneider');
+    // Any other printer and missing values fall back to Schneider.
+    expect(listPrinterVariant('other')).toBe('schneider');
     expect(listPrinterVariant(null)).toBe('schneider');
     expect(listPrinterVariant(undefined)).toBe('schneider');
   });

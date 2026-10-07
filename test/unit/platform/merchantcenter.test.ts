@@ -1161,8 +1161,8 @@ describe('uploadPlaylist', () => {
     expect(h.productInputs.insert).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to the playlist price when no order type matches', async () => {
-    h.getOrderType.mockResolvedValue(null);
+  it('falls back to the playlist price when the deck has no price', async () => {
+    h.getOrderType.mockResolvedValue({ digital: false, amount: 0, alternatives: {} });
     await svc.uploadPlaylist(makePlaylist({ featuredLocale: 'nl', price: 25 }));
     const bodies = h.productInputs.insert.mock.calls.map(
       (c: any[]) => c[0].requestBody
@@ -1174,8 +1174,8 @@ describe('uploadPlaylist', () => {
     });
   });
 
-  it('falls back to 29.99 when neither order type nor playlist price exist', async () => {
-    h.getOrderType.mockResolvedValue(null);
+  it('falls back to 29.99 when neither the deck nor the playlist has a price', async () => {
+    h.getOrderType.mockResolvedValue({ digital: false, amount: 0, alternatives: {} });
     await svc.uploadPlaylist(
       makePlaylist({ featuredLocale: 'nl', price: null })
     );

@@ -58,15 +58,15 @@
 - **Email/Password:** User account system with salt+hash (PBKDF2)
 - **Email Verification:** Hash-based verification with expiry
 - **Password Reset:** Secure token flow with expiry validation
-- **Admin Authentication:** Role-based (admin, vibeadmin, companyadmin, qrvoteadmin, users)
+- **Admin Authentication:** Role-based (admin, companyadmin, qrvoteadmin, users, api_users)
 - **OAuth Integration:** Spotify authorization (for playlist linking)
 
 ### 2.2 Authorization & User Roles
 - **Admin:** Full system access
-- **VibeAdmin:** Admin for voting/submission system
 - **CompanyAdmin:** Restricted to company data
 - **QRVoteAdmin:** Voting/survey management
 - **Users:** Regular customers & guest accounts
+- **API users:** Reseller API access
 
 ### 2.3 Authentication Endpoints
 - `POST /validate` - Login/email validation
@@ -104,7 +104,6 @@
 - `POST /mollie/webhook` - Payment status webhook
 - `GET /progress/:playlistId/:paymentId` - Order progress tracking
 - `GET /ordertype/:numberOfTracks/:digital/:subType/:playlistId` - Product pricing
-- `GET /ordertypes` - List all available products
 - `POST /order/calculate` - Calculate order totals
 - `POST /order/volume-discount` - Volume discount calculation
 - `POST /discount/:code/:digital` - Discount code validation
@@ -262,7 +261,7 @@
 - **Physical QR Cards:** Full-page layouts with customization
 - **Digital Card PDFs:** User-downloadable versions
 - **Invoices:** Customer-facing and merchant receipts
-- **Quotations:** Business proposal templates (Vibe/QRSong)
+- **Quotations:** Business proposal templates (QRSong/Tromp and Schneider)
 - **Gamesets:** ZIP archives with QR codes
 
 ### 7.3 Customization Features
@@ -545,11 +544,12 @@
 
 ---
 
-## 18. VOTING & SUBMISSION SYSTEM (OnzeVibe)
+## 18. VOTING & SUBMISSION SYSTEM (business)
 
 ### 18.1 Company Voting System
 - **Purpose:** Employee or customer voting on music
 - **Features:**
+  - Public voting page on the QRSong! site (`qrsong.io/v/<slug>`)
   - Company-managed voting lists
   - Individual submissions
   - Email verification
@@ -566,27 +566,24 @@
 - Survey answers
 
 ### 18.3 Voting Endpoints
-- `POST /vibe/companylist/create` - Create public voting list
-- `GET /vibe/companies` - List companies (admin)
-- `POST /vibe/companies` - Create company
-- `PUT /vibe/companies/:companyId` - Update company
-- `DELETE /vibe/companies/:companyId` - Delete company
-- `POST /vibe/companies/:companyId/lists` - Create voting list
-- `DELETE /vibe/companies/:companyId/lists/:listId` - Delete list
-- `PUT /vibe/companies/:companyId/lists/:listId` - Update list
-- `GET /vibe/company/:companyId` - Get company lists
-- `GET /vibe/state/:listId` - Get voting state
-- `POST /vibe/finalize` - Finalize voting
-- `POST /vibe/generate/:listId` - Generate PDF from votes
-- `PUT /vibe/submissions/:submissionId` - Update submission
-- `DELETE /vibe/submissions/:submissionId` - Delete submission
-- `POST /vibe/lists/:companyListId/replace-track` - Replace track in votes
+- `GET /business/companies` - List companies (admin)
+- `POST /business/companies` - Create company
+- `PUT /business/companies/:companyId` - Update company
+- `DELETE /business/companies/:companyId` - Delete company
+- `POST /business/companies/:companyId/lists` - Create voting list
+- `DELETE /business/companies/:companyId/lists/:listId` - Delete list
+- `PUT /business/companies/:companyId/lists/:listId` - Update list
+- `GET /business/company/:companyId` - Get company lists
+- `GET /business/state/:listId` - Get voting state
+- `POST /business/finalize` - Finalize voting
+- `PUT /business/submissions/:submissionId` - Update submission
+- `DELETE /business/submissions/:submissionId` - Delete submission
+- `POST /business/lists/:companyListId/replace-track` - Replace track in votes
 
 ### 18.4 Pricing Calculation
-- `POST /vibe/calculate` - OnzeVibe pricing
-- `POST /vibe/calculate-tromp` - Tromp (QRSong) pricing
-- `POST /vibe/quotation/:companyId` - Generate quotation PDF
-- `GET /vibe/quotation/:type/:companyId/:quotationNumber` - View quotation
+- `POST /business/calculate-tromp` - Tromp (QRSong) pricing
+- `POST /business/quotation/:companyId` - Generate quotation PDF (types `qrsong` (Tromp) or `schneider`)
+- `GET /business/quotation/:type/:companyId/:quotationNumber` - View quotation
 
 ---
 
@@ -1049,7 +1046,7 @@ This QRHit/QRSong backend is a sophisticated, feature-rich e-commerce and conten
 
 - **Complex order fulfillment** spanning physical goods, digital deliverables, and printing
 - **Rich music integrations** with multiple metadata sources and music link resolution
-- **B2B capabilities** (OnzeVibe voting system) alongside B2C retail
+- **B2B capabilities** (QRSong! business: companies, voting, quotations) alongside B2C retail
 - **Multilingual support** across 11 languages
 - **Enterprise features** including user roles, company management, and comprehensive reporting
 - **Background job processing** with queue management and worker pools

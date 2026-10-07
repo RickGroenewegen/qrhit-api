@@ -377,12 +377,12 @@ describe('getPlaylistPlayRanking', () => {
     id,
     type: 'physical',
     numberOfTracks: 100,
+    printerType: null,
     playlist: { id: playlistId, name: 'Hits of the 80s', image: 'cover.jpg', customImage: null },
     payment: {
       orderId: `Q-${id}`,
       paymentId: `tr_${id}`,
       fullname,
-      vibe: false,
       createdAt: new Date('2026-09-01T10:00:00Z'),
     },
   });

@@ -370,7 +370,6 @@ class Excel {
         user: { userId: null, email: null, displayName: null },
         locale: 'en',
         refreshPlaylists: [],
-        onzevibe: false,
         cart: { items, discounts },
         extraOrderData: {
           fullname: 'Excel Import',
@@ -395,7 +394,6 @@ class Excel {
           invoiceZipcode: '',
           invoiceCountrycode: '',
           orderType: 'digital',
-          vibe: true,
         },
       };
 

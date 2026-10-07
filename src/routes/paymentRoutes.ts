@@ -96,8 +96,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/ordertype/:numberOfTracks/:digital/:subType/:playlistId',
     async (request: any, _reply) => {
-      // "null", "undefined" or "NaN" would reach Prisma as `gte: NaN` and
-      // throw a PrismaClientValidationError on every call.
+      // "null", "undefined" or "NaN" would be priced as a NaN deck.
       const numberOfTracks = parseInt(request.params.numberOfTracks);
       if (!Number.isFinite(numberOfTracks) || numberOfTracks < 0) {
         return { success: false, error: 'Invalid number of tracks' };
@@ -109,40 +108,17 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         request.params.playlistId,
         request.params.subType
       );
-      if (orderType) {
-        return {
-          success: true,
-          data: {
-            id: orderType.id,
-            amount: orderType.amount,
-            maxCards: maxCardsFor(orderType.digital),
-            alternatives: orderType.alternatives || {},
-            available: true,
-          },
-        };
-      } else {
-        return {
-          success: true,
-          data: {
-            id: 0,
-            amount: 0,
-            alternatives: {},
-            available: false,
-          },
-        };
-      }
+      return {
+        success: true,
+        data: {
+          amount: orderType.amount,
+          maxCards: maxCardsFor(orderType.digital),
+          alternatives: orderType.alternatives,
+          available: true,
+        },
+      };
     }
   );
-
-  // Get order types
-  fastify.get('/ordertypes', async (request: any, _reply) => {
-    const orderTypes = await order.getOrderTypes();
-    if (orderTypes && orderTypes.length > 0) {
-      return orderTypes;
-    } else {
-      return { success: false, error: 'Order type not found' };
-    }
-  });
 
   // Download files
   fastify.get(
@@ -479,16 +455,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
 
       if (payment.email) {
-        // An admin-chosen order template, or the company list's forced
-        // template for company orders (see forcedPrinterTemplate), replaces
+        // An admin-chosen order template (see forcedPrinterTemplate) replaces
         // the single-card printer layout only: digital downloads and sheets
         // keep their multi-card layout instead of coming out one card per page.
         const requestedTemplate: string = request.params.template;
-        const forcedTemplate = forcedPrinterTemplate(
-          php[0].template,
-          playlist.template,
-          payment.vibe
-        );
+        const forcedTemplate = forcedPrinterTemplate(php[0].template);
         const template =
           forcedTemplate && !isMultiCardTemplate(requestedTemplate)
             ? forcedTemplate

@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify/types/instance';
 import blogRoutes from '../routes/blogRoutes';
 import accountRoutes from './routes/accountRoutes';
 import adminRoutes from './routes/adminRoutes';
-import vibeRoutes from './routes/vibeRoutes';
+import companyRoutes from './routes/companyRoutes';
 import musicRoutes from './routes/musicRoutes';
 import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
@@ -159,7 +159,7 @@ class Server {
     // Register route modules
     await accountRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await adminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
-    await vibeRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await companyRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await bingoRoutes(this.fastify, getAuthHandler);
     await quizRoutes(this.fastify, getAuthHandler);
     await gameRoutes(this.fastify, getAuthHandler);
@@ -385,9 +385,6 @@ class Server {
     const productionOrigins = [
       'https://www.qrsong.io',
       'https://qrsong.io',
-      'https://onzevibe.nl',
-      'https://www.onzevibe.nl',
-      'https://stem.onzevibe.nl',
     ];
     const developmentOrigins = [
       'http://localhost:4200',

@@ -32,7 +32,12 @@ import { promises as fs } from 'fs';
 import Cache from './cache';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
-import { BOX_PRICE, BOX_UNIT_COST, APP_DESIGN_PRICE } from './config/constants';
+import {
+  BOX_PRICE,
+  BOX_UNIT_COST,
+  APP_DESIGN_PRICE,
+  PRINTER_TYPE,
+} from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import AppDesign, { CheckoutAppDesignRequest, validateCheckoutDesigns } from './appDesign';
@@ -153,7 +158,6 @@ class Mollie {
     }
 
     const where = {
-      vibe: false,
       AND: [
         {
           createdAt: {
@@ -313,8 +317,6 @@ class Mollie {
           ), 0) as profitAssignedCount
         FROM payments p
         WHERE p.status = 'paid'
-          AND p.vibe = 0
-          AND p.test = 0
           AND p.createdAt > '2024-12-05'
           ${emailFilter}
         GROUP BY ${dateExpr}
@@ -351,8 +353,6 @@ class Mollie {
         FROM payment_has_playlist php
         JOIN payments p ON php.paymentId = p.id
         WHERE p.status = 'paid'
-          AND p.vibe = 0
-          AND p.test = 0
           AND p.createdAt > '2024-12-05'
           AND php.boxEnabled = 1
           ${emailFilter}
@@ -452,8 +452,6 @@ class Mollie {
       FROM payment_has_playlist php
       JOIN payments p ON php.paymentId = p.id
       WHERE p.status = 'paid'
-        AND p.vibe = 0
-        AND p.test = 0
         AND p.createdAt > '2024-12-05'
         ${emailFilter}
         ${typeFilter}
@@ -488,8 +486,6 @@ class Mollie {
         ), 0) as profitAssignedCount
       FROM payments p
       WHERE p.status = 'paid'
-        AND p.vibe = 0
-        AND p.test = 0
         AND p.createdAt > '2024-12-05'
         ${emailFilter}
         AND EXISTS (
@@ -621,8 +617,6 @@ class Mollie {
     // already carries totals and a profit at creation.
     const where = {
       status: 'paid',
-      vibe: false,
-      test: false,
       AND: [
         {
           createdAt: {
@@ -691,7 +685,6 @@ class Mollie {
       FROM payment_has_playlist php
       JOIN payments p ON php.paymentId = p.id
       WHERE p.status = 'paid'
-        AND p.vibe = 0
         AND p.createdAt >= '${startDate.toISOString()}'
         AND p.createdAt <= '${endDate.toISOString()}'
         AND php.boxEnabled = 1
@@ -766,8 +759,6 @@ class Mollie {
         ), 0) as profitAssignedCount
       FROM payments p
       WHERE p.status = 'paid'
-        AND p.vibe = 0
-        AND p.test = 0
         AND p.createdAt >= '${startDate.toISOString()}'
         AND p.createdAt <= '${endDate.toISOString()}'
         AND p.createdAt > '2024-12-05'
@@ -882,8 +873,6 @@ class Mollie {
 
     const where = {
       status: 'paid',
-      vibe: false,
-      test: false,
       AND: [
         {
           createdAt: {
@@ -1751,13 +1740,15 @@ class Mollie {
     // to the printer but are still on printApiStatus = 'Created': either the
     // customer approved printing (userConfirmedPrinting, shown as Judged) or
     // the approval timer (canBeSentToPrinterAt) ran out. Orders on printer hold
-    // are parked on purpose and have their own filter.
+    // are parked on purpose and have their own filter. Only Print&Bind
+    // playlists count: the other printers never get an order from us.
     const notSentToPrinterFilter: Prisma.PaymentWhereInput = {
       printApiStatus: 'Created',
       printerHold: false,
       PaymentHasPlaylist: {
         some: {
           type: 'physical',
+          printerType: PRINTER_TYPE.PRINTNBIND,
         },
       },
       OR: [
@@ -1765,6 +1756,7 @@ class Mollie {
           PaymentHasPlaylist: {
             some: {
               type: 'physical',
+              printerType: PRINTER_TYPE.PRINTNBIND,
               userConfirmedPrinting: true,
             },
           },
@@ -1856,7 +1848,6 @@ class Mollie {
       ].filter((clause) => Object.keys(clause).length > 0);
 
       return {
-        vibe: false,
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
@@ -1960,12 +1951,6 @@ class Mollie {
             firstScannedAt: true,
             suggestionsPending: true,
             playlistId: true,
-            orderType: {
-              select: {
-                name: true,
-                digital: true,
-              },
-            },
             filenameDigital: true,
             printApiUploaded: true,
             printApiUploadResponse: true,
@@ -2075,12 +2060,14 @@ class Mollie {
     // timer never submits those on the customer's behalf.
     // Mirrors needsAttentionFilter above; keep the two in step.
     const now = new Date();
+    const isPrintNBind = (php: (typeof payments)[number]['PaymentHasPlaylist'][number]) =>
+      php.type === 'physical' && php.printerType === PRINTER_TYPE.PRINTNBIND;
     const isNotSentToPrinter = (payment: (typeof payments)[number]) =>
       payment.printApiStatus === 'Created' &&
       !payment.printerHold &&
-      payment.PaymentHasPlaylist.some((php) => php.type === 'physical') &&
+      payment.PaymentHasPlaylist.some(isPrintNBind) &&
       (payment.PaymentHasPlaylist.some(
-        (php) => php.type === 'physical' && php.userConfirmedPrinting
+        (php) => isPrintNBind(php) && php.userConfirmedPrinting
       ) ||
         (payment.canBeSentToPrinterAt !== null &&
           payment.canBeSentToPrinterAt <= now) ||
@@ -2317,11 +2304,6 @@ class Mollie {
       let discountAmount = 0;
       let discountUsed = false;
       let triggerDirectGeneration: boolean = false;
-      let vibe: boolean = false;
-
-      if (params.extraOrderData.vibe) {
-        vibe = params.extraOrderData.vibe;
-      }
 
       // Refresh track counts from Spotify API (uncached) before calculating price
       await this.refreshCartTrackCounts(params.cart, params.locale);
@@ -2493,8 +2475,8 @@ class Mollie {
       const presentmentRate = converted.rate;
       const presentmentCurrency: SupportedCurrency = converted.currency;
 
-      // Handle free orders (with discount) OR vibe orders with low totals
-      if ((calculateResult.data.total === 0 && discountUsed) || (vibe && calculateResult.data.total <= 10)) {
+      // Handle free orders (with discount)
+      if (calculateResult.data.total === 0 && discountUsed) {
         molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
         molliePaymentAmount = 0;
         molliePaymentStatus = 'paid';
@@ -2709,7 +2691,6 @@ class Mollie {
 
           return {
             playlistId: playlistDatabaseIds[index],
-            orderTypeId: orderType.id,
             amount: item.amount,
             numberOfTracks: item.numberOfTracks,
             type: item.type == 'sheets' ? 'physical' : item.type,
@@ -2851,7 +2832,6 @@ class Mollie {
         data: {
           ...customerFields,
           paymentId: molliePaymentId,
-          vibe,
           user: {
             connect: { id: userDatabaseId },
           },
@@ -2867,7 +2847,6 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
-          test: false,
           profit: totalProfit,
           printApiPrice: 0,
           shipping: useOrderType == 'physical' ? discountBase.shippingGross : 0,
@@ -3748,7 +3727,6 @@ class Mollie {
         isBusinessOrder: true,
         companyName: true,
         vatId: true,
-        vibe: true,
         discount: true,
         volumeDiscount: true,
         pricingVersion: true,

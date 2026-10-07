@@ -564,11 +564,10 @@
             ]
         },
         {
-            "slug": "onzevibe",
-            "title": "What is OnzeVibe?",
-            "description": "OnzeVibe is QRSong!'s corporate music experience. Companies can create personalized QR music cards for employees. Employees vote for their favorite songs, creating a company top 200 playlist, and each employee receives a personalized box of cards.",
+            "slug": "business",
+            "title": "What does QRSong! offer companies?",
+            "description": "Companies can order boxes of QR music cards in their own design, from 100 boxes. Leave your details on our business page and within 24 hours you get a design of your box and a quotation. Employees can also vote for their favourite songs on a voting page, and the top songs become the company's own card set.",
             "tags": [
-                "OnzeVibe",
                 "corporate",
                 "company",
                 "business",
@@ -914,7 +913,7 @@
         {
             "slug": "business-events",
             "title": "Can I use QRSong for business events?",
-            "description": "Absolutely! QRSong! cards are great for corporate events, team building, and client gifts. Check out OnzeVibe for a complete corporate music experience, or contact us for custom business solutions.",
+            "description": "Absolutely! QRSong! cards are great for corporate events, team building, and client gifts. Check out our business page for boxes in your company's own design, or contact us for custom business solutions.",
             "tags": [
                 "business",
                 "corporate",

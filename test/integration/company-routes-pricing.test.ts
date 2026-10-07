@@ -14,10 +14,10 @@ import { PriceListEdition, priceListQuery } from '../../src/priceList';
 import { PROFIT_TIERS } from '../../src/services/boxPricing';
 
 /**
- * Vibe pricing persistence (company/list calculations), quotation HTML
+ * Business pricing persistence (company/list calculations), quotation HTML
  * views, technical instructions, pricing table views and company deletion.
  */
-describe('vibe pricing and quotation views', () => {
+describe('business pricing and quotation views', () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
   let companyId: number;
@@ -52,23 +52,10 @@ describe('vibe pricing and quotation views', () => {
   });
 
   describe('company-level calculations', () => {
-    it('saves the OnzeVibe calculation', async () => {
-      const calc = JSON.stringify({ quantity: 250, soldBy: 'onzevibe' });
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/vibe/companies/${companyId}/calculation`,
-        headers,
-        payload: { calculation: calc },
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().company.findUnique({ where: { id: companyId } });
-      expect(row!.calculation).toBe(calc);
-    });
-
     it('saves the Tromp calculation', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/calculation-tromp`,
+        url: `/business/companies/${companyId}/calculation-tromp`,
         headers,
         payload: { calculationTromp: '{"quantity":100,"printingType":"eigen"}' },
       });
@@ -79,7 +66,7 @@ describe('vibe pricing and quotation views', () => {
     it('saves the Schneider calculation', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/calculation-schneider`,
+        url: `/business/companies/${companyId}/calculation-schneider`,
         headers,
         payload: {
           calculationSchneider: '{"quantity":50,"cardCount":96,"profitMargin":2}',
@@ -91,9 +78,9 @@ describe('vibe pricing and quotation views', () => {
     it('404s for an unknown company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/companies/999999/calculation',
+        url: '/business/companies/999999/calculation-schneider',
         headers,
-        payload: { calculation: '{}' },
+        payload: { calculationSchneider: '{}' },
       });
       expect(res.statusCode).toBe(404);
     });
@@ -101,11 +88,21 @@ describe('vibe pricing and quotation views', () => {
     it('400s for a non-numeric company id', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/companies/abc/calculation',
+        url: '/business/companies/abc/calculation-schneider',
+        headers,
+        payload: { calculationSchneider: '{}' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('has no company-level calculation save without a printer', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/business/companies/${companyId}/calculation`,
         headers,
         payload: { calculation: '{}' },
       });
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(404);
     });
   });
 
@@ -113,7 +110,7 @@ describe('vibe pricing and quotation views', () => {
     it('falls back to the company calculation when the list has none', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -126,7 +123,7 @@ describe('vibe pricing and quotation views', () => {
     it('saves a list-level calculation with order metrics', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation-schneider`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation-schneider`,
         headers,
         payload: {
           calculationSchneider: '{"quantity":75}',
@@ -145,7 +142,7 @@ describe('vibe pricing and quotation views', () => {
     it('prefers the list-level value once present', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation?variant=schneider`,
         headers,
       });
       const body = res.json();
@@ -153,23 +150,17 @@ describe('vibe pricing and quotation views', () => {
       expect(JSON.parse(body.calculation).quantity).toBe(75);
     });
 
-    it('has no OnzeVibe list calculation any more', async () => {
-      // Lists are priced by Tromp or Schneider; the OnzeVibe calculator is gone.
-      const read = await app.inject({
-        method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=onzevibe`,
-        headers,
-      });
-      expect(read.statusCode).toBe(400);
+    it('has no list calculation without a Tromp or Schneider variant', async () => {
+      // Lists are priced by Tromp or Schneider.
       const noVariant = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation`,
         headers,
       });
       expect(noVariant.statusCode).toBe(400);
       const write = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation`,
         headers,
         payload: { calculation: '{"quantity":75}' },
       });
@@ -183,7 +174,7 @@ describe('vibe pricing and quotation views', () => {
       });
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=tromp`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation?variant=tromp`,
         headers,
       });
       const body = res.json();
@@ -194,7 +185,7 @@ describe('vibe pricing and quotation views', () => {
     it('rejects an invalid variant', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation?variant=other`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation?variant=other`,
         headers,
       });
       expect(res.statusCode).toBe(400);
@@ -203,14 +194,14 @@ describe('vibe pricing and quotation views', () => {
     it('saves list-level tromp and schneider calculations', async () => {
       const tromp = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation-tromp`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation-tromp`,
         headers,
         payload: { calculationTromp: '{"quantity":120}' },
       });
       expect(tromp.statusCode).toBe(200);
       const schneider = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/calculation-schneider`,
+        url: `/business/companies/${companyId}/lists/${listId}/calculation-schneider`,
         headers,
         payload: { calculationSchneider: '{"quantity":60,"cardCount":144}' },
       });
@@ -223,7 +214,7 @@ describe('vibe pricing and quotation views', () => {
     it('404s list calculations for the wrong company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/999999/lists/${listId}/calculation-schneider`,
+        url: `/business/companies/999999/lists/${listId}/calculation-schneider`,
         headers,
         payload: { calculationSchneider: '{}' },
       });
@@ -232,20 +223,18 @@ describe('vibe pricing and quotation views', () => {
   });
 
   describe('quotation HTML views', () => {
-    it('renders the OnzeVibe quotation', async () => {
+    it('404s a quotation type other than qrsong or schneider', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-100`,
+        url: `/business/quotation/other/${companyId}/Q-2026-100`,
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.headers['content-type']).toContain('text/html');
-      expect(res.body).toContain('Pricing Company BV');
+      expect(res.statusCode).toBe(404);
     });
 
     it('renders the QRSong (Tromp) quotation using stored list calculation', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-101?listId=${listId}`,
+        url: `/business/quotation/qrsong/${companyId}/Q-2026-101?listId=${listId}`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('Q-2026-101');
@@ -254,16 +243,17 @@ describe('vibe pricing and quotation views', () => {
     it('renders the Schneider quotation', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/schneider/${companyId}/Q-2026-102?isReseller=true`,
+        url: `/business/quotation/schneider/${companyId}/Q-2026-102?isReseller=true`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
+      expect(res.body).toContain('Pricing Company BV');
     });
 
     it('404s an unknown company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/quotation/onzevibe/999999/Q-1',
+        url: '/business/quotation/schneider/999999/Q-1',
       });
       expect(res.statusCode).toBe(404);
     });
@@ -271,7 +261,7 @@ describe('vibe pricing and quotation views', () => {
     it('applies 21% Dutch VAT when the company has no usable country', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-110`,
+        url: `/business/quotation/schneider/${companyId}/Q-2026-110`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('BTW 21%');
@@ -286,7 +276,7 @@ describe('vibe pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-111`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-111`,
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
@@ -311,7 +301,7 @@ describe('vibe pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/qrsong/${companyId}/Q-2026-112?listId=${listId}`,
+          url: `/business/quotation/qrsong/${companyId}/Q-2026-112?listId=${listId}`,
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
@@ -331,7 +321,7 @@ describe('vibe pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-114?locale=de`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-114?locale=de`,
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('Deutschland');
@@ -351,7 +341,7 @@ describe('vibe pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/onzevibe/${companyId}/Q-2026-113`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-113`,
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW 0%');
@@ -370,7 +360,7 @@ describe('vibe pricing and quotation views', () => {
       // what decides the language of the customer's quotation.
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-103?locale=de`,
+        url: `/business/quotation/qrsong/${companyId}/Q-2026-103?locale=de`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="de"');
@@ -390,7 +380,7 @@ describe('vibe pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/qrsong/${companyId}/Q-2026-104`,
+          url: `/business/quotation/qrsong/${companyId}/Q-2026-104`,
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('lang="de"');
@@ -408,7 +398,7 @@ describe('vibe pricing and quotation views', () => {
       // the route, and was still emitting Dutch on a German quotation.
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/schneider/${companyId}/Q-2026-107?locale=de`,
+        url: `/business/quotation/schneider/${companyId}/Q-2026-107?locale=de`,
       });
       expect(res.statusCode).toBe(200);
       // The card count depends on whatever calculation an earlier test stored,
@@ -423,7 +413,7 @@ describe('vibe pricing and quotation views', () => {
     it('falls back to English for a language we do not write quotations in', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-105?locale=fr`,
+        url: `/business/quotation/qrsong/${companyId}/Q-2026-105?locale=fr`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="en"');
@@ -433,7 +423,7 @@ describe('vibe pricing and quotation views', () => {
     it('still renders Dutch, unchanged, for a Dutch company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/quotation/qrsong/${companyId}/Q-2026-106?locale=nl`,
+        url: `/business/quotation/qrsong/${companyId}/Q-2026-106?locale=nl`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="nl"');
@@ -463,7 +453,7 @@ describe('vibe pricing and quotation views', () => {
         await store({});
         const de = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/schneider/${companyId}/Q-2026-120?listId=${listId}&locale=de`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-120?listId=${listId}&locale=de`,
         });
         expect(de.statusCode).toBe(200);
         expect(de.body).toContain('Versand nach Deutschland');
@@ -471,7 +461,7 @@ describe('vibe pricing and quotation views', () => {
 
         const nl = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/schneider/${companyId}/Q-2026-121?listId=${listId}&locale=nl`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-121?listId=${listId}&locale=nl`,
         });
         expect(nl.body).toContain('Verzending naar Duitsland');
         expect(nl.body).toContain('34 omdozen op 1 pallet');
@@ -480,7 +470,7 @@ describe('vibe pricing and quotation views', () => {
         await store({ forceShippingPrice: 0 });
         const free = await app.inject({
           method: 'GET',
-          url: `/vibe/quotation/schneider/${companyId}/Q-2026-122?listId=${listId}&locale=nl`,
+          url: `/business/quotation/schneider/${companyId}/Q-2026-122?listId=${listId}&locale=nl`,
         });
         expect(free.statusCode).toBe(200);
         expect(free.body).not.toContain('Verzending naar');
@@ -497,7 +487,7 @@ describe('vibe pricing and quotation views', () => {
     it('renders in the language from the query string', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/technical-instructions/${companyId}?printer=tromp&locale=de`,
+        url: `/business/technical-instructions/${companyId}?printer=tromp&locale=de`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="de"');
@@ -511,7 +501,7 @@ describe('vibe pricing and quotation views', () => {
     it('keeps the schneider card size when translated', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/technical-instructions/${companyId}?printer=schneider&locale=de`,
+        url: `/business/technical-instructions/${companyId}?printer=schneider&locale=de`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('56x56mm');
@@ -520,7 +510,7 @@ describe('vibe pricing and quotation views', () => {
     it('falls back to English for an unsupported language', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/technical-instructions/${companyId}?locale=jp`,
+        url: `/business/technical-instructions/${companyId}?locale=jp`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="en"');
@@ -532,7 +522,7 @@ describe('vibe pricing and quotation views', () => {
     it('renders the technical instructions page', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/technical-instructions/${companyId}?printer=tromp`,
+        url: `/business/technical-instructions/${companyId}?printer=tromp`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
@@ -541,7 +531,7 @@ describe('vibe pricing and quotation views', () => {
     it('404s technical instructions for an unknown company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/technical-instructions/999999',
+        url: '/business/technical-instructions/999999',
       });
       expect(res.statusCode).toBe(404);
     });
@@ -557,19 +547,19 @@ describe('vibe pricing and quotation views', () => {
       return m;
     };
     const priceListUrl = (edition: PriceListEdition, locale: string) =>
-      `/vibe/${edition}-pricing?${priceListQuery(edition, locale, priceListMatrix())}`;
+      `/business/${edition}-pricing?${priceListQuery(edition, locale, priceListMatrix())}`;
 
     it('refuses to render a price list without a valid signature', async () => {
       // Without the signature anyone could render it with an empty matrix
       // and read the printer's cost per box.
-      const unsigned = await app.inject({ method: 'GET', url: '/vibe/retail-pricing' });
+      const unsigned = await app.inject({ method: 'GET', url: '/business/retail-pricing' });
       expect(unsigned.statusCode).toBe(403);
 
       const signed = new URLSearchParams(priceListQuery('retail', 'nl', priceListMatrix()));
       signed.set('profitMatrix', JSON.stringify({ 'schneider-48': {} }));
       const tampered = await app.inject({
         method: 'GET',
-        url: `/vibe/retail-pricing?${signed.toString()}`,
+        url: `/business/retail-pricing?${signed.toString()}`,
       });
       expect(tampered.statusCode).toBe(403);
     });
@@ -622,21 +612,12 @@ describe('vibe pricing and quotation views', () => {
       // does not have: a clear 400 instead of a list at the printer's cost.
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/retail-pricing/pdf',
+        url: '/business/retail-pricing/pdf',
         headers,
         payload: { locale: 'nl' },
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toContain('profit table');
-    });
-
-    it('renders the vibe poster page', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/vibe/poster/some-poster-id',
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.headers['content-type']).toContain('text/html');
     });
   });
 
@@ -646,20 +627,20 @@ describe('vibe pricing and quotation views', () => {
         data: {
           quotationNumber: 'Q-DEL-1',
           companyId,
-          variant: 'onzevibe',
+          variant: 'schneider',
           quantity: 10,
         },
       });
       const wrong = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/999999/quotations/${quotation.id}`,
+        url: `/business/companies/999999/quotations/${quotation.id}`,
         headers,
       });
       expect(wrong.statusCode).toBe(404);
 
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/quotations/${quotation.id}`,
+        url: `/business/companies/${companyId}/quotations/${quotation.id}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -672,7 +653,7 @@ describe('vibe pricing and quotation views', () => {
     it('rejects finalize without a list id', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/finalize',
+        url: '/business/finalize',
         headers,
         payload: {},
       });
@@ -685,7 +666,7 @@ describe('vibe pricing and quotation views', () => {
       });
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${company.id}`,
+        url: `/business/companies/${company.id}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -698,7 +679,7 @@ describe('vibe pricing and quotation views', () => {
     it('404s deleting an unknown company', async () => {
       const res = await app.inject({
         method: 'DELETE',
-        url: '/vibe/companies/999999',
+        url: '/business/companies/999999',
         headers,
       });
       expect(res.statusCode).toBe(404);

@@ -92,17 +92,6 @@ describe('admin routes — wave 2 coverage', () => {
       },
     });
 
-    // Needed for changePlaylistType to digital (orderTypeProduct:'cards', digital:true)
-    await prisma().orderType.create({
-      data: {
-        name: 'digital-wave2',
-        type: 'cards',
-        digital: true,
-        description: 'Digital cards',
-        amount: 30,
-      },
-    });
-
     const playlist = await prisma().playlist.create({
       data: {
         playlistId: 'wave2-playlist-1',

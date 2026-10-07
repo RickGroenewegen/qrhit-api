@@ -7,7 +7,7 @@ import { outbound } from '../../helpers/recording-mock';
  * processing (scoring/filtering/dedupe, track upserts, birthday track),
  * verification, cached company-list lookup and the MusicFetch search.
  *
- * Everything (prisma, cache, spotify, vibe, data, utils, axios) is mocked;
+ * Everything (prisma, cache, spotify, business, data, utils, axios) is mocked;
  * mail is asserted through the global recording mock.
  */
 
@@ -84,7 +84,7 @@ vi.mock('../../../src/settings', () => ({
 vi.mock('../../../src/data', () => ({
   default: { getInstance: () => ({ updateTrackYear: h.updateTrackYear }) },
 }));
-vi.mock('../../../src/vibe', () => ({
+vi.mock('../../../src/business', () => ({
   default: {
     getInstance: () => ({ markSpotifyForReload: h.markSpotifyForReload }),
   },

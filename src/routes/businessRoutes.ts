@@ -41,7 +41,7 @@ export default async function businessRoutes(
   const quoteRequests = QuoteRequests.getInstance();
   const translation = new Translation();
   const chatgpt = new ChatGPT();
-  const staff = getAuthHandler(['admin', 'vibeadmin']);
+  const staff = getAuthHandler(['admin']);
 
   const companyIdOf = (request: any): number => parseInt(request.params.companyId, 10);
 
@@ -138,7 +138,7 @@ export default async function businessRoutes(
 
   // Newest first. Without listId: the company's own files; ?listId=<id>: that
   // list's; ?listId=all: both.
-  fastify.get('/vibe/companies/:companyId/files', staff, async (request: any, reply: any) => {
+  fastify.get('/business/companies/:companyId/files', staff, async (request: any, reply: any) => {
     const company = await findCompany(companyIdOf(request), reply);
     if (!company) return;
     const all = request.query.listId === 'all';
@@ -155,7 +155,7 @@ export default async function businessRoutes(
     });
   });
 
-  fastify.post('/vibe/companies/:companyId/files', staff, async (request: any, reply: any) => {
+  fastify.post('/business/companies/:companyId/files', staff, async (request: any, reply: any) => {
     const company = await findCompany(companyIdOf(request), reply);
     if (!company) return;
     if (!request.isMultipart()) {
@@ -230,7 +230,7 @@ export default async function businessRoutes(
   });
 
   fastify.get(
-    '/vibe/companies/:companyId/files/:fileId/download',
+    '/business/companies/:companyId/files/:fileId/download',
     staff,
     async (request: any, reply: any) => {
       const file = await findCompanyFile(companyIdOf(request), parseInt(request.params.fileId, 10));
@@ -259,7 +259,7 @@ export default async function businessRoutes(
   );
 
   fastify.get(
-    '/vibe/companies/:companyId/files/:fileId/thumb',
+    '/business/companies/:companyId/files/:fileId/thumb',
     staff,
     async (request: any, reply: any) => {
       const file = await findCompanyFile(companyIdOf(request), parseInt(request.params.fileId, 10));
@@ -286,7 +286,7 @@ export default async function businessRoutes(
   );
 
   fastify.patch(
-    '/vibe/companies/:companyId/files/:fileId',
+    '/business/companies/:companyId/files/:fileId',
     staff,
     async (request: any, reply: any) => {
       const file = await findCompanyFile(companyIdOf(request), parseInt(request.params.fileId, 10));
@@ -308,7 +308,7 @@ export default async function businessRoutes(
   );
 
   fastify.delete(
-    '/vibe/companies/:companyId/files/:fileId',
+    '/business/companies/:companyId/files/:fileId',
     staff,
     async (request: any, reply: any) => {
       const file = await findCompanyFile(companyIdOf(request), parseInt(request.params.fileId, 10));
@@ -323,7 +323,7 @@ export default async function businessRoutes(
 
   // ---- Quote requests ----
 
-  fastify.get('/vibe/quote-requests', staff, async (request: any, reply: any) => {
+  fastify.get('/business/quote-requests', staff, async (request: any, reply: any) => {
     const statuses = String(request.query.status || 'open,in_progress')
       .split(',')
       .map((s) => s.trim())
@@ -331,7 +331,7 @@ export default async function businessRoutes(
     reply.send({ success: true, requests: await quoteRequests.list(statuses) });
   });
 
-  fastify.get('/vibe/quote-requests/:id', staff, async (request: any, reply: any) => {
+  fastify.get('/business/quote-requests/:id', staff, async (request: any, reply: any) => {
     const found = await quoteRequests.get(parseInt(request.params.id, 10));
     if (!found) {
       reply.status(404).send({ success: false, error: 'Quote request not found' });
@@ -340,7 +340,7 @@ export default async function businessRoutes(
     reply.send({ success: true, request: found });
   });
 
-  fastify.put('/vibe/quote-requests/:id', staff, async (request: any, reply: any) => {
+  fastify.put('/business/quote-requests/:id', staff, async (request: any, reply: any) => {
     try {
       const updated = await quoteRequests.updateStatus(
         parseInt(request.params.id, 10),
@@ -353,7 +353,7 @@ export default async function businessRoutes(
   });
 
   fastify.get(
-    '/vibe/companies/:companyId/quote-requests',
+    '/business/companies/:companyId/quote-requests',
     staff,
     async (request: any, reply: any) => {
       const company = await findCompany(companyIdOf(request), reply);
@@ -364,7 +364,7 @@ export default async function businessRoutes(
 
   // ---- Mail files and a quotation to a company contact ----
 
-  fastify.post('/vibe/companies/:companyId/mail', staff, async (request: any, reply: any) => {
+  fastify.post('/business/companies/:companyId/mail', staff, async (request: any, reply: any) => {
     const company = await findCompany(companyIdOf(request), reply);
     if (!company) return;
     const body = request.body || {};
@@ -505,7 +505,7 @@ export default async function businessRoutes(
 
   // ---- Song years for boxd's sample cards ----
 
-  fastify.get('/vibe/tracks/year', staff, async (request: any, reply: any) => {
+  fastify.get('/business/tracks/year', staff, async (request: any, reply: any) => {
     const artist = String(request.query.artist || '').trim();
     const title = String(request.query.title || '').trim();
     if (!artist || !title) {

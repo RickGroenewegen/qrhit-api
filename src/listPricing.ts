@@ -78,8 +78,8 @@ export function round2(n: number): number {
 }
 
 /**
- * The price variant of a list's printer. Lists saved with the retired
- * OnzeVibe printer count as Schneider, the default.
+ * The price variant of a list's printer: Tromp (`qrsong`), or Schneider for
+ * anything else, the default.
  */
 export function listPrinterVariant(printer: string | null | undefined): ListVariant {
   return printer === 'qrsong' ? 'qrsong' : 'schneider';

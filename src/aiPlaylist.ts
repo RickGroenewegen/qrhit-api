@@ -241,7 +241,7 @@ class AIPlaylistGenerator {
         const purchased = await this.prisma.playlist.findFirst({
           where: {
             playlistId: spId,
-            Payment: { some: { payment: { status: 'paid', test: false } } },
+            Payment: { some: { payment: { status: 'paid' } } },
           },
           select: { id: true },
         });

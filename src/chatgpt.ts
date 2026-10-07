@@ -1167,7 +1167,7 @@ Only use these approved internal links (replace [lang] with appropriate language
 - /[lang]/pricing (Pricing overview / calculator)
 - /[lang]/reviews (All our reviews)
 - /[lang]/faq (FAQ)
-- /[lang]/onzevibe (QRSong!, but for companies)
+- /[lang]/business (QRSong!, but for companies)
 - /[lang]/pubquiz (Our music quiz service)
 - /[lang]/qr-cards-as-a-service (QR cards as a service)
 - /[lang]/contact (Our contact page)
@@ -1296,7 +1296,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
                     - /[lang]/pricing (Pricing overview / calculator)
                     - /[lang]/reviews (All our reviews)
                     - /[lang]/faq (FAQ)
-                    - /[lang]/onzevibe (QRSong!, but for companies)
+                    - /[lang]/business (QRSong!, but for companies)
                     - /[lang]/contact (Our contact page)
                     - /[lang]/supported-platforms (See which music platforms are supported)
                     - /[lang]/shipping-info (Shipping information)
@@ -1485,7 +1485,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
    * text-to-image scene, stored as a wide hero-sized JPEG under
    * PUBLIC_DIR/event_images.
    * @param name The occasion name (e.g. "Christmas") used for theming
-   * @param description Optional admin description guiding the vibe
+   * @param description Optional admin description guiding the mood
    * @returns Promise<string | null> - filename if successful, null if failed
    */
   public async generateEventImage(
@@ -1514,12 +1514,12 @@ Write in a professional, informative, and engaging style. The tone should be cle
       // description is admin-authored guidance ("what fits this occasion"); we
       // frame it as a visual scene rather than passing it verbatim. No product
       // reference image is used — this is a pure text-to-image hero scene.
-      const vibe =
+      const mood =
         description && description.trim()
           ? ` Mood and theme: ${description.trim()}.`
           : '';
       const imagePrompt =
-        `A warm, festive wide hero banner celebrating ${name}.${vibe} ` +
+        `A warm, festive wide hero banner celebrating ${name}.${mood} ` +
         `A beautifully styled, seasonal scene themed around ${name}, with ` +
         `soft cinematic lighting and vibrant, tasteful colours. Photographic, ` +
         `high quality, suitable as a website hero background with calm ` +

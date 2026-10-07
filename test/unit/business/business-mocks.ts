@@ -1,5 +1,5 @@
 /**
- * Shared mock holder + vi.mock module factories for the src/vibe.ts unit
+ * Shared mock holder + vi.mock module factories for the src/business.ts unit
  * suites. The RDS test database is unavailable, so src/prisma is replaced
  * with a configurable fake (vi.fn per model method) and every collaborator
  * with I/O (cache, spotify, generator, mollie, discount, fs, sharp, ...)
@@ -10,7 +10,7 @@
  * file) by delegating to the *Module() factories exported here, e.g.:
  *
  *   vi.mock('../../../src/prisma', async () =>
- *     (await import('./vibe-mocks')).prismaModule()
+ *     (await import('./business-mocks')).prismaModule()
  *   );
  */
 import { vi } from 'vitest';
@@ -107,7 +107,7 @@ export function resetAll(): void {
   h.sharpToBuffer.mockReset();
   h.loggerLog.mockReset();
 
-  // Defaults mirroring the real implementations closely enough for vibe.ts
+  // Defaults mirroring the real implementations closely enough for business.ts
   h.utils.verifyRecaptcha.mockResolvedValue({ isHuman: true, score: 0.9 });
   h.utils.isSpam.mockReturnValue({ isSpam: false, reason: null });
   h.utils.parseBoolean.mockImplementation((value: any) => {
@@ -220,7 +220,7 @@ export function generatorModule() {
 export function translationModule() {
   // The business-locale helpers read the real locales/business/*.json
   // bundles rather than returning canned strings, so a key that goes missing
-  // from a bundle shows up as a failing vibe test instead of a broken PDF.
+  // from a bundle shows up as a failing business test instead of a broken PDF.
   const businessLocales = ['nl', 'de', 'en'];
   const intlTags: Record<string, string> = {
     nl: 'nl-NL',

@@ -19,7 +19,6 @@ import { flushTestRedis } from '../helpers/redis';
  *  - POST /resolve_shortlink (validation)
  *  - POST /qrlink_unknown (validation)
  *  - GET /qr2/:trackId/:php (EJS template rendering)
- *  - GET /qrvibe/:trackId (EJS template rendering)
  *  - GET /qrlink2/:trackId/:php (returns empty link for unknown track)
  *  - POST /hitlist/search-musicfetch (validation path)
  *  - POST /hitlist/spotify-auth-complete (validation)
@@ -259,20 +258,6 @@ describe('music routes — wave 2 coverage', () => {
 
     it('renders even without a link parameter', async () => {
       const res = await app.inject({ method: 'GET', url: '/qr_url2' });
-      expect([200, 404, 500]).toContain(res.statusCode);
-    });
-  });
-
-  // ====================================================================
-  // GET /qrvibe/:trackId (EJS template)
-  // ====================================================================
-
-  describe('GET /qrvibe/:trackId', () => {
-    it('returns a response (EJS template)', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/qrvibe/${dbTrackId}`,
-      });
       expect([200, 404, 500]).toContain(res.statusCode);
     });
   });

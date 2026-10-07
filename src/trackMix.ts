@@ -25,15 +25,12 @@ export const CARDS_PER_STACK = 48;
 
 /**
  * Business decks get the year mix on generation: the ones we print through
- * Schneiders or Tromp and company-list (vibe) orders. Consumer decks keep the
- * streaming service's order.
+ * Schneiders or Tromp. Consumer decks keep the streaming service's order.
  */
 export function isBusinessDeck(
-  printerType: string | null | undefined,
-  vibe: boolean | null | undefined
+  printerType: string | null | undefined
 ): boolean {
   return (
-    vibe === true ||
     printerType === PRINTER_TYPE.SCHNEIDERS ||
     printerType === PRINTER_TYPE.TROMP
   );

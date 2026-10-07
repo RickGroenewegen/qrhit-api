@@ -29,7 +29,6 @@ const h = vi.hoisted(() => {
     storeUser: vi.fn(async () => 501),
     storePlaylists: vi.fn(async () => [601]),
     areAllTracksManuallyChecked: vi.fn(async () => true),
-    getOrderType: vi.fn(async () => ({ id: 7 })),
     queueGenerate: vi.fn(),
     generateRandomString: vi.fn((len: number) => 'R'.repeat(len)),
     prisma: {
@@ -99,7 +98,7 @@ vi.mock('../../../src/data', () => ({
 }));
 
 vi.mock('../../../src/order', () => ({
-  default: { getInstance: () => ({ getOrderType: h.getOrderType }) },
+  default: { getInstance: () => ({}) },
 }));
 
 vi.mock('../../../src/generator', () => ({
@@ -148,7 +147,6 @@ beforeEach(() => {
   h.prisma.userInGroup.findFirst.mockResolvedValue({ userId: 1 });
   h.storeUser.mockResolvedValue(501);
   h.storePlaylists.mockResolvedValue([601]);
-  h.getOrderType.mockResolvedValue({ id: 7 });
   h.generateRandomString.mockImplementation((len: number) => 'R'.repeat(len));
 });
 
@@ -273,24 +271,21 @@ describe('createOrder', () => {
         price: 0,
       }),
     ]);
-    expect(h.getOrderType).toHaveBeenCalledWith(120, false, 'cards', 'pl-abc', 'none');
 
     const createArgs = h.prisma.payment.create.mock.calls[0][0].data;
     expect(createArgs).toMatchObject({
       paymentId: 'reseller_RRRRRRRRRRRRRRRR',
       status: 'paid',
       totalPrice: 0,
-      vibe: false,
-      test: false,
       fullname: 'Shop BV',
       email: 'shop@example.com',
       user: { connect: { id: 501 } },
     });
 
     const php = createArgs.PaymentHasPlaylist.create[0];
+    expect(php).not.toHaveProperty('orderTypeId');
     expect(php).toMatchObject({
       playlistId: 601,
-      orderTypeId: 7,
       amount: 1,
       numberOfTracks: 120,
       type: 'physical',

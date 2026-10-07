@@ -224,7 +224,6 @@ export function makePayment(over: Record<string, any> = {}): any {
     profit: 5,
     totalPrice: 25,
     shipping: 0,
-    vibe: false,
     finalized: false,
     qrSubDir: 'qsub',
     canBeSentToPrinter: true,

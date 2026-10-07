@@ -8,12 +8,8 @@ import { color, white } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
 import path from 'path'; // Added path
 import Utils from './utils'; // Added Utils
-import Mollie from './mollie';
-import Discount from './discount';
 import Data from './data';
-import sharp from 'sharp'; // Import sharp
 import Spotify from './spotify';
-import Generator from './generator';
 import Cache from './cache';
 import Translation from './translation';
 import Mail from './mail';
@@ -41,8 +37,8 @@ import {
 // Card backgrounds and the voting page's logo and background (processAndSaveImage).
 const UPLOAD_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 
-class Vibe {
-  private static instance: Vibe;
+class Business {
+  private static instance: Business;
   private translation = new Translation();
   public prisma = PrismaInstance.getInstance();
   private mail = Mail.getInstance();
@@ -99,311 +95,7 @@ class Vibe {
   }
 
   /**
-   * Validate password strength
-   * @param password The password to validate
-   * @returns Object with isValid boolean and error message if invalid
-   */
-  private validatePassword(password: string): {
-    isValid: boolean;
-    error?: string;
-  } {
-    if (password.length < 8) {
-      return {
-        isValid: false,
-        error: 'Password must be at least 8 characters long',
-      };
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      return {
-        isValid: false,
-        error: 'Password must contain at least one uppercase letter',
-      };
-    }
-
-    if (!/[a-z]/.test(password)) {
-      return {
-        isValid: false,
-        error: 'Password must contain at least one lowercase letter',
-      };
-    }
-
-    if (!/[0-9]/.test(password)) {
-      return {
-        isValid: false,
-        error: 'Password must contain at least one number',
-      };
-    }
-
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return {
-        isValid: false,
-        error: 'Password must contain at least one special character',
-      };
-    }
-
-    return { isValid: true };
-  }
-
-  /**
-   * Handle the POST /vibe/companylist/create endpoint logic.
-   * Accepts: fullname, company, email, captchaToken, password1, password2
-   * - Verifies captcha
-   * - Creates company (if not exists)
-   * - Creates company list with same name
-   * - Sends verification email to the user
-   */
-  public async handleCompanyListCreate(
-    body: any,
-    clientIp: string
-  ): Promise<any> {
-    const {
-      fullname,
-      company,
-      email,
-      phone,
-      message,
-      captchaToken,
-      password1,
-      password2,
-      qrvote,
-      marketingEmails,
-      honeypot,
-      source,
-      locale: submittedLocale,
-    } = body || {};
-
-    // Language the lead filled the form in. Drives the company's document
-    // language, the new user's locale and the welcome email.
-    const formLocale = this.translation.isValidLocale(submittedLocale)
-      ? submittedLocale
-      : 'nl';
-
-    if (!fullname || !company || !email) {
-      return {
-        success: false,
-        error: 'Missing required fields: fullname, company, email',
-        statusCode: 400,
-      };
-    }
-
-    // Captcha check (same as sendContactForm in mail.ts)
-    const { isHuman } = await this.utils.verifyRecaptcha(captchaToken);
-    if (!isHuman) {
-      return {
-        success: false,
-        error: 'reCAPTCHA verification failed',
-        statusCode: 400,
-      };
-    }
-
-    // Check for spam using heuristics
-    const spamCheck = this.utils.isSpam({
-      name: fullname,
-      email: email,
-      message: company, // Use company name as message for spam check
-      honeypot: honeypot,
-    });
-
-    if (spamCheck.isSpam) {
-      this.logger.log(
-        color.yellow.bold(
-          `Spam detected in vibe form from ${white.bold(email)} (IP: ${white.bold(clientIp)}): ${white(spamCheck.reason || 'Unknown')}`
-        )
-      );
-      return {
-        success: false,
-        error: 'Message detected as spam',
-        statusCode: 400,
-      };
-    }
-
-    // Handle password validation if custom passwords are provided
-    let userPassword: string;
-    if (password1 && password2) {
-      if (password1 !== password2) {
-        return {
-          success: false,
-          error: 'Passwords do not match',
-          statusCode: 400,
-        };
-      }
-
-      const passwordValidation = this.validatePassword(password1);
-      if (!passwordValidation.isValid) {
-        return {
-          success: false,
-          error: passwordValidation.error,
-          statusCode: 400,
-        };
-      }
-
-      userPassword = password1;
-    } else {
-      // Generate a random password for the user (for demo, use random string)
-      userPassword = Math.random().toString(36).slice(-10);
-    }
-
-    try {
-      // 1. Create the company (if not exists)
-      const fromBusinessForm = source === 'business';
-      const companyResult = await this.createCompany({
-        name: company,
-        onlyForAdmin: fromBusinessForm,
-        contact: fullname,
-        contactemail: email,
-        contactphone: phone,
-        // So their quotation and technical instructions come out right from
-        // the first contact.
-        locale: formLocale,
-        message,
-      });
-      if (!companyResult.success) {
-        return {
-          success: false,
-          error: companyResult.error || 'Failed to create company',
-          statusCode: 409,
-        };
-      }
-      const companyId = companyResult.data.company.id;
-
-      // 1b. Create the user for this company (admin)
-      const isQRVote = this.utils.parseBoolean(qrvote);
-      const user = await this.upsertLeadUser({
-        email,
-        fullname,
-        phone,
-        companyId,
-        locale: formLocale,
-        password: userPassword,
-        marketingEmails: !!marketingEmails,
-        isQRVote,
-      });
-
-      // 2. Create the company list with the same name
-      // Use the company name as the list name and slug (slugify for URL safety)
-      const slug = company
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50);
-
-      const listData = {
-        name: company,
-        slug,
-        numberOfCards: 200,
-        numberOfTracks: 5,
-        minimumNumberOfTracks: 5,
-        qrvote: isQRVote, // Set to true when created through QRVote form
-        // Optionally add description fields for all locales as empty string
-      };
-
-      const listResult = await this.createCompanyList(companyId, listData);
-
-      if (!listResult.success) {
-        return {
-          success: false,
-          error: listResult.error || 'Failed to create company list',
-          statusCode: 409,
-        };
-      }
-
-      // Welcome mail follows the language the form was filled in.
-      const locale = formLocale;
-
-      // The list's voting page on the site; the site picks the language.
-      const portalUrl = `${process.env['FRONTEND_URI']}/v/${slug}`;
-      const adminUrl = process.env['FRONTEND_VOTING_URI'];
-
-      try {
-        // Check if this is a QRVote request
-        if (isQRVote) {
-          // Send QRVote welcome email with verification hash
-          await this.mail.sendQRVoteWelcomeEmail(
-            email,
-            fullname,
-            company,
-            locale,
-            user.verificationHash || ''
-          );
-        } else if (!fromBusinessForm) {
-          // Send regular OnzeVibe portal welcome email
-          // Skipped for the /business intake form, which is handled manually
-          await this.mail.sendPortalWelcomeEmail(
-            email,
-            fullname,
-            company,
-            portalUrl,
-            email, // Use email as username
-            userPassword,
-            locale,
-            adminUrl // pass admin URL
-          );
-        } else {
-          // /business intake: the contact gets no mail, but the business
-          // inbox does, so the request lands in mail as well as Pushover.
-          await this.mail.sendBusinessLeadNotification({
-            company,
-            fullname,
-            email,
-            phone,
-            message,
-            locale,
-          });
-        }
-      } catch (err) {
-        // Log but do not fail the endpoint if email fails
-        this.logger.log(
-          color.red.bold(`Failed to send welcome email to ${email}: ${err}`)
-        );
-      }
-
-      // Send pushover notification for new company registration
-      try {
-        const pushoverLines = [
-          `Company: ${company}`,
-          `Contact: ${fullname} <${email}>`,
-        ];
-        if (phone && String(phone).trim()) {
-          pushoverLines.push(`Phone: ${phone}`);
-        }
-        if (message && String(message).trim()) {
-          pushoverLines.push(`Message: ${message}`);
-        }
-        await this.pushover.sendMessage(
-          {
-            title: 'New company registered',
-            message: pushoverLines.join('\n'),
-            sound: 'incoming',
-          },
-          clientIp,
-          fromBusinessForm // always notify for /business intake, even in dev / trusted IP
-        );
-      } catch (pushErr) {
-        this.logger.log(
-          color.red.bold(
-            `Failed to send pushover notification for new company registration: ${pushErr}`
-          )
-        );
-      }
-
-      return {
-        success: true,
-        company: companyResult.data.company,
-        list: listResult.data.list,
-        portalWelcomeSent: true,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Internal server error',
-        statusCode: 500,
-      };
-    }
-  }
-
-  /**
-   * The user behind a lead from a public form (OnzeVibe, QRVote, /business):
+   * The user behind a lead from the public /business form:
    * created when the e-mail is new, otherwise adopted as the company's
    * contact when it has no company yet. Also puts it in its groups.
    */
@@ -735,11 +427,8 @@ class Vibe {
   }
   private logger = new Logger();
   private utils = new Utils();
-  private discount = new Discount();
   private data = Data.getInstance();
   private spotify = Spotify.getInstance();
-  private mollie = new Mollie();
-  private generator = Generator.getInstance();
   private cache = Cache.getInstance();
 
   private constructor() {}
@@ -790,11 +479,11 @@ class Vibe {
     }
   }
 
-  public static getInstance(): Vibe {
-    if (!Vibe.instance) {
-      Vibe.instance = new Vibe();
+  public static getInstance(): Business {
+    if (!Business.instance) {
+      Business.instance = new Business();
     }
-    return Vibe.instance;
+    return Business.instance;
   }
 
   /**
@@ -963,7 +652,7 @@ class Vibe {
         },
       };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error getting vibe state: ${error}`));
+      this.logger.log(color.red.bold(`Error getting list state: ${error}`));
       return { success: false, error: 'Error retrieving company state' };
     }
   }
@@ -2271,588 +1960,6 @@ class Vibe {
   }
 
   /**
-   * Adds TrackExtraInfo records for a given company list and playlist.
-   * Always creates an entry for each unique track in the ranking.
-   * If shownames is true, includes names for users who agreed to use their name.
-   * Sets extraArtistAttribute to the position in the ranking (#1, #2, ...).
-   * @param listId The ID of the company list.
-   * @param playlistId The ID of the playlist.
-   * @param shownames Whether to include names in extraNameAttribute.
-   * @param ranking Optional: Array of trackIds in ranking order (for position).
-   * @private
-   */
-  private async addTrackExtraInfo(
-    listId: number,
-    playlistId: number,
-    shownames: boolean,
-    ranking?: number[]
-  ): Promise<void> {
-    try {
-      // Get all submission tracks for this list
-      const allSubmissionTracks =
-        await this.prisma.companyListSubmissionTrack.findMany({
-          where: {
-            CompanyListSubmission: {
-              companyListId: listId,
-            },
-          },
-          select: {
-            trackId: true,
-            CompanyListSubmission: {
-              select: {
-                firstname: true,
-                lastname: true,
-                cardName: true,
-                agreeToUseName: true,
-              },
-            },
-          },
-        });
-
-      // Aggregate submissions by trackId
-      const trackSubmissionsMap: Map<
-        number,
-        {
-          firstname: string | null;
-          lastname: string | null;
-          cardName: string | null;
-          agreeToUseName: boolean | null;
-        }[]
-      > = new Map();
-      for (const submission of allSubmissionTracks) {
-        const trackId = submission.trackId;
-        if (!trackSubmissionsMap.has(trackId)) {
-          trackSubmissionsMap.set(trackId, []);
-        }
-        if (submission.CompanyListSubmission) {
-          trackSubmissionsMap.get(trackId)!.push({
-            firstname: submission.CompanyListSubmission.firstname,
-            lastname: submission.CompanyListSubmission.lastname,
-            cardName: submission.CompanyListSubmission.cardName,
-            agreeToUseName:
-              submission.CompanyListSubmission.agreeToUseName ?? false,
-          });
-        }
-      }
-
-      // If ranking is not provided, use all unique trackIds in any order
-      const trackIdsInOrder =
-        ranking && Array.isArray(ranking) && ranking.length > 0
-          ? ranking
-          : Array.from(trackSubmissionsMap.keys());
-
-      const trackExtraInfoCreations = [];
-
-      // Iterate through tracks in ranking order, assign position
-      for (let i = 0; i < trackIdsInOrder.length; i++) {
-        const trackId = trackIdsInOrder[i];
-        const voters = trackSubmissionsMap.get(trackId) || [];
-
-        // Only include names if shownames is true and user agreed
-        let cardNames: string[] = [];
-        if (shownames) {
-          for (const voter of voters) {
-            if (
-              voter.agreeToUseName &&
-              voter.cardName &&
-              voter.cardName.length > 0
-            ) {
-              cardNames.push(voter.cardName.replace(/ /g, '&nbsp;'));
-            }
-          }
-        }
-
-        let extraNameAttributeValue = '';
-        if (cardNames.length > 0) {
-          extraNameAttributeValue = `${cardNames.join(' • ')}`;
-        }
-
-        // Position in ranking (1-based)
-        const position = i + 1;
-        const extraArtistAttributeValue = `#${position}`;
-
-        // Upsert: finalizing a list again reuses its playlist row, and a
-        // second row per track would print every card twice.
-        trackExtraInfoCreations.push(
-          this.prisma.trackExtraInfo.upsert({
-            where: { playlistId_trackId: { playlistId, trackId } },
-            update: {
-              extraNameAttribute: extraNameAttributeValue,
-              extraArtistAttribute: extraArtistAttributeValue,
-            },
-            create: {
-              playlistId: playlistId,
-              trackId: trackId,
-              extraNameAttribute: extraNameAttributeValue,
-              extraArtistAttribute: extraArtistAttributeValue,
-            },
-          })
-        );
-      }
-
-      if (trackExtraInfoCreations.length > 0) {
-        await Promise.all(trackExtraInfoCreations);
-        this.logger.log(
-          color.blue.bold(
-            `Successfully created ${color.white.bold(
-              trackExtraInfoCreations.length
-            )} extra track info records for tracks in playlist ${color.white.bold(
-              playlistId
-            )}.`
-          )
-        );
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error adding extra track info for list ${color.white.bold(
-            listId
-          )} and playlist ${color.white.bold(playlistId)}: ${color.white.bold(
-            error
-          )}`
-        )
-      );
-      // Depending on requirements, you might want to re-throw the error
-      // or handle it in a way that doesn't stop the parent process (e.g., generatePDF)
-    }
-  }
-
-  public async generatePDF(
-    listId: number,
-    mollie: Mollie,
-    clientIp: string
-  ): Promise<any> {
-    // Price set to €100 (10000 cents) to ensure proper discount calculation
-    // After 100% discount + shipping, total will be ~€3, which triggers vibe free order logic
-    const price = 10000;
-
-    // Get the company list details
-    let companyList = await this.prisma.companyList.findUnique({
-      where: { id: listId },
-      include: {
-        Company: true,
-      },
-    });
-
-    companyList = await this.prisma.companyList.findUnique({
-      where: { id: listId },
-      include: {
-        Company: true,
-      },
-    });
-
-    if (companyList) {
-      // Remove the playlist and payment using the paymentId and playlistId on the companyList
-      if (companyList.playlistId) {
-        await this.prisma.playlist.delete({
-          where: { id: companyList.playlistId },
-        });
-      }
-      if (companyList.paymentId) {
-        await this.prisma.payment.delete({
-          where: { id: companyList.paymentId },
-        });
-      }
-    }
-
-    // Update the list status to 'generating_pdf' using prisma
-    const updatedCompanyList = await this.prisma.companyList.update({
-      where: { id: listId },
-      data: { status: 'generating_pdf' },
-    });
-
-    // Invalidate cache for this list (by slug)
-    await this.clearCompanyListCache(updatedCompanyList.slug);
-
-    if (!companyList) {
-      return { success: false, error: 'Company list not found' };
-    }
-
-    // playlist ID the the last part of the companyList.playlistUrl
-    const playlistId = companyList.playlistUrl!.split('/').pop();
-
-    const discount = await this.discount.createDiscountCode(price, '', '');
-
-    let background = null;
-
-    // Copy companyList.background to the public directory
-    if (
-      companyList &&
-      companyList.background &&
-      companyList.background.length > 0
-    ) {
-      const companyDataBackgroundPath = `${process.env['PUBLIC_DIR']}/companydata/backgrounds/${companyList.background}`;
-      // Target directory is now public/background
-      const backgroundTargetDir = `${process.env['PUBLIC_DIR']}/background/${companyList.background}`;
-
-      try {
-        // Copy the background file to the target directory
-        await fs.copyFile(companyDataBackgroundPath, backgroundTargetDir);
-
-        // --- Start Image Processing ---
-        // Read the copied file
-        const buffer = await fs.readFile(backgroundTargetDir);
-
-        // Define the base sharp operation
-        let sharpInstance = sharp(buffer).resize(1000, 1000, {
-          fit: 'cover',
-        });
-
-        // Conditionally add the circle composite layer
-        if (!companyList.hideCircle) {
-          const circleSvg = `<svg width="1000" height="1000"><circle cx="500" cy="500" r="400" fill="white" stroke="white" stroke-width="10"/></svg>`;
-          sharpInstance = sharpInstance.composite([
-            {
-              input: Buffer.from(circleSvg),
-              blend: 'over', // Or appropriate blend mode if needed
-            },
-          ]);
-        }
-
-        // Convert to PNG and get the processed buffer
-        const processedBuffer = await sharpInstance
-          .png({ compressionLevel: 9, quality: 90 })
-          .toBuffer();
-
-        // Overwrite the file in the target directory with the processed image
-        await fs.writeFile(backgroundTargetDir, processedBuffer);
-
-        this.logger.log(
-          color.blue.bold(
-            `Processed background image for list ${color.white.bold(
-              listId
-            )}: ${color.white.bold(backgroundTargetDir)}`
-          )
-        );
-        // --- End Image Processing ---
-
-        // Get the filename (already correct)
-        background = companyList.background;
-      } catch (error) {
-        this.logger.log(
-          color.red.bold(
-            `Error copying or processing background for list ${color.white.bold(
-              listId
-            )}: ${color.white.bold(error)}`
-          )
-        );
-        // Decide how to handle the error - maybe proceed without background?
-        background = null; // Set background to null if processing fails
-      }
-    }
-
-    let backgroundBack = null;
-
-    // Copy companyList.background2 (backside) to the public directory
-    if (
-      companyList &&
-      companyList.background2 &&
-      companyList.background2.length > 0
-    ) {
-      const companyDataBackgroundPath = `${process.env['PUBLIC_DIR']}/companydata/backgrounds/${companyList.background2}`;
-      // Target directory is now public/background
-      const backgroundBackTargetDir = `${process.env['PUBLIC_DIR']}/background/${companyList.background2}`;
-
-      try {
-        // Copy the background file to the target directory
-        await fs.copyFile(companyDataBackgroundPath, backgroundBackTargetDir);
-
-        // --- Start Image Processing ---
-        // Read the copied file
-        const buffer = await fs.readFile(backgroundBackTargetDir);
-
-        // Resize and process the backside image (no circle needed for backside)
-        const processedBuffer = await sharp(buffer)
-          .resize(1000, 1000, {
-            fit: 'cover',
-          })
-          .png({ compressionLevel: 9, quality: 90 })
-          .toBuffer();
-
-        // Overwrite the file in the target directory with the processed image
-        await fs.writeFile(backgroundBackTargetDir, processedBuffer);
-
-        this.logger.log(
-          color.blue.bold(
-            `Processed background2 (backside) image for list ${color.white.bold(
-              listId
-            )}: ${color.white.bold(backgroundBackTargetDir)}`
-          )
-        );
-        // --- End Image Processing ---
-
-        // Get the filename (already correct)
-        backgroundBack = companyList.background2;
-      } catch (error) {
-        this.logger.log(
-          color.red.bold(
-            `Error copying or processing background2 for list ${color.white.bold(
-              listId
-            )}: ${color.white.bold(error)}`
-          )
-        );
-        // Decide how to handle the error - maybe proceed without background?
-        backgroundBack = null; // Set backgroundBack to null if processing fails
-      }
-    }
-
-    const items = [
-      {
-        productType: 'cards',
-        playlistId: playlistId,
-        playlistName: companyList.name,
-        numberOfTracks: companyList.numberOfCards,
-        hideCircle: companyList.hideCircle,
-        qrColor: companyList.qrColor,
-        // The list's back-side text colour; without it every business card
-        // back printed black whatever the admin had set.
-        fontColor: companyList.textColor || '#000000',
-        amount: 1,
-        price: price,
-        type: 'physical',
-        subType: 'none',
-        background,
-        backgroundBack, // Add backside background (processed)
-        backgroundBackType: backgroundBack ? 'image' : 'solid', // Set to image if backgroundBack exists
-        image: '',
-        doubleSided: false,
-        eco: false,
-        isSlug: false,
-      },
-    ];
-
-    const discounts = [
-      { code: discount.code, amountLeft: price, fullAmount: price },
-    ];
-
-    const paymentParams = {
-      user: { userId: null, email: null, displayName: null },
-      locale: 'en',
-      refreshPlaylists: [],
-      onzevibe: true,
-      cart: { items, discounts },
-      extraOrderData: {
-        fullname: 'OnzeVibe',
-        email: 'info@onzevibe.nl',
-        address: 'Prinsenhof',
-        housenumber: '1',
-        city: 'Sassenheim',
-        zipcode: '2171XZ',
-        countrycode: 'NL',
-        price: 0,
-        shipping: 0,
-        total: 0,
-        taxRate: 21,
-        taxRateShipping: 21,
-        agreeNoRefund: true,
-        agreeTerms: true,
-        marketingEmails: false,
-        differentInvoiceAddress: false,
-        invoiceAddress: '',
-        invoiceHousenumber: '',
-        invoiceCity: '',
-        invoiceZipcode: '',
-        invoiceCountrycode: '',
-        orderType: 'physical',
-        vibe: true,
-      },
-    };
-
-    this.logger.log(
-      color.blue.bold(
-        `Started PDF generation for list ${color.white.bold(
-          companyList.name
-        )} (ID: ${color.white.bold(listId)})`
-      )
-    );
-
-    const result = await mollie.getPaymentUri(
-      paymentParams,
-      clientIp,
-      true,
-      true
-    );
-
-    // Apply forceTemplate to playlist IMMEDIATELY after creation (before early return)
-    // This ensures the template is set even for free/vibe orders that return early
-    if (companyList.forceTemplate && playlistId) {
-      try {
-        const createdPlaylist = await this.prisma.playlist.findUnique({
-          where: { playlistId: playlistId },
-        });
-
-        if (createdPlaylist) {
-          await this.prisma.playlist.update({
-            where: { id: createdPlaylist.id },
-            data: { template: companyList.forceTemplate },
-          });
-
-          this.logger.log(
-            color.blue.bold(
-              `Applied forced template ${color.white.bold(
-                companyList.forceTemplate
-              )} to playlist for list ${color.white.bold(companyList.name)}`
-            )
-          );
-        } else {
-          this.logger.log(
-            color.yellow.bold(
-              `Could not find playlist ${playlistId} to apply forceTemplate`
-            )
-          );
-        }
-      } catch (error) {
-        this.logger.log(
-          color.red.bold(
-            `Error applying forceTemplate: ${error}`
-          )
-        );
-      }
-    }
-
-    // If generation was already queued by Mollie (for free/vibe orders), return early
-    if (result.data.generationQueued) {
-      this.logger.log(
-        color.green.bold(
-          `PDF generation complete for list ${color.white.bold(
-            companyList.name
-          )} (ID: ${color.white.bold(listId)})`
-        )
-      );
-      return { success: true, message: 'PDF generation queued by payment system' };
-    }
-
-    const userId = result.data.userId;
-
-    // Get the user from db
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    // Get the playlist using the playlistId
-    let playlist = await this.prisma.playlist.findUnique({
-      where: { playlistId },
-    });
-
-    if (playlist) {
-      // Fallback: Apply forceTemplate if not already set (for non-free orders)
-      if (companyList.forceTemplate && !playlist.template) {
-        await this.prisma.playlist.update({
-          where: { id: playlist.id },
-          data: { template: companyList.forceTemplate },
-        });
-        playlist.template = companyList.forceTemplate;
-        this.logger.log(
-          color.blue.bold(
-            `Applied forced template ${color.white.bold(
-              companyList.forceTemplate
-            )} to playlist (fallback path)`
-          )
-        );
-      }
-
-      // Always add extra track info, passing showNames as a parameter and ranking for position
-      this.logger.log(
-        color.blue.bold(
-          `Adding extra track info for company list ${color.white.bold(
-            companyList.name
-          )} (showNames: ${companyList.showNames ? 'true' : 'false'})`
-        )
-      );
-
-      // Get ranking for this list to determine order/position
-      let rankingTrackIds: number[] = [];
-      try {
-        const rankingResult = await this.getRanking(listId);
-        if (
-          rankingResult.success &&
-          rankingResult.data &&
-          Array.isArray(rankingResult.data.ranking)
-        ) {
-          rankingTrackIds = rankingResult.data.ranking.map(
-            (track: any) => track.id
-          );
-        }
-      } catch (e) {
-        this.logger.log(
-          color.yellow.bold(
-            `Could not retrieve ranking for extra track info: ${e}`
-          )
-        );
-      }
-
-      await this.addTrackExtraInfo(
-        listId,
-        playlist.id,
-        !!companyList.showNames,
-        rankingTrackIds
-      );
-
-      // Old PDFs are automatically cleared by generator.generate()
-      await this.generator.queueGenerate(
-        result.data.paymentId,
-        clientIp,
-        '',
-        true, // Force finalize
-        true,
-        false
-      );
-
-      const payment = await this.mollie.getPayment(result.data.paymentId);
-
-      const trackCountFull = await this.prisma.playlistHasTrack.count({
-        where: {
-          playlistId: playlist.id,
-        },
-      });
-
-      // Count the number of tracks in the playlist with manuallyChecked = false
-      const trackCountUnchecked = await this.prisma.playlistHasTrack.count({
-        where: {
-          playlistId: playlist.id,
-          track: {
-            year: { gt: 0 },
-            manuallyChecked: false,
-          },
-        },
-      });
-
-      // Update the company list with the playlistId
-      await this.prisma.companyList.update({
-        where: { id: listId },
-        data: {
-          playlistId: playlist.id,
-          paymentId: payment.id,
-          numberOfUncheckedTracks: trackCountUnchecked,
-          totalSpotifyTracks: trackCountFull,
-        },
-      });
-    }
-
-    if (user && companyList) {
-      const downloadLink = `${process.env['API_URI']}/download/${result.data.paymentId}/${user.hash}/${playlistId}/printer`;
-      const reviewLink = `${process.env['FRONTEND_URI']}/usersuggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
-
-      // Update the list status to 'generating_pdf' using prisma
-      const finalizedList = await this.prisma.companyList.update({
-        where: { id: listId },
-        data: { status: 'pdf_complete', downloadLink, reviewLink },
-      });
-
-      // Invalidate cache for this list (by slug)
-      await this.clearCompanyListCache(finalizedList.slug);
-
-      this.logger.log(
-        color.blue.bold(
-          `PDF generation complete for list ${color.white.bold(
-            companyList.name
-          )} (ID: ${color.white.bold(listId)})`
-        )
-      );
-    }
-  }
-
-  /**
    * Calculate the ranking for a company list based on verified submissions.
    * @param listId The ID of the company list to rank.
    * @returns Object with success status and the ranked list of tracks.
@@ -3063,7 +2170,7 @@ class Vibe {
         },
       });
 
-      // --- Use Vibe's getRanking method ---
+      // --- Use getRanking ---
       const rankingResult = await this.getRanking(companyListId);
 
       if (!rankingResult.success || !rankingResult.data) {
@@ -3281,314 +2388,6 @@ class Vibe {
         color.red.bold(`Error creating Spotify playlist: ${error}`)
       );
       return { success: false, error: 'Error creating Spotify playlist' };
-    }
-  }
-
-  /**
-   * Calculate pricing for QRSong! HappiBox orders
-   * @param params Calculation parameters
-   * @returns Object with calculation results
-   */
-  public async calculatePricing(params: {
-    quantity: number;
-    includePersonalization: boolean;
-    shipmentOnLocation: boolean;
-    soldBy: 'onzevibe' | 'happibox';
-    isReseller: boolean;
-    manualDiscount: number;
-    fluidMode?: boolean;
-    includeCustomApp?: boolean;
-    includeVotingPortal?: boolean;
-    forceResellerPrice?: number | null;
-    forceClientPrice?: number | null;
-  }): Promise<any> {
-    try {
-      const {
-        quantity,
-        includePersonalization,
-        shipmentOnLocation,
-        soldBy,
-        isReseller,
-        manualDiscount,
-        fluidMode = false,
-        includeCustomApp = false,
-        includeVotingPortal = false,
-        forceResellerPrice = null,
-        forceClientPrice = null,
-      } = params;
-
-      // Validate input
-      if (!quantity || quantity < 1) {
-        return { success: false, error: 'Invalid quantity' };
-      }
-
-      // Pricing tiers
-      const pricingTiers: Record<number, any> = {
-        100: {
-          productionCost: 4.9,
-          cards: 9.288,
-          personalization: 5,
-          projectManagement: 5,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 3,
-          resellerDiscount: 3.079,
-          commercialPrice: 44.95,
-        },
-        250: {
-          productionCost: 4.9,
-          cards: 9.288,
-          personalization: 2,
-          projectManagement: 1,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 4.5,
-          resellerDiscount: 4.613,
-          commercialPrice: 30.95,
-        },
-        500: {
-          productionCost: 2.95,
-          cards: 6.408,
-          personalization: 1,
-          projectManagement: 0.5,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 4.3,
-          resellerDiscount: 3.46,
-          commercialPrice: 22.95,
-        },
-        1000: {
-          productionCost: 2.8,
-          cards: 5.25,
-          personalization: 0.6,
-          projectManagement: 0.25,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 4.1,
-          resellerDiscount: 3.079,
-          commercialPrice: 20.5,
-        },
-        2500: {
-          productionCost: 2.7,
-          cards: 4.15,
-          personalization: 0.2,
-          projectManagement: 0.25,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 3.8,
-          resellerDiscount: 2.744,
-          commercialPrice: 18.5,
-        },
-        5000: {
-          productionCost: 2.4,
-          cards: 3.828,
-          personalization: 0.1,
-          projectManagement: 0.15,
-          fulfillment: 1.5,
-          shipping: 2.95,
-          kickBackFee: 3.5,
-          resellerDiscount: 2.546,
-          commercialPrice: 16.95,
-        },
-      };
-
-      // Determine appropriate tier and calculate pricing
-      let tierKey: number;
-      let tierData: any;
-      let commercialPrice: number;
-
-      if (fluidMode && quantity > 100) {
-        // Fluid mode: interpolate between tiers
-        const tierThresholds = [100, 250, 500, 1000, 2500, 5000];
-
-        // Find the two surrounding tiers
-        let lowerTier = 100;
-        let upperTier = 5000;
-
-        for (let i = 0; i < tierThresholds.length - 1; i++) {
-          if (
-            quantity >= tierThresholds[i] &&
-            quantity < tierThresholds[i + 1]
-          ) {
-            lowerTier = tierThresholds[i];
-            upperTier = tierThresholds[i + 1];
-            break;
-          }
-        }
-
-        // Handle edge case for quantities >= 5000
-        if (quantity >= 5000) {
-          tierKey = 5000;
-          tierData = pricingTiers[5000];
-          commercialPrice = tierData.commercialPrice;
-        } else {
-          // Linear interpolation between tiers
-          const lowerTierData = pricingTiers[lowerTier];
-          const upperTierData = pricingTiers[upperTier];
-
-          // Calculate interpolation factor (0 to 1)
-          const factor = (quantity - lowerTier) / (upperTier - lowerTier);
-
-          // Interpolate all pricing components
-          tierData = {
-            productionCost:
-              lowerTierData.productionCost +
-              (upperTierData.productionCost - lowerTierData.productionCost) *
-                factor,
-            cards:
-              lowerTierData.cards +
-              (upperTierData.cards - lowerTierData.cards) * factor,
-            personalization:
-              lowerTierData.personalization +
-              (upperTierData.personalization - lowerTierData.personalization) *
-                factor,
-            projectManagement:
-              lowerTierData.projectManagement +
-              (upperTierData.projectManagement -
-                lowerTierData.projectManagement) *
-                factor,
-            fulfillment:
-              lowerTierData.fulfillment +
-              (upperTierData.fulfillment - lowerTierData.fulfillment) * factor,
-            shipping:
-              lowerTierData.shipping +
-              (upperTierData.shipping - lowerTierData.shipping) * factor,
-            kickBackFee:
-              lowerTierData.kickBackFee +
-              (upperTierData.kickBackFee - lowerTierData.kickBackFee) * factor,
-            resellerDiscount:
-              lowerTierData.resellerDiscount +
-              (upperTierData.resellerDiscount -
-                lowerTierData.resellerDiscount) *
-                factor,
-            commercialPrice:
-              lowerTierData.commercialPrice +
-              (upperTierData.commercialPrice - lowerTierData.commercialPrice) *
-                factor,
-          };
-
-          // Use interpolated tier for display
-          tierKey = lowerTier; // Display the lower tier as reference
-          commercialPrice = tierData.commercialPrice;
-        }
-      } else {
-        // Standard mode: use tier brackets
-        if (quantity < 250) tierKey = 100;
-        else if (quantity < 500) tierKey = 250;
-        else if (quantity < 1000) tierKey = 500;
-        else if (quantity < 2500) tierKey = 1000;
-        else if (quantity < 5000) tierKey = 2500;
-        else tierKey = 5000;
-
-        tierData = pricingTiers[tierKey];
-        commercialPrice = tierData.commercialPrice;
-      }
-
-      // Calculate adjustments
-      const adjustedShipping = shipmentOnLocation ? 0.35 : tierData.shipping;
-      const shippingDifference = tierData.shipping - adjustedShipping;
-      const adjustedProjectManagement =
-        soldBy === 'onzevibe' ? 0 : tierData.projectManagement;
-      const projectManagementDifference =
-        tierData.projectManagement - adjustedProjectManagement;
-
-      // Adjust commercial price
-      if (!includePersonalization) {
-        commercialPrice -= tierData.personalization;
-      }
-      if (shipmentOnLocation) {
-        commercialPrice -= shippingDifference;
-      }
-      if (soldBy === 'onzevibe') {
-        commercialPrice -= projectManagementDifference;
-      }
-
-      // Apply manual discount to commercial price (client pays less)
-      commercialPrice -= manualDiscount || 0;
-
-      // Round per-box price to 2 decimals so totals reconcile with the displayed unit price
-      const round2 = (n: number) => Math.round(n * 100) / 100;
-      commercialPrice = round2(commercialPrice);
-
-      // Calculate profits
-      const kickBackFee = tierData.kickBackFee;
-      let resellerDiscountForUs = 0;
-
-      if (!isReseller) {
-        if (soldBy === 'happibox') {
-          resellerDiscountForUs = tierData.resellerDiscount * 0.5;
-        } else {
-          resellerDiscountForUs = tierData.resellerDiscount;
-        }
-      }
-
-      // Our profit is reduced by the manual discount
-      let profitPerBox = round2(
-        kickBackFee + resellerDiscountForUs - (manualDiscount || 0)
-      );
-
-      // A forced per-box price overrides the calculated commercial price for
-      // the party that pays us (reseller when isReseller, client otherwise).
-      // The difference flows 1:1 into our profit, like a manual discount.
-      const forcedPerBox = isReseller ? forceResellerPrice : forceClientPrice;
-      if (forcedPerBox && forcedPerBox > 0) {
-        const priceDelta = round2(forcedPerBox - commercialPrice);
-        commercialPrice = round2(forcedPerBox);
-        profitPerBox = round2(profitPerBox + priceDelta);
-      }
-
-      const baseOurProfit = round2(profitPerBox * quantity);
-      const resellerProfit = isReseller
-        ? round2(tierData.resellerDiscount * quantity)
-        : 0;
-      const baseClientPrice = round2(commercialPrice * quantity);
-
-      // Add custom app fee (one-time) - added to both client price and our profit
-      const customAppFee = includeCustomApp ? 350 : 0;
-      const votingPortalFee = includeVotingPortal ? 500 : 0;
-      const clientPrice = round2(baseClientPrice + customAppFee + votingPortalFee);
-      const ourProfit = round2(baseOurProfit + customAppFee + votingPortalFee);
-
-      const happiBoxPayment = round2(clientPrice - ourProfit - resellerProfit);
-
-      // Return calculation results
-      return {
-        success: true,
-        calculation: {
-          quantity,
-          tierKey,
-          tierData,
-          adjustments: {
-            includePersonalization,
-            shipmentOnLocation,
-            soldBy,
-            isReseller,
-            manualDiscount: manualDiscount || 0,
-            adjustedShipping,
-            shippingDifference,
-            adjustedProjectManagement,
-            projectManagementDifference,
-            fluidMode,
-            includeCustomApp,
-            includeVotingPortal,
-            forceResellerPrice: forceResellerPrice || 0,
-            forceClientPrice: forceClientPrice || 0,
-          },
-          pricing: {
-            commercialPricePerBox: commercialPrice,
-            profitPerBox,
-            clientPrice,
-            ourProfit,
-            resellerProfit,
-            happiBoxPayment,
-            customAppFee,
-            votingPortalFee,
-          },
-        },
-      };
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error calculating pricing: ${error}`));
-      return { success: false, error: 'Error calculating pricing' };
     }
   }
 
@@ -3984,7 +2783,7 @@ class Vibe {
    * @param userId The user making the request
    * @param userGroups The user's groups
    * @param userCompanyId The user's company ID (for companyadmin validation)
-   * @param type The quotation type ('onzevibe', 'qrsong', or 'schneider')
+   * @param type The quotation type ('qrsong' for Tromp, or 'schneider')
    * @param pricingOptions Optional pricing options from frontend (isReseller, profitMargins, calculatedPrices)
    * @returns Buffer with PDF data or error
    */
@@ -3992,8 +2791,8 @@ class Vibe {
     companyId: number,
     userId: number,
     userGroups: string[],
-    userCompanyId?: number,
-    type: string = 'onzevibe',
+    userCompanyId: number | undefined,
+    type: 'qrsong' | 'schneider',
     pricingOptions?: {
       isReseller?: boolean;
       profitMargins?: { qrsong: number; reseller: number };
@@ -4040,9 +2839,8 @@ class Vibe {
         return { success: false, error: 'Company not found' };
       }
 
-      // Generate unique quotation number - use QRS for both qrsong and schneider (no printer names)
-      const prefix = type === 'onzevibe' ? 'ONZ' : 'QRS';
-      const quotationNumber = `${prefix}${Date.now().toString().slice(-8)}`;
+      // Generate unique quotation number - QRS for both printers (no printer names)
+      const quotationNumber = `QRS${Date.now().toString().slice(-8)}`;
 
       // Prepare file path — archive to PRIVATE_DIR so we can re-download later.
       const quotationDir = `${process.env['PRIVATE_DIR']}/quotation`;
@@ -4084,7 +2882,7 @@ class Vibe {
       queryParams.set('locale', locale);
 
       const queryString = queryParams.toString();
-      const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;
+      const htmlUrl = `${baseUrl}/business/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;
 
       this.logger.log(
         color.blue.bold(`Generating PDF quotation from URL: `) +
@@ -4115,15 +2913,10 @@ class Vibe {
 
       // Persist a quotation history row. Pull the current calculation JSON
       // from the list (or fall back to the company-level one) so we can
-      // extract the flags and totals the admin cares about. OnzeVibe
-      // quotations come from the OnzeVibe portal and are company-level only.
+      // extract the flags and totals the admin cares about.
       try {
         const column =
-          type === 'qrsong'
-            ? 'calculationTromp'
-            : type === 'schneider'
-              ? 'calculationSchneider'
-              : 'calculation';
+          type === 'qrsong' ? 'calculationTromp' : 'calculationSchneider';
 
         let calcJson: string | null = null;
         let listName: string | null = null;
@@ -4142,9 +2935,7 @@ class Vibe {
           if (list) {
             listName = list.name;
             listNumberOfCards = list.numberOfCards ?? null;
-            if (column !== 'calculation') {
-              calcJson = list[column] as string | null;
-            }
+            calcJson = list[column] as string | null;
           }
         }
         if (!calcJson) {
@@ -4184,7 +2975,7 @@ class Vibe {
             includeCustomApp: !!state.includeCustomApp,
             includePersonalization: !!state.includePersonalization,
             isReseller: !!(pricingOptions?.isReseller ?? state.isReseller),
-            manualDiscountPercent: this.quotedDiscountPercent(type, state, company),
+            manualDiscountPercent: this.quotedDiscountPercent(state, company),
             locale,
             payload: JSON.stringify({
               state,
@@ -4219,11 +3010,11 @@ class Vibe {
    * Tromp or Schneider calculation saved before the discount moved onto the
    * list, the company-wide one (the quotation route applies the same rule).
    */
-  private quotedDiscountPercent(type: string, state: any, company: any): number {
+  private quotedDiscountPercent(state: any, company: any): number {
     if (typeof state?.manualDiscountPercent === 'number') {
       return state.manualDiscountPercent;
     }
-    if (type === 'onzevibe' || !company?.calculation) return 0;
+    if (!company?.calculation) return 0;
     try {
       return Number(JSON.parse(company.calculation).manualDiscountPercent) || 0;
     } catch {
@@ -5044,4 +3835,4 @@ class Vibe {
   }
 }
 
-export default Vibe;
+export default Business;

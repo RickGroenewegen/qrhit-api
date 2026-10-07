@@ -1361,9 +1361,9 @@ export default async function accountRoutes(
               type: php.type,
               // What the customer chose: sheets are stored as physical + subType.
               orderType: orderLineType(php),
-              // Gift cards and business (OnzeVibe) orders cannot be ordered again
-              // from the account: they are not a card set built in the order flow.
-              canOrderAgain: php.playlist.type !== 'giftcard' && !payment.vibe,
+              // Gift cards cannot be ordered again from the account: they are
+              // not a card set built in the order flow.
+              canOrderAgain: php.playlist.type !== 'giftcard',
               // Individual playlist download availability
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
@@ -1425,7 +1425,7 @@ export default async function accountRoutes(
         const php = await prisma.paymentHasPlaylist.findUnique({
           where: { id: phpId },
           include: {
-            payment: { select: { userId: true, status: true, vibe: true } },
+            payment: { select: { userId: true, status: true } },
             playlist: {
               select: { playlistId: true, serviceType: true, type: true, name: true, image: true },
             },
@@ -1436,7 +1436,7 @@ export default async function accountRoutes(
           reply.status(404).send({ success: false, error: 'orderNotFound' });
           return;
         }
-        if (php.playlist.type === 'giftcard' || php.payment.vibe) {
+        if (php.playlist.type === 'giftcard') {
           reply.status(400).send({ success: false, error: 'notReorderable' });
           return;
         }

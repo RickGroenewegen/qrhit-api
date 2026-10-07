@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
  * Quote requests from the /business form: the field and file rules, and which
- * company a request lands on. Prisma, Vibe, mail and reCAPTCHA are mocked.
+ * company a request lands on. Prisma, Business, mail and reCAPTCHA are mocked.
  */
 
 const h = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ vi.mock('../../src/prisma', () => ({
   },
 }));
 
-vi.mock('../../src/vibe', () => ({
+vi.mock('../../src/business', () => ({
   default: {
     getInstance: () => ({
       createCompany: h.createCompany,

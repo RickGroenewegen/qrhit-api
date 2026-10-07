@@ -8,7 +8,7 @@ import { Music } from './music';
 import Settings from './settings'; // Import the new Settings class
 import Data from './data';
 import Mail from './mail';
-import Vibe from './vibe'; // Import the Vibe class
+import Business from './business';
 import Translation from './translation'; // Import Translation
 import { Prisma } from '@prisma/client'; // Import Prisma for raw query join
 import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
@@ -24,7 +24,7 @@ class Hitlist {
   private spotify = Spotify.getInstance();
   private mail = Mail.getInstance();
   private settings = Settings.getInstance(); // Instantiate Settings
-  private vibe = Vibe.getInstance(); // Instantiate Vibe
+  private business = Business.getInstance();
   private translation = new Translation(); // Instantiate Translation
 
   private constructor() {
@@ -276,7 +276,7 @@ class Hitlist {
 
       // If a submission was created or updated, mark the company list for Spotify reload
       if (createdOrUpdatedSubmission) {
-        await this.vibe['markSpotifyForReload'](parseInt(companyListId));
+        await this.business['markSpotifyForReload'](parseInt(companyListId));
       }
 
       // Send verification email if we have an email address
@@ -512,7 +512,7 @@ class Hitlist {
         }
 
         // Mark the company list for Spotify reload after any change to the tracks
-        await this.vibe['markSpotifyForReload'](parseInt(companyListId));
+        await this.business['markSpotifyForReload'](parseInt(companyListId));
 
         this.logger.log(
           color.green.bold(
@@ -639,7 +639,7 @@ class Hitlist {
       });
 
       // Mark the company list for Spotify reload
-      await this.vibe['markSpotifyForReload'](companyListId);
+      await this.business['markSpotifyForReload'](companyListId);
 
       this.logger.log(
         color.green.bold(
@@ -680,7 +680,7 @@ class Hitlist {
       });
 
       // Mark the company list for Spotify reload after verification
-      await this.vibe['markSpotifyForReload'](submission.companyListId);
+      await this.business['markSpotifyForReload'](submission.companyListId);
 
       this.logger.log(
         color.green.bold(

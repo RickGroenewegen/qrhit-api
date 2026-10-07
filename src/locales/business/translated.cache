@@ -259,22 +259,6 @@
     "nl",
     "de"
   ],
-  "quotation.itemVibeBox": [
-    "nl",
-    "de"
-  ],
-  "quotation.itemWithPersonalization": [
-    "nl",
-    "de"
-  ],
-  "quotation.itemNoPersonalization": [
-    "nl",
-    "de"
-  ],
-  "quotation.itemSingleLocation": [
-    "nl",
-    "de"
-  ],
   "quotation.productLuxeBox": [
     "nl",
     "de"
@@ -295,14 +279,6 @@
     "nl",
     "de"
   ],
-  "quotation.productHappiBox": [
-    "nl",
-    "de"
-  ],
-  "quotation.productHappiBoxDetails": [
-    "nl",
-    "de"
-  ],
   "quotation.productInfoTitle": [
     "nl",
     "de"
@@ -320,38 +296,6 @@
     "de"
   ],
   "quotation.piSpecsCards": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeSets": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeSetContains": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeTotal": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeBoxSpec1": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeBoxSpec2": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeCardSpec1": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeCardSpec2": [
-    "nl",
-    "de"
-  ],
-  "quotation.piVibeCardSpec3": [
     "nl",
     "de"
   ],

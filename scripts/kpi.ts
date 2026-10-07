@@ -81,7 +81,6 @@ async function daily(days: number): Promise<void> {
     SELECT DATE(createdAt) AS day, COUNT(*) AS orders, COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat
     FROM payments
     WHERE status = 'paid'
-      AND test = 0
       AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days - 1} DAY)
     GROUP BY DATE(createdAt)
   `);
@@ -131,7 +130,6 @@ async function main(): Promise<void> {
       COALESCE(SUM(discount),0)             AS discount
     FROM payments
     WHERE status = 'paid'
-      AND test = 0
       AND createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
   `);
 

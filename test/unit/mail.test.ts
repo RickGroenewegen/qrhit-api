@@ -179,10 +179,6 @@ beforeAll(() => {
   // Fixture files in the scratch dirs (created by test/setup.ts).
   fs.mkdirSync(path.join(ASSETS, 'images'), { recursive: true });
   fs.writeFileSync(path.join(ASSETS, 'images', 'logo.png'), 'fake-logo-png');
-  fs.writeFileSync(
-    path.join(ASSETS, 'images', 'onzevibe_logo.png'),
-    'fake-onzevibe-logo'
-  );
   fs.mkdirSync(path.join(PUBLIC, 'pdf'), { recursive: true });
   fs.writeFileSync(path.join(PUBLIC, 'pdf', 'voucher-digital.pdf'), 'pdf-d');
   fs.writeFileSync(path.join(PUBLIC, 'pdf', 'voucher-printer.pdf'), 'pdf-p');
@@ -393,42 +389,6 @@ describe('account & verification mails', () => {
     expect(raw).toMatch(/Subject: .* - QRSong!/);
     expect(raw).toContain('/de/v/acme-list/verify/vhash');
     expect(raw).toContain('filename="logo.png"');
-    expect(raw).not.toContain('OnzeVibe');
-    expect(raw).not.toContain('onzevibe');
-  });
-
-  it('sendQRVoteWelcomeEmail sends a fixed subject with the verify url', async () => {
-    await mail.sendQRVoteWelcomeEmail(
-      'w@example.com',
-      'Wendy',
-      'ACME Corp',
-      'en',
-      'vw-hash'
-    );
-    const raw = lastRaw();
-    expect(raw).toContain('Subject: Welcome to QRVote!');
-    expect(raw).toContain('ACME Corp');
-    expect(raw).toContain('http://localhost:4200/en/account/verify/vw-hash');
-  });
-
-  it('sendPortalWelcomeEmail sends credentials from the OnzeVibe sender', async () => {
-    await mail.sendPortalWelcomeEmail(
-      'p@example.com',
-      'Piet',
-      'ACME',
-      'https://portal.example.com',
-      'piet-user',
-      's3cret',
-      'nl',
-      'https://admin.example.com'
-    );
-    const raw = lastRaw();
-    expect(raw).toContain('From: OnzeVibe <noreply@qrsong.io>');
-    expect(raw).toContain('Subject: Welkom bij je OnzeVibe portal!');
-    expect(raw).toContain('piet-user');
-    expect(raw).toContain('s3cret');
-    expect(raw).toContain('https://portal.example.com');
-    expect(raw).toContain('filename="onzevibe_logo.png"');
   });
 
   it('sendDesignAlterMail (hitster) sends from the info address with the brand reason', async () => {
@@ -1425,8 +1385,6 @@ describe('sender guard and error paths', () => {
       await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
       await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
       await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');
-      await mail.sendQRVoteWelcomeEmail('a@x.io', 'A', 'C', 'en', 'h');
-      await mail.sendPortalWelcomeEmail('a@x.io', 'A', 'C', 'u', 'us', 'pw');
       await mail.sendEmail('digital', makePayment(), [makePlaylist()]);
       await mail.sendTrackingEmail(makePayment(), 't', '');
       await mail.sendBoxInstructionsEmail(makePayment());
@@ -1459,8 +1417,6 @@ describe('sender guard and error paths', () => {
     await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
     await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
     await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');
-    await mail.sendQRVoteWelcomeEmail('a@x.io', 'A', 'C', 'en', 'h');
-    await mail.sendPortalWelcomeEmail('a@x.io', 'A', 'C', 'u', 'us', 'pw');
     await mail.sendTrackingEmail(makePayment(), 't', '');
     await mail.sendBoxInstructionsEmail(makePayment());
     await mail.sendToPrinterMail(makePayment(), makePlaylist());

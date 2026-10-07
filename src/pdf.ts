@@ -26,8 +26,8 @@ const OUTLINE_TEXT_PRINTER_TYPES = new Set<string>([
   PRINTER_TYPE.SCHNEIDERS,
 ]);
 
-export function needsOutlinedText(printerType: string, payment: any): boolean {
-  return OUTLINE_TEXT_PRINTER_TYPES.has(printerType) || Boolean(payment?.vibe);
+export function needsOutlinedText(printerType: string): boolean {
+  return OUTLINE_TEXT_PRINTER_TYPES.has(printerType);
 }
 
 /**
@@ -55,24 +55,17 @@ export function isMultiCardTemplate(template: string): boolean {
 
 /**
  * The card template forced onto a single-card printer PDF, or null for the
- * regular layout. Two sources, in order:
+ * regular layout: the order's own template (PaymentHasPlaylist.template), set
+ * by an admin in the production settings of that order or by the toolkit. It
+ * applies to any order on any printer.
  *
- * 1. The order's own template (PaymentHasPlaylist.template), set by an admin
- *    in the production settings of that order. It applies to any order on
- *    any printer.
- * 2. The playlist's template (Playlist.template), written from
- *    CompanyList.forceTemplate. The playlist row is shared by every later
- *    order of that Spotify playlist, so it only counts for company (vibe)
- *    orders: a public order of the same playlist prints the regular layout.
+ * (Playlist.template, written from CompanyList.forceTemplate, only counted for
+ * the company-list orders the old portal generated, removed on 2026-10-07.)
  */
 export function forcedPrinterTemplate(
-  orderTemplate: string | null | undefined,
-  playlistTemplate: string | null | undefined,
-  vibe: boolean | null | undefined
+  orderTemplate: string | null | undefined
 ): string | null {
-  if (orderTemplate) return orderTemplate;
-  if (vibe && playlistTemplate) return playlistTemplate;
-  return null;
+  return orderTemplate || null;
 }
 
 /**
@@ -758,14 +751,10 @@ class PDF {
 
       // Post-processing
       if (!isDigitalTemplate) {
-        if (payment.vibe) {
-          await this.resizePDFPages(finalPath, 62, 62);
-        } else {
-          const pageSize = printerPageSizeMm(template, printerType);
-          await this.resizePDFPages(finalPath, pageSize, pageSize);
-          await this.addBleed(finalPath, 3);
-        }
-        if (needsOutlinedText(printerType, payment)) {
+        const pageSize = printerPageSizeMm(template, printerType);
+        await this.resizePDFPages(finalPath, pageSize, pageSize);
+        await this.addBleed(finalPath, 3);
+        if (needsOutlinedText(printerType)) {
           await this.outlineText(finalPath);
         }
       } else if (template === 'printer_sheets') {
@@ -949,14 +938,10 @@ class PDF {
 
     // Post-processing
     if (!isDigitalTemplate) {
-      if (payment.vibe) {
-        await this.resizePDFPages(finalPath, 62, 62);
-      } else {
-        const pageSize = printerPageSizeMm(template, printerType);
-        await this.resizePDFPages(finalPath, pageSize, pageSize);
-        await this.addBleed(finalPath, 3);
-      }
-      if (needsOutlinedText(printerType, payment)) {
+      const pageSize = printerPageSizeMm(template, printerType);
+      await this.resizePDFPages(finalPath, pageSize, pageSize);
+      await this.addBleed(finalPath, 3);
+      if (needsOutlinedText(printerType)) {
         await this.outlineText(finalPath);
       }
     } else if (template === 'printer_sheets') {

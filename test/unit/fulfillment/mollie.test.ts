@@ -347,7 +347,7 @@ function applyDefaults(): void {
       vatIdChecked: null,
     },
   });
-  orderMock.getOrderType.mockResolvedValue({ id: 3, amount: 15 });
+  orderMock.getOrderType.mockResolvedValue({ digital: true, amount: 15, alternatives: {} });
 
   discountMock.calculateDiscounts.mockResolvedValue({
     discountAmount: 0,
@@ -703,7 +703,6 @@ describe('getPaymentUri', () => {
     const data = prismaMock.payment.create.mock.calls[0][0].data;
     expect(data).toMatchObject({
       paymentId: 'tr_test123',
-      vibe: false,
       user: { connect: { id: 42 } },
       totalPrice: 25,
       totalPriceWithoutTax: 20.66, // 25 / 1.21
@@ -717,7 +716,6 @@ describe('getPaymentUri', () => {
       shippingVATPrice: 0,
       totalVATPrice: 4.34,
       clientIp: IP,
-      test: false,
       profit: 20.66,
       printApiPrice: 0,
       discount: 0,
@@ -736,9 +734,9 @@ describe('getPaymentUri', () => {
     });
 
     const row = data.PaymentHasPlaylist.create[0];
+    expect(row).not.toHaveProperty('orderTypeId');
     expect(row).toMatchObject({
       playlistId: 700,
-      orderTypeId: 3,
       amount: 1,
       numberOfTracks: 100,
       type: 'digital',
@@ -984,43 +982,6 @@ describe('getPaymentUri', () => {
     expect(discountMock.attachPaymentToDiscountUses).not.toHaveBeenCalled();
   });
 
-  it('treats vibe orders with totals <= 10 as paid without Mollie', async () => {
-    orderMock.calculateOrder.mockResolvedValue({
-      success: true,
-      data: {
-        total: 8,
-        price: '6.61',
-        payment: '0.00',
-        taxRate: 21,
-        taxRateShipping: 21,
-        boxFee: 0,
-        reverseCharge: false,
-        vatIdChecked: null,
-      },
-    });
-    const params = makeParams();
-    params.extraOrderData.vibe = true;
-
-    const result = await mollie.getPaymentUri(params, IP);
-
-    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
-    expect(result.data.paymentId).toBe('free_RND1234567');
-    expect(result.data.generationQueued).toBe(true);
-    expect(prismaMock.payment.create.mock.calls[0][0].data).toMatchObject({
-      vibe: true,
-      status: 'paid',
-      totalPrice: 0,
-    });
-    expect(generatorMock.queueGenerate).toHaveBeenCalledWith(
-      'free_RND1234567',
-      IP,
-      '',
-      false,
-      false,
-      false
-    );
-  });
-
   it('refuses non-free orders with a total <= 3', async () => {
     orderMock.calculateOrder.mockResolvedValue({
       success: true,
@@ -1177,7 +1138,6 @@ describe('getPaymentUri', () => {
     expect(data).toMatchObject({
       discount: 0,
       status: 'open',
-      test: false,
       profit: 20.66,
       boxFee: 0,
       totalPrice: 25,
@@ -1345,7 +1305,7 @@ describe('getPaymentUri', () => {
       success: true,
       data: { total: 120 },
     });
-    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+    orderMock.getOrderType.mockResolvedValue({ digital: true, amount: 30, alternatives: {} });
 
     await mollie.getPaymentUri(makeParams(), IP);
 
@@ -1363,7 +1323,6 @@ describe('getPaymentUri', () => {
     expect(row).toMatchObject({
       numberOfTracks: 120,
       price: 30, // repriced from orderType.amount
-      orderTypeId: 9,
       printApiPrice: 30,
     });
   });
@@ -1377,7 +1336,7 @@ describe('getPaymentUri', () => {
       success: true,
       data: { total: 3 },
     });
-    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+    orderMock.getOrderType.mockResolvedValue({ digital: true, amount: 30, alternatives: {} });
 
     await mollie.getPaymentUri(
       makeParams({
@@ -1419,7 +1378,7 @@ describe('getPaymentUri', () => {
       success: true,
       data: { total: 40 },
     });
-    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+    orderMock.getOrderType.mockResolvedValue({ digital: true, amount: 30, alternatives: {} });
 
     await mollie.getPaymentUri(
       makeParams({
@@ -1440,7 +1399,7 @@ describe('getPaymentUri', () => {
       success: true,
       data: { total: 40 },
     });
-    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+    orderMock.getOrderType.mockResolvedValue({ digital: true, amount: 30, alternatives: {} });
 
     await mollie.getPaymentUri(makeParams(), IP);
 

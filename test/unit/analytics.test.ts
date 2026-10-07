@@ -150,14 +150,12 @@ describe('getTotalPlaylistsSoldByType', () => {
       digital: { amount: 5, tracks: 200 },
       physical: { amount: 0, tracks: 0 },
     });
-    // excludes test/vibe payments and the default owner emails
+    // excludes the default owner emails
     expect(prismaMock.paymentHasPlaylist.groupBy).toHaveBeenCalledWith(
       expect.objectContaining({
         by: ['type'],
         where: {
           payment: {
-            vibe: false,
-            test: false,
             user: {
               email: {
                 notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],

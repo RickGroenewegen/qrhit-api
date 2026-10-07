@@ -490,25 +490,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     });
   });
 
-  fastify.get('/qrvibe/:trackId', async (request: any, reply) => {
-    const locale = utils.parseAcceptLanguage(
-      request.headers['accept-language']
-    );
-    const translations = await translation.getTranslationsByPrefix(
-      locale,
-      'countdown_onzevibe'
-    );
-    let useVersion = '1.0.0'; // Default version
-    if (process.env['ENVIRONMENT'] === 'development') {
-      useVersion = new Date().getTime().toString();
-    }
-    await reply.view(`countdown_vibe.ejs`, {
-      translations,
-      version: useVersion,
-      domain: process.env['FRONTEND_URI'],
-    });
-  });
-
   // What a decoyed request gets instead of the track it asked for.
   //
   // Every link was resolved through our own MusicFetch pipeline from the

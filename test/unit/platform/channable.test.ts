@@ -586,8 +586,8 @@ describe('build coordination', () => {
     expect(rows.every((r) => r.playlist_id === 'spot123')).toBe(true);
   });
 
-  it('falls back to the playlist price when the order type has none', async () => {
-    h.getOrderType.mockResolvedValue(null);
+  it('falls back to the playlist price when the deck has no price', async () => {
+    h.getOrderType.mockResolvedValue({ digital: false, amount: 0, alternatives: {} });
     h.prisma.playlist.findMany.mockImplementation(async (args: any) => {
       if (args?.select?.id) return [{ id: 7 }];
       return [makePlaylist({ featuredLocale: 'nl', price: 24.5 })];

@@ -88,7 +88,7 @@
 - Volledig responsive voor alle schermgroottes
 - Featured playlist overzicht: Door gebruikers aangeleverde playlists (Volledig filterbaar, sorteerbaar en doorzoekbaar)
 - Speciale landingspagina's voor (Meta ads)
-- Corporate oplossingen met stemportalen via OnzeVibe
+- Corporate oplossingen (QRSong! business) met een stempagina per lijst op `qrsong.io/v/<slug>`
 - FAQ systeem
 - Contact mogelijk via e-mail (formulier) en chat (Crisp)
 

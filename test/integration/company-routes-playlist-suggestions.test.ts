@@ -114,11 +114,11 @@ describe('playlist suggestions document', () => {
     await closeTestApp(app);
   });
 
-  describe('GET /vibe/playlist-suggestions', () => {
+  describe('GET /business/playlist-suggestions', () => {
     it('renders the document in the requested language', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=de&cardCount=48',
+        url: '/business/playlist-suggestions?locale=de&cardCount=48',
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
@@ -132,7 +132,7 @@ describe('playlist suggestions document', () => {
     it('lists only playlists with enough tracks for the box', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=200',
+        url: '/business/playlist-suggestions?locale=en&cardCount=200',
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('Global Party');
@@ -143,7 +143,7 @@ describe('playlist suggestions document', () => {
     it('filters on locale but always keeps international playlists', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=48&locales=de',
+        url: '/business/playlist-suggestions?locale=en&cardCount=48&locales=de',
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('Schlager und Nederpop');
@@ -154,7 +154,7 @@ describe('playlist suggestions document', () => {
     it('filters on genre', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/playlist-suggestions?locale=en&cardCount=48&genreIds=${rockGenreId}`,
+        url: `/business/playlist-suggestions?locale=en&cardCount=48&genreIds=${rockGenreId}`,
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('Schlager und Nederpop');
@@ -164,7 +164,7 @@ describe('playlist suggestions document', () => {
     it('never shows hidden or pending promotional playlists', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=48',
+        url: '/business/playlist-suggestions?locale=en&cardCount=48',
       });
       expect(res.body).not.toContain('Hidden Gems');
       expect(res.body).not.toContain('Pending Promo');
@@ -173,7 +173,7 @@ describe('playlist suggestions document', () => {
     it('links every playlist to Spotify and notes when we make a selection', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=96',
+        url: '/business/playlist-suggestions?locale=en&cardCount=96',
       });
       expect(res.body).toContain('https://open.spotify.com/playlist/sugg-intl-250');
       // Said once in the intro as soon as any listed playlist has more tracks than the box.
@@ -182,13 +182,13 @@ describe('playlist suggestions document', () => {
       // A selection where every playlist fits exactly has no such note.
       const exact = await app.inject({
         method: 'GET',
-        url: `/vibe/playlist-suggestions?locale=en&cardCount=48&genreIds=${rockGenreId}`,
+        url: `/business/playlist-suggestions?locale=en&cardCount=48&genreIds=${rockGenreId}`,
       });
       expect(exact.body).toContain('Schlager und Nederpop');
       expect(exact.body).toContain('We select the 48 best-fitting tracks');
       const none = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=200&genreIds=999999',
+        url: '/business/playlist-suggestions?locale=en&cardCount=200&genreIds=999999',
       });
       expect(none.body).toContain('No playlists match this selection.');
       expect(none.body).not.toContain('best-fitting tracks');
@@ -197,14 +197,14 @@ describe('playlist suggestions document', () => {
     it('points every card at the cached artwork route and 404s for unknown playlists', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?locale=en&cardCount=48',
+        url: '/business/playlist-suggestions?locale=en&cardCount=48',
       });
-      expect(res.body).toContain('/vibe/playlist-suggestions/art/sugg-intl-250');
+      expect(res.body).toContain('/business/playlist-suggestions/art/sugg-intl-250');
       expect(res.body).not.toContain('https://i.scdn.co/image/x');
 
       const art = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions/art/does-not-exist',
+        url: '/business/playlist-suggestions/art/does-not-exist',
       });
       expect(art.statusCode).toBe(404);
     });
@@ -212,7 +212,7 @@ describe('playlist suggestions document', () => {
     it('rejects an unsupported card count', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/playlist-suggestions?cardCount=100',
+        url: '/business/playlist-suggestions?cardCount=100',
       });
       expect(res.statusCode).toBe(400);
       expect(res.json()).toEqual({ error: 'Invalid cardCount' });
@@ -252,14 +252,14 @@ describe('playlist suggestions document', () => {
     it('requires an admin for the PDF and validates the body', async () => {
       const anon = await app.inject({
         method: 'POST',
-        url: '/vibe/playlist-suggestions/pdf',
+        url: '/business/playlist-suggestions/pdf',
         payload: { cardCount: 96 },
       });
       expect(anon.statusCode).toBe(401);
 
       const bad = await app.inject({
         method: 'POST',
-        url: '/vibe/playlist-suggestions/pdf',
+        url: '/business/playlist-suggestions/pdf',
         headers,
         payload: { cardCount: 100 },
       });

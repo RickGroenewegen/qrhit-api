@@ -2,8 +2,7 @@ import { DELIVERY_FIELDS, pickDeliveryFields } from '../deliveryAddress';
 import { FastifyInstance } from 'fastify';
 import * as crypto from 'crypto';
 import { verifyToken } from '../auth';
-import Vibe from '../vibe';
-import Mollie from '../mollie';
+import Business from '../business';
 import Bookkeeping from '../bookkeeping';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
@@ -48,13 +47,12 @@ import {
 import { BUSINESS_OPTION_PRICES, businessContactEmail } from '../businessOptions';
 import { shippingLineText } from '../businessShipping';
 
-export default async function vibeRoutes(
+export default async function companyRoutes(
   fastify: FastifyInstance,
   verifyTokenMiddleware: any,
   getAuthHandler: any
 ) {
-  const vibe = Vibe.getInstance();
-  const mollie = new Mollie();
+  const business = Business.getInstance();
   const bookkeeping = Bookkeeping.getInstance();
   const translation = new Translation();
   const data = Data.getInstance();
@@ -108,7 +106,7 @@ export default async function vibeRoutes(
 
   // Returns { provider, connected, reason? }.
   fastify.get(
-    '/vibe/bookkeeping/status',
+    '/business/bookkeeping/status',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       const status = await bookkeeping.getStatus();
@@ -121,7 +119,7 @@ export default async function vibeRoutes(
   // would invoice (excl. VAT), so the admin sees the amounts before creating
   // anything. `?type=` picks the price variant, default the list's printer.
   fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/invoices',
+    '/business/companies/:companyId/lists/:listId/invoices',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
@@ -150,14 +148,14 @@ export default async function vibeRoutes(
         const status = await bookkeeping.getStatus();
         let invoices: ListInvoices = { full: null, down: null, remaining: null };
         if (status.connected) {
-          const references = await vibe.buildInvoiceReferences(
+          const references = await business.buildInvoiceReferences(
             list.name,
             company?.locale
           );
           invoices = await findListInvoices({ listId, companyId, references });
         }
 
-        const built = await vibe.buildInvoiceLineItems(
+        const built = await business.buildInvoiceLineItems(
           companyId,
           listId,
           variant,
@@ -190,7 +188,7 @@ export default async function vibeRoutes(
 
   // Stream a sales invoice PDF from the bookkeeping provider.
   fastify.get(
-    '/vibe/sales-invoices/:invoiceId/pdf',
+    '/business/sales-invoices/:invoiceId/pdf',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
@@ -226,7 +224,7 @@ export default async function vibeRoutes(
   // Create a sales invoice from a list's quotation values.
   // body: { type: 'qrsong' | 'schneider', paymentOption: 'full' | 'down' | 'remaining' }
   fastify.post(
-    '/vibe/companies/:companyId/lists/:listId/invoice',
+    '/business/companies/:companyId/lists/:listId/invoice',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
@@ -269,7 +267,7 @@ export default async function vibeRoutes(
           where: { id: companyId },
           select: { locale: true },
         });
-        const refs = await vibe.buildInvoiceReferences(
+        const refs = await business.buildInvoiceReferences(
           listRow.name,
           companyRow?.locale
         );
@@ -301,7 +299,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const built = await vibe.buildInvoiceLineItems(
+        const built = await business.buildInvoiceLineItems(
           companyId,
           listId,
           t,
@@ -422,12 +420,12 @@ export default async function vibeRoutes(
 
   // Get all companies
   fastify.get(
-    '/vibe/companies',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         // Pass user groups to filter companies based on onlyForAdmin flag
-        const result = await vibe.getAllCompanies(request.user?.userGroups);
+        const result = await business.getAllCompanies(request.user?.userGroups);
 
         if (!result.success) {
           reply.status(500).send({ error: result.error });
@@ -444,8 +442,8 @@ export default async function vibeRoutes(
 
   // Update company list
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -456,7 +454,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.updateCompanyList(companyId, listId, request);
+        const result = await business.updateCompanyList(companyId, listId, request);
 
         if (!result || !result.success) {
           let statusCode = 500;
@@ -479,8 +477,8 @@ export default async function vibeRoutes(
 
   // Get users by company
   fastify.get(
-    '/vibe/users/:companyId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/users/:companyId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -490,7 +488,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.getUsersByCompany(companyId);
+        const result = await business.getUsersByCompany(companyId);
 
         if (!result.success) {
           let statusCode = 500;
@@ -511,8 +509,8 @@ export default async function vibeRoutes(
 
   // Update company
   fastify.put(
-    '/vibe/companies/:companyId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const {
@@ -541,7 +539,7 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.updateCompany(companyId, {
+      const result = await business.updateCompany(companyId, {
         name,
         followUp,
         onlyForAdmin,
@@ -574,48 +572,9 @@ export default async function vibeRoutes(
     }
   );
 
-  // Update company calculation
-  fastify.put(
-    '/vibe/companies/:companyId/calculation',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const { calculation } = request.body;
-
-      if (isNaN(companyId)) {
-        reply.status(400).send({ error: 'Invalid company ID' });
-        return;
-      }
-
-      // If user is companyadmin, only allow editing their own company
-      if (
-        request.user.userGroups.includes('companyadmin') &&
-        request.user.companyId !== companyId
-      ) {
-        reply
-          .status(403)
-          .send({ error: 'Forbidden: You can only edit your own company' });
-        return;
-      }
-
-      const result = await vibe.updateCompany(companyId, { calculation });
-
-      if (!result.success) {
-        let statusCode = 500;
-        if (result.error === 'Company not found') {
-          statusCode = 404;
-        }
-        reply.status(statusCode).send({ error: result.error });
-        return;
-      }
-
-      reply.send({ success: true, company: result.data.company });
-    }
-  );
-
   // Update company Tromp calculation
   fastify.put(
-    '/vibe/companies/:companyId/calculation-tromp',
+    '/business/companies/:companyId/calculation-tromp',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
@@ -626,7 +585,7 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.updateCompany(companyId, { calculationTromp });
+      const result = await business.updateCompany(companyId, { calculationTromp });
 
       if (!result.success) {
         let statusCode = 500;
@@ -643,7 +602,7 @@ export default async function vibeRoutes(
 
   // Update company Schneider calculation
   fastify.put(
-    '/vibe/companies/:companyId/calculation-schneider',
+    '/business/companies/:companyId/calculation-schneider',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
@@ -654,7 +613,7 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.updateCompany(companyId, { calculationSchneider });
+      const result = await business.updateCompany(companyId, { calculationSchneider });
 
       if (!result.success) {
         let statusCode = 500;
@@ -672,8 +631,8 @@ export default async function vibeRoutes(
   // Get list-level calculation with fallback to company-level.
   // ?variant=tromp|schneider (lists are priced by Tromp or Schneider).
   fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/calculation',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/companies/:companyId/lists/:listId/calculation',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -765,8 +724,8 @@ export default async function vibeRoutes(
 
   // Update company list info (JSON). Accepts all non-design editable fields.
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/info',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/info',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -952,8 +911,8 @@ export default async function vibeRoutes(
       });
 
       // The voting page caches the list; a renamed slug leaves the old copies too.
-      await vibe.clearCompanyListCache(list.slug);
-      if (updated.slug !== list.slug) await vibe.clearCompanyListCache(updated.slug);
+      await business.clearCompanyListCache(list.slug);
+      if (updated.slug !== list.slug) await business.clearCompanyListCache(updated.slug);
 
       reply.send({ success: true, list: updated });
     }
@@ -963,7 +922,7 @@ export default async function vibeRoutes(
   // the financial reports (src/businessSales.ts). Body: { sold, soldAt? },
   // soldAt as YYYY-MM-DD. Admin only, it moves the books.
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/sold',
+    '/business/companies/:companyId/lists/:listId/sold',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
@@ -1016,8 +975,8 @@ export default async function vibeRoutes(
 
   // Get delivery addresses for a list
   fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/delivery-addresses',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/delivery-addresses',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1035,8 +994,8 @@ export default async function vibeRoutes(
 
   // Create delivery address
   fastify.post(
-    '/vibe/companies/:companyId/lists/:listId/delivery-addresses',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/delivery-addresses',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1066,8 +1025,8 @@ export default async function vibeRoutes(
 
   // Update delivery address
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1106,8 +1065,8 @@ export default async function vibeRoutes(
 
   // Delete delivery address
   fastify.delete(
-    '/vibe/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1139,8 +1098,8 @@ export default async function vibeRoutes(
 
   // Build the printer order e-mail (Dutch) for a list
   fastify.get(
-    '/vibe/companies/:companyId/lists/:listId/order-email',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/order-email',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1149,7 +1108,7 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.getOrderEmail(companyId, listId);
+      const result = await business.getOrderEmail(companyId, listId);
       if (!result.success) {
         reply
           .status(result.error === 'List not found' ? 404 : 500)
@@ -1162,8 +1121,8 @@ export default async function vibeRoutes(
 
   // Toggle the favorite flag on a company
   fastify.put(
-    '/vibe/companies/:companyId/favorite',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/favorite',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       if (isNaN(companyId)) {
@@ -1193,10 +1152,10 @@ export default async function vibeRoutes(
 
   // Get all lists with status "production" across companies
   fastify.get(
-    '/vibe/production-lists',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/production-lists',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
-      const result = await vibe.getProductionLists();
+      const result = await business.getProductionLists();
       if (!result.success) {
         reply.status(500).send({ error: result.error });
         return;
@@ -1207,8 +1166,8 @@ export default async function vibeRoutes(
 
   // Generate or rotate the intake-form token for a list
   fastify.post(
-    '/vibe/companies/:companyId/lists/:listId/intake-link',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId/intake-link',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const listId = parseInt(request.params.listId);
@@ -1237,7 +1196,7 @@ export default async function vibeRoutes(
 
   // Public intake form — fetch list + company data by token (no auth)
   fastify.get(
-    '/vibe/intake/:token',
+    '/business/intake/:token',
     async (request: any, reply: any) => {
       const token = String(request.params.token || '');
       if (!token || token.length < 16) {
@@ -1297,7 +1256,7 @@ export default async function vibeRoutes(
 
   // Public intake form — save (partial) list + company data by token
   fastify.put(
-    '/vibe/intake/:token',
+    '/business/intake/:token',
     async (request: any, reply: any) => {
       const token = String(request.params.token || '');
       if (!token || token.length < 16) {
@@ -1412,8 +1371,8 @@ export default async function vibeRoutes(
 
   // Re-download a previously persisted quotation as PDF
   fastify.get(
-    '/vibe/companies/:companyId/quotations/:quotationId/pdf',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/companies/:companyId/quotations/:quotationId/pdf',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const quotationId = parseInt(request.params.quotationId);
@@ -1422,7 +1381,7 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.getQuotationPDF(
+      const result = await business.getQuotationPDF(
         companyId,
         quotationId,
         request.user.userGroups,
@@ -1453,8 +1412,8 @@ export default async function vibeRoutes(
 
   // Delete a persisted quotation (and its archived PDF)
   fastify.delete(
-    '/vibe/companies/:companyId/quotations/:quotationId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/quotations/:quotationId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const quotationId = parseInt(request.params.quotationId);
@@ -1488,8 +1447,8 @@ export default async function vibeRoutes(
 
   // List quotations for a company
   fastify.get(
-    '/vibe/companies/:companyId/quotations',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/companies/:companyId/quotations',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       if (isNaN(companyId)) {
@@ -1516,8 +1475,8 @@ export default async function vibeRoutes(
 
   // Aggregate counts for the company detail sidebar
   fastify.get(
-    '/vibe/companies/:companyId/counts',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/companies/:companyId/counts',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       if (isNaN(companyId)) {
@@ -1550,7 +1509,7 @@ export default async function vibeRoutes(
 
   // Update list-level Tromp calculation
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/calculation-tromp',
+    '/business/companies/:companyId/lists/:listId/calculation-tromp',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
@@ -1583,7 +1542,7 @@ export default async function vibeRoutes(
 
   // Update list-level Schneider calculation
   fastify.put(
-    '/vibe/companies/:companyId/lists/:listId/calculation-schneider',
+    '/business/companies/:companyId/lists/:listId/calculation-schneider',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
@@ -1616,12 +1575,17 @@ export default async function vibeRoutes(
 
   // Quotation HTML View (for PDF generation)
   fastify.get(
-    '/vibe/quotation/:type/:companyId/:quotationNumber',
+    '/business/quotation/:type/:companyId/:quotationNumber',
     async (request: any, reply: any) => {
       try {
-        const type = request.params.type; // 'onzevibe', 'qrsong', or 'schneider'
+        const type = request.params.type; // 'qrsong' (Tromp) or 'schneider'
         const companyId = parseInt(request.params.companyId);
         const quotationNumber = request.params.quotationNumber;
+
+        if (type !== 'qrsong' && type !== 'schneider') {
+          reply.status(404).send({ error: 'Unknown quotation type' });
+          return;
+        }
 
         // Extract pricing options from query parameters
         const isReseller = request.query.isReseller === 'true';
@@ -1651,7 +1615,7 @@ export default async function vibeRoutes(
         }
 
         // Get company data directly from database - pass ['admin'] to include onlyForAdmin companies
-        const companiesResult = await vibe.getAllCompanies(['admin']);
+        const companiesResult = await business.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const storedCompany = companies.find((c: any) => c.id === companyId);
 
@@ -1723,8 +1687,6 @@ export default async function vibeRoutes(
 
         // If a list was specified, load its per-list calculation so per-list
         // toggles (e.g. includeVotingPortal) override the company defaults.
-        // Lists are priced by Tromp or Schneider; an OnzeVibe quotation comes
-        // from the OnzeVibe portal and is company-level.
         let listCalc: {
           name: string;
           calculationTromp: string | null;
@@ -1798,8 +1760,8 @@ export default async function vibeRoutes(
             }
           }
 
-          // Use the Vibe calculateTrompPricing method
-          const pricingResult = await vibe.calculateTrompPricing({
+          // Use Business.calculateTrompPricing
+          const pricingResult = await business.calculateTrompPricing({
             quantity: calculation.quantity || 100,
             includeStansmestekening: calculation.includeStansmestekening || false,
             includeStansvorm: calculation.includeStansvorm || false,
@@ -1840,7 +1802,7 @@ export default async function vibeRoutes(
             productDescription = quotationT('productCardSet');
             productDetails = quotationT('productStandardBoxDetails');
           }
-        } else if (type === 'schneider') {
+        } else {
           // Schneider calculation
           calculation = {
             quantity: 100,
@@ -1861,10 +1823,10 @@ export default async function vibeRoutes(
             }
           }
 
-          // Use the Vibe calculateSchneiderPricing method. The delivery
+          // Use Business.calculateSchneiderPricing. The delivery
           // country and a forced shipping price come from the calculator, so
           // the shipping line matches what it showed.
-          const pricingResult = await vibe.calculateSchneiderPricing({
+          const pricingResult = await business.calculateSchneiderPricing({
             quantity: calculation.quantity || 100,
             cardCount: calculation.cardCount || 48,
             includeStansmes: calculation.includeStansmes || false,
@@ -1905,52 +1867,6 @@ export default async function vibeRoutes(
                 count: cardCount,
               });
           }
-        } else {
-          // OnzeVibe calculation
-          calculation = {
-            quantity: 100,
-            includePersonalization: true,
-            shipmentOnLocation: false,
-            soldBy: 'onzevibe',
-            isReseller: false,
-            manualDiscount: 0,
-            fluidMode: false,
-          };
-
-          const onzevibeSource = company.calculation;
-          if (onzevibeSource) {
-            try {
-              const storedCalc = JSON.parse(onzevibeSource);
-              calculation = storedCalc;
-            } catch (e) {
-              console.error('Error parsing OnzeVibe calculation:', e);
-            }
-          }
-
-          // Use the Vibe calculatePricing method
-          const pricingResult = await vibe.calculatePricing({
-            quantity: calculation.quantity || 100,
-            includePersonalization:
-              calculation.includePersonalization !== undefined
-                ? calculation.includePersonalization
-                : true,
-            shipmentOnLocation: calculation.shipmentOnLocation || false,
-            soldBy: calculation.soldBy || 'onzevibe',
-            isReseller: calculation.isReseller || false,
-            manualDiscount: calculation.manualDiscount || 0,
-            fluidMode: calculation.fluidMode || false,
-            includeCustomApp: calculation.includeCustomApp || false,
-            includeVotingPortal: calculation.includeVotingPortal || false,
-            forceResellerPrice: calculation.forceResellerPrice || null,
-            forceClientPrice: calculation.forceClientPrice || null,
-          });
-
-          if (pricingResult.success) {
-            calculationResult = pricingResult.calculation;
-          }
-
-          productDescription = quotationT('productHappiBox');
-          productDetails = quotationT('productHappiBoxDetails');
         }
 
         // Date formatting functions, driven by the company's business locale.
@@ -1981,8 +1897,8 @@ export default async function vibeRoutes(
         const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
 
-        // Use the appropriate template - use tromp_quotation for both qrsong and schneider
-        const template = (type === 'qrsong' || type === 'schneider') ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
+        // One template for Tromp and Schneider.
+        const template = 'tromp_quotation.ejs';
 
         // The shipping extra's line: "Versand nach Deutschland" with
         // "34 Umkartons auf 1 Palette" instead of "one-off cost".
@@ -2023,7 +1939,7 @@ export default async function vibeRoutes(
 
   // Generate quotation PDF
   fastify.post(
-    '/vibe/quotation/:companyId',
+    '/business/quotation/:companyId',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
 
@@ -2036,20 +1952,24 @@ export default async function vibeRoutes(
           calculatedPrices,
           listId,
           contactUserId,
-        } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
+        } = request.body; // 'qrsong' (Tromp) or 'schneider'
 
         if (isNaN(companyId)) {
           reply.status(400).send({ error: 'Invalid company ID' });
           return;
         }
+        if (type !== 'qrsong' && type !== 'schneider') {
+          reply.status(400).send({ error: 'Invalid quotation type' });
+          return;
+        }
 
-        // Call the business logic in Vibe class
-        const result = await vibe.generateQuotationPDF(
+        // Call the business logic in the Business class
+        const result = await business.generateQuotationPDF(
           companyId,
           request.user.userId,
           request.user.userGroups,
           request.user.companyId,
-          type || 'onzevibe',
+          type,
           { isReseller, profitMargins, calculatedPrices },
           listId ? Number(listId) : undefined,
           contactUserId ? Number(contactUserId) : undefined
@@ -2082,14 +2002,14 @@ export default async function vibeRoutes(
 
   // Technical Instructions HTML View (for PDF generation)
   fastify.get(
-    '/vibe/technical-instructions/:companyId',
+    '/business/technical-instructions/:companyId',
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
         const printer = request.query.printer || 'tromp';
 
         // Get company data - pass ['admin'] to include onlyForAdmin companies
-        const companiesResult = await vibe.getAllCompanies(['admin']);
+        const companiesResult = await business.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -2137,8 +2057,8 @@ export default async function vibeRoutes(
 
   // Generate Technical Instructions PDF
   fastify.post(
-    '/vibe/technical-instructions/:companyId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/technical-instructions/:companyId',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -2149,7 +2069,7 @@ export default async function vibeRoutes(
         }
 
         // Get company data - pass ['admin'] to include onlyForAdmin companies
-        const companiesResult = await vibe.getAllCompanies(['admin']);
+        const companiesResult = await business.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -2172,7 +2092,7 @@ export default async function vibeRoutes(
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
         const printer = request.body?.printer || 'tromp';
         const locale = translation.resolveBusinessLocale(company.locale);
-        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`;
+        const htmlUrl = `${baseUrl}/business/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`;
 
         // Generate PDF
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -2211,8 +2131,8 @@ export default async function vibeRoutes(
 
   // Delete company
   fastify.delete(
-    '/vibe/companies/:companyId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -2222,7 +2142,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.deleteCompany(companyId);
+        const result = await business.deleteCompany(companyId);
 
         if (!result.success) {
           let statusCode = 500;
@@ -2248,8 +2168,8 @@ export default async function vibeRoutes(
 
   // Replace track in submissions
   fastify.post(
-    '/vibe/lists/:companyListId/replace-track',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/lists/:companyListId/replace-track',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyListId = parseInt(request.params.companyListId);
@@ -2266,7 +2186,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.replaceTrackInSubmissions(
+        const result = await business.replaceTrackInSubmissions(
           companyListId,
           Number(sourceTrackId),
           Number(destinationTrackId)
@@ -2287,8 +2207,8 @@ export default async function vibeRoutes(
 
   // Delete submission
   fastify.delete(
-    '/vibe/submissions/:submissionId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/submissions/:submissionId',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       try {
         const submissionId = parseInt(request.params.submissionId);
@@ -2300,7 +2220,7 @@ export default async function vibeRoutes(
 
         // If user is companyadmin, check that the submission belongs to their company
         if (request.user.userGroups.includes('companyadmin')) {
-          const belongs = await vibe.submissionBelongsToCompany(
+          const belongs = await business.submissionBelongsToCompany(
             submissionId,
             request.user.companyId
           );
@@ -2312,7 +2232,7 @@ export default async function vibeRoutes(
           }
         }
 
-        const result = await vibe.deleteSubmission(submissionId);
+        const result = await business.deleteSubmission(submissionId);
 
         if (!result.success) {
           let statusCode = 500;
@@ -2333,8 +2253,8 @@ export default async function vibeRoutes(
 
   // Create company list
   fastify.post(
-    '/vibe/companies/:companyId/lists',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -2384,7 +2304,7 @@ export default async function vibeRoutes(
           playlistUrl,
         };
 
-        const result = await vibe.createCompanyList(companyId, listData);
+        const result = await business.createCompanyList(companyId, listData);
 
         if (!result.success) {
           let statusCode = 500;
@@ -2420,8 +2340,8 @@ export default async function vibeRoutes(
 
   // Delete company list
   fastify.delete(
-    '/vibe/companies/:companyId/lists/:listId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/lists/:listId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -2439,7 +2359,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.deleteCompanyList(companyId, listId);
+        const result = await business.deleteCompanyList(companyId, listId);
 
         if (!result.success) {
           let statusCode = 500;
@@ -2462,8 +2382,8 @@ export default async function vibeRoutes(
 
   // Create company
   fastify.post(
-    '/vibe/companies',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const {
@@ -2487,7 +2407,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.createCompany({
+        const result = await business.createCompany({
           name,
           followUp,
           onlyForAdmin,
@@ -2522,8 +2442,8 @@ export default async function vibeRoutes(
 
   // Finalize company list
   fastify.post(
-    '/vibe/finalize',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/finalize',
+    getAuthHandler(['admin']),
     async (request: any, reply) => {
       const { companyListId } = request.body;
 
@@ -2531,21 +2451,21 @@ export default async function vibeRoutes(
         return { success: false, error: 'Missing company list ID' };
       }
 
-      return await vibe.finalizeList(parseInt(companyListId));
+      return await business.finalizeList(parseInt(companyListId));
     }
   );
 
   // Get company list state
   fastify.get(
-    '/vibe/state/:listId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin', 'qrvoteadmin']),
+    '/business/state/:listId',
+    getAuthHandler(['admin', 'companyadmin', 'qrvoteadmin']),
     async (request: any, reply: any) => {
       try {
         const token = request.headers.authorization?.split(' ')[1];
         const decoded = verifyToken(token || '');
         const listId = parseInt(request.params.listId);
 
-        const result = await vibe.getState(listId);
+        const result = await business.getState(listId);
 
         if (!result.success) {
           reply.status(404).send({ error: result.error });
@@ -2562,8 +2482,8 @@ export default async function vibeRoutes(
 
   // Get company lists
   fastify.get(
-    '/vibe/company/:companyId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/company/:companyId',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       if (
         request.user.userGroups.includes('companyadmin') &&
@@ -2576,7 +2496,7 @@ export default async function vibeRoutes(
       }
 
       try {
-        const result = await vibe.getCompanyLists(
+        const result = await business.getCompanyLists(
           parseInt(request.params.companyId)
         );
 
@@ -2593,38 +2513,10 @@ export default async function vibeRoutes(
     }
   );
 
-  // Generate PDF
-  fastify.post(
-    '/vibe/generate/:listId',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      try {
-        const listId = parseInt(request.params.listId);
-
-        if (isNaN(listId)) {
-          reply.status(400).send({ error: 'Invalid list ID' });
-          return;
-        }
-
-        const result = await vibe.generatePDF(listId, mollie, request.clientIp);
-
-        reply.send({
-          success: true,
-          message: 'PDF generation initiated (placeholder)',
-        });
-      } catch (error) {
-        console.error('Error calling generatePDF:', error);
-        reply
-          .status(500)
-          .send({ error: 'Internal server error during PDF generation' });
-      }
-    }
-  );
-
   // Update submission
   fastify.put(
-    '/vibe/submissions/:submissionId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/submissions/:submissionId',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       try {
         const submissionId = parseInt(request.params.submissionId);
@@ -2642,7 +2534,7 @@ export default async function vibeRoutes(
 
         // If user is companyadmin, check that the submission belongs to their company
         if (request.user.userGroups.includes('companyadmin')) {
-          const belongs = await vibe.submissionBelongsToCompany(
+          const belongs = await business.submissionBelongsToCompany(
             submissionId,
             request.user.companyId
           );
@@ -2654,7 +2546,7 @@ export default async function vibeRoutes(
           }
         }
 
-        const result = await vibe.updateSubmission(submissionId, { cardName });
+        const result = await business.updateSubmission(submissionId, { cardName });
         if (!result.success) {
           let statusCode = 500;
           if (result.error === 'Submission not found') {
@@ -2673,8 +2565,8 @@ export default async function vibeRoutes(
 
   // Verify submission
   fastify.put(
-    '/vibe/submissions/:submissionId/verify',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    '/business/submissions/:submissionId/verify',
+    getAuthHandler(['admin', 'companyadmin']),
     async (request: any, reply: any) => {
       try {
         const submissionId = parseInt(request.params.submissionId);
@@ -2685,7 +2577,7 @@ export default async function vibeRoutes(
 
         // If user is companyadmin, check that the submission belongs to their company
         if (request.user.userGroups.includes('companyadmin')) {
-          const belongs = await vibe.submissionBelongsToCompany(
+          const belongs = await business.submissionBelongsToCompany(
             submissionId,
             request.user.companyId
           );
@@ -2697,7 +2589,7 @@ export default async function vibeRoutes(
           }
         }
 
-        const result = await vibe.verifySubmission(submissionId);
+        const result = await business.verifySubmission(submissionId);
         if (!result.success) {
           let statusCode = 500;
           if (result.error === 'Submission not found') {
@@ -2714,45 +2606,11 @@ export default async function vibeRoutes(
     }
   );
 
-  // Create company list (public endpoint)
-  fastify.post('/vibe/companylist/create', async (request: any, reply: any) => {
-    const result = await vibe.handleCompanyListCreate(
-      request.body,
-      request.clientIp
-    );
-    if (!result.success) {
-      reply.status(result.statusCode || 400).send(result);
-    } else {
-      reply.send(result);
-    }
-  });
-
-  // Calculate pricing (admin and vibeadmin only)
-  fastify.post(
-    '/vibe/calculate',
-    getAuthHandler(['admin', 'vibeadmin']),
-    async (request: any, reply: any) => {
-      try {
-        const result = await vibe.calculatePricing(request.body);
-
-        if (!result.success) {
-          reply.status(400).send({ error: result.error });
-          return;
-        }
-
-        reply.send(result);
-      } catch (error) {
-        console.error('Error calculating pricing:', error);
-        reply.status(500).send({ error: 'Internal server error' });
-      }
-    }
-  );
-
   // Pricing tables profit-margin config (Redis-backed, shared across browsers/users).
   // Stores the same shape the frontend used to keep in localStorage:
   //   { profitMatrix: ProfitMatrix, defaultProfits: Record<string, ProfitEntry> }
   fastify.get(
-    '/vibe/pricing-tables/profit-config',
+    '/business/pricing-tables/profit-config',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       try {
@@ -2773,7 +2631,7 @@ export default async function vibeRoutes(
   );
 
   fastify.put(
-    '/vibe/pricing-tables/profit-config',
+    '/business/pricing-tables/profit-config',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
@@ -2797,11 +2655,11 @@ export default async function vibeRoutes(
 
   // Calculate Tromp pricing (admin only)
   fastify.post(
-    '/vibe/calculate-tromp',
+    '/business/calculate-tromp',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const result = await vibe.calculateTrompPricing(request.body);
+        const result = await business.calculateTrompPricing(request.body);
 
         if (!result.success) {
           reply.status(400).send({ error: result.error });
@@ -2821,11 +2679,11 @@ export default async function vibeRoutes(
   // includeVotingPortal, profitMargin, and for shipping deliveryCountry and
   // forceShippingPrice (see calculateSchneiderPricing).
   fastify.post(
-    '/vibe/calculate-schneider',
+    '/business/calculate-schneider',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const result = await vibe.calculateSchneiderPricing(request.body);
+        const result = await business.calculateSchneiderPricing(request.body);
 
         if (!result.success) {
           reply.status(400).send({ error: result.error });
@@ -2839,20 +2697,6 @@ export default async function vibeRoutes(
       }
     }
   );
-
-  // Vibe poster
-  fastify.get('/vibe/poster/:posterId', async (request: any, reply: any) => {
-    const posterId = request.params.posterId;
-    const qrUrl = `${process.env['APP_DOMAIN']}/vibe/post/${posterId}`;
-    await reply.view('poster_vibe.ejs', {
-      posterId,
-      qrUrl,
-      brandColor: '#5FBFFF',
-      brandSecondary: '#3F6FAF',
-      brandAccent: '#E56581',
-      appDomain: process.env['APP_DOMAIN'],
-    });
-  });
 
   // Business price lists: the brochure view the Lambda prints, one per
   // edition (retail, reseller, client). Unauthenticated because the Lambda
@@ -2879,7 +2723,7 @@ export default async function vibeRoutes(
           edition === 'client'
             ? null
             : await buildPriceList(JSON.parse(matrixJson), (params) =>
-                vibe.calculateSchneiderPricing(params)
+                business.calculateSchneiderPricing(params)
               );
 
         const formatCurrency = (value: number) =>
@@ -2957,7 +2801,7 @@ export default async function vibeRoutes(
         const filePath = path.join('/tmp', `${edition}_pricing_${Date.now()}.pdf`);
 
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const htmlUrl = `${baseUrl}/vibe/${edition}-pricing?${priceListQuery(edition, locale, matrix)}`;
+        const htmlUrl = `${baseUrl}/business/${edition}-pricing?${priceListQuery(edition, locale, matrix)}`;
 
         // Generate PDF - let CSS @page rules control orientation
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
@@ -2994,8 +2838,8 @@ export default async function vibeRoutes(
     };
 
   for (const edition of PRICE_LIST_EDITIONS) {
-    fastify.get(`/vibe/${edition}-pricing`, renderPriceList(edition));
-    fastify.post(`/vibe/${edition}-pricing/pdf`, getAuthHandler(['admin']), priceListPdf(edition));
+    fastify.get(`/business/${edition}-pricing`, renderPriceList(edition));
+    fastify.post(`/business/${edition}-pricing/pdf`, getAuthHandler(['admin']), priceListPdf(edition));
   }
 
   // ============================================
@@ -3007,7 +2851,7 @@ export default async function vibeRoutes(
   // and is validated by parsePlaylistSuggestionOptions. It shows no prices,
   // so unlike the price lists it needs no signature.
   fastify.get(
-    '/vibe/playlist-suggestions',
+    '/business/playlist-suggestions',
     async (request: any, reply: any) => {
       try {
         const parsed = parsePlaylistSuggestionOptions(request.query, translation);
@@ -3085,7 +2929,7 @@ export default async function vibeRoutes(
   // Playlist artwork as a small cached JPEG for the brochure. Unauthenticated
   // because the Lambda's Chromium fetches it while rendering the view.
   fastify.get(
-    '/vibe/playlist-suggestions/art/:playlistId',
+    '/business/playlist-suggestions/art/:playlistId',
     async (request: any, reply: any) => {
       try {
         const playlistId = String(request.params.playlistId || '');
@@ -3110,7 +2954,7 @@ export default async function vibeRoutes(
 
   // Playlist suggestions PDF download
   fastify.post(
-    '/vibe/playlist-suggestions/pdf',
+    '/business/playlist-suggestions/pdf',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
@@ -3130,7 +2974,7 @@ export default async function vibeRoutes(
         const filePath = path.join(tempDir, fileName);
 
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const htmlUrl = `${baseUrl}/vibe/playlist-suggestions?${playlistSuggestionQuery(parsed.opts)}`;
+        const htmlUrl = `${baseUrl}/business/playlist-suggestions?${playlistSuggestionQuery(parsed.opts)}`;
 
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
           format: 'a4',
@@ -3167,8 +3011,8 @@ export default async function vibeRoutes(
 
   // Get company events
   fastify.get(
-    '/vibe/companies/:companyId/events',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/events',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -3177,7 +3021,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.getCompanyEvents(companyId);
+        const result = await business.getCompanyEvents(companyId);
         if (!result.success) {
           reply.status(500).send({ error: result.error });
           return;
@@ -3193,8 +3037,8 @@ export default async function vibeRoutes(
 
   // Create company event
   fastify.post(
-    '/vibe/companies/:companyId/events',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/events',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -3242,7 +3086,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.createCompanyEvent(companyId, userId, content, attachmentUrl);
+        const result = await business.createCompanyEvent(companyId, userId, content, attachmentUrl);
         if (!result.success) {
           reply.status(500).send({ error: result.error });
           return;
@@ -3258,8 +3102,8 @@ export default async function vibeRoutes(
 
   // Update company event
   fastify.put(
-    '/vibe/companies/:companyId/events/:eventId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/events/:eventId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -3276,7 +3120,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.updateCompanyEvent(companyId, eventId, content);
+        const result = await business.updateCompanyEvent(companyId, eventId, content);
         if (!result.success) {
           reply.status(result.error === 'Event not found' ? 404 : 500).send({ error: result.error });
           return;
@@ -3292,8 +3136,8 @@ export default async function vibeRoutes(
 
   // Delete company event
   fastify.delete(
-    '/vibe/companies/:companyId/events/:eventId',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/:companyId/events/:eventId',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -3304,7 +3148,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.deleteCompanyEvent(companyId, eventId);
+        const result = await business.deleteCompanyEvent(companyId, eventId);
         if (!result.success) {
           reply.status(result.error === 'Event not found' ? 404 : 500).send({ error: result.error });
           return;
@@ -3323,8 +3167,8 @@ export default async function vibeRoutes(
   // ============================================
 
   fastify.post(
-    '/vibe/companies/import',
-    getAuthHandler(['admin', 'vibeadmin']),
+    '/business/companies/import',
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
         const userId = request.user.id;
@@ -3343,7 +3187,7 @@ export default async function vibeRoutes(
           return;
         }
 
-        const result = await vibe.importCompaniesFromExcel(fileBuffer, userId);
+        const result = await business.importCompaniesFromExcel(fileBuffer, userId);
         if (!result.success) {
           reply.status(400).send({ error: result.error });
           return;

@@ -61,7 +61,6 @@ export async function seedBaseline(): Promise<void> {
       { id: 2, name: 'users' },
       { id: 3, name: 'companies' },
       { id: 4, name: 'resellers' },
-      { id: 5, name: 'vibeadmin' },
     ],
     skipDuplicates: true,
   });

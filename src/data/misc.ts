@@ -12,6 +12,7 @@ import {
   CACHE_KEY_TRACK_COUNT,
 } from '../spotify';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
+import { isBusinessDeck } from '../trackMix';
 import { LOCALE_PRIMARY_COUNTRY, occasionSlug } from './giftOccasions';
 import { isProductPageIndexable } from './productPageLocales';
 import { DataDeps } from './types';
@@ -290,6 +291,7 @@ export async function getPlaylistPlayRanking(
             id: true,
             type: true,
             numberOfTracks: true,
+            printerType: true,
             playlist: {
               select: { id: true, name: true, image: true, customImage: true },
             },
@@ -298,7 +300,6 @@ export async function getPlaylistPlayRanking(
                 orderId: true,
                 paymentId: true,
                 fullname: true,
-                vibe: true,
                 createdAt: true,
               },
             },
@@ -323,7 +324,8 @@ export async function getPlaylistPlayRanking(
         numberOfTracks: line?.numberOfTracks ?? null,
         orderId: line ? line.payment.orderId || line.payment.paymentId : null,
         customerName: line?.payment.fullname || null,
-        business: !!line?.payment.vibe,
+        // A deck printed by Schneiders or Tromp.
+        business: !!line && isBusinessDeck(line.printerType),
         orderedAt: line?.payment.createdAt ?? null,
       };
     });
@@ -640,7 +642,7 @@ export async function createSiteMap(
   }
 
   // Define standard paths with default values
-  // Destinations only. `/reviews`, `/examples` and `/onzevibe` used to be
+  // Destinations only. `/reviews`, `/examples` and a third page used to be
   // listed here, but all three redirect (302, 302 and 301), so every locale
   // submitted three URLs that are not the page — 36 of them — while the real
   // destinations appeared in no sitemap at all. `/en/reviews` even canonicals

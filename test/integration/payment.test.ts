@@ -66,42 +66,6 @@ describe('payment routes', () => {
       ],
     });
 
-    // Order types for GET /ordertypes.
-    await prisma().orderType.createMany({
-      data: [
-        {
-          name: 'digital',
-          description: 'Digital cards',
-          amount: 13,
-          amountWithMargin: 13,
-          maxCards: 3000,
-          digital: true,
-        },
-        {
-          name: 'physical-small',
-          description: 'Up to 80 cards',
-          amount: 29,
-          amountWithMargin: 34,
-          maxCards: 80,
-        },
-        {
-          name: 'physical-large',
-          description: 'Up to 1000 cards',
-          amount: 89,
-          amountWithMargin: 99,
-          maxCards: 1000,
-        },
-        {
-          name: 'hidden',
-          description: 'Not visible',
-          amount: 1,
-          amountWithMargin: 1,
-          maxCards: 10,
-          visible: false,
-        },
-      ],
-    });
-
     // Pre-seed the FX cache through the exact code path Fx reads (same
     // Cache instance, same version-prefixed key) so /currency/rates and
     // presentment conversion never hit the ECB feed.
@@ -245,28 +209,6 @@ describe('payment routes', () => {
       expect(mollieMock.processWebhook).toHaveBeenCalledTimes(2);
       expect(mollieMock.processWebhook).toHaveBeenNthCalledWith(1, payload);
       expect(mollieMock.processWebhook).toHaveBeenNthCalledWith(2, payload);
-    });
-  });
-
-  describe('GET /ordertypes', () => {
-    it('returns visible card order types, digital first then by maxCards', async () => {
-      const res = await app.inject({ method: 'GET', url: '/ordertypes' });
-      expect(res.statusCode).toBe(200);
-      const types = res.json();
-      expect(Array.isArray(types)).toBe(true);
-      expect(types.map((t: any) => t.name)).toEqual([
-        'digital',
-        'physical-small',
-        'physical-large',
-      ]);
-      expect(types[0]).toMatchObject({
-        name: 'digital',
-        maxCards: 3000,
-        amountWithMargin: 13,
-      });
-      expect(types[0].id).toBeGreaterThan(0);
-      // The hidden type must not leak.
-      expect(types.find((t: any) => t.name === 'hidden')).toBeUndefined();
     });
   });
 

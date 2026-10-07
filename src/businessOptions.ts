@@ -1,6 +1,6 @@
 /**
  * The one-off business options as the price-list brochures print them, in EUR
- * excl. VAT. The quotation code in vibe.ts prices the custom app and the
+ * excl. VAT. The quotation code in business.ts prices the custom app and the
  * voting portal with its own literals; change both together.
  */
 export const BUSINESS_OPTION_PRICES = {

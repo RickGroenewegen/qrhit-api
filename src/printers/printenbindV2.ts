@@ -18,6 +18,7 @@ import PDF from '../pdf';
 import PushoverClient from '../pushover';
 import Spotify from '../spotify';
 import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
+import { OrderTypePrice } from '../interfaces/OrderTypePrice';
 import Discount from '../discount';
 import Shipping from '../shipping';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
@@ -158,108 +159,36 @@ class PrintEnBindV2 {
     return PrintEnBindV2.instance;
   }
 
-  public async getOrderTypes(type: string = 'cards') {
-    let orderTypes = null;
-    let cacheKey = `orderTypes_${type}`;
-    const cachedOrderType = await this.cache.get(cacheKey);
-    if (cachedOrderType) {
-      orderTypes = JSON.parse(cachedOrderType);
-    } else {
-      orderTypes = await this.prisma.orderType.findMany({
-        select: {
-          id: true,
-          name: true,
-          maxCards: true,
-          amountWithMargin: true,
-        },
-        where: {
-          visible: true,
-          type,
-        },
-        orderBy: [
-          {
-            digital: 'desc',
-          },
-          {
-            maxCards: 'asc',
-          },
-        ],
-      });
-      this.cache.set(cacheKey, JSON.stringify(orderTypes));
-    }
-
-    return orderTypes;
-  }
-
+  /**
+   * The price of one deck of `numberOfTracks` cards, priced at the cap when
+   * it is bigger. A gift card answers 0: its price is on the cart item.
+   * There is no table behind this any more: it used to look up a tier row in
+   * `order_types` first, and a deck above the last row had no price at all.
+   */
   public async getOrderType(
     numberOfTracks: number,
     digital: boolean = false,
     productType: string = 'cards',
     playlistId: string,
     subType: 'sheets' | 'none' = 'none'
-  ) {
-    let orderType = null;
-    let digitalInt = digital ? 1 : 0;
-    let maxCards = maxCardsFor(digital);
-    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${productType}`;
-    if (digital) {
-      // There is just one digital product
-      cacheKey = `orderType_${digitalInt}_${productType}`;
+  ): Promise<OrderTypePrice> {
+    if (productType != 'cards') {
+      return { digital, amount: 0, alternatives: {} };
     }
 
-    const cachedOrderType = await this.cache.get(cacheKey);
+    const singleCalculation = await this.calculateSingleItem({
+      productType: 'cards',
+      type: digital ? 'digital' : 'physical',
+      quantity: Math.min(numberOfTracks, maxCardsFor(digital)),
+      alternatives: {},
+      subType,
+    });
 
-    if (numberOfTracks > maxCards) {
-      numberOfTracks = maxCards;
-    }
-
-    if (cachedOrderType) {
-      orderType = JSON.parse(cachedOrderType);
-    } else {
-        try {
-        orderType = await this.prisma.orderType.findFirst({
-          where: {
-            type: productType,
-            ...(digital
-              ? {}
-              : {
-                  maxCards: {
-                    gte: numberOfTracks,
-                  },
-                }),
-            digital: digital,
-          },
-          orderBy: [
-            {
-              maxCards: 'asc',
-            },
-          ],
-        });
-        } catch {
-          // Callers treat null as "cannot be priced"; a feed or checkout
-          // must not throw on one bad track count.
-        }
-
-      this.cache.set(cacheKey, JSON.stringify(orderType));
-    }
-
-    if (numberOfTracks > maxCards) {
-      numberOfTracks = maxCards;
-    }
-
-    if (orderType && productType == 'cards') {
-      const singleCalculation = await this.calculateSingleItem({
-        productType: 'cards',
-        type: digital ? 'digital' : 'physical',
-        quantity: numberOfTracks,
-        alternatives: {},
-        subType,
-      });
-      orderType.amount = singleCalculation.price;
-      orderType.alternatives = singleCalculation.alternatives;
-    }
-
-    return orderType;
+    return {
+      digital,
+      amount: singleCalculation.price,
+      alternatives: singleCalculation.alternatives,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -615,11 +544,7 @@ class PrintEnBindV2 {
             'cards',
             item.playlistId
           );
-          if (orderType?.amountWithMargin) {
-            totalProductPriceWithoutVAT += round2(
-              orderType.amountWithMargin / taxModifier
-            );
-          }
+          totalProductPriceWithoutVAT += round2(orderType.amount / taxModifier);
         }
         articles.push(this.toPbArticle(item));
       } else if (item.type == 'digital') {
@@ -635,7 +560,7 @@ class PrintEnBindV2 {
 
           if (item.productType === 'cards') {
             itemPrice = parseFloat(
-              (orderType.amountWithMargin * item.amount).toFixed(2)
+              (orderType.amount * item.amount).toFixed(2)
             );
           } else if (item.productType === 'giftcard') {
             itemPrice = parseFloat(item.price.toFixed(2));
@@ -2457,7 +2382,6 @@ class PrintEnBindV2 {
       const payments = await this.prisma.payment.findMany({
         where: {
           status: 'paid',
-          test: false,
           printApiShipped: true,
           printApiShippedAt: {
             not: null,

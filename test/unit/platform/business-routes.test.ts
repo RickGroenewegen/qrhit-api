@@ -187,7 +187,7 @@ async function upload(
 ) {
   return app.inject({
     method: 'POST',
-    url: `/vibe/companies/${companyId}/files`,
+    url: `/business/companies/${companyId}/files`,
     ...multipart([
       { name: 'category', value: category },
       ...(listId ? [{ name: 'listId', value: String(listId) }] : []),
@@ -205,7 +205,7 @@ describe('asset store', () => {
     const onDisk = await fs.readdir(path.join(privateDir, 'company-files', '1'));
     expect(onDisk).toHaveLength(1);
 
-    const list = await app.inject({ method: 'GET', url: '/vibe/companies/1/files' });
+    const list = await app.inject({ method: 'GET', url: '/business/companies/1/files' });
     expect(list.json()).toMatchObject({ success: true, mailLimitBytes: expect.any(Number) });
     expect(list.json().files).toHaveLength(1);
   });
@@ -218,9 +218,9 @@ describe('asset store', () => {
 
   it('never serves one company\'s file under another company', async () => {
     const id = (await upload(1, 'logo.png')).json().files[0].id;
-    const other = await app.inject({ method: 'GET', url: `/vibe/companies/2/files/${id}/download` });
+    const other = await app.inject({ method: 'GET', url: `/business/companies/2/files/${id}/download` });
     expect(other.statusCode).toBe(404);
-    const own = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/download` });
+    const own = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/download` });
     expect(own.statusCode).toBe(200);
     expect(own.headers['content-disposition']).toMatch(/^attachment;/);
     expect(own.headers['x-content-type-options']).toBe('nosniff');
@@ -228,7 +228,7 @@ describe('asset store', () => {
 
   it('deletes the file and its row', async () => {
     const id = (await upload(1, 'a.pdf')).json().files[0].id;
-    const res = await app.inject({ method: 'DELETE', url: `/vibe/companies/1/files/${id}` });
+    const res = await app.inject({ method: 'DELETE', url: `/business/companies/1/files/${id}` });
     expect(res.statusCode).toBe(200);
     expect(h.files).toHaveLength(0);
     expect(await fs.readdir(path.join(privateDir, 'company-files', '1'))).toHaveLength(0);
@@ -243,9 +243,9 @@ describe('list assets', () => {
     const listed = (await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 7)).json().files[0];
     expect(listed).toMatchObject({ companyListId: 7 });
 
-    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files' }))).toEqual(['logo.png']);
-    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=7' }))).toEqual(['cards.pdf']);
-    expect(names(await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=all' }))).toEqual([
+    expect(names(await app.inject({ method: 'GET', url: '/business/companies/1/files' }))).toEqual(['logo.png']);
+    expect(names(await app.inject({ method: 'GET', url: '/business/companies/1/files?listId=7' }))).toEqual(['cards.pdf']);
+    expect(names(await app.inject({ method: 'GET', url: '/business/companies/1/files?listId=all' }))).toEqual([
       'cards.pdf',
       'logo.png',
     ]);
@@ -254,7 +254,7 @@ describe('list assets', () => {
   it('refuses another company\'s list', async () => {
     expect((await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 8)).statusCode).toBe(400);
     expect(h.files).toHaveLength(0);
-    const res = await app.inject({ method: 'GET', url: '/vibe/companies/1/files?listId=8' });
+    const res = await app.inject({ method: 'GET', url: '/business/companies/1/files?listId=8' });
     expect(res.statusCode).toBe(400);
   });
 
@@ -262,21 +262,21 @@ describe('list assets', () => {
     const id = (await upload(1, 'tracks.xlsx', Buffer.from('x'), 'other')).json().files[0].id;
     const toList = await app.inject({
       method: 'PATCH',
-      url: `/vibe/companies/1/files/${id}`,
+      url: `/business/companies/1/files/${id}`,
       payload: { companyListId: 7 },
     });
     expect(toList.json().file).toMatchObject({ companyListId: 7, category: 'other' });
 
     const back = await app.inject({
       method: 'PATCH',
-      url: `/vibe/companies/1/files/${id}`,
+      url: `/business/companies/1/files/${id}`,
       payload: { companyListId: null },
     });
     expect(back.json().file).toMatchObject({ companyListId: null });
 
     const elsewhere = await app.inject({
       method: 'PATCH',
-      url: `/vibe/companies/1/files/${id}`,
+      url: `/business/companies/1/files/${id}`,
       payload: { companyListId: 8 },
     });
     expect(elsewhere.statusCode).toBe(400);
@@ -286,7 +286,7 @@ describe('list assets', () => {
     const id = (await upload(1, 'cards.pdf', Buffer.from('x'), 'design', 7)).json().files[0].id;
     const res = await app.inject({
       method: 'PATCH',
-      url: `/vibe/companies/1/files/${id}`,
+      url: `/business/companies/1/files/${id}`,
       payload: { note: 'Print file' },
     });
     expect(res.json().file).toMatchObject({ companyListId: 7, note: 'Print file' });
@@ -297,7 +297,7 @@ describe('thumbnails', () => {
   it('draws a spreadsheet as an SVG the browser renders, and keeps it', async () => {
     const id = (await upload(1, 'tracks.csv', Buffer.from('Titel;Artiest\nBrabant;Guus Meeuwis\n'), 'other')).json()
       .files[0].id;
-    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    const res = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/thumb` });
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('image/svg+xml');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
@@ -312,7 +312,7 @@ describe('thumbnails', () => {
     const pdf = await PDFDocument.create();
     pdf.addPage([400, 300]).drawRectangle({ x: 50, y: 50, width: 300, height: 200, color: rgb(0.1, 0.5, 0.4) });
     const id = (await upload(1, 'box.pdf', Buffer.from(await pdf.save()))).json().files[0].id;
-    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    const res = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/thumb` });
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('image/webp');
     expect(res.rawPayload.subarray(8, 12).toString('latin1')).toBe('WEBP');
@@ -320,24 +320,24 @@ describe('thumbnails', () => {
 
   it('does not try a failed preview again on the next view', async () => {
     const id = (await upload(1, 'broken.pdf', Buffer.from('%PDF-1.4 this is not really a PDF'))).json().files[0].id;
-    const first = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    const first = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/thumb` });
     expect(first.statusCode).toBe(404);
     const dir = path.join(privateDir, 'company-files', '1');
     expect((await fs.readdir(dir)).some((f) => f.endsWith('.thumb.failed'))).toBe(true);
 
-    const again = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    const again = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/thumb` });
     expect(again.statusCode).toBe(404);
 
     // Deleting the file takes the marker with it.
-    await app.inject({ method: 'DELETE', url: `/vibe/companies/1/files/${id}` });
+    await app.inject({ method: 'DELETE', url: `/business/companies/1/files/${id}` });
     expect(await fs.readdir(dir)).toHaveLength(0);
   });
 
   it('answers 404 for a type without a preview, and the file stays downloadable', async () => {
     const id = (await upload(1, 'pack.zip')).json().files[0].id;
-    const listed = (await app.inject({ method: 'GET', url: '/vibe/companies/1/files' })).json().files[0];
+    const listed = (await app.inject({ method: 'GET', url: '/business/companies/1/files' })).json().files[0];
     expect(listed.hasThumb).toBe(false);
-    const res = await app.inject({ method: 'GET', url: `/vibe/companies/1/files/${id}/thumb` });
+    const res = await app.inject({ method: 'GET', url: `/business/companies/1/files/${id}/thumb` });
     expect(res.statusCode).toBe(404);
   });
 });
@@ -347,7 +347,7 @@ describe('mail to a contact', () => {
     const id = (await upload(1, 'ontwerp.pdf', Buffer.from('%PDF'))).json().files[0].id;
     const res = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { userId: 10, subject: 'Jullie box', message: 'Hierbij het ontwerp', locale: 'de', fileIds: [id] },
     });
     expect(res.statusCode).toBe(200);
@@ -368,7 +368,7 @@ describe('mail to a contact', () => {
   it('does not translate Dutch', async () => {
     await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { email: 'ANNA@zoet.nl', subject: 'S', message: 'M', locale: 'nl', fileIds: [] },
     });
     expect(h.translateMessage).not.toHaveBeenCalled();
@@ -378,13 +378,13 @@ describe('mail to a contact', () => {
   it('only mails contacts of the company', async () => {
     const stranger = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { email: 'someone@else.com', subject: 'S', message: 'M', fileIds: [] },
     });
     expect(stranger.statusCode).toBe(400);
     const otherCompanyUser = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/2/mail',
+      url: '/business/companies/2/mail',
       payload: { userId: 10, subject: 'S', message: 'M', fileIds: [] },
     });
     expect(otherCompanyUser.statusCode).toBe(400);
@@ -395,7 +395,7 @@ describe('mail to a contact', () => {
     const id = (await upload(2, 'theirs.pdf')).json().files[0].id;
     const res = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { userId: 10, subject: 'S', message: 'M', fileIds: [id] },
     });
     expect(res.statusCode).toBe(400);
@@ -405,7 +405,7 @@ describe('mail to a contact', () => {
     const id = (await upload(1, 'huge.pdf', Buffer.alloc(8 * 1000 * 1000))).json().files[0].id;
     const res = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { userId: 10, subject: 'S', message: 'M', locale: 'nl', fileIds: [id] },
     });
     expect(res.statusCode).toBe(413);
@@ -419,7 +419,7 @@ describe('mail to a contact', () => {
     await fs.writeFile(path.join(privateDir, 'quotation', 'QRS12345678.pdf'), '%PDF');
     const res = await app.inject({
       method: 'POST',
-      url: '/vibe/companies/1/mail',
+      url: '/business/companies/1/mail',
       payload: { userId: 10, subject: 'S', message: 'M', locale: 'nl', fileIds: [], quotationId: 3 },
     });
     expect(res.statusCode).toBe(200);
@@ -473,9 +473,9 @@ describe('public quote request', () => {
 describe('three-size quotation (removed 2026-10-06)', () => {
   it('has no routes any more', async () => {
     for (const [method, url] of [
-      ['POST', '/vibe/quotation/1/box-options'],
-      ['GET', '/vibe/quotation-options/QRS12345678?sig=x'],
-      ['POST', '/vibe/quote-requests/1/quotation'],
+      ['POST', '/business/quotation/1/box-options'],
+      ['GET', '/business/quotation-options/QRS12345678?sig=x'],
+      ['POST', '/business/quote-requests/1/quotation'],
     ] as const) {
       const res = await app.inject({ method, url });
       expect(res.statusCode, `${method} ${url}`).toBe(404);

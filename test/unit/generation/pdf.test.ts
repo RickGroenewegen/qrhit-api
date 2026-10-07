@@ -217,7 +217,7 @@ afterEach(() => {
 });
 
 const playlist10 = { playlistId: 'pl1', numberOfTracks: 10 } as any;
-const payment = { paymentId: 'pay1', vibe: false } as any;
+const payment = { paymentId: 'pay1' } as any;
 
 describe('renderUrlToPdfBuffer (convertHtmlToPdf)', () => {
   it('invokes the configured Lambda with url + options and decodes a base64 body', async () => {
@@ -479,38 +479,6 @@ describe('generatePDF (Lambda path)', () => {
     expect(bleedSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/s.pdf`, 3);
   });
 
-  it('resizes vibe orders to 62x62 without bleed', async () => {
-    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
-    await pdf.generatePDF(
-      'v.pdf',
-      playlist,
-      { paymentId: 'pay1', vibe: true } as any,
-      'printnbind',
-      'sub',
-      false,
-      'printnbind'
-    );
-    expect(resizeSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/v.pdf`, 62, 62);
-    expect(bleedSpy).not.toHaveBeenCalled();
-  });
-
-  it('outlines the text for vibe orders, after the resize', async () => {
-    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
-    await pdf.generatePDF(
-      'v.pdf',
-      playlist,
-      { paymentId: 'pay1', vibe: true } as any,
-      'printnbind',
-      'sub',
-      false,
-      'printnbind'
-    );
-    expect(outlineSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/v.pdf`);
-    expect(outlineSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
-      resizeSpy.mock.invocationCallOrder[0]
-    );
-  });
-
   it.each(['tromp', 'schneiders'])(
     'outlines the text for the %s printer, after resize and bleed',
     async (printerType) => {
@@ -741,7 +709,7 @@ describe('generateGiftcardPDF', () => {
 describe('printerPageSizeMm', () => {
   it('uses 60 mm for the standard card templates on any printer', () => {
     expect(printerPageSizeMm('printer', 'printnbind')).toBe(60);
-    expect(printerPageSizeMm('printer_vibe', 'tromp')).toBe(60);
+    expect(printerPageSizeMm('printer', 'tromp')).toBe(60);
     expect(printerPageSizeMm('cannock', 'printnbind')).toBe(60);
   });
 
@@ -757,16 +725,15 @@ describe('printerPageSizeMm', () => {
 });
 
 describe('needsOutlinedText', () => {
-  it('is on for Tromp, Schneiders and OnzeVibe orders', () => {
-    expect(needsOutlinedText('tromp', { vibe: false })).toBe(true);
-    expect(needsOutlinedText('schneiders', { vibe: false })).toBe(true);
-    expect(needsOutlinedText('printnbind', { vibe: true })).toBe(true);
+  it('is on for Tromp and Schneiders', () => {
+    expect(needsOutlinedText('tromp')).toBe(true);
+    expect(needsOutlinedText('schneiders')).toBe(true);
   });
 
   it('is off for every other printer', () => {
-    expect(needsOutlinedText('printnbind', { vibe: false })).toBe(false);
-    expect(needsOutlinedText('reseller', undefined)).toBe(false);
-    expect(needsOutlinedText('musicmatch', {})).toBe(false);
+    expect(needsOutlinedText('printnbind')).toBe(false);
+    expect(needsOutlinedText('reseller')).toBe(false);
+    expect(needsOutlinedText('musicmatch')).toBe(false);
   });
 });
 
@@ -815,7 +782,7 @@ describe('isMultiCardTemplate', () => {
   });
 
   it('treats every single-card printer layout, company ones included, as not multi-card', () => {
-    for (const template of ['printer', 'printer_vibe', 'schneiders', 'kramp', 'banvo', 'gebo']) {
+    for (const template of ['printer', 'schneiders', 'kramp', 'banvo', 'gebo']) {
       expect(isMultiCardTemplate(template)).toBe(false);
     }
   });

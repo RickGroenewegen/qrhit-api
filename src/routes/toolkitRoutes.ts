@@ -16,11 +16,12 @@ import {
   ShareError,
 } from '../toolkitShare';
 import Mail from '../mail';
+import { PRINTER_TYPE } from '../config/constants';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skill-qrsong), a CLI the agent
  * runs with the admin bearer token. Admin only: there is no dashboard screen
- * behind them, and none of them is meant for a customer or a vibeadmin.
+ * behind them, and none of them is meant for a customer or a company admin.
  *
  * - POST /admin/toolkit/playlist                  make or refill a playlist in our Spotify account from exact track ids
  * - GET  /admin/toolkit/playlist/:playlistId/items  the playlist exactly as Spotify holds it (for verifying)
@@ -143,16 +144,28 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
   });
 
   // The same generation as GET /regenerate/:id/0 (forced finalize, no mail),
-  // but only for an order that is on printer hold and not at a printer yet.
+  // but only for an order the hourly pass cannot send meanwhile: one with no
+  // Print&Bind playlist (the toolkit's own Schneiders/Tromp orders) or one on
+  // printer hold, and not at a printer yet.
   fastify.post('/admin/toolkit/order/:paymentId/regenerate', adminOnly, async (request: any, reply: any) => {
     const paymentId = String(request.params.paymentId);
     const payment = await prisma.payment.findUnique({
       where: { paymentId },
-      select: { printerHold: true, sentToPrinter: true },
+      select: {
+        printerHold: true,
+        sentToPrinter: true,
+        PaymentHasPlaylist: { select: { type: true, printerType: true } },
+      },
     });
     if (!payment) return reply.status(404).send({ success: false, error: 'order not found' });
-    if (!payment.printerHold || payment.sentToPrinter) {
-      return reply.status(409).send({ success: false, error: 'only an order on printer hold that is not at a printer yet' });
+    const forPrintNBind = payment.PaymentHasPlaylist.some(
+      (php) => php.type === 'physical' && php.printerType === PRINTER_TYPE.PRINTNBIND
+    );
+    if ((forPrintNBind && !payment.printerHold) || payment.sentToPrinter) {
+      return reply.status(409).send({
+        success: false,
+        error: 'only an order that is not at a printer yet and has no Print&Bind playlist, or is on printer hold',
+      });
     }
     const jobId = await generator.queueGenerate(paymentId, request.clientIp, '', true, true, false);
     return { success: true, jobId };

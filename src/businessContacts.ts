@@ -25,7 +25,7 @@ export const BUSINESS_LIST_KEYS: BusinessListKey[] = ['nl', 'en', 'de'];
 
 const API_URL = 'https://api.emailoctopus.com';
 // Internal people who are linked to a company: never on a business list.
-const STAFF_GROUPS = ['admin', 'vibeadmin'];
+const STAFF_GROUPS = ['admin'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // A run that would remove more than this share of the lists (and more than
 // REMOVAL_GUARD_MIN contacts) removes nothing: a broken query or the wrong

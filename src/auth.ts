@@ -843,7 +843,7 @@ export async function createOrUpdateAdminUser(
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
   // The order of this array defines the hierarchy: first is highest
-  const groupRank = ['admin', 'vibeadmin', 'companyadmin'];
+  const groupRank = ['admin', 'companyadmin'];
 
   try {
     // Check if userGroup is provided and exists

@@ -36,7 +36,6 @@ vi.unmock('../../../src/printers/printenbindV2');
 // Module-boundary mocks (hoisted)
 // ---------------------------------------------------------------------------
 const prismaMock = vi.hoisted(() => ({
-  orderType: { findFirst: vi.fn(), findMany: vi.fn() },
   shippingCostNew: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
   payment: {
     findMany: vi.fn(),
@@ -429,97 +428,42 @@ describe('getShippingCosts', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getOrderTypes / getOrderType
+// getOrderType
 // ---------------------------------------------------------------------------
-describe('getOrderTypes', () => {
-  it('queries visible order types of the requested type and caches them', async () => {
-    const rows = [{ id: 1, name: 'Digital', maxCards: 3000, amountWithMargin: 13 }];
-    prismaMock.orderType.findMany.mockResolvedValue(rows);
-    const r = await peb.getOrderTypes('cards');
-    expect(r).toEqual(rows);
-    expect(prismaMock.orderType.findMany).toHaveBeenCalledWith({
-      select: { id: true, name: true, maxCards: true, amountWithMargin: true },
-      where: { visible: true, type: 'cards' },
-      orderBy: [{ digital: 'desc' }, { maxCards: 'asc' }],
-    });
-    expect(cacheMock.set).toHaveBeenCalledWith(
-      'orderTypes_cards',
-      JSON.stringify(rows)
-    );
-  });
-
-  it('serves order types from cache', async () => {
-    cacheMock.get.mockResolvedValue(JSON.stringify([{ id: 7 }]));
-    expect(await peb.getOrderTypes('giftcard')).toEqual([{ id: 7 }]);
-    expect(prismaMock.orderType.findMany).not.toHaveBeenCalled();
-  });
-});
-
 describe('getOrderType', () => {
-  it('looks up the smallest physical tier covering the track count and computes the price', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
+  it('computes the price of a physical deck', async () => {
     const r = await peb.getOrderType(100, false, 'cards', 'pl1');
-    expect(prismaMock.orderType.findFirst).toHaveBeenCalledWith({
-      where: { type: 'cards', maxCards: { gte: 100 }, digital: false },
-      orderBy: [{ maxCards: 'asc' }],
+    // calculateSingleItem(physical, 100) = 26
+    expect(r).toEqual({
+      digital: false,
+      amount: 26,
+      alternatives: { type: { physical: 0, digital: -13, sheets: -6 } },
     });
-    // amount comes from calculateSingleItem(physical, 100) = 26
-    expect(r.amount).toBe(26);
-    expect(r.alternatives).toEqual({
-      type: { physical: 0, digital: -13, sheets: -6 },
-    });
-    expect(cacheMock.set).toHaveBeenCalledWith(
-      'orderType_100_0_cards',
-      expect.any(String)
-    );
   });
 
-  it('uses a track-count-independent cache key for the digital product', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 1,
-      maxCards: 3000,
-      amountWithMargin: 13,
-    });
+  it('prices every physical deck up to the cap and a bigger one at the cap', async () => {
+    // 1,375 cards had no price while order_types stopped at 1,000 cards.
+    expect((await peb.getOrderType(1375, false, 'cards', 'pl1')).amount).toBeGreaterThan(0);
+    const atCap = await peb.getOrderType(MAX_CARDS_PHYSICAL, false, 'cards', 'pl1');
+    const above = await peb.getOrderType(MAX_CARDS_PHYSICAL + 500, false, 'cards', 'pl1');
+    expect(above.amount).toBe(atCap.amount);
+  });
+
+  it('prices the digital product', async () => {
     const r = await peb.getOrderType(100, true, 'cards', 'pl1');
-    expect(prismaMock.orderType.findFirst).toHaveBeenCalledWith({
-      where: { type: 'cards', digital: true },
-      orderBy: [{ maxCards: 'asc' }],
-    });
+    expect(r.digital).toBe(true);
     expect(r.amount).toBe(13);
-    expect(cacheMock.set).toHaveBeenCalledWith(
-      'orderType_1_cards',
-      expect.any(String)
-    );
   });
 
   it('clamps digital track counts to MAX_CARDS (3000) for the price calculation', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 1,
-      maxCards: 3000,
-      amountWithMargin: 13,
-    });
     const r = await peb.getOrderType(5000, true, 'cards', 'pl1');
     // calculateCardPrice(13, 3000) at the 50% cap → 39
     expect(r.amount).toBe(39);
   });
 
-  it('serves the order type from cache but still recomputes the amount', async () => {
-    cacheMock.get.mockResolvedValue(
-      JSON.stringify({ id: 2, maxCards: 500, amountWithMargin: 26 })
-    );
-    const r = await peb.getOrderType(100, false, 'cards', 'pl1');
-    expect(prismaMock.orderType.findFirst).not.toHaveBeenCalled();
-    expect(r.amount).toBe(26);
-  });
-
-  it('does not attach a computed amount for non-cards product types', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({ id: 5, maxCards: 1 });
+  it('answers 0 for a gift card, whose price is on the cart item', async () => {
     const r = await peb.getOrderType(1, true, 'giftcard', 'pl1');
-    expect(r).toEqual({ id: 5, maxCards: 1 });
+    expect(r).toEqual({ digital: true, amount: 0, alternatives: {} });
   });
 });
 
@@ -1384,11 +1328,6 @@ describe('processOrderRequest', () => {
           jsonResponse({ data: { ...order, id: null, status: 'Aangemaakt' } }),
       },
     ]);
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
   }
 
   /** Calls to exactly POST {PB}/orders (not /orders/calculate). */
@@ -1526,12 +1465,7 @@ describe('processOrderRequest', () => {
     expect(second).toMatchObject({ size: 'a4', borderless: false });
   });
 
-  it('totals digital items from the order type margin without any HTTP calls', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 1,
-      maxCards: 3000,
-      amountWithMargin: 15,
-    });
+  it('totals digital items from the calculated price without any HTTP calls', async () => {
     const result = await (peb as any).processOrderRequest(
       [
         {
@@ -1546,22 +1480,21 @@ describe('processOrderRequest', () => {
       {}
     );
     expect(fetchMock).not.toHaveBeenCalled();
-    // itemPrice = 15 × 2 = 30 · ex VAT = 30 / 1.21 = 24.79
+    // itemPrice = 13 (100 digital cards) × 2 = 26 · ex VAT = 26 / 1.21 = 21.49
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
       orderId: null,
-      total: 30,
+      total: 26,
       shipping: 0,
       handling: 0,
       taxRateShipping: 21,
       taxRate: 21,
-      price: 24.79,
+      price: 21.49,
       payment: 0,
     });
   });
 
   it('uses the item price directly for digital giftcards', async () => {
-    prismaMock.orderType.findFirst.mockResolvedValue({ id: 9, maxCards: 1 });
     const result = await (peb as any).processOrderRequest(
       [
         {
@@ -1598,11 +1531,6 @@ describe('processOrderRequest', () => {
           ),
       },
     ]);
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
     const result = await (peb as any).processOrderRequest(
       [physicalItem()],
       customerNL,
@@ -1653,11 +1581,6 @@ describe('processOrderRequest', () => {
             jsonResponse({ data: { ...orderResource(), id: null } }),
         },
       ]);
-      prismaMock.orderType.findFirst.mockResolvedValue({
-        id: 2,
-        maxCards: 500,
-        amountWithMargin: 26,
-      });
       const result = await (peb as any).processOrderRequest(
         [physicalItem()],
         customerNL,
@@ -2053,7 +1976,6 @@ describe('handleBoxInstructionMails', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: 'paid',
-          test: false,
           printApiShipped: true,
           boxInstructionsMailSent: false,
           PaymentHasPlaylist: {
@@ -2143,11 +2065,6 @@ describe('createOrder', () => {
     prismaMock.paymentHasPlaylistItem.findMany.mockResolvedValue([]);
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([]);
     prismaMock.payment.update.mockResolvedValue({});
-    prismaMock.orderType.findFirst.mockResolvedValue({
-      id: 2,
-      maxCards: 500,
-      amountWithMargin: 26,
-    });
   });
 
   it('builds the game card article from the playlist and places the order', async () => {

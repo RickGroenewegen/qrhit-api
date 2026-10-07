@@ -141,12 +141,12 @@ MAJOR FEATURE CATEGORIES (36 SECTIONS IN FULL DOCUMENT)
     - Draft/publish status
     - AI image descriptions
 
-18. VOTING & SUBMISSION SYSTEM (OnzeVibe)
-    - B2B company voting
+18. VOTING & SUBMISSION SYSTEM (business)
+    - B2B company voting (public page on qrsong.io/v/<slug>)
     - Email verification
     - Survey questions
     - Result aggregation
-    - PDF generation from votes
+    - Quotations & invoices (Tromp/Schneider pricing)
 
 19. GAMES SYSTEM
     - QRSong card games
@@ -267,7 +267,7 @@ REVENUE STREAMS:
 ✓ Physical QR card sales
 ✓ Digital card sales
 ✓ Sheet printing services
-✓ B2B voting system (OnzeVibe)
+✓ B2B voting system (QRSong! business)
 ✓ Game licensing/subscriptions
 ✓ Volume-based discounts
 
@@ -418,13 +418,13 @@ FILE STRUCTURE OVERVIEW
 ├── publicRoutes.ts (619 lines) - Public-facing features
 ├── musicRoutes.ts (434 lines) - Music/Spotify/track endpoints
 ├── gameRoutes.ts (169 lines) - Games system
-└── vibeRoutes.ts (973 lines) - B2B voting system
+└── companyRoutes.ts (3213 lines) - B2B business system
 
 /src/
 ├── mollie.ts (1304 lines) - Payment processing
 ├── mail.ts (1724 lines) - Email system
 ├── spotify.ts (1698 lines) - Music integration
-├── vibe.ts (3127 lines) - Voting system
+├── business.ts (3838 lines) - B2B business & voting system
 ├── data.ts (2812 lines) - Core data operations
 ├── generator.ts (1401 lines) - PDF generation
 ├── shipping.ts (1187 lines) - Fulfillment

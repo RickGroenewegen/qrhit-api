@@ -11,14 +11,13 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
-import Utils from '../../src/utils';
 
 /**
- * Integration coverage for the OnzeVibe company portal:
- * vibeRoutes.ts + vibe.ts (companies, lists, submissions, delivery
+ * Integration coverage for the business company admin:
+ * companyRoutes.ts + business.ts (companies, lists, submissions, delivery
  * addresses, intake forms, events, calculators, order email).
  */
-describe('vibe portal routes', () => {
+describe('business company routes', () => {
   let app: FastifyInstance;
   let admin: Awaited<ReturnType<typeof createTestUser>>;
   let plainUser: Awaited<ReturnType<typeof createTestUser>>;
@@ -29,23 +28,11 @@ describe('vibe portal routes', () => {
   let listId: number;
 
   beforeAll(async () => {
-    vi.spyOn(Utils.prototype, 'verifyRecaptcha').mockResolvedValue({
-      isHuman: true,
-      score: 0.9,
-    } as any);
     app = await buildTestApp();
     await resetDb();
     await seedBaseline();
     await flushTestRedis();
-    // groups used by the public company-list-create flow
-    await prisma().userGroup.createMany({
-      data: [
-        { id: 6, name: 'companyadmin' },
-        { id: 7, name: 'qrvoteadmin' },
-      ],
-      skipDuplicates: true,
-    });
-    admin = await createTestUser({ groups: ['admin'] });
+    admin =await createTestUser({ groups: ['admin'] });
     plainUser = await createTestUser({ groups: ['users'] });
     headers = authHeader(admin.token);
   });
@@ -57,14 +44,14 @@ describe('vibe portal routes', () => {
 
   describe('auth guards', () => {
     it('rejects unauthenticated access', async () => {
-      const res = await app.inject({ method: 'GET', url: '/vibe/companies' });
+      const res = await app.inject({ method: 'GET', url: '/business/companies' });
       expect(res.statusCode).toBe(401);
     });
 
     it('rejects users without an allowed group', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers: authHeader(plainUser.token),
       });
       expect(res.statusCode).toBe(403);
@@ -75,7 +62,7 @@ describe('vibe portal routes', () => {
     it('rejects creation without a name', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers,
         payload: { city: 'Amsterdam' },
       });
@@ -86,7 +73,7 @@ describe('vibe portal routes', () => {
     it('creates a company and auto-creates the contact user', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers,
         payload: {
           name: 'Acme Music BV',
@@ -115,7 +102,7 @@ describe('vibe portal routes', () => {
     it('refuses a duplicate company name', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers,
         payload: { name: 'Acme Music BV' },
       });
@@ -126,7 +113,7 @@ describe('vibe portal routes', () => {
     it('lists all companies for an admin', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -140,7 +127,7 @@ describe('vibe portal routes', () => {
     it('updates a company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}`,
+        url: `/business/companies/${companyId}`,
         headers,
         payload: { name: 'Acme Music BV', city: 'Rotterdam', locale: 'nl' },
       });
@@ -155,7 +142,7 @@ describe('vibe portal routes', () => {
     it('404s when updating an unknown company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/companies/999999',
+        url: '/business/companies/999999',
         headers,
         payload: { name: 'Ghost BV' },
       });
@@ -165,7 +152,7 @@ describe('vibe portal routes', () => {
     it('400s on a non-numeric company id', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/companies/abc',
+        url: '/business/companies/abc',
         headers,
         payload: { name: 'X' },
       });
@@ -175,7 +162,7 @@ describe('vibe portal routes', () => {
     it('returns the users of a company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/users/${companyId}`,
+        url: `/business/users/${companyId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -189,7 +176,7 @@ describe('vibe portal routes', () => {
     it('404s for users of an unknown company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/users/999999',
+        url: '/business/users/999999',
         headers,
       });
       expect(res.statusCode).toBe(404);
@@ -198,7 +185,7 @@ describe('vibe portal routes', () => {
     it('toggles the favorite flag', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/favorite`,
+        url: `/business/companies/${companyId}/favorite`,
         headers,
         payload: { favorite: true },
       });
@@ -207,7 +194,7 @@ describe('vibe portal routes', () => {
 
       const off = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/favorite`,
+        url: `/business/companies/${companyId}/favorite`,
         headers,
         payload: { favorite: false },
       });
@@ -217,7 +204,7 @@ describe('vibe portal routes', () => {
     it('404s favorite toggle for an unknown company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/companies/999999/favorite',
+        url: '/business/companies/999999/favorite',
         headers,
         payload: { favorite: true },
       });
@@ -229,7 +216,7 @@ describe('vibe portal routes', () => {
     it('rejects list creation with missing fields', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: { name: 'No slug' },
       });
@@ -239,7 +226,7 @@ describe('vibe portal routes', () => {
     it('creates a list', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: {
           name: 'Zomerfeest 2026',
@@ -260,7 +247,7 @@ describe('vibe portal routes', () => {
     it('refuses a duplicate slug', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: {
           name: 'Another',
@@ -276,7 +263,7 @@ describe('vibe portal routes', () => {
     it('404s when the company does not exist', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/companies/999999/lists',
+        url: '/business/companies/999999/lists',
         headers,
         payload: {
           name: 'Ghost',
@@ -292,7 +279,7 @@ describe('vibe portal routes', () => {
     it('returns company lists', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/company/${companyId}`,
+        url: `/business/company/${companyId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -303,7 +290,7 @@ describe('vibe portal routes', () => {
     it('updates list info fields', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: {
           name: 'Zomerfeest 2026 v2',
@@ -325,7 +312,7 @@ describe('vibe portal routes', () => {
     it('rejects an invalid status value', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: { status: 'not-a-status' },
       });
@@ -336,7 +323,7 @@ describe('vibe portal routes', () => {
     it('rejects a negative number field', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: { numberOfTracks: -2 },
       });
@@ -346,7 +333,7 @@ describe('vibe portal routes', () => {
     it('rejects an invalid date', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: { endAt: 'not-a-date' },
       });
@@ -356,7 +343,7 @@ describe('vibe portal routes', () => {
     it('rejects an empty body', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: {},
       });
@@ -368,7 +355,7 @@ describe('vibe portal routes', () => {
       // create a second list whose slug we collide with
       const other = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: {
           name: 'Kerstborrel',
@@ -381,7 +368,7 @@ describe('vibe portal routes', () => {
       expect(other.statusCode).toBe(201);
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/info`,
+        url: `/business/companies/${companyId}/lists/${listId}/info`,
         headers,
         payload: { slug: 'kerstborrel-2026' },
       });
@@ -391,17 +378,17 @@ describe('vibe portal routes', () => {
     it('404s info update on a list of another company', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/999999/lists/${listId}/info`,
+        url: `/business/companies/999999/lists/${listId}/info`,
         headers,
         payload: { name: 'Stolen' },
       });
       expect(res.statusCode).toBe(404);
     });
 
-    it('returns the vibe state of a list', async () => {
+    it('returns the state of a list', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/state/${listId}`,
+        url: `/business/state/${listId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -417,7 +404,7 @@ describe('vibe portal routes', () => {
     it('404s the state of an unknown list', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/state/999999',
+        url: '/business/state/999999',
         headers,
       });
       expect(res.statusCode).toBe(404);
@@ -430,7 +417,7 @@ describe('vibe portal routes', () => {
       });
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/production-lists',
+        url: '/business/production-lists',
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -449,7 +436,7 @@ describe('vibe portal routes', () => {
     it('deletes a list whatever its status', async () => {
       const created = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: {
           name: 'In productie',
@@ -466,7 +453,7 @@ describe('vibe portal routes', () => {
       });
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${tempId}`,
+        url: `/business/companies/${companyId}/lists/${tempId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -478,14 +465,14 @@ describe('vibe portal routes', () => {
     it('403s deleting a list through the wrong company', async () => {
       const other = await app.inject({
         method: 'POST',
-        url: '/vibe/companies',
+        url: '/business/companies',
         headers,
         payload: { name: 'Other Company BV' },
       });
       const otherCompanyId = other.json().company.id;
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${otherCompanyId}/lists/${listId}`,
+        url: `/business/companies/${otherCompanyId}/lists/${listId}`,
         headers,
       });
       expect(res.statusCode).toBe(403);
@@ -494,7 +481,7 @@ describe('vibe portal routes', () => {
     it('deletes a fresh list', async () => {
       const created = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists`,
+        url: `/business/companies/${companyId}/lists`,
         headers,
         payload: {
           name: 'Tijdelijk',
@@ -507,7 +494,7 @@ describe('vibe portal routes', () => {
       const tempId = created.json().listId;
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${tempId}`,
+        url: `/business/companies/${companyId}/lists/${tempId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -521,7 +508,7 @@ describe('vibe portal routes', () => {
     it('404s deleting an unknown list', async () => {
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/999999`,
+        url: `/business/companies/${companyId}/lists/999999`,
         headers,
       });
       expect(res.statusCode).toBe(404);
@@ -530,7 +517,7 @@ describe('vibe portal routes', () => {
     it('returns aggregate counts for a company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/counts`,
+        url: `/business/companies/${companyId}/counts`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -551,7 +538,7 @@ describe('vibe portal routes', () => {
       });
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/quotations`,
+        url: `/business/companies/${companyId}/quotations`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -567,7 +554,7 @@ describe('vibe portal routes', () => {
     it('starts with no addresses', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -577,7 +564,7 @@ describe('vibe portal routes', () => {
     it('requires name, address and country', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
         headers,
         payload: { name: 'Depot', address: '' },
       });
@@ -587,7 +574,7 @@ describe('vibe portal routes', () => {
     it('creates an address', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
         headers,
         payload: {
           name: 'Hoofdkantoor',
@@ -604,7 +591,7 @@ describe('vibe portal routes', () => {
     it('updates an address', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
         headers,
         payload: {
           name: 'Magazijn',
@@ -622,7 +609,7 @@ describe('vibe portal routes', () => {
       });
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/lists/${otherList!.id}/delivery-addresses/${addressId}`,
+        url: `/business/companies/${companyId}/lists/${otherList!.id}/delivery-addresses/${addressId}`,
         headers,
         payload: { name: 'X', address: 'Y', country: 'Z' },
       });
@@ -632,7 +619,7 @@ describe('vibe portal routes', () => {
     it('404s for a list that does not belong to the company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/999999/lists/${listId}/delivery-addresses`,
+        url: `/business/companies/999999/lists/${listId}/delivery-addresses`,
         headers,
       });
       expect(res.statusCode).toBe(404);
@@ -641,13 +628,13 @@ describe('vibe portal routes', () => {
     it('deletes an address', async () => {
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
       const del = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
+        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
         headers,
       });
       expect(del.statusCode).toBe(404);
@@ -675,7 +662,7 @@ describe('vibe portal routes', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/${listId}/order-email`,
+        url: `/business/companies/${companyId}/lists/${listId}/order-email`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -695,7 +682,7 @@ describe('vibe portal routes', () => {
     it('404s for an unknown list', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/lists/999999/order-email`,
+        url: `/business/companies/${companyId}/lists/999999/order-email`,
         headers,
       });
       expect(res.statusCode).toBe(404);
@@ -708,7 +695,7 @@ describe('vibe portal routes', () => {
     it('generates an intake token', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/lists/${listId}/intake-link`,
+        url: `/business/companies/${companyId}/lists/${listId}/intake-link`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -719,7 +706,7 @@ describe('vibe portal routes', () => {
     it('serves the intake data publicly by token', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/intake/${intakeToken}`,
+        url: `/business/intake/${intakeToken}`,
       });
       expect(res.statusCode).toBe(200);
       const body = res.json();
@@ -728,14 +715,14 @@ describe('vibe portal routes', () => {
     });
 
     it('400s a too-short token', async () => {
-      const res = await app.inject({ method: 'GET', url: '/vibe/intake/abc' });
+      const res = await app.inject({ method: 'GET', url: '/business/intake/abc' });
       expect(res.statusCode).toBe(400);
     });
 
     it('404s an unknown token', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/intake/unknown-token-unknown-token',
+        url: '/business/intake/unknown-token-unknown-token',
       });
       expect(res.statusCode).toBe(404);
     });
@@ -743,7 +730,7 @@ describe('vibe portal routes', () => {
     it('saves intake fields publicly', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/intake/${intakeToken}`,
+        url: `/business/intake/${intakeToken}`,
         payload: {
           musicWishes: 'Vooral jaren 90',
           numberOfCards: 144,
@@ -762,7 +749,7 @@ describe('vibe portal routes', () => {
     it('404s saving with an unknown token', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/intake/unknown-token-unknown-token',
+        url: '/business/intake/unknown-token-unknown-token',
         payload: { musicWishes: 'x' },
       });
       expect(res.statusCode).toBe(404);
@@ -804,7 +791,7 @@ describe('vibe portal routes', () => {
     it('updates the card name', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/submissions/${submissionId}`,
+        url: `/business/submissions/${submissionId}`,
         headers,
         payload: { cardName: 'Piet J.' },
       });
@@ -815,7 +802,7 @@ describe('vibe portal routes', () => {
     it('rejects an empty card name', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/submissions/${submissionId}`,
+        url: `/business/submissions/${submissionId}`,
         headers,
         payload: { cardName: '   ' },
       });
@@ -825,7 +812,7 @@ describe('vibe portal routes', () => {
     it('404s updating an unknown submission', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: '/vibe/submissions/999999',
+        url: '/business/submissions/999999',
         headers,
         payload: { cardName: 'Ghost' },
       });
@@ -835,7 +822,7 @@ describe('vibe portal routes', () => {
     it('verifies a submission', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/submissions/${submissionId}/verify`,
+        url: `/business/submissions/${submissionId}/verify`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -847,7 +834,7 @@ describe('vibe portal routes', () => {
     it('replaces a track across submissions', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/lists/${listId}/replace-track`,
+        url: `/business/lists/${listId}/replace-track`,
         headers,
         payload: { sourceTrackId: trackA.id, destinationTrackId: trackB.id },
       });
@@ -862,7 +849,7 @@ describe('vibe portal routes', () => {
     it('400s replace-track with missing params', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/lists/${listId}/replace-track`,
+        url: `/business/lists/${listId}/replace-track`,
         headers,
         payload: { sourceTrackId: trackA.id },
       });
@@ -872,7 +859,7 @@ describe('vibe portal routes', () => {
     it('includes the submission with voteCount in the state', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/state/${listId}`,
+        url: `/business/state/${listId}`,
         headers,
       });
       const body = res.json();
@@ -885,13 +872,13 @@ describe('vibe portal routes', () => {
     it('deletes a submission', async () => {
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/submissions/${submissionId}`,
+        url: `/business/submissions/${submissionId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
       const gone = await app.inject({
         method: 'DELETE',
-        url: `/vibe/submissions/${submissionId}`,
+        url: `/business/submissions/${submissionId}`,
         headers,
       });
       expect(gone.statusCode).toBe(404);
@@ -904,7 +891,7 @@ describe('vibe portal routes', () => {
     it('starts empty', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/vibe/companies/${companyId}/events`,
+        url: `/business/companies/${companyId}/events`,
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -914,7 +901,7 @@ describe('vibe portal routes', () => {
     it('creates an event from a JSON body', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/events`,
+        url: `/business/companies/${companyId}/events`,
         headers,
         payload: { content: 'Kickoff call gepland' },
       });
@@ -927,7 +914,7 @@ describe('vibe portal routes', () => {
     it('rejects an empty content', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: `/vibe/companies/${companyId}/events`,
+        url: `/business/companies/${companyId}/events`,
         headers,
         payload: { content: '   ' },
       });
@@ -937,7 +924,7 @@ describe('vibe portal routes', () => {
     it('updates an event', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/events/${eventId}`,
+        url: `/business/companies/${companyId}/events/${eventId}`,
         headers,
         payload: { content: 'Kickoff call verzet' },
       });
@@ -948,7 +935,7 @@ describe('vibe portal routes', () => {
     it('404s updating an unknown event', async () => {
       const res = await app.inject({
         method: 'PUT',
-        url: `/vibe/companies/${companyId}/events/999999`,
+        url: `/business/companies/${companyId}/events/999999`,
         headers,
         payload: { content: 'Ghost' },
       });
@@ -958,13 +945,13 @@ describe('vibe portal routes', () => {
     it('deletes an event', async () => {
       const res = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/events/${eventId}`,
+        url: `/business/companies/${companyId}/events/${eventId}`,
         headers,
       });
       expect(res.statusCode).toBe(200);
       const gone = await app.inject({
         method: 'DELETE',
-        url: `/vibe/companies/${companyId}/events/${eventId}`,
+        url: `/business/companies/${companyId}/events/${eventId}`,
         headers,
       });
       expect(gone.statusCode).toBe(404);
@@ -972,171 +959,10 @@ describe('vibe portal routes', () => {
   });
 
   describe('pricing calculators', () => {
-    it('calculates standard OnzeVibe pricing for the 100 tier', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 100,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const { calculation } = res.json();
-      expect(calculation.tierKey).toBe(100);
-      expect(calculation.pricing.commercialPricePerBox).toBe(44.95);
-      // kickback 3 + half reseller discount 1.5395 -> 4.54
-      expect(calculation.pricing.profitPerBox).toBe(4.54);
-      expect(calculation.pricing.clientPrice).toBe(4495);
-      expect(calculation.pricing.ourProfit).toBe(454);
-      expect(calculation.pricing.happiBoxPayment).toBe(4041);
-    });
-
-    it('drops project management when sold by onzevibe', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 100,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'onzevibe',
-          isReseller: false,
-          manualDiscount: 0,
-        },
-      });
-      const { calculation } = res.json();
-      expect(calculation.pricing.commercialPricePerBox).toBe(39.95);
-      expect(calculation.adjustments.adjustedProjectManagement).toBe(0);
-    });
-
-    it('uses tier brackets in standard mode', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 600,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: true,
-          manualDiscount: 0,
-        },
-      });
-      const { calculation } = res.json();
-      expect(calculation.tierKey).toBe(500);
-      expect(calculation.pricing.commercialPricePerBox).toBe(22.95);
-      // reseller keeps the reseller discount
-      expect(calculation.pricing.resellerProfit).toBe(
-        Math.round(3.46 * 600 * 100) / 100
-      );
-    });
-
-    it('interpolates between tiers in fluid mode', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 175,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-          fluidMode: true,
-        },
-      });
-      const { calculation } = res.json();
-      expect(calculation.tierKey).toBe(100);
-      // halfway between 44.95 and 30.95
-      expect(calculation.pricing.commercialPricePerBox).toBe(37.95);
-    });
-
-    it('caps fluid mode at the 5000 tier', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 6000,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-          fluidMode: true,
-        },
-      });
-      const { calculation } = res.json();
-      expect(calculation.tierKey).toBe(5000);
-      expect(calculation.pricing.commercialPricePerBox).toBe(16.95);
-    });
-
-    it('adds one-time custom app and voting portal fees', async () => {
-      const base = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 100,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-        },
-      });
-      const withExtras = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 100,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-          includeCustomApp: true,
-          includeVotingPortal: true,
-        },
-      });
-      const a = base.json().calculation.pricing;
-      const b = withExtras.json().calculation.pricing;
-      expect(b.clientPrice).toBe(a.clientPrice + 850);
-      expect(b.ourProfit).toBe(a.ourProfit + 850);
-    });
-
-    it('rejects an invalid quantity', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/calculate',
-        headers,
-        payload: {
-          quantity: 0,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'happibox',
-          isReseller: false,
-          manualDiscount: 0,
-        },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe('Invalid quantity');
-    });
-
     it('calculates Tromp pricing for own printing with extras', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-tromp',
+        url: '/business/calculate-tromp',
         headers,
         payload: {
           quantity: 100,
@@ -1160,7 +986,7 @@ describe('vibe portal routes', () => {
     it('calculates Tromp pricing for the luxe box', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-tromp',
+        url: '/business/calculate-tromp',
         headers,
         payload: {
           quantity: 100,
@@ -1180,7 +1006,7 @@ describe('vibe portal routes', () => {
     it('calculates Tromp pricing for the small pre-printed box', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-tromp',
+        url: '/business/calculate-tromp',
         headers,
         payload: {
           quantity: 100,
@@ -1200,7 +1026,7 @@ describe('vibe portal routes', () => {
     it('rejects an invalid Tromp quantity', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-tromp',
+        url: '/business/calculate-tromp',
         headers,
         payload: {
           quantity: 0,
@@ -1215,7 +1041,7 @@ describe('vibe portal routes', () => {
     it('calculates Schneider pricing for 96 cards', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-schneider',
+        url: '/business/calculate-schneider',
         headers,
         payload: {
           quantity: 100,
@@ -1236,7 +1062,7 @@ describe('vibe portal routes', () => {
     it('applies the 30% reseller discount on the 48-card tier price', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-schneider',
+        url: '/business/calculate-schneider',
         headers,
         payload: {
           quantity: 600,
@@ -1255,7 +1081,7 @@ describe('vibe portal routes', () => {
     it('adds the stansmes for 192 cards', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-schneider',
+        url: '/business/calculate-schneider',
         headers,
         payload: {
           quantity: 50,
@@ -1276,7 +1102,7 @@ describe('vibe portal routes', () => {
     it('rejects an invalid Schneider card count', async () => {
       const res = await app.inject({
         method: 'POST',
-        url: '/vibe/calculate-schneider',
+        url: '/business/calculate-schneider',
         headers,
         payload: {
           quantity: 100,
@@ -1294,7 +1120,7 @@ describe('vibe portal routes', () => {
     it('returns nulls when nothing is stored', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/pricing-tables/profit-config',
+        url: '/business/pricing-tables/profit-config',
         headers,
       });
       expect(res.statusCode).toBe(200);
@@ -1304,7 +1130,7 @@ describe('vibe portal routes', () => {
     it('stores and returns the config', async () => {
       const put = await app.inject({
         method: 'PUT',
-        url: '/vibe/pricing-tables/profit-config',
+        url: '/business/pricing-tables/profit-config',
         headers,
         payload: {
           profitMatrix: { schneider: { '100': 2 } },
@@ -1314,119 +1140,13 @@ describe('vibe portal routes', () => {
       expect(put.statusCode).toBe(200);
       const res = await app.inject({
         method: 'GET',
-        url: '/vibe/pricing-tables/profit-config',
+        url: '/business/pricing-tables/profit-config',
         headers,
       });
       expect(res.json()).toEqual({
         profitMatrix: { schneider: { '100': 2 } },
         defaultProfits: { schneider: { profit: 2 } },
       });
-    });
-  });
-
-  describe('public company list creation', () => {
-    it('rejects missing required fields', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: { fullname: 'Jan' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('rejects mismatching passwords', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: {
-          fullname: 'Klaas Visser',
-          company: 'Visser Events',
-          email: 'klaas@test.qrsong.io',
-          captchaToken: 'tok',
-          password1: 'Sup3rSecret!',
-          password2: 'Different1!',
-        },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe('Passwords do not match');
-    });
-
-    it('rejects a weak password', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: {
-          fullname: 'Klaas Visser',
-          company: 'Visser Events',
-          email: 'klaas@test.qrsong.io',
-          captchaToken: 'tok',
-          password1: 'alllowercase1!',
-          password2: 'alllowercase1!',
-        },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain('uppercase');
-    });
-
-    it('creates company, list and portal user', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: {
-          fullname: 'Klaas Visser',
-          company: 'Visser Events',
-          email: 'klaas@test.qrsong.io',
-          phone: '+31698765432',
-          captchaToken: 'tok',
-          password1: 'Sup3rSecret!',
-          password2: 'Sup3rSecret!',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.company.name).toBe('Visser Events');
-      expect(body.list.slug).toBe('visser-events');
-
-      const user = await prisma().user.findUnique({
-        where: { email: 'klaas@test.qrsong.io' },
-      });
-      expect(user).toBeTruthy();
-      expect(user!.companyId).toBe(body.company.id);
-      expect(user!.verified).toBe(true);
-    });
-
-    it('409s when the company already exists', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: {
-          fullname: 'Klaas Visser',
-          company: 'Visser Events',
-          email: 'klaas2@test.qrsong.io',
-          captchaToken: 'tok',
-        },
-      });
-      expect(res.statusCode).toBe(409);
-    });
-
-    it('rejects when the captcha fails', async () => {
-      (Utils.prototype.verifyRecaptcha as any).mockResolvedValueOnce({
-        isHuman: false,
-        score: 0.1,
-      });
-      const res = await app.inject({
-        method: 'POST',
-        url: '/vibe/companylist/create',
-        payload: {
-          fullname: 'Bot Botsson',
-          company: 'Botfarm BV',
-          email: 'bot@test.qrsong.io',
-          captchaToken: 'tok',
-        },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe('reCAPTCHA verification failed');
     });
   });
 });

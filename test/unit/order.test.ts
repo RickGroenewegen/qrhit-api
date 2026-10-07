@@ -11,7 +11,6 @@ const { prismaMock, cacheStore, pdfGenerateFromUrl, pdfResizePages, appDesignEnt
     prismaMock: {
       payment: { findUnique: vi.fn(), update: vi.fn() },
       paymentHasPlaylist: { count: vi.fn() },
-      orderType: { findMany: vi.fn() },
       user: { findUnique: vi.fn() },
     },
     cacheStore: new Map<string, string>(),
@@ -60,7 +59,6 @@ beforeEach(async () => {
   prismaMock.payment.findUnique.mockReset();
   prismaMock.payment.update.mockReset();
   prismaMock.paymentHasPlaylist.count.mockReset();
-  prismaMock.orderType.findMany.mockReset();
   pdfGenerateFromUrl.mockClear();
   pdfResizePages.mockClear();
   await fs.rm(INVOICE_DIR, { recursive: true, force: true });
@@ -98,33 +96,6 @@ describe('calculateDigitalCardPrice', () => {
     const at5000 = await order.calculateDigitalCardPrice(13, 5000);
     expect(at5000.discountPercentage).toBe(50);
     expect(at5000.totalPrice).toBe(65);
-  });
-});
-
-describe('getOrderTypes', () => {
-  const rows = [
-    { id: 1, name: 'digital', maxCards: 500, amountWithMargin: 5 },
-    { id: 2, name: 'small', maxCards: 100, amountWithMargin: 20 },
-  ];
-
-  it('queries visible order types for the product type and caches them', async () => {
-    prismaMock.orderType.findMany.mockResolvedValue(rows);
-    const result = await order.getOrderTypes('cards');
-    expect(result).toEqual(rows);
-    expect(prismaMock.orderType.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { visible: true, type: 'cards' },
-        orderBy: [{ digital: 'desc' }, { maxCards: 'asc' }],
-      })
-    );
-    expect(JSON.parse(cacheStore.get('orderTypes_cards')!)).toEqual(rows);
-  });
-
-  it('serves from the cache without hitting the database', async () => {
-    cacheStore.set('orderTypes_giftcard', JSON.stringify(rows));
-    const result = await order.getOrderTypes('giftcard');
-    expect(result).toEqual(rows);
-    expect(prismaMock.orderType.findMany).not.toHaveBeenCalled();
   });
 });
 

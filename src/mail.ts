@@ -880,216 +880,6 @@ class Mail {
     }
   }
 
-  /**
-   * Send a QRVote welcome email to a user for account verification.
-   * @param email The user's email address
-   * @param fullname The user's full name
-   * @param companyName The company name
-   * @param locale The user's locale (default: 'nl')
-   */
-  public async sendQRVoteWelcomeEmail(
-    email: string,
-    fullname: string,
-    companyName: string,
-    locale: string = 'nl',
-    verificationHash: string
-  ): Promise<void> {
-    if (!this.ses) return;
-
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-
-    // Fetch translations for QRVote welcome mail
-    const translations = await this.translation.getTranslationsByPrefix(
-      locale,
-      'qrvote_welcome'
-    );
-
-    const verifyUrl = `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`;
-
-    const mailParams = {
-      fullname: fullname || email.split('@')[0],
-      companyName,
-      verifyUrl,
-      productName: process.env['PRODUCT_NAME'],
-      currentYear: new Date().getFullYear(),
-      translations,
-    };
-
-    try {
-      // Read the logo file and convert it to Base64
-      const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
-
-      const html = await this.templates.render(
-        'mails/qrvote_welcome_html',
-        mailParams
-      );
-      const text = await this.templates.render(
-        'mails/qrvote_welcome_text',
-        mailParams
-      );
-
-      const subject = `Welcome to QRVote!`;
-
-      const attachments: Attachment[] = [
-        {
-          contentType: 'image/png',
-          filename: 'logo.png',
-          data: logoBase64,
-          isInline: true,
-          cid: 'logo',
-        },
-      ];
-
-      const rawEmail = await this.renderRaw(
-        {
-          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-          to: email,
-          subject,
-          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
-          text,
-          attachments,
-          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['REPLY_TO_EMAIL'],
-        },
-        false // No BCC for QRVote welcome emails
-      );
-
-      const emailBuffer = Buffer.from(rawEmail);
-
-      // Prepare and send the raw email
-      const command = new SendRawEmailCommand({
-        RawMessage: {
-          Data: emailBuffer,
-        },
-      });
-
-      await this.ses.send(command);
-      this.logger.log(
-        color.blue.bold(`QRVote welcome email sent to ${white.bold(email)}`)
-      );
-    } catch (error) {
-      console.error('Error while sending QRVote welcome email:', error);
-      this.logger.log(
-        color.red.bold(
-          `Failed to send QRVote welcome email to ${white.bold(
-            email
-          )}: ${error}`
-        )
-      );
-    }
-  }
-
-  /**
-   * Send a portal welcome email to a user with their portal credentials.
-   * @param email The user's email address
-   * @param fullname The user's full name
-   * @param companyName The company name
-   * @param portalUrl The portal URL
-   * @param username The username for the portal
-   * @param password The password for the portal
-   * @param locale The user's locale (default: 'nl')
-   */
-  public async sendPortalWelcomeEmail(
-    email: string,
-    fullname: string,
-    companyName: string,
-    portalUrl: string,
-    username: string,
-    password: string,
-    locale: string = 'nl',
-    adminUrl?: string // new param for admin URL
-  ): Promise<void> {
-    if (!this.ses) return;
-
-    const logoPath = `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
-
-    // Fetch translations for portal welcome mail
-    const translations = await this.translation.getTranslationsByPrefix(
-      locale,
-      'portal_welcome'
-    );
-
-    const mailParams = {
-      fullname: fullname || email.split('@')[0],
-      companyName,
-      portalUrl,
-      adminUrl,
-      username,
-      password,
-      productName: process.env['PRODUCT_NAME'],
-      currentYear: new Date().getFullYear(),
-      translations,
-    };
-
-    try {
-      // Read the logo file and convert it to Base64
-      const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
-
-      const html = await this.templates.render(
-        'mails/portal_welcome_html',
-        mailParams
-      );
-      const text = await this.templates.render(
-        'mails/portal_welcome_text',
-        mailParams
-      );
-
-      const subject = `Welkom bij je OnzeVibe portal!`;
-
-      const attachments: Attachment[] = [
-        {
-          contentType: 'image/png',
-          filename: 'onzevibe_logo.png',
-          data: logoBase64,
-          isInline: true,
-          cid: 'onzevibe_logo',
-        },
-      ];
-
-      const rawEmail = await this.renderRaw(
-        {
-          from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
-          to: email,
-          subject,
-          html: html.replace(
-            '<img src="logo.png"',
-            '<img src="cid:onzevibe_logo"'
-          ),
-          text,
-          attachments,
-          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['REPLY_TO_EMAIL'],
-        },
-        false // No BCC for portal welcome emails
-      );
-
-      const emailBuffer = Buffer.from(rawEmail);
-
-      // Prepare and send the raw email
-      const command = new SendRawEmailCommand({
-        RawMessage: {
-          Data: emailBuffer,
-        },
-      });
-
-      await this.ses.send(command);
-      this.logger.log(
-        color.blue.bold(`Portal welcome email sent to ${white.bold(email)}`)
-      );
-    } catch (error) {
-      console.error('Error while sending portal welcome email:', error);
-      this.logger.log(
-        color.red.bold(
-          `Failed to send portal welcome email to ${white.bold(
-            email
-          )}: ${error}`
-        )
-      );
-    }
-  }
-
   public static getInstance(): Mail {
     if (!Mail.instance) {
       Mail.instance = new Mail();
@@ -2565,9 +2355,8 @@ ${params.html}
   ): Promise<void> {
     if (!this.ses) return;
 
-    // The voting page is part of the site (/:lang/v/:slug) since the OnzeVibe
-    // portal was retired, so every voter gets the QRSong! mail, whatever the
-    // list's qrvote flag says.
+    // The voting page is part of the site (/:lang/v/:slug), so every voter
+    // gets the QRSong! mail, whatever the list's qrvote flag says.
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
     const templatePrefix = 'mails/qrvote_verification';
     const brandName = process.env['PRODUCT_NAME'];
@@ -2737,7 +2526,7 @@ ${params.html}
   ): Promise<{ flagged: number }> {
     let flagged = 0;
 
-    // Skip users in privileged groups (admin, vibeadmin, companyadmin, …) —
+    // Skip users in privileged groups (admin, companyadmin, …) —
     // mirrors the filter applied in uploadContacts so we don't leave their
     // sync flag permanently stuck on.
     const groupFilter = {

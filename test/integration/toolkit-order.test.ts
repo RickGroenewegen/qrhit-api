@@ -10,7 +10,7 @@ import MusicServiceRegistry from '../../src/services/MusicServiceRegistry';
 
 /**
  * The qrsong toolkit's order routes (src/routes/toolkitRoutes.ts): admin only,
- * an order on printer hold without Mollie or mails, and nothing for Print&Bind.
+ * an order without Mollie or mails, and nothing for Print&Bind.
  */
 describe('toolkit order routes', () => {
   let app: FastifyInstance;
@@ -68,7 +68,7 @@ describe('toolkit order routes', () => {
     expect(await prisma().payment.count()).toBe(0);
   });
 
-  it('creates the order on printer hold, reads it back, changes the design and regenerates without mail', async () => {
+  it('creates the order, reads it back, changes the design and regenerates without mail', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/admin/toolkit/order',
@@ -90,9 +90,8 @@ describe('toolkit order routes', () => {
 
     const payment = await prisma().payment.findUnique({ where: { paymentId: body.paymentId }, include: { PaymentHasPlaylist: true } });
     expect(payment!.status).toBe('paid');
-    expect(payment!.printerHold).toBe(true);
+    expect(payment!.printerHold).toBe(false);
     expect(payment!.marketingEmails).toBe(false);
-    expect(payment!.vibe).toBe(false);
     expect(payment!.PaymentHasPlaylist[0].printerType).toBe('schneiders');
     expect(payment!.PaymentHasPlaylist[0].backOpacity).toBe(100);
     expect(queueGenerate).toHaveBeenLastCalledWith(body.paymentId, '127.0.0.1', PLAYLIST, false, true, false);
@@ -100,7 +99,7 @@ describe('toolkit order routes', () => {
     const status = await app.inject({ method: 'GET', url: `/admin/toolkit/order/${body.paymentId}`, headers: admin });
     expect(status.statusCode).toBe(200);
     const order = status.json().order;
-    expect(order.printerHold).toBe(true);
+    expect(order.printerHold).toBe(false);
     expect(order.line.printerType).toBe('schneiders');
     expect(order.line.design.qrColor).toBe('#ffffff');
     expect(order.line.printerPdf).toBeNull();
@@ -121,9 +120,27 @@ describe('toolkit order routes', () => {
     // forceFinalize, skipMainMail
     expect(queueGenerate).toHaveBeenLastCalledWith(body.paymentId, expect.anything(), '', true, true, false);
 
-    // Off hold: the toolkit will not regenerate it any more.
-    await prisma().payment.update({ where: { id: payment!.id }, data: { printerHold: false } });
+    // At the printer: the toolkit will not regenerate it any more.
+    await prisma().payment.update({ where: { id: payment!.id }, data: { sentToPrinter: true } });
     const refused = await app.inject({ method: 'POST', url: `/admin/toolkit/order/${body.paymentId}/regenerate`, headers: admin });
     expect(refused.statusCode).toBe(409);
+  });
+
+  it('regenerates a Print&Bind order only while it is on printer hold', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/toolkit/order',
+      headers: admin,
+      payload: { email: 'owner@test.qrsong.io', playlistId: PLAYLIST, expectedTracks: 48 },
+    });
+    const { paymentId, paymentDbId } = res.json();
+    await prisma().paymentHasPlaylist.updateMany({ where: { paymentId: paymentDbId }, data: { printerType: 'printnbind' } });
+
+    const refused = await app.inject({ method: 'POST', url: `/admin/toolkit/order/${paymentId}/regenerate`, headers: admin });
+    expect(refused.statusCode).toBe(409);
+
+    await prisma().payment.update({ where: { id: paymentDbId }, data: { printerHold: true } });
+    const regen = await app.inject({ method: 'POST', url: `/admin/toolkit/order/${paymentId}/regenerate`, headers: admin });
+    expect(regen.statusCode).toBe(200);
   });
 });

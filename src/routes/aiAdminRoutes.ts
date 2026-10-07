@@ -123,7 +123,7 @@ export default async function aiAdminRoutes(
               playlistId: { in: spotifyIds },
               Payment: {
                 some: {
-                  payment: { status: 'paid', test: false },
+                  payment: { status: 'paid' },
                 },
               },
             },

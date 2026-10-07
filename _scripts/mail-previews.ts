@@ -19,9 +19,6 @@ const MAILS = path.resolve('src/templates/mails');
 const FRONTEND = 'https://www.qrsong.io';
 const API = 'https://api.qrsong.io';
 
-// Onze Vibe branded mails are not part of the QRSong! restyle
-const SKIP = new Set(['portal_welcome', 'verification']);
-
 // Templates whose translation prefix is not simply their own name
 const PREFIX: Record<string, string> = {
   promotional_sale: 'promotional_email',
@@ -132,7 +129,6 @@ async function main() {
   const written: string[] = [];
   for (const file of files) {
     const name = file.replace('_html.hbs', '');
-    if (SKIP.has(name)) continue;
     const prefix = PREFIX[name] ?? (en[`${name}.subject`] || en[`${name}.title`] ? name : 'mail');
     const data = { ...base, translations: { ...mail, ...byPrefix(prefix) } };
     try {

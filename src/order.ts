@@ -1,6 +1,5 @@
 import Log from './logger';
 import PrismaInstance from './prisma';
-import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
@@ -48,7 +47,6 @@ export function addAppDesignFee(result: any, params: any): any {
 class Order {
   private static instance: Order;
   private prisma = PrismaInstance.getInstance();
-  private cache = Cache.getInstance();
   private utils = new Utils();
   private spotify = Spotify.getInstance();
   private logger = new Log();
@@ -196,39 +194,6 @@ class Order {
       Order.instance = new Order();
     }
     return Order.instance;
-  }
-
-  public async getOrderTypes(type: string = 'cards') {
-    let orderTypes = null;
-    let cacheKey = `orderTypes_${type}`;
-    const cachedOrderType = await this.cache.get(cacheKey);
-    if (cachedOrderType) {
-      orderTypes = JSON.parse(cachedOrderType);
-    } else {
-      orderTypes = await this.prisma.orderType.findMany({
-        select: {
-          id: true,
-          name: true,
-          maxCards: true,
-          amountWithMargin: true,
-        },
-        where: {
-          visible: true,
-          type,
-        },
-        orderBy: [
-          {
-            digital: 'desc',
-          },
-          {
-            maxCards: 'asc',
-          },
-        ],
-      });
-      this.cache.set(cacheKey, JSON.stringify(orderTypes));
-    }
-
-    return orderTypes;
   }
 
   public async getOrderType(

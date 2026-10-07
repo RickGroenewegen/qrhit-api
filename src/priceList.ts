@@ -89,8 +89,8 @@ export async function buildPriceList(
   const calc: CostCalculator =
     calculate ??
     (async (params) => {
-      const Vibe = (await import('./vibe')).default;
-      return Vibe.getInstance().calculateSchneiderPricing(params);
+      const Business = (await import('./business')).default;
+      return Business.getInstance().calculateSchneiderPricing(params);
     });
 
   const rows: PriceListRow[] = [];

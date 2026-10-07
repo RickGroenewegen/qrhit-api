@@ -513,7 +513,7 @@ class Discount {
     }
   }
 
-  /** Mint a fixed voucher (gift cards, vibe free orders, Excel imports). */
+  /** Mint a fixed voucher (gift cards, Excel imports). */
   public async createDiscountCode(
     amount: number,
     from: string,

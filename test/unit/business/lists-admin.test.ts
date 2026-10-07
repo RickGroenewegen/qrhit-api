@@ -1,29 +1,29 @@
 /**
- * Unit tests for src/vibe.ts — company/list admin CRUD, production list
+ * Unit tests for src/business.ts — company/list admin CRUD, production list
  * overview, the Dutch printer order e-mail builder, quotation PDF fetch
  * and the processAndSaveImage helper.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
-import { h, resetAll, TEST_LOCALES } from './vibe-mocks';
+import { h, resetAll, TEST_LOCALES } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
-vi.mock('sharp', async () => (await import('./vibe-mocks')).sharpModule());
-vi.mock('fs/promises', async () => (await import('./vibe-mocks')).fsModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
+vi.mock('sharp', async () => (await import('./business-mocks')).sharpModule());
+vi.mock('fs/promises', async () => (await import('./business-mocks')).fsModule());
 
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 beforeEach(() => {
   resetAll();
@@ -31,12 +31,12 @@ beforeEach(() => {
 
 describe('updateCompany', () => {
   it('requires a company id and an existing company', async () => {
-    expect(await vibe.updateCompany(0, {})).toMatchObject({
+    expect(await business.updateCompany(0, {})).toMatchObject({
       success: false,
       error: 'No company ID provided',
     });
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.updateCompany(1, {})).toMatchObject({
+    expect(await business.updateCompany(1, {})).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -47,7 +47,7 @@ describe('updateCompany', () => {
     h.prisma.company.update.mockResolvedValue({ id: 1, name: 'Renamed' });
     h.prisma.companyList.updateMany.mockResolvedValue({ count: 1 });
 
-    const res = await vibe.updateCompany(1, {
+    const res = await business.updateCompany(1, {
       name: 'Renamed',
       followUp: true,
       excludeFromMailing: true,
@@ -70,7 +70,7 @@ describe('updateCompany', () => {
 
   it('maps prisma errors', async () => {
     h.prisma.company.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.updateCompany(1, {})).toMatchObject({
+    expect(await business.updateCompany(1, {})).toMatchObject({
       success: false,
       error: 'Error updating company',
     });
@@ -79,9 +79,9 @@ describe('updateCompany', () => {
 
 describe('getCompanyLists / getAllCompanies', () => {
   it('getCompanyLists validates and fetches lists newest-first', async () => {
-    expect(await vibe.getCompanyLists(0)).toMatchObject({ success: false });
+    expect(await business.getCompanyLists(0)).toMatchObject({ success: false });
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.getCompanyLists(1)).toMatchObject({
+    expect(await business.getCompanyLists(1)).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -89,7 +89,7 @@ describe('getCompanyLists / getAllCompanies', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1 });
     const lists = [{ id: 9 }];
     h.prisma.companyList.findMany.mockResolvedValue(lists);
-    const res = await vibe.getCompanyLists(1);
+    const res = await business.getCompanyLists(1);
     expect(res).toEqual({ success: true, data: { companyLists: lists } });
     expect(h.prisma.companyList.findMany).toHaveBeenCalledWith({
       where: { companyId: 1 },
@@ -99,11 +99,11 @@ describe('getCompanyLists / getAllCompanies', () => {
 
   it('getAllCompanies hides admin-only companies from non-admins', async () => {
     h.prisma.company.findMany.mockResolvedValue([]);
-    await vibe.getAllCompanies(['companyadmin']);
+    await business.getAllCompanies(['companyadmin']);
     expect(h.prisma.company.findMany.mock.calls[0][0].where).toEqual({
       onlyForAdmin: false,
     });
-    await vibe.getAllCompanies(['admin']);
+    await business.getAllCompanies(['admin']);
     expect(h.prisma.company.findMany.mock.calls[1][0].where).toEqual({});
   });
 
@@ -111,7 +111,7 @@ describe('getCompanyLists / getAllCompanies', () => {
     h.prisma.company.findMany.mockResolvedValue([
       { id: 1, name: 'A', _count: { CompanyList: 3 } },
     ]);
-    const res = await vibe.getAllCompanies(['admin']);
+    const res = await business.getAllCompanies(['admin']);
     expect(res.success).toBe(true);
     expect(res.data.companies[0]).toMatchObject({
       id: 1,
@@ -122,7 +122,7 @@ describe('getCompanyLists / getAllCompanies', () => {
 
   it('getAllCompanies maps errors', async () => {
     h.prisma.company.findMany.mockRejectedValue(new Error('x'));
-    expect(await vibe.getAllCompanies()).toMatchObject({
+    expect(await business.getAllCompanies()).toMatchObject({
       success: false,
       error: 'Error retrieving companies',
     });
@@ -131,12 +131,12 @@ describe('getCompanyLists / getAllCompanies', () => {
 
 describe('deleteCompany', () => {
   it('validates the id and existence', async () => {
-    expect(await vibe.deleteCompany(NaN)).toMatchObject({
+    expect(await business.deleteCompany(NaN)).toMatchObject({
       success: false,
       error: 'Invalid company ID provided',
     });
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.deleteCompany(1)).toMatchObject({
+    expect(await business.deleteCompany(1)).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -148,7 +148,7 @@ describe('deleteCompany', () => {
       name: 'A',
       _count: { CompanyList: 2 },
     });
-    expect(await vibe.deleteCompany(1)).toMatchObject({
+    expect(await business.deleteCompany(1)).toMatchObject({
       success: false,
       error: 'Company cannot be deleted because it has associated lists',
     });
@@ -162,7 +162,7 @@ describe('deleteCompany', () => {
       _count: { CompanyList: 0 },
     });
     h.prisma.company.delete.mockResolvedValue({});
-    expect(await vibe.deleteCompany(1)).toEqual({ success: true });
+    expect(await business.deleteCompany(1)).toEqual({ success: true });
     expect(h.prisma.company.delete).toHaveBeenCalledWith({ where: { id: 1 } });
   });
 });
@@ -176,18 +176,18 @@ describe('createCompanyList', () => {
   };
 
   it('validates ids, required fields and numeric ranges', async () => {
-    expect(await vibe.createCompanyList(NaN, valid)).toMatchObject({
+    expect(await business.createCompanyList(NaN, valid)).toMatchObject({
       success: false,
       error: 'Ongeldig bedrijfs-ID opgegeven',
     });
     expect(
-      await vibe.createCompanyList(1, { ...valid, name: '' })
+      await business.createCompanyList(1, { ...valid, name: '' })
     ).toMatchObject({
       success: false,
       error: 'Verplichte velden voor de bedrijfslijst ontbreken',
     });
     expect(
-      await vibe.createCompanyList(1, { ...valid, numberOfCards: -1 })
+      await business.createCompanyList(1, { ...valid, numberOfCards: -1 })
     ).toMatchObject({
       success: false,
       error: 'Ongeldig aantal voor kaarten of nummers',
@@ -196,14 +196,14 @@ describe('createCompanyList', () => {
 
   it('requires an existing company and a globally unique slug', async () => {
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.createCompanyList(1, valid)).toMatchObject({
+    expect(await business.createCompanyList(1, valid)).toMatchObject({
       success: false,
       error: 'Bedrijf niet gevonden',
     });
 
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'A' });
     h.prisma.companyList.findFirst.mockResolvedValue({ id: 2, slug: 'lijst' });
-    expect(await vibe.createCompanyList(1, valid)).toMatchObject({
+    expect(await business.createCompanyList(1, valid)).toMatchObject({
       success: false,
       error: 'Slug bestaat al. Kies een unieke slug.',
     });
@@ -217,7 +217,7 @@ describe('createCompanyList', () => {
       ...data,
     }));
 
-    const res = await vibe.createCompanyList(1, {
+    const res = await business.createCompanyList(1, {
       ...valid,
       description_en: 'Hello',
       description_nl: 'Hallo',
@@ -247,7 +247,7 @@ describe('createCompanyList', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'A' });
     h.prisma.companyList.findFirst.mockResolvedValue(null);
     h.prisma.companyList.create.mockImplementation(async ({ data }: any) => data);
-    await vibe.createCompanyList(1, valid);
+    await business.createCompanyList(1, valid);
     expect(h.prisma.companyList.create.mock.calls[0][0].data).toMatchObject({
       playlistSource: 'own',
       playlistUrl: null,
@@ -264,7 +264,7 @@ describe('createCompanyList', () => {
         meta: { target: ['slug'] },
       })
     );
-    expect(await vibe.createCompanyList(1, valid)).toMatchObject({
+    expect(await business.createCompanyList(1, valid)).toMatchObject({
       success: false,
       error: 'Slug bestaat al. Kies een unieke slug.',
     });
@@ -274,7 +274,7 @@ describe('createCompanyList', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'A' });
     h.prisma.companyList.findFirst.mockResolvedValue(null);
     h.prisma.companyList.create.mockRejectedValue(new Error('db'));
-    expect(await vibe.createCompanyList(1, valid)).toMatchObject({
+    expect(await business.createCompanyList(1, valid)).toMatchObject({
       success: false,
       error: 'Fout bij het aanmaken van de bedrijfslijst',
     });
@@ -283,11 +283,11 @@ describe('createCompanyList', () => {
 
 describe('deleteCompanyList', () => {
   it('validates ids, ownership and status', async () => {
-    expect(await vibe.deleteCompanyList(NaN, 1)).toMatchObject({ success: false });
-    expect(await vibe.deleteCompanyList(1, NaN)).toMatchObject({ success: false });
+    expect(await business.deleteCompanyList(NaN, 1)).toMatchObject({ success: false });
+    expect(await business.deleteCompanyList(1, NaN)).toMatchObject({ success: false });
 
     h.prisma.companyList.findUnique.mockResolvedValueOnce(null);
-    expect(await vibe.deleteCompanyList(1, 2)).toMatchObject({
+    expect(await business.deleteCompanyList(1, 2)).toMatchObject({
       success: false,
       error: 'Company list not found',
     });
@@ -297,7 +297,7 @@ describe('deleteCompanyList', () => {
       companyId: 9,
       status: 'new',
     });
-    expect(await vibe.deleteCompanyList(1, 2)).toMatchObject({
+    expect(await business.deleteCompanyList(1, 2)).toMatchObject({
       success: false,
       error: 'List does not belong to this company',
     });
@@ -314,7 +314,7 @@ describe('deleteCompanyList', () => {
         status,
       });
       h.prisma.companyList.delete.mockResolvedValue({});
-      expect(await vibe.deleteCompanyList(1, 2)).toEqual({ success: true });
+      expect(await business.deleteCompanyList(1, 2)).toEqual({ success: true });
       expect(h.prisma.companyList.delete).toHaveBeenCalledWith({ where: { id: 2 } });
     });
   }
@@ -361,7 +361,7 @@ describe('getProductionLists', () => {
         id: 3,
         companyId: 9,
         Company: { id: 9, name: 'C' },
-        name: 'Vibe lijst',
+        name: 'Lijst zonder printer',
         slug: 'c',
         printer: null,
         status: 'production',
@@ -372,7 +372,7 @@ describe('getProductionLists', () => {
       },
     ]);
 
-    const res = await vibe.getProductionLists();
+    const res = await business.getProductionLists();
     expect(res.success).toBe(true);
     expect(res.data).toHaveLength(3);
     expect(res.data[0]).toMatchObject({
@@ -399,7 +399,7 @@ describe('getProductionLists', () => {
 
   it('maps errors', async () => {
     h.prisma.companyList.findMany.mockRejectedValue(new Error('x'));
-    expect(await vibe.getProductionLists()).toMatchObject({
+    expect(await business.getProductionLists()).toMatchObject({
       success: false,
       error: 'Error getting production lists',
     });
@@ -436,12 +436,12 @@ describe('getOrderEmail', () => {
 
   it('rejects unknown lists or other companies', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(null);
-    expect(await vibe.getOrderEmail(1, 2)).toMatchObject({
+    expect(await business.getOrderEmail(1, 2)).toMatchObject({
       success: false,
       error: 'List not found',
     });
     h.prisma.companyList.findUnique.mockResolvedValue(baseList({ companyId: 99 }));
-    expect(await vibe.getOrderEmail(1, 2)).toMatchObject({
+    expect(await business.getOrderEmail(1, 2)).toMatchObject({
       success: false,
       error: 'List not found',
     });
@@ -464,7 +464,7 @@ describe('getOrderEmail', () => {
         },
       })
     );
-    const d = (await vibe.getOrderEmail(1, 2)).data;
+    const d = (await business.getOrderEmail(1, 2)).data;
     expect(d.warnings).toEqual([]);
     expect(d.addressCount).toBe(2);
     expect(d.text).toContain('Adres 1: 5 stuks');
@@ -485,7 +485,7 @@ describe('getOrderEmail', () => {
         Company: { id: 1, name: 'Van Haren', deliveryAddress: 'Elders', deliveryCity: 'Utrecht' },
       })
     );
-    const d = (await vibe.getOrderEmail(1, 2)).data;
+    const d = (await business.getOrderEmail(1, 2)).data;
     expect(d.text).toContain('Van Haren\nt.a.v. Receptie\nHoofdstraat 1\n2000 Antwerpen\nBE');
     expect(d.text).not.toContain('Utrecht');
   });
@@ -494,7 +494,7 @@ describe('getOrderEmail', () => {
     h.prisma.companyList.findUnique.mockResolvedValue(
       baseList({ deliveryAsap: true, desiredDeliveryDate: null })
     );
-    const d = (await vibe.getOrderEmail(1, 2)).data;
+    const d = (await business.getOrderEmail(1, 2)).data;
     expect(d.warnings).toEqual([]);
     expect(d.text).toContain('De wens is dat het zo snel mogelijk (z.s.m.) geleverd wordt.');
     expect(d.html).toContain('<strong>zo snel mogelijk (z.s.m.)</strong>');
@@ -503,7 +503,7 @@ describe('getOrderEmail', () => {
 
   it('builds a complete Schneider order mail without warnings', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(baseList());
-    const res = await vibe.getOrderEmail(1, 2);
+    const res = await business.getOrderEmail(1, 2);
     expect(res.success).toBe(true);
     const d = res.data;
 
@@ -545,7 +545,7 @@ describe('getOrderEmail', () => {
     h.prisma.companyList.findUnique.mockResolvedValue(
       baseList({ calculationSchneider: JSON.stringify({ quantity: 5, cardCount: 60 }) })
     );
-    const res = await vibe.getOrderEmail(1, 2);
+    const res = await business.getOrderEmail(1, 2);
     expect(res.data.text).toContain('60 kaarten (2x 48 in banderol)');
   });
 
@@ -556,7 +556,7 @@ describe('getOrderEmail', () => {
         calculationTromp: JSON.stringify({ quantity: 8, printingType: 'luxe' }),
       })
     );
-    const res = await vibe.getOrderEmail(1, 2);
+    const res = await business.getOrderEmail(1, 2);
     expect(res.data.totalBoxes).toBe(8);
     expect(res.data.text).toContain('luxe doos met 200 kaarten + bedrukte chips');
   });
@@ -572,7 +572,7 @@ describe('getOrderEmail', () => {
         numberOfCards: 200,
       })
     );
-    const res = await vibe.getOrderEmail(1, 2);
+    const res = await business.getOrderEmail(1, 2);
     expect(res.success).toBe(true);
     const d = res.data;
 
@@ -583,8 +583,7 @@ describe('getOrderEmail', () => {
     expect(d.addressCount).toBe(1);
     expect(d.text).toContain('op één verschillende adressen');
 
-    // A list without a printer (or the retired OnzeVibe one) is ordered as
-    // Schneider, the default.
+    // A list without a printer is ordered as Schneider, the default.
     expect(d.text).toContain('dekseldoosje');
     expect(d.warnings).toEqual([
       expect.stringContaining('Geen aantal dozen gevonden'),
@@ -596,7 +595,7 @@ describe('getOrderEmail', () => {
 
   it('maps errors', async () => {
     h.prisma.companyList.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.getOrderEmail(1, 2)).toMatchObject({
+    expect(await business.getOrderEmail(1, 2)).toMatchObject({
       success: false,
       error: 'Error building order email',
     });
@@ -617,19 +616,19 @@ describe('getQuotationPDF', () => {
   }
 
   it('forbids companyadmins from fetching other companies', async () => {
-    const res = await vibe.getQuotationPDF(1, 4, ['companyadmin'], 2);
+    const res = await business.getQuotationPDF(1, 4, ['companyadmin'], 2);
     expect(res).toMatchObject({ success: false, error: 'Forbidden' });
     expect(h.prisma.quotation.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects unknown quotations and company mismatches', async () => {
     h.prisma.quotation.findUnique.mockResolvedValueOnce(null);
-    expect(await vibe.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
+    expect(await business.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
       success: false,
       error: 'Quotation not found',
     });
     h.prisma.quotation.findUnique.mockResolvedValueOnce({ id: 4, companyId: 9 });
-    expect(await vibe.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
+    expect(await business.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
       success: false,
       error: 'Quotation not found',
     });
@@ -638,7 +637,7 @@ describe('getQuotationPDF', () => {
   it('reports a missing archived PDF', async () => {
     arrangeQuotation();
     h.fs.access.mockRejectedValue(new Error('ENOENT'));
-    expect(await vibe.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
+    expect(await business.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
       success: false,
       error: 'Archived PDF not found',
     });
@@ -651,7 +650,7 @@ describe('getQuotationPDF', () => {
     h.fs.access.mockResolvedValue(undefined);
     h.fs.readFile.mockResolvedValue(Buffer.from('%PDF-fake'));
 
-    const res = await vibe.getQuotationPDF(1, 4, ['admin']);
+    const res = await business.getQuotationPDF(1, 4, ['admin']);
     expect(res.filename).toBe('Angebot_Acme_Co__QRS12345678.pdf');
   });
 
@@ -661,7 +660,7 @@ describe('getQuotationPDF', () => {
     const pdf = Buffer.from('%PDF-fake');
     h.fs.readFile.mockResolvedValue(pdf);
 
-    const res = await vibe.getQuotationPDF(1, 4, ['companyadmin'], 1);
+    const res = await business.getQuotationPDF(1, 4, ['companyadmin'], 1);
     expect(res.success).toBe(true);
     expect(res.data).toBe(pdf);
     expect(res.filename).toBe('Offerte_Acme_Co__QRS12345678.pdf');
@@ -673,7 +672,7 @@ describe('getQuotationPDF', () => {
 
 describe('generateQuotationPDF — guard branches', () => {
   it('forbids companyadmins from generating for other companies', async () => {
-    const res = await vibe.generateQuotationPDF(1, 9, ['companyadmin'], 2);
+    const res = await business.generateQuotationPDF(1, 9, ['companyadmin'], 2);
     expect(res).toMatchObject({
       success: false,
       error: 'Forbidden: You can only generate quotations for your own company',
@@ -682,7 +681,7 @@ describe('generateQuotationPDF — guard branches', () => {
 
   it('fails cleanly when companies cannot be fetched', async () => {
     h.prisma.company.findMany.mockRejectedValue(new Error('db'));
-    expect(await vibe.generateQuotationPDF(1, 9, ['admin'])).toMatchObject({
+    expect(await business.generateQuotationPDF(1, 9, ['admin'])).toMatchObject({
       success: false,
       error: 'Failed to fetch companies',
     });
@@ -692,7 +691,7 @@ describe('generateQuotationPDF — guard branches', () => {
     h.prisma.company.findMany.mockResolvedValue([
       { id: 2, name: 'Other', _count: { CompanyList: 0 } },
     ]);
-    expect(await vibe.generateQuotationPDF(1, 9, ['admin'])).toMatchObject({
+    expect(await business.generateQuotationPDF(1, 9, ['admin'])).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -700,12 +699,12 @@ describe('generateQuotationPDF — guard branches', () => {
 });
 
 describe('processAndSaveImage (private)', () => {
-  const anyVibe = vibe as any;
+  const anyBusiness = business as any;
 
   it('returns null when no file part is provided', async () => {
-    expect(await anyVibe.processAndSaveImage(null, 5, 'background')).toBeNull();
+    expect(await anyBusiness.processAndSaveImage(null, 5, 'background')).toBeNull();
     expect(
-      await anyVibe.processAndSaveImage({ filename: '' }, 5, 'background')
+      await anyBusiness.processAndSaveImage({ filename: '' }, 5, 'background')
     ).toBeNull();
     expect(h.fs.writeFile).not.toHaveBeenCalled();
   });
@@ -717,7 +716,7 @@ describe('processAndSaveImage (private)', () => {
       filename: 'Logo.JPG',
       toBuffer: vi.fn(async () => Buffer.from('img')),
     };
-    const name = await anyVibe.processAndSaveImage(part, 5, 'votingLogo');
+    const name = await anyBusiness.processAndSaveImage(part, 5, 'votingLogo');
     expect(name).toBe('card_votingLogo_5_RANDOM32.jpg');
     expect(h.fs.mkdir).toHaveBeenCalledWith(
       path.join(process.env['PUBLIC_DIR'] as string, 'companydata', 'backgrounds'),
@@ -737,6 +736,6 @@ describe('processAndSaveImage (private)', () => {
         throw new Error('stream broke');
       }),
     };
-    expect(await anyVibe.processAndSaveImage(part, 5, 'background')).toBeNull();
+    expect(await anyBusiness.processAndSaveImage(part, 5, 'background')).toBeNull();
   });
 });

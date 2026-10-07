@@ -4,7 +4,6 @@ import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import Data from './data';
-import Order from './order';
 import Generator from './generator';
 import Utils from './utils';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
@@ -22,11 +21,10 @@ import { PRINTER_TYPE, PRINTER_TYPES, PrinterType } from './config/constants';
  *
  * - no Mollie payment, no invoice, no mail, no Pushover: status `paid`,
  *   totals 0, `marketingEmails` off, generation queued with skipMainMail;
- * - printerHold on from the first moment. The hourly send-to-printer pass
- *   does not look at printerType: without the hold a Schneiders order is
- *   placed at Print&Bind once its 36 hour timer runs out (orders 8194 and
- *   8237 were). The reason stays null, i.e. a hold placed by hand, which
- *   nothing clears automatically;
+ * - no printer hold: sendToPrinter only ever sends printnbind playlists, so
+ *   the hourly pass leaves these alone. (Until 2026-10-07 it did not look at
+ *   the printer type and these orders were created on hold; orders 8194 and
+ *   8237 went to Print&Bind before that.);
  * - Print&Bind and the reseller printer type are refused.
  *
  * What still mails: finishing the year check of the last unchecked track
@@ -147,7 +145,6 @@ class ToolkitOrder {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private data = Data.getInstance();
-  private order = Order.getInstance();
   private generator = Generator.getInstance();
   private utils = new Utils();
   private registry = MusicServiceRegistry.getInstance();
@@ -198,13 +195,11 @@ class ToolkitOrder {
       serviceType: 'spotify',
     };
     const [playlistDbId] = await this.data.storePlaylists(user.id, [cartItem]);
-    const orderType = await this.order.getOrderType(trackCount, false, 'cards', input.playlistId, 'none');
 
     const paymentId = `toolkit_${this.utils.generateRandomString(16)}`;
     const created = await this.prisma.payment.create({
       data: {
         paymentId,
-        vibe: false,
         user: { connect: { id: user.id } },
         totalPrice: 0,
         totalPriceWithoutTax: 0,
@@ -218,7 +213,6 @@ class ToolkitOrder {
         shippingVATPrice: 0,
         totalVATPrice: 0,
         clientIp: '127.0.0.1',
-        test: false,
         profit: 0,
         printApiPrice: 0,
         discount: 0,
@@ -227,12 +221,10 @@ class ToolkitOrder {
         companyName: input.companyName?.trim() || '',
         isBusinessOrder: !!input.companyName,
         marketingEmails: false,
-        printerHold: true,
         PaymentHasPlaylist: {
           create: [
             {
               playlistId: playlistDbId,
-              orderTypeId: orderType.id,
               amount,
               numberOfTracks: trackCount,
               type: 'physical',
@@ -266,7 +258,7 @@ class ToolkitOrder {
       color.green.bold(
         `[${white.bold('Toolkit')}] Order ${white.bold(orderId)} (${white.bold(paymentId)}): ${white.bold(
           playlistData.name
-        )}, ${white.bold(trackCount)} tracks, printer ${white.bold(printerType)}, on printer hold`
+        )}, ${white.bold(trackCount)} tracks, printer ${white.bold(printerType)}`
       )
     );
 

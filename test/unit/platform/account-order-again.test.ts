@@ -46,7 +46,7 @@ function line(overrides: Record<string, any> = {}) {
     boxEnabled: true,
     boxFrontBackground: 'box-front.png',
     boxBackText: 'Happy 40th',
-    payment: { userId: 7, status: 'paid', vibe: false },
+    payment: { userId: 7, status: 'paid' },
     playlist: { playlistId: 'sp-1', serviceType: 'spotify', type: 'cards', name: 'Road Trip Hits', image: 'cover.jpg' },
     extraDesigns: [{ background: 'second.png', qrColor: '#445566' }],
     ...overrides,
@@ -110,16 +110,14 @@ describe('order again', () => {
   it('is not found for someone else\'s order or an unpaid one', async () => {
     h.lines.set(12, line());
     expect((await get(12, 'bob@example.com')).statusCode).toBe(404);
-    h.lines.set(15, line({ id: 15, payment: { userId: 7, status: 'open', vibe: false } }));
+    h.lines.set(15, line({ id: 15, payment: { userId: 7, status: 'open' } }));
     expect((await get(15)).statusCode).toBe(404);
     expect((await get(999)).statusCode).toBe(404);
     expect((await get('abc')).statusCode).toBe(400);
   });
 
-  it('refuses gift cards and business orders', async () => {
+  it('refuses gift cards', async () => {
     h.lines.set(16, line({ id: 16, playlist: { ...line().playlist, type: 'giftcard' } }));
-    h.lines.set(17, line({ id: 17, payment: { userId: 7, status: 'paid', vibe: true } }));
     expect((await get(16)).json()).toMatchObject({ success: false, error: 'notReorderable' });
-    expect((await get(17)).statusCode).toBe(400);
   });
 });

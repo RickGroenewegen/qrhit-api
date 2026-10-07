@@ -158,12 +158,6 @@ class PrintEnBind {
     return (await this.active()).calculateSingleItem(...args);
   }
 
-  public async getOrderTypes(
-    ...args: Parameters<PrintEnBindV2['getOrderTypes']>
-  ) {
-    return (await this.active()).getOrderTypes(...args);
-  }
-
   public async getOrderType(
     ...args: Parameters<PrintEnBindV2['getOrderType']>
   ) {

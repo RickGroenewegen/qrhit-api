@@ -329,7 +329,7 @@ export class ChannableService {
     const rows: FeedRow[] = [];
     let skippedNoImage = 0;
 
-    // Price comes from the same OrderType lookup the summary component uses.
+    // Price comes from the same calculation the summary component uses.
     const cardsOrderType = await this.order.getOrderType(
       playlist.numberOfTracks,
       false,
@@ -341,11 +341,7 @@ export class ChannableService {
     const productTypes: Array<{ type: 'physical'; price: number }> = [
       {
         type: 'physical',
-        price:
-          cardsOrderType?.amount ||
-          cardsOrderType?.amountWithMargin ||
-          playlist.price ||
-          29.99,
+        price: cardsOrderType.amount || playlist.price || 29.99,
       },
     ];
 

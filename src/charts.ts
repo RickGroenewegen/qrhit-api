@@ -94,8 +94,6 @@ class Charts {
         FROM payments p
         WHERE
           p.status = 'paid'
-          AND p.test = FALSE
-          AND p.vibe = FALSE
           ${dateFilter}
         GROUP BY DATE(p.createdAt)
       ) daily_data
@@ -129,8 +127,6 @@ class Charts {
       FROM payments
       WHERE
         status = 'paid'
-        AND test = FALSE
-        AND vibe = FALSE
         ${dateFilter}
       GROUP BY HOUR(createdAt)
       ORDER BY hour ASC
@@ -163,8 +159,6 @@ class Charts {
       FROM payments
       WHERE
         status = 'paid'
-        AND test = FALSE
-        AND vibe = FALSE
         ${dateFilter}
       GROUP BY DAYOFWEEK(createdAt)
       ORDER BY day_of_week ASC

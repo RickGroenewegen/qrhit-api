@@ -1,28 +1,28 @@
 /**
- * Unit tests for src/vibe.ts — updateCompanyList multipart handling:
+ * Unit tests for src/business.ts — updateCompanyList multipart handling:
  * field coercion (booleans, numbers, dates, locale descriptions),
  * background uploads/clearing and cache invalidation.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h, resetAll } from './vibe-mocks';
+import { h, resetAll } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
-vi.mock('sharp', async () => (await import('./vibe-mocks')).sharpModule());
-vi.mock('fs/promises', async () => (await import('./vibe-mocks')).fsModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
+vi.mock('sharp', async () => (await import('./business-mocks')).sharpModule());
+vi.mock('fs/promises', async () => (await import('./business-mocks')).fsModule());
 
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 const LIST = {
   id: 2,
@@ -71,23 +71,23 @@ beforeEach(() => {
 
 describe('updateCompanyList — validation', () => {
   it('rejects invalid ids', async () => {
-    expect(await vibe.updateCompanyList(NaN, 2, makeRequest([]))).toMatchObject({
+    expect(await business.updateCompanyList(NaN, 2, makeRequest([]))).toMatchObject({
       success: false,
       error: 'Invalid company or list ID provided',
     });
-    expect(await vibe.updateCompanyList(1, NaN, makeRequest([]))).toMatchObject({
+    expect(await business.updateCompanyList(1, NaN, makeRequest([]))).toMatchObject({
       success: false,
     });
   });
 
   it('rejects unknown lists and foreign lists', async () => {
     h.prisma.companyList.findUnique.mockResolvedValueOnce(null);
-    expect(await vibe.updateCompanyList(1, 2, makeRequest([]))).toMatchObject({
+    expect(await business.updateCompanyList(1, 2, makeRequest([]))).toMatchObject({
       success: false,
       error: 'Company list not found',
     });
     h.prisma.companyList.findUnique.mockResolvedValueOnce({ ...LIST, companyId: 8 });
-    expect(await vibe.updateCompanyList(1, 2, makeRequest([]))).toMatchObject({
+    expect(await business.updateCompanyList(1, 2, makeRequest([]))).toMatchObject({
       success: false,
       error: 'List does not belong to this company',
     });
@@ -96,7 +96,7 @@ describe('updateCompanyList — validation', () => {
 
 describe('updateCompanyList — field coercion', () => {
   it('returns the original list when nothing was provided', async () => {
-    const res = await vibe.updateCompanyList(1, 2, makeRequest([]));
+    const res = await business.updateCompanyList(1, 2, makeRequest([]));
     expect(res.success).toBe(true);
     expect(res.data.list).toEqual(LIST);
     expect(res.data.backgroundFilename).toBe('old-bg.png');
@@ -105,7 +105,7 @@ describe('updateCompanyList — field coercion', () => {
   });
 
   it('coerces every supported field type into the update payload', async () => {
-    const res = await vibe.updateCompanyList(
+    const res = await business.updateCompanyList(
       1,
       2,
       makeRequest([
@@ -172,7 +172,7 @@ describe('updateCompanyList — field coercion', () => {
   });
 
   it('parses valid numbers and dates, nulls unparseable dates', async () => {
-    await vibe.updateCompanyList(
+    await business.updateCompanyList(
       1,
       2,
       makeRequest([
@@ -192,7 +192,7 @@ describe('updateCompanyList — field coercion', () => {
   });
 
   it('ignores negative card counts', async () => {
-    const res = await vibe.updateCompanyList(
+    const res = await business.updateCompanyList(
       1,
       2,
       makeRequest([field('numberOfCards', '-5')])
@@ -207,7 +207,7 @@ describe('updateCompanyList — file uploads', () => {
   it('stores uploaded backgrounds and drains unexpected file fields', async () => {
     const bg = file('background', 'pic.png');
     const stray = file('unexpected', 'evil.bin');
-    const res = await vibe.updateCompanyList(1, 2, makeRequest([bg, stray]));
+    const res = await business.updateCompanyList(1, 2, makeRequest([bg, stray]));
     expect(res.success).toBe(true);
 
     const data = h.prisma.companyList.update.mock.calls[0][0].data;
@@ -220,7 +220,7 @@ describe('updateCompanyList — file uploads', () => {
 
   it('refuses a file that is not a raster image, so nothing scriptable lands in public', async () => {
     const page = file('votingLogo', 'logo.html');
-    const res = await vibe.updateCompanyList(1, 2, makeRequest([page]));
+    const res = await business.updateCompanyList(1, 2, makeRequest([page]));
     expect(res.success).toBe(true);
     expect(page.toBuffer).toHaveBeenCalled();
     expect(h.prisma.companyList.update).not.toHaveBeenCalled();
@@ -228,7 +228,7 @@ describe('updateCompanyList — file uploads', () => {
   });
 
   it('clears the voting logo and background on an empty value', async () => {
-    const res = await vibe.updateCompanyList(
+    const res = await business.updateCompanyList(
       1,
       2,
       makeRequest([field('votingLogo', ''), field('votingBackground', '')])
@@ -245,7 +245,7 @@ describe('updateCompanyList — file uploads', () => {
       .mockReturnValueOnce('R2')
       .mockReturnValueOnce('R3')
       .mockReturnValueOnce('R4');
-    await vibe.updateCompanyList(
+    await business.updateCompanyList(
       1,
       2,
       makeRequest([
@@ -273,7 +273,7 @@ describe('updateCompanyList — file uploads', () => {
         throw new Error('broken stream');
       }),
     };
-    const res = await vibe.updateCompanyList(1, 2, makeRequest([bad]));
+    const res = await business.updateCompanyList(1, 2, makeRequest([bad]));
     expect(res.success).toBe(true);
     // Processing failed -> no update happened, original filename returned
     expect(h.prisma.companyList.update).not.toHaveBeenCalled();
@@ -284,7 +284,7 @@ describe('updateCompanyList — file uploads', () => {
 describe('updateCompanyList — errors', () => {
   it('maps prisma update failures', async () => {
     h.prisma.companyList.update.mockRejectedValue(new Error('db'));
-    const res = await vibe.updateCompanyList(
+    const res = await business.updateCompanyList(
       1,
       2,
       makeRequest([field('name', 'X')])

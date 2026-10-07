@@ -1,207 +1,36 @@
 /**
- * Unit tests for src/vibe.ts — pricing calculators (OnzeVibe/HappiBox,
- * Tromp, Schneider) and buildInvoiceLineItems. Pure math; prisma only
- * needed for buildInvoiceLineItems lookups.
+ * Unit tests for src/business.ts — pricing calculators (Tromp, Schneider)
+ * and buildInvoiceLineItems. Pure math; prisma only needed for
+ * buildInvoiceLineItems lookups.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h, resetAll } from './vibe-mocks';
+import { h, resetAll } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
-vi.mock('sharp', async () => (await import('./vibe-mocks')).sharpModule());
-vi.mock('fs/promises', async () => (await import('./vibe-mocks')).fsModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
+vi.mock('sharp', async () => (await import('./business-mocks')).sharpModule());
+vi.mock('fs/promises', async () => (await import('./business-mocks')).fsModule());
 
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 beforeEach(() => {
   resetAll();
 });
 
-const baseParams = {
-  quantity: 100,
-  includePersonalization: true,
-  shipmentOnLocation: false,
-  soldBy: 'happibox' as const,
-  isReseller: false,
-  manualDiscount: 0,
-};
-
-describe('calculatePricing (OnzeVibe/HappiBox)', () => {
-  it('rejects invalid quantity', async () => {
-    expect(await vibe.calculatePricing({ ...baseParams, quantity: 0 })).toMatchObject({
-      success: false,
-      error: 'Invalid quantity',
-    });
-  });
-
-  it('tier 100, sold by happibox: half reseller discount goes to us', async () => {
-    const res = await vibe.calculatePricing(baseParams);
-    expect(res.success).toBe(true);
-    const c = res.calculation;
-    expect(c.tierKey).toBe(100);
-    expect(c.pricing.commercialPricePerBox).toBe(44.95);
-    // kickBack 3 + half of reseller discount 3.079/2 = 4.5395 -> 4.54
-    expect(c.pricing.profitPerBox).toBe(4.54);
-    expect(c.pricing.clientPrice).toBe(4495);
-    expect(c.pricing.ourProfit).toBe(454);
-    expect(c.pricing.resellerProfit).toBe(0);
-    expect(c.pricing.happiBoxPayment).toBe(4041);
-  });
-
-  it('sold by onzevibe: project management waived, full reseller discount for us', async () => {
-    const res = await vibe.calculatePricing({ ...baseParams, soldBy: 'onzevibe' });
-    const c = res.calculation;
-    expect(c.adjustments.adjustedProjectManagement).toBe(0);
-    expect(c.adjustments.projectManagementDifference).toBe(5);
-    expect(c.pricing.commercialPricePerBox).toBe(39.95); // 44.95 - 5
-    expect(c.pricing.profitPerBox).toBe(6.08); // 3 + 3.079
-  });
-
-  it('removes the personalization component when not included', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      includePersonalization: false,
-    });
-    expect(res.calculation.pricing.commercialPricePerBox).toBe(39.95); // 44.95 - 5
-  });
-
-  it('shipment on location reduces shipping to 0.35 per box', async () => {
-    const res = await vibe.calculatePricing({ ...baseParams, shipmentOnLocation: true });
-    const c = res.calculation;
-    expect(c.adjustments.adjustedShipping).toBe(0.35);
-    expect(c.adjustments.shippingDifference).toBeCloseTo(2.6, 10);
-    expect(c.pricing.commercialPricePerBox).toBe(42.35); // 44.95 - 2.60
-  });
-
-  it('reseller orders move the reseller discount out of our profit', async () => {
-    const res = await vibe.calculatePricing({ ...baseParams, isReseller: true });
-    const c = res.calculation;
-    expect(c.pricing.profitPerBox).toBe(3); // kickback only
-    expect(c.pricing.resellerProfit).toBe(307.9); // 3.079 * 100
-    expect(c.pricing.happiBoxPayment).toBe(3887.1); // 4495 - 300 - 307.9
-  });
-
-  it('manual discount lowers both the client price and our profit', async () => {
-    const res = await vibe.calculatePricing({ ...baseParams, manualDiscount: 2 });
-    const c = res.calculation;
-    expect(c.pricing.commercialPricePerBox).toBe(42.95);
-    expect(c.pricing.profitPerBox).toBe(2.54); // 4.54 - 2
-  });
-
-  it('force client price overrides the per-box price; the delta flows into our profit', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      forceClientPrice: 40,
-      forceResellerPrice: 99, // ignored: not a reseller order
-    });
-    const c = res.calculation;
-    expect(c.pricing.commercialPricePerBox).toBe(40);
-    expect(c.pricing.profitPerBox).toBe(-0.41); // 4.54 + (40 - 44.95)
-    expect(c.pricing.clientPrice).toBe(4000);
-    expect(c.adjustments.forceClientPrice).toBe(40);
-  });
-
-  it('force reseller price applies only on reseller orders', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      isReseller: true,
-      forceResellerPrice: 50,
-      forceClientPrice: 10, // ignored: reseller order
-    });
-    const c = res.calculation;
-    expect(c.pricing.commercialPricePerBox).toBe(50);
-    expect(c.pricing.profitPerBox).toBe(8.05); // 3 + (50 - 44.95)
-    expect(c.pricing.clientPrice).toBe(5000);
-  });
-
-  it('ignores empty/zero force prices', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      forceClientPrice: 0,
-      forceResellerPrice: null,
-    });
-    expect(res.calculation.pricing.commercialPricePerBox).toBe(44.95);
-    expect(res.calculation.pricing.profitPerBox).toBe(4.54);
-  });
-
-  it.each([
-    [100, 100],
-    [249, 100],
-    [250, 250],
-    [999, 500],
-    [1000, 1000],
-    [2500, 2500],
-    [4999, 2500],
-    [5000, 5000],
-    [9000, 5000],
-  ])('standard mode maps quantity %i to tier %i', async (quantity, tierKey) => {
-    const res = await vibe.calculatePricing({ ...baseParams, quantity });
-    expect(res.calculation.tierKey).toBe(tierKey);
-  });
-
-  it('fluid mode interpolates linearly between tiers', async () => {
-    // 175 sits exactly halfway between the 100 and 250 tiers
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      quantity: 175,
-      fluidMode: true,
-    });
-    const c = res.calculation;
-    expect(c.tierKey).toBe(100); // lower tier shown as reference
-    expect(c.pricing.commercialPricePerBox).toBe(37.95); // (44.95+30.95)/2
-    expect(c.tierData.personalization).toBeCloseTo(3.5, 10); // (5+2)/2
-    expect(c.tierData.kickBackFee).toBeCloseTo(3.75, 10); // (3+4.5)/2
-    expect(c.pricing.clientPrice).toBeCloseTo(6641.25, 2);
-  });
-
-  it('fluid mode clamps to the 5000 tier for huge quantities', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      quantity: 6000,
-      fluidMode: true,
-    });
-    expect(res.calculation.tierKey).toBe(5000);
-    expect(res.calculation.pricing.commercialPricePerBox).toBe(16.95);
-  });
-
-  it('fluid mode at exactly 100 falls back to standard brackets', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      quantity: 100,
-      fluidMode: true,
-    });
-    expect(res.calculation.tierKey).toBe(100);
-    expect(res.calculation.pricing.commercialPricePerBox).toBe(44.95);
-  });
-
-  it('adds one-time app and voting portal fees to client price and our profit', async () => {
-    const res = await vibe.calculatePricing({
-      ...baseParams,
-      includeCustomApp: true,
-      includeVotingPortal: true,
-    });
-    const p = res.calculation.pricing;
-    expect(p.customAppFee).toBe(350);
-    expect(p.votingPortalFee).toBe(500);
-    expect(p.clientPrice).toBe(5345); // 4495 + 850
-    expect(p.ourProfit).toBe(1304); // 454 + 850
-  });
-});
-
 describe('calculateTrompPricing', () => {
   const tromp = (over: Record<string, any> = {}) =>
-    vibe.calculateTrompPricing({
+    business.calculateTrompPricing({
       quantity: 1000,
       includeStansmestekening: false,
       includeStansvorm: false,
@@ -287,7 +116,7 @@ describe('calculateTrompPricing', () => {
 
 describe('calculateSchneiderPricing', () => {
   const schneider = (over: Record<string, any> = {}) =>
-    vibe.calculateSchneiderPricing({
+    business.calculateSchneiderPricing({
       quantity: 100,
       cardCount: 48,
       includeStansmes: false,
@@ -560,12 +389,12 @@ describe('buildInvoiceLineItems', () => {
 
   it('rejects unknown lists and company mismatches', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(null);
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
       success: false,
       error: 'List not found',
     });
     h.prisma.companyList.findUnique.mockResolvedValue({ id: 2, companyId: 99 });
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
       success: false,
       error: 'List not found',
     });
@@ -574,7 +403,7 @@ describe('buildInvoiceLineItems', () => {
   it('rejects when the company is missing', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue({ id: 2, companyId: 1 });
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -591,7 +420,7 @@ describe('buildInvoiceLineItems', () => {
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.success).toBe(true);
     expect(res.reference).toBe('Feest 2026');
     expect(res.items).toEqual([
@@ -644,7 +473,7 @@ describe('buildInvoiceLineItems', () => {
     );
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Tromp Print & Packaging', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.success).toBe(true);
     expect(res.items).toHaveLength(3);
     expect(res.items![0]).toEqual({
@@ -672,7 +501,7 @@ describe('buildInvoiceLineItems', () => {
       pricing: snapshot({ trompSold: true, licenseCards: 100 }),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items![0].description).toBe('QRSong! Box - 48 kaarten');
   });
 
@@ -683,7 +512,7 @@ describe('buildInvoiceLineItems', () => {
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     const sum = res.items!.reduce(
       (s, i) => s + Number(i.amount) * Number(i.price),
       0
@@ -702,7 +531,7 @@ describe('buildInvoiceLineItems', () => {
       calculationTromp: JSON.stringify({ quantity: 1000 }),
     });
 
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
       success: false,
       code: 'no_pricing',
     });
@@ -711,7 +540,7 @@ describe('buildInvoiceLineItems', () => {
   it('reads the snapshot of the requested variant only', async () => {
     listWith('calculationTromp', { pricing: snapshot() });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'schneider', 'full')).toMatchObject({
       success: false,
       code: 'no_pricing',
     });
@@ -721,7 +550,7 @@ describe('buildInvoiceLineItems', () => {
     listWith('calculationTromp', { printingType: 'eigen', pricing: snapshot() });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
     expect(res.items).toEqual([
       { description: 'Aanbetaling 30% - Feest 2026', amount: '1', price: '3469.50' },
     ]);
@@ -733,7 +562,7 @@ describe('buildInvoiceLineItems', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
     // Down payment invoiced at €3,000 (the price went up since).
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
       downPaymentExclVat: 3000,
     });
     expect(res.items).toEqual([
@@ -744,7 +573,7 @@ describe('buildInvoiceLineItems', () => {
   it('remaining payment without a down payment invoice is the total minus 30%', async () => {
     listWith('calculationTromp', { pricing: snapshot({ discountPercent: 0, customAppFee: 0 }) });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
     expect(res.items![0].price).toBe('8750.00');
   });
 
@@ -755,8 +584,8 @@ describe('buildInvoiceLineItems', () => {
       pricing: snapshot({ quantity: 1, unitPrice: 100.05, customAppFee: 0, discountPercent: 0 }),
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const down = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
-    const rest = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+    const down = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    const rest = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
       downPaymentExclVat: down.invoiceTotal,
     });
     expect(down.invoiceTotal! + rest.invoiceTotal!).toBeCloseTo(100.05, 10);
@@ -765,7 +594,7 @@ describe('buildInvoiceLineItems', () => {
   it('refuses a remaining payment when the down payment covers the total', async () => {
     listWith('calculationTromp', { pricing: snapshot() });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining', {
       downPaymentExclVat: 11565,
     });
     expect(res.success).toBe(false);
@@ -796,7 +625,7 @@ describe('buildInvoiceLineItems', () => {
     );
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toEqual([
       { description: 'QRSong! Box - 144 kaarten', amount: '10', price: '140.00' },
       {
@@ -831,7 +660,7 @@ describe('buildInvoiceLineItems', () => {
       shippingList(pallet);
       h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
       expect(res.items).toEqual([
         { description: 'QRSong! Box - 192 kaarten', amount: '600', price: '7.50' },
         {
@@ -847,7 +676,7 @@ describe('buildInvoiceLineItems', () => {
       shippingList(pallet);
       h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Muster GmbH', locale: 'de' });
 
-      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
       expect(res.items![1]).toEqual({
         description: 'Versand nach Deutschland (34 Umkartons auf 1 Palette)',
         amount: '1',
@@ -858,12 +687,12 @@ describe('buildInvoiceLineItems', () => {
     it('parcels without a pallet, and the article where the language needs one', async () => {
       shippingList({ country: 'CH', cartons: 2, pallets: 0, mode: 'unknown' }, 95);
       h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Muster AG', locale: 'de' });
-      const de = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      const de = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
       expect(de.items![1].description).toBe('Versand in die Schweiz (2 Umkartons)');
 
       shippingList({ country: 'DE', cartons: 2, pallets: 0, mode: 'parcel' }, 20.93);
       h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme Ltd', locale: 'en' });
-      const en = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      const en = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
       expect(en.items![1]).toEqual({
         description: 'Shipping to Germany (2 outer cartons)',
         amount: '1',
@@ -893,7 +722,7 @@ describe('buildInvoiceLineItems', () => {
       );
       h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-      const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+      const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
       expect(res.items).toEqual([
         { description: 'QRSong! Box - 192 kaarten', amount: '600', price: '7.50' },
         { description: 'Stansmes 4-vaks doosje (eenmalige kosten)', amount: '1', price: '375.00' },
@@ -929,7 +758,7 @@ describe('buildInvoiceLineItems', () => {
     );
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toEqual([
       { description: 'QRSong! Box - 48 kaarten', amount: '100', price: '39.95' },
       {
@@ -961,7 +790,7 @@ describe('buildInvoiceLineItems', () => {
       locale: 'de',
     });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
     expect(res.locale).toBe('de');
     expect(res.items![0].description).toBe('Anzahlung 30 % - Feier 2026');
   });
@@ -979,7 +808,7 @@ describe('buildInvoiceLineItems', () => {
       locale: 'fr',
     });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'remaining');
     expect(res.locale).toBe('en');
     expect(res.items![0].description).toBe('Final instalment 70% - Fete 2026');
   });
@@ -993,7 +822,7 @@ describe('buildInvoiceLineItems', () => {
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Legacy BV', locale: null });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'down');
     expect(res.locale).toBe('en');
     expect(res.items![0].description).toBe('Down payment 30% - Party');
   });
@@ -1026,7 +855,7 @@ describe('buildInvoiceLineItems', () => {
       locale: 'de',
     });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     const descriptions = res.items!.map((i) => i.description);
     expect(descriptions).toContain(
       'Stanzform, 4-Fach-Schachtel (einmalige Kosten)'
@@ -1056,7 +885,7 @@ describe('buildInvoiceLineItems', () => {
     });
     h.prisma.company.findUnique.mockResolvedValue({ id: 1, name: 'Acme', locale: 'nl' });
 
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     const descriptions = res.items!.map((i) => i.description);
     // Exactly one line each, from the dedicated translated keys.
     expect(descriptions.filter((d) => d.includes('App in eigen stijl'))).toHaveLength(1);
@@ -1068,17 +897,17 @@ describe('buildInvoiceLineItems', () => {
     // Creation and the "already invoiced?" lookup both call this. If they ever
     // disagree, the dashboard shows a booked down payment as un-invoiced and
     // an admin bills the customer a second time.
-    const nl = await vibe.buildInvoiceReferences('Feest 2026', 'nl');
+    const nl = await business.buildInvoiceReferences('Feest 2026', 'nl');
     expect(nl.full).toBe('Feest 2026');
     expect(nl.down).toBe('Feest 2026 - Aanbetaling 30%');
     expect(nl.remaining).toBe('Feest 2026 - Slottermijn 70%');
 
-    const de = await vibe.buildInvoiceReferences('Feier 2026', 'de');
+    const de = await business.buildInvoiceReferences('Feier 2026', 'de');
     expect(de.down).toBe('Feier 2026 - Anzahlung 30 %');
     expect(de.remaining).toBe('Feier 2026 - Schlussrate 70 %');
 
     // Unknown/blank locales fall back to English like every other document.
-    const fallback = await vibe.buildInvoiceReferences('Party', null);
+    const fallback = await business.buildInvoiceReferences('Party', null);
     expect(fallback.down).toBe('Party - Down payment 30%');
 
     // Invoices booked before these documents were translated used the Dutch
@@ -1089,7 +918,7 @@ describe('buildInvoiceLineItems', () => {
 
   it('surfaces thrown errors', async () => {
     h.prisma.companyList.findUnique.mockRejectedValue(new Error('db sad'));
-    expect(await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
+    expect(await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full')).toMatchObject({
       success: false,
       error: 'db sad',
     });

@@ -167,17 +167,16 @@ describe('mixTrackOrder', () => {
 });
 
 describe('isBusinessDeck', () => {
-  it('is true for Schneiders, Tromp and company-list (vibe) orders', () => {
-    expect(isBusinessDeck('schneiders', false)).toBe(true);
-    expect(isBusinessDeck('tromp', false)).toBe(true);
-    expect(isBusinessDeck('printnbind', true)).toBe(true);
+  it('is true for Schneiders and Tromp decks', () => {
+    expect(isBusinessDeck('schneiders')).toBe(true);
+    expect(isBusinessDeck('tromp')).toBe(true);
   });
 
   it('is false for consumer decks', () => {
-    expect(isBusinessDeck('printnbind', false)).toBe(false);
-    expect(isBusinessDeck(undefined, undefined)).toBe(false);
-    expect(isBusinessDeck('reseller', false)).toBe(false);
-    expect(isBusinessDeck('musicmatch', null)).toBe(false);
+    expect(isBusinessDeck('printnbind')).toBe(false);
+    expect(isBusinessDeck(undefined)).toBe(false);
+    expect(isBusinessDeck('reseller')).toBe(false);
+    expect(isBusinessDeck('musicmatch')).toBe(false);
   });
 });
 

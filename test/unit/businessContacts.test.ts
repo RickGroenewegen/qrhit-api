@@ -128,7 +128,7 @@ describe('wantedContacts', () => {
     const { contacts, invalid } = wantedContacts([
       company({
         contactemail: 'not-an-address',
-        User: [user('rick@qrsong.io', 'Rick', ['vibeadmin']), user('admin@acme.nl', 'A', ['admin'])],
+        User: [user('rick@qrsong.io', 'Rick', ['admin', 'users']), user('admin@acme.nl', 'A', ['admin'])],
       }),
     ]);
     expect(contacts.size).toBe(0);

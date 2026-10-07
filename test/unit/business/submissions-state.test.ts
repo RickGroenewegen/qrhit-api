@@ -1,27 +1,27 @@
 /**
- * Unit tests for src/vibe.ts — submission CRUD, getUsersByCompany,
+ * Unit tests for src/business.ts — submission CRUD, getUsersByCompany,
  * getState and company events. Fake prisma throughout (DB down).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h, resetAll, TEST_LOCALES } from './vibe-mocks';
+import { h, resetAll, TEST_LOCALES } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
-vi.mock('sharp', async () => (await import('./vibe-mocks')).sharpModule());
-vi.mock('fs/promises', async () => (await import('./vibe-mocks')).fsModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
+vi.mock('sharp', async () => (await import('./business-mocks')).sharpModule());
+vi.mock('fs/promises', async () => (await import('./business-mocks')).fsModule());
 
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 beforeEach(() => {
   resetAll();
@@ -29,17 +29,17 @@ beforeEach(() => {
 
 describe('getUsersByCompany', () => {
   it('rejects an invalid company id', async () => {
-    expect(await vibe.getUsersByCompany(NaN)).toMatchObject({
+    expect(await business.getUsersByCompany(NaN)).toMatchObject({
       success: false,
       error: 'Invalid company ID provided',
     });
-    expect(await vibe.getUsersByCompany(0)).toMatchObject({ success: false });
+    expect(await business.getUsersByCompany(0)).toMatchObject({ success: false });
     expect(h.prisma.company.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns an error when the company does not exist', async () => {
     h.prisma.company.findUnique.mockResolvedValue(null);
-    expect(await vibe.getUsersByCompany(3)).toMatchObject({
+    expect(await business.getUsersByCompany(3)).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -49,7 +49,7 @@ describe('getUsersByCompany', () => {
     h.prisma.company.findUnique.mockResolvedValue({ id: 3 });
     const users = [{ id: 1, email: 'a@b.c' }];
     h.prisma.user.findMany.mockResolvedValue(users);
-    const res = await vibe.getUsersByCompany(3);
+    const res = await business.getUsersByCompany(3);
     expect(res).toEqual({ success: true, users });
     expect(h.prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -61,7 +61,7 @@ describe('getUsersByCompany', () => {
 
   it('maps prisma errors to a friendly error', async () => {
     h.prisma.company.findUnique.mockRejectedValue(new Error('boom'));
-    expect(await vibe.getUsersByCompany(3)).toMatchObject({
+    expect(await business.getUsersByCompany(3)).toMatchObject({
       success: false,
       error: 'Error retrieving users for company',
     });
@@ -70,14 +70,14 @@ describe('getUsersByCompany', () => {
 
 describe('replaceTrackInSubmissions', () => {
   it('validates all three ids', async () => {
-    expect(await vibe.replaceTrackInSubmissions(NaN, 1, 2)).toMatchObject({
+    expect(await business.replaceTrackInSubmissions(NaN, 1, 2)).toMatchObject({
       success: false,
       error: 'Invalid parameters provided',
     });
-    expect(await vibe.replaceTrackInSubmissions(1, 0, 2)).toMatchObject({
+    expect(await business.replaceTrackInSubmissions(1, 0, 2)).toMatchObject({
       success: false,
     });
-    expect(await vibe.replaceTrackInSubmissions(1, 2, NaN)).toMatchObject({
+    expect(await business.replaceTrackInSubmissions(1, 2, NaN)).toMatchObject({
       success: false,
     });
   });
@@ -85,7 +85,7 @@ describe('replaceTrackInSubmissions', () => {
   it('moves votes between tracks and marks the list for Spotify reload', async () => {
     h.prisma.companyListSubmissionTrack.updateMany.mockResolvedValue({ count: 4 });
     h.prisma.companyList.update.mockResolvedValue({});
-    const res = await vibe.replaceTrackInSubmissions(10, 100, 200);
+    const res = await business.replaceTrackInSubmissions(10, 100, 200);
     expect(res).toEqual({ success: true, updatedCount: 4 });
     expect(h.prisma.companyListSubmissionTrack.updateMany).toHaveBeenCalledWith({
       where: {
@@ -102,7 +102,7 @@ describe('replaceTrackInSubmissions', () => {
 
   it('maps prisma errors to a friendly error', async () => {
     h.prisma.companyListSubmissionTrack.updateMany.mockRejectedValue(new Error('x'));
-    expect(await vibe.replaceTrackInSubmissions(10, 100, 200)).toMatchObject({
+    expect(await business.replaceTrackInSubmissions(10, 100, 200)).toMatchObject({
       success: false,
       error: 'Error replacing track in submissions',
     });
@@ -111,7 +111,7 @@ describe('replaceTrackInSubmissions', () => {
 
 describe('deleteSubmission', () => {
   it('validates the id', async () => {
-    expect(await vibe.deleteSubmission(NaN)).toMatchObject({
+    expect(await business.deleteSubmission(NaN)).toMatchObject({
       success: false,
       error: 'Invalid submission ID provided',
     });
@@ -119,7 +119,7 @@ describe('deleteSubmission', () => {
 
   it('returns not-found when the submission does not exist', async () => {
     h.prisma.companyListSubmission.findUnique.mockResolvedValue(null);
-    expect(await vibe.deleteSubmission(8)).toMatchObject({
+    expect(await business.deleteSubmission(8)).toMatchObject({
       success: false,
       error: 'Submission not found',
     });
@@ -133,7 +133,7 @@ describe('deleteSubmission', () => {
     });
     h.prisma.companyListSubmission.delete.mockResolvedValue({});
     h.prisma.companyList.update.mockResolvedValue({});
-    expect(await vibe.deleteSubmission(8)).toEqual({ success: true });
+    expect(await business.deleteSubmission(8)).toEqual({ success: true });
     expect(h.prisma.companyListSubmission.delete).toHaveBeenCalledWith({
       where: { id: 8 },
     });
@@ -145,7 +145,7 @@ describe('deleteSubmission', () => {
 
   it('maps prisma errors', async () => {
     h.prisma.companyListSubmission.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.deleteSubmission(8)).toMatchObject({
+    expect(await business.deleteSubmission(8)).toMatchObject({
       success: false,
       error: 'Error deleting submission',
     });
@@ -154,19 +154,19 @@ describe('deleteSubmission', () => {
 
 describe('submissionBelongsToCompany', () => {
   it('returns false for invalid ids without querying', async () => {
-    expect(await vibe.submissionBelongsToCompany(NaN, 1)).toBe(false);
-    expect(await vibe.submissionBelongsToCompany(1, 0)).toBe(false);
+    expect(await business.submissionBelongsToCompany(NaN, 1)).toBe(false);
+    expect(await business.submissionBelongsToCompany(1, 0)).toBe(false);
     expect(h.prisma.companyListSubmission.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns false when the submission or its list is missing', async () => {
     h.prisma.companyListSubmission.findUnique.mockResolvedValueOnce(null);
-    expect(await vibe.submissionBelongsToCompany(1, 2)).toBe(false);
+    expect(await business.submissionBelongsToCompany(1, 2)).toBe(false);
     h.prisma.companyListSubmission.findUnique.mockResolvedValueOnce({
       id: 1,
       CompanyList: null,
     });
-    expect(await vibe.submissionBelongsToCompany(1, 2)).toBe(false);
+    expect(await business.submissionBelongsToCompany(1, 2)).toBe(false);
   });
 
   it('compares the owning companyId', async () => {
@@ -174,29 +174,29 @@ describe('submissionBelongsToCompany', () => {
       id: 1,
       CompanyList: { companyId: 2 },
     });
-    expect(await vibe.submissionBelongsToCompany(1, 2)).toBe(true);
-    expect(await vibe.submissionBelongsToCompany(1, 3)).toBe(false);
+    expect(await business.submissionBelongsToCompany(1, 2)).toBe(true);
+    expect(await business.submissionBelongsToCompany(1, 3)).toBe(false);
   });
 });
 
 describe('updateSubmission', () => {
   it('validates id and cardName', async () => {
-    expect(await vibe.updateSubmission(NaN, { cardName: 'x' })).toMatchObject({
+    expect(await business.updateSubmission(NaN, { cardName: 'x' })).toMatchObject({
       success: false,
       error: 'Invalid submission ID provided',
     });
-    expect(await vibe.updateSubmission(1, { cardName: '   ' })).toMatchObject({
+    expect(await business.updateSubmission(1, { cardName: '   ' })).toMatchObject({
       success: false,
       error: 'cardName is required and must be a non-empty string',
     });
-    expect(await vibe.updateSubmission(1, { cardName: 5 as any })).toMatchObject({
+    expect(await business.updateSubmission(1, { cardName: 5 as any })).toMatchObject({
       success: false,
     });
   });
 
   it('returns not-found for a missing submission', async () => {
     h.prisma.companyListSubmission.findUnique.mockResolvedValue(null);
-    expect(await vibe.updateSubmission(1, { cardName: 'New' })).toMatchObject({
+    expect(await business.updateSubmission(1, { cardName: 'New' })).toMatchObject({
       success: false,
       error: 'Submission not found',
     });
@@ -210,7 +210,7 @@ describe('updateSubmission', () => {
     const updated = { id: 1, cardName: 'New' };
     h.prisma.companyListSubmission.update.mockResolvedValue(updated);
     h.prisma.companyList.update.mockResolvedValue({});
-    const res = await vibe.updateSubmission(1, { cardName: 'New' });
+    const res = await business.updateSubmission(1, { cardName: 'New' });
     expect(res).toEqual({ success: true, data: updated });
     expect(h.prisma.companyListSubmission.update).toHaveBeenCalledWith({
       where: { id: 1 },
@@ -224,7 +224,7 @@ describe('updateSubmission', () => {
 
   it('maps prisma errors', async () => {
     h.prisma.companyListSubmission.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.updateSubmission(1, { cardName: 'New' })).toMatchObject({
+    expect(await business.updateSubmission(1, { cardName: 'New' })).toMatchObject({
       success: false,
       error: 'Error updating submission',
     });
@@ -233,7 +233,7 @@ describe('updateSubmission', () => {
 
 describe('verifySubmission', () => {
   it('validates the id', async () => {
-    expect(await vibe.verifySubmission(0)).toMatchObject({
+    expect(await business.verifySubmission(0)).toMatchObject({
       success: false,
       error: 'Invalid submission ID provided',
     });
@@ -241,7 +241,7 @@ describe('verifySubmission', () => {
 
   it('returns not-found for a missing submission', async () => {
     h.prisma.companyListSubmission.findUnique.mockResolvedValue(null);
-    expect(await vibe.verifySubmission(9)).toMatchObject({
+    expect(await business.verifySubmission(9)).toMatchObject({
       success: false,
       error: 'Submission not found',
     });
@@ -256,7 +256,7 @@ describe('verifySubmission', () => {
     h.prisma.companyListSubmission.update.mockResolvedValue(updated);
     h.prisma.companyList.update.mockResolvedValue({});
 
-    const res = await vibe.verifySubmission(9);
+    const res = await business.verifySubmission(9);
     expect(res).toEqual({ success: true, data: updated });
 
     const updateArgs = h.prisma.companyListSubmission.update.mock.calls[0][0];
@@ -273,7 +273,7 @@ describe('verifySubmission', () => {
 
 describe('getState', () => {
   it('returns an empty state when no listId is given', async () => {
-    const res = await vibe.getState();
+    const res = await business.getState();
     expect(res.success).toBe(true);
     expect(res.data).toEqual({
       questions: [],
@@ -287,7 +287,7 @@ describe('getState', () => {
 
   it('returns an error when the list does not exist', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(null);
-    expect(await vibe.getState(5)).toMatchObject({
+    expect(await business.getState(5)).toMatchObject({
       success: false,
       error: 'Company list not found',
     });
@@ -325,7 +325,7 @@ describe('getState', () => {
       { id: 71, firstname: 'B', _count: undefined },
     ]);
 
-    const res = await vibe.getState(5);
+    const res = await business.getState(5);
     expect(res.success).toBe(true);
 
     // Select includes the per-locale description columns
@@ -361,14 +361,14 @@ describe('getState', () => {
     );
     h.prisma.companyListQuestion.findMany.mockResolvedValue([]);
     h.prisma.companyListSubmission.findMany.mockResolvedValue([]);
-    const res = await vibe.getState(5);
+    const res = await business.getState(5);
     expect(res.success).toBe(true);
     expect(res.data.list.languages).toEqual([]);
   });
 
   it('maps prisma errors to a friendly error', async () => {
     h.prisma.companyList.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.getState(5)).toMatchObject({
+    expect(await business.getState(5)).toMatchObject({
       success: false,
       error: 'Error retrieving company state',
     });
@@ -379,7 +379,7 @@ describe('company events', () => {
   it('getCompanyEvents returns events with their author', async () => {
     const events = [{ id: 1, content: 'hi', User: { id: 2 } }];
     h.prisma.companyEvent.findMany.mockResolvedValue(events);
-    expect(await vibe.getCompanyEvents(7)).toEqual({ success: true, data: events });
+    expect(await business.getCompanyEvents(7)).toEqual({ success: true, data: events });
     expect(h.prisma.companyEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { companyId: 7 },
@@ -390,7 +390,7 @@ describe('company events', () => {
 
   it('getCompanyEvents maps errors', async () => {
     h.prisma.companyEvent.findMany.mockRejectedValue(new Error('x'));
-    expect(await vibe.getCompanyEvents(7)).toMatchObject({
+    expect(await business.getCompanyEvents(7)).toMatchObject({
       success: false,
       error: 'Failed to get company events',
     });
@@ -399,7 +399,7 @@ describe('company events', () => {
   it('createCompanyEvent stores a comment with optional attachment', async () => {
     const created = { id: 3, content: 'note' };
     h.prisma.companyEvent.create.mockResolvedValue(created);
-    const res = await vibe.createCompanyEvent(7, 2, 'note', '/a.png');
+    const res = await business.createCompanyEvent(7, 2, 'note', '/a.png');
     expect(res).toEqual({ success: true, data: created });
     expect(h.prisma.companyEvent.create.mock.calls[0][0].data).toEqual({
       companyId: 7,
@@ -412,7 +412,7 @@ describe('company events', () => {
 
   it('updateCompanyEvent refuses events outside the company and trims content', async () => {
     h.prisma.companyEvent.findFirst.mockResolvedValueOnce(null);
-    expect(await vibe.updateCompanyEvent(7, 3, 'x')).toMatchObject({
+    expect(await business.updateCompanyEvent(7, 3, 'x')).toMatchObject({
       success: false,
       error: 'Event not found',
     });
@@ -420,7 +420,7 @@ describe('company events', () => {
     h.prisma.companyEvent.findFirst.mockResolvedValueOnce({ id: 3 });
     const updated = { id: 3, content: 'trimmed' };
     h.prisma.companyEvent.update.mockResolvedValue(updated);
-    const res = await vibe.updateCompanyEvent(7, 3, '  trimmed  ');
+    const res = await business.updateCompanyEvent(7, 3, '  trimmed  ');
     expect(res).toEqual({ success: true, data: updated });
     expect(h.prisma.companyEvent.update.mock.calls[0][0].data).toEqual({
       content: 'trimmed',
@@ -437,7 +437,7 @@ describe('company events', () => {
     });
     h.fs.unlink.mockRejectedValue(new Error('ENOENT'));
     h.prisma.companyEvent.delete.mockResolvedValue({});
-    expect(await vibe.deleteCompanyEvent(7, 3)).toEqual({ success: true });
+    expect(await business.deleteCompanyEvent(7, 3)).toEqual({ success: true });
     expect(h.fs.unlink).toHaveBeenCalledWith(
       `${process.env['PUBLIC_DIR']}/companydata/att.png`
     );
@@ -447,13 +447,13 @@ describe('company events', () => {
   it('deleteCompanyEvent skips unlink when there is no attachment', async () => {
     h.prisma.companyEvent.findFirst.mockResolvedValue({ id: 3, attachmentUrl: null });
     h.prisma.companyEvent.delete.mockResolvedValue({});
-    expect(await vibe.deleteCompanyEvent(7, 3)).toEqual({ success: true });
+    expect(await business.deleteCompanyEvent(7, 3)).toEqual({ success: true });
     expect(h.fs.unlink).not.toHaveBeenCalled();
   });
 
   it('deleteCompanyEvent returns not-found for foreign events', async () => {
     h.prisma.companyEvent.findFirst.mockResolvedValue(null);
-    expect(await vibe.deleteCompanyEvent(7, 3)).toMatchObject({
+    expect(await business.deleteCompanyEvent(7, 3)).toMatchObject({
       success: false,
       error: 'Event not found',
     });

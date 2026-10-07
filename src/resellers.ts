@@ -5,7 +5,6 @@ import { color, white } from 'console-log-colors';
 import Designer from './designer';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import Data from './data';
-import Order from './order';
 import Generator from './generator';
 import Utils from './utils';
 import { ResellerUser } from './resellerAuth';
@@ -21,7 +20,6 @@ class Resellers {
   private designer = Designer.getInstance();
   private musicServiceRegistry = MusicServiceRegistry.getInstance();
   private data = Data.getInstance();
-  private order = Order.getInstance();
   private generator = Generator.getInstance();
   private cache = Cache.getInstance();
   private utils = new Utils();
@@ -307,19 +305,6 @@ class Resellers {
       color.blue.bold(`[${white.bold('Reseller')}] Playlist stored with DB ID ${white.bold(playlistDbId.toString())}`)
     );
 
-    // Get order type
-    const orderType = await this.order.getOrderType(
-      playlistData.trackCount,
-      false,
-      'cards',
-      playlistId,
-      'none'
-    );
-
-    this.logger.logDev(
-      color.blue.bold(`[${white.bold('Reseller')}] Order type: ${white.bold(orderType.id.toString())}`)
-    );
-
     // Create Payment record (mimicking mollie.ts)
     const randomStr = this.utils.generateRandomString(16);
     const molliePaymentId = `reseller_${randomStr}`;
@@ -330,7 +315,6 @@ class Resellers {
 
     const paymentHasPlaylistData = {
       playlistId: playlistDbId,
-      orderTypeId: orderType.id,
       amount: 1,
       numberOfTracks: playlistData.trackCount,
       type: 'physical',
@@ -374,7 +358,6 @@ class Resellers {
     const insertResult = await this.prisma.payment.create({
       data: {
         paymentId: molliePaymentId,
-        vibe: false,
         user: { connect: { id: userDatabaseId } },
         totalPrice: 0,
         totalPriceWithoutTax: 0,
@@ -388,7 +371,6 @@ class Resellers {
         shippingVATPrice: 0,
         totalVATPrice: 0,
         clientIp: '127.0.0.1',
-        test: false,
         profit: 0,
         printApiPrice: 0,
         discount: 0,

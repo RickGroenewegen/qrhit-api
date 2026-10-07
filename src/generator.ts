@@ -143,10 +143,15 @@ class Generator {
       : {
           sentToPrinter: false,
           printerHold: false,
-          vibe: false,
+          // Only orders with something for Print&Bind (sendToPrinter sends
+          // the printnbind playlists alone).
           PaymentHasPlaylist: {
             none: {
               printerType: PRINTER_TYPE.RESELLER,
+            },
+            some: {
+              type: 'physical',
+              printerType: PRINTER_TYPE.PRINTNBIND,
             },
           },
           OR: [
@@ -850,7 +855,7 @@ class Generator {
     // A business deck is put in a year-mixed order instead (src/trackMix.ts).
     // The seed is set once and kept, so every later regeneration, whichever
     // order triggers it, reproduces the same deck; storeTracks applies it.
-    if (isBusinessDeck(playlist.printerType, payment.vibe)) {
+    if (isBusinessDeck(playlist.printerType)) {
       await this.prisma.playlist.updateMany({
         where: { id: playlist.id, trackMixSeed: null },
         data: { trackMixSeed: crypto.randomInt(1, 2 ** 31 - 1) },
@@ -1191,17 +1196,10 @@ class Generator {
 
           let printerTemplate = 'printer';
 
-          // An admin-chosen order template, or the company list's forced
-          // template for company orders (see forcedPrinterTemplate).
-          const forcedTemplate = forcedPrinterTemplate(
-            playlist.orderTemplate,
-            playlist.template,
-            payment.vibe
-          );
+          // An admin-chosen order template (see forcedPrinterTemplate).
+          const forcedTemplate = forcedPrinterTemplate(playlist.orderTemplate);
           if (forcedTemplate) {
             printerTemplate = forcedTemplate;
-          } else if (payment.vibe) {
-            printerTemplate = 'printer_vibe';
           } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
             printerTemplate = PRINTER_TYPE.SCHNEIDERS;
           }
@@ -1642,15 +1640,9 @@ class Generator {
       );
 
       let printerTemplate = 'printer';
-      const forcedTemplate = forcedPrinterTemplate(
-        playlist.orderTemplate,
-        playlist.template,
-        payment.vibe
-      );
+      const forcedTemplate = forcedPrinterTemplate(playlist.orderTemplate);
       if (forcedTemplate) {
         printerTemplate = forcedTemplate;
-      } else if (payment.vibe) {
-        printerTemplate = 'printer_vibe';
       } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
         printerTemplate = PRINTER_TYPE.SCHNEIDERS;
       }
@@ -1745,13 +1737,36 @@ class Generator {
         payment.paymentId
       );
 
+      // Only a playlist whose printerType is printnbind goes to Print&Bind,
+      // whichever path asks (hourly pass, customer approval, admin). Schneiders,
+      // Tromp, reseller and MusicMatch decks are printed elsewhere; orders 8194
+      // and 8237 (Schneiders) were placed at Print&Bind because nothing here
+      // looked at the printer type.
+      const printNBindPlaylists = playlists.filter(
+        (playlist: any) =>
+          playlist.orderType === 'physical' &&
+          playlist.printerType === PRINTER_TYPE.PRINTNBIND
+      );
+      if (printNBindPlaylists.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `Order ${white.bold(
+              paymentId
+            )} not sent to Print&Bind: no physical playlist has printer type ${white.bold(
+              PRINTER_TYPE.PRINTNBIND
+            )}`
+          )
+        );
+        return { success: false, reason: 'No Print&Bind playlists' };
+      }
+
       // Rebuild any PDF that no longer matches the live design before anything
       // reads it. Everything below (page-count validation, finalCheck, the
       // print API upload) then operates on the same, current file.
       // Inlay-only sends ship the box insert, not the card PDFs, so they skip it.
       if (!inlayOnly) {
         try {
-          await this.regenerateStalePrinterPdfs(payment, playlists);
+          await this.regenerateStalePrinterPdfs(payment, printNBindPlaylists);
         } catch (error) {
           // A failed rebuild must not send the stale file instead. Hold the
           // order and let the existing Pushover/printerHold path surface it.
@@ -1771,28 +1786,26 @@ class Generator {
 
       const physicalPlaylists: any[] = [];
 
-      // Loop over playlists and get physical ones with their filenames
-      for (const playlist of playlists) {
-        if (playlist.orderType === 'physical') {
-          const paymentHasPlaylist =
-            await this.prisma.paymentHasPlaylist.findFirst({
-              select: {
-                filename: true,
-              },
-              where: {
-                paymentId: payment.id,
-                playlistId: playlist.id,
-                type: playlist.orderType,
-                subType: playlist.subType || 'none',
-              },
-            });
+      // Get the Print&Bind playlists' filenames
+      for (const playlist of printNBindPlaylists) {
+        const paymentHasPlaylist =
+          await this.prisma.paymentHasPlaylist.findFirst({
+            select: {
+              filename: true,
+            },
+            where: {
+              paymentId: payment.id,
+              playlistId: playlist.id,
+              type: playlist.orderType,
+              subType: playlist.subType || 'none',
+            },
+          });
 
-          if (paymentHasPlaylist?.filename) {
-            physicalPlaylists.push({
-              playlist,
-              filename: paymentHasPlaylist.filename,
-            });
-          }
+        if (paymentHasPlaylist?.filename) {
+          physicalPlaylists.push({
+            playlist,
+            filename: paymentHasPlaylist.filename,
+          });
         }
       }
 
@@ -1901,7 +1914,7 @@ class Generator {
         : await this.order.createOrder(
             payment,
             physicalPlaylists,
-            playlists[0].productType
+            printNBindPlaylists[0].productType
           );
 
       printApiOrderId = orderData.response.id;

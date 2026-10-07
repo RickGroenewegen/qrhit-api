@@ -212,6 +212,42 @@ describe('sendToPrinter()', () => {
     expect(h.cache.releaseLock).toHaveBeenCalledWith('printer:pay_1');
   });
 
+  it.each(['schneiders', 'tromp', 'reseller', 'musicmatch'])(
+    'never sends a %s order to Print&Bind',
+    async (printerType) => {
+      arrangePrinter({}, { printerType });
+
+      const res = await gen.sendToPrinter('pay_1', '1.1.1.1', true, true);
+
+      expect(res).toEqual({ success: false, reason: 'No Print&Bind playlists' });
+      expect(h.order.createOrder).not.toHaveBeenCalled();
+      expect(h.finalCheck.runCheck).not.toHaveBeenCalled();
+      expect(h.pdf.generatePDF).not.toHaveBeenCalled();
+      expect(h.cache.releaseLock).toHaveBeenCalledWith('printer:pay_1');
+    }
+  );
+
+  it('sends only the printnbind playlists of a mixed order', async () => {
+    const { payment, playlist } = arrangePrinter();
+    const schneiders = makePlaylist({
+      id: 22,
+      paymentHasPlaylistId: 32,
+      orderType: 'physical',
+      printerType: 'schneiders',
+    });
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([schneiders, playlist]);
+
+    const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.order.createOrder).toHaveBeenCalledWith(
+      payment,
+      [{ playlist, filename: 'phys.pdf' }],
+      'cards'
+    );
+    expect(outbound.calls('Mail', 'sendToPrinterMail')).toHaveLength(1);
+  });
+
   it('passes the My Account bingo link in the printer mail for games-enabled playlists', async () => {
     arrangePrinter({}, { gamesEnabled: true });
 
@@ -529,7 +565,10 @@ describe('runSendToPrinterPass()', () => {
     expect(where).toMatchObject({
       sentToPrinter: false,
       printerHold: false,
-      vibe: false,
+      PaymentHasPlaylist: {
+        none: { printerType: 'reseller' },
+        some: { type: 'physical', printerType: 'printnbind' },
+      },
     });
     expect(where.OR).toHaveLength(2);
   });

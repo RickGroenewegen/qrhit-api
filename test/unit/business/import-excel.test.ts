@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/vibe.ts — importCompaniesFromExcel. Uses the REAL
+ * Unit tests for src/business.ts — importCompaniesFromExcel. Uses the REAL
  * exceljs library to build workbook buffers (the code under test loads
  * them with exceljs too), with all database access mocked.
  *
@@ -9,25 +9,25 @@
  * Dutch layout (Bedrijfsnaam, E-mail, Voornaam, ...) is covered as well.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h, resetAll } from './vibe-mocks';
+import { h, resetAll } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
 // NOTE: no fs/sharp/exceljs mocks here — exceljs must stay real.
 
 import ExcelJS from 'exceljs';
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 /** Header row of the current lead export (24 columns). */
 const HEADER = [
@@ -135,7 +135,7 @@ beforeEach(() => {
 describe('importCompaniesFromExcel', () => {
   it('rejects an empty sheet (header only)', async () => {
     const buffer = await buildXlsx([]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(res).toMatchObject({
       success: false,
       error: 'Excel file is empty or has no data rows',
@@ -144,7 +144,7 @@ describe('importCompaniesFromExcel', () => {
 
   it('rejects a sheet without a recognisable company column', async () => {
     const buffer = await buildXlsx([['a@b.nl', 'Jan']], ['Email', 'First name']);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(res.success).toBe(false);
     expect(res.error).toContain('Could not find a company name column');
     expect(res.error).toContain('Email, First name');
@@ -154,7 +154,7 @@ describe('importCompaniesFromExcel', () => {
   it('fails when the companyadmin group is missing', async () => {
     h.prisma.userGroup.findUnique.mockResolvedValue(null);
     const buffer = await buildXlsx([lead({ company: 'Acme', email: 'a@acme.nl' })]);
-    expect(await vibe.importCompaniesFromExcel(buffer, 1)).toMatchObject({
+    expect(await business.importCompaniesFromExcel(buffer, 1)).toMatchObject({
       success: false,
       error: 'companyadmin user group not found',
     });
@@ -174,7 +174,7 @@ describe('importCompaniesFromExcel', () => {
         comment: 'Wil folder digitaal',
       }),
     ]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 42);
+    const res = await business.importCompaniesFromExcel(buffer, 42);
     expect(res.success).toBe(true);
     expect(res.data).toMatchObject({ imported: 1, skipped: 0, usersCreated: 1, errors: [] });
 
@@ -240,7 +240,7 @@ describe('importCompaniesFromExcel', () => {
       ],
       LEGACY_HEADER
     );
-    const res = await vibe.importCompaniesFromExcel(buffer, 42);
+    const res = await business.importCompaniesFromExcel(buffer, 42);
     expect(res.data).toMatchObject({ imported: 1, skipped: 0, errors: [] });
     expect(h.prisma.company.create).toHaveBeenCalledWith({
       data: {
@@ -264,7 +264,7 @@ describe('importCompaniesFromExcel', () => {
   it('matches headers regardless of case, spacing and punctuation', async () => {
     const header = ['COMPANY_NAME', 'e_mail', 'First-Name', 'LAST NAME', 'Zip Code'];
     const buffer = await buildXlsx([['Acme', 'x@acme.nl', 'Jan', 'V', '1234AB']], header);
-    await vibe.importCompaniesFromExcel(buffer, 1);
+    await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.company.create.mock.calls[0][0].data).toMatchObject({
       name: 'Acme',
       contactemail: 'x@acme.nl',
@@ -278,7 +278,7 @@ describe('importCompaniesFromExcel', () => {
       lead({ company: 'Döbler', email: 'eckert@doebler.de', firstName: 'E', lastName: 'K' }),
       lead({ company: 'Döbler', email: 'judith@doebler.de', firstName: 'J', lastName: 'M' }),
     ]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(res.data.imported).toBe(1);
     expect(res.data.usersCreated).toBe(2);
     expect(h.prisma.company.create).toHaveBeenCalledTimes(1);
@@ -295,7 +295,7 @@ describe('importCompaniesFromExcel', () => {
       lead({ company: 'Acme BV', email: 'jan@acme.nl', firstName: 'Jan', lastName: 'V' }),
       lead({ company: 'Acme BV', email: 'piet@acme.nl', firstName: 'Piet', lastName: 'B' }),
     ]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
 
     expect(res.data).toMatchObject({ imported: 0, skipped: 1, usersCreated: 1 });
     expect(h.prisma.company.create).not.toHaveBeenCalled();
@@ -328,7 +328,7 @@ describe('importCompaniesFromExcel', () => {
       companyId: null,
     });
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl' })]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.user.create).not.toHaveBeenCalled();
     expect(h.prisma.user.update).toHaveBeenCalledWith({
       where: { id: 9 },
@@ -344,7 +344,7 @@ describe('importCompaniesFromExcel', () => {
       companyId: 55,
     });
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl' })]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.user.update).not.toHaveBeenCalled();
     expect(res.data.details[0].usersCreated).toBe(0);
     expect(res.data.usersCreated).toBe(0);
@@ -359,7 +359,7 @@ describe('importCompaniesFromExcel', () => {
     ['', ''],
   ])('normalizes phone %s to %s', async (input, expected) => {
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl', phone: input })]);
-    await vibe.importCompaniesFromExcel(buffer, 1);
+    await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.company.create.mock.calls[0][0].data.contactphone).toBe(expected);
   });
 
@@ -375,7 +375,7 @@ describe('importCompaniesFromExcel', () => {
     ['', ''],
   ])('maps country %s to %s', async (input, expected) => {
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl', country: input })]);
-    await vibe.importCompaniesFromExcel(buffer, 1);
+    await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.company.create.mock.calls[0][0].data.countrycode).toBe(expected);
   });
 
@@ -387,7 +387,7 @@ describe('importCompaniesFromExcel', () => {
     ['', '', ''],
   ])('splits address %s into street %s and number %s', async (input, street, number) => {
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl', address: input })]);
-    await vibe.importCompaniesFromExcel(buffer, 1);
+    await business.importCompaniesFromExcel(buffer, 1);
     const data = h.prisma.company.create.mock.calls[0][0].data;
     expect(data.address).toBe(street);
     expect(data.housenumber).toBe(number);
@@ -395,7 +395,7 @@ describe('importCompaniesFromExcel', () => {
 
   it('keeps unknown countries as-is', async () => {
     const buffer = await buildXlsx([lead({ company: 'Acme BV', email: 'jan@acme.nl', country: 'Atlantis' })]);
-    await vibe.importCompaniesFromExcel(buffer, 1);
+    await business.importCompaniesFromExcel(buffer, 1);
     expect(h.prisma.company.create.mock.calls[0][0].data.countrycode).toBe('Atlantis');
   });
 
@@ -407,7 +407,7 @@ describe('importCompaniesFromExcel', () => {
       lead({ company: 'Broken BV', email: 'x@broken.nl' }),
       lead({ company: 'Fine BV', email: 'ok@fine.nl' }),
     ]);
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(res.success).toBe(true);
     expect(res.data.imported).toBe(1);
     expect(res.data.errors).toEqual(['Broken BV: insert exploded']);
@@ -419,7 +419,7 @@ describe('importCompaniesFromExcel', () => {
   });
 
   it('rejects unreadable buffers with the import error message', async () => {
-    const res = await vibe.importCompaniesFromExcel(Buffer.from('not xlsx'), 1);
+    const res = await business.importCompaniesFromExcel(Buffer.from('not xlsx'), 1);
     expect(res.success).toBe(false);
     expect(res.error).toContain('Failed to import companies');
   });

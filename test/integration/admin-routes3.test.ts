@@ -261,15 +261,20 @@ describe('admin routes — wave 3 coverage', () => {
       expect(res.json().error).toContain('Missing required fields');
     });
 
-    it('POST /admin/create — creates a new vibeadmin user', async () => {
+    it('POST /admin/create — creates a new companyadmin user with a generated password', async () => {
+      await prisma().userGroup.upsert({
+        where: { name: 'companyadmin' },
+        create: { id: 6, name: 'companyadmin' },
+        update: {},
+      });
       const res = await app.inject({
         method: 'POST',
         url: '/admin/create',
         headers,
         payload: {
-          email: `wave3-vibe-${Date.now()}@test.qrsong.io`,
-          displayName: 'Wave3 VibeAdmin',
-          userGroup: 'vibeadmin',
+          email: `wave3-companyadmin-${Date.now()}@test.qrsong.io`,
+          displayName: 'Wave3 CompanyAdmin',
+          userGroup: 'companyadmin',
         },
       });
       expect(res.statusCode).toBe(200);

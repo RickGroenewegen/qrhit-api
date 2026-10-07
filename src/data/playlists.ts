@@ -474,13 +474,10 @@ export async function updatePlaylistAmount(
 /** Admin-selectable product type, mapped to the underlying type/subType pair. */
 export type ProductType = 'digital' | 'cards' | 'sheets';
 
-const PRODUCT_TYPE_MAP: Record<
-  ProductType,
-  { type: string; subType: string; digital: boolean; orderTypeProduct: string }
-> = {
-  digital: { type: 'digital', subType: 'none', digital: true, orderTypeProduct: 'cards' },
-  cards: { type: 'physical', subType: 'none', digital: false, orderTypeProduct: 'cards' },
-  sheets: { type: 'physical', subType: 'sheets', digital: false, orderTypeProduct: 'sheets' },
+const PRODUCT_TYPE_MAP: Record<ProductType, { type: string; subType: string }> = {
+  digital: { type: 'digital', subType: 'none' },
+  cards: { type: 'physical', subType: 'none' },
+  sheets: { type: 'physical', subType: 'sheets' },
 };
 
 /**
@@ -514,7 +511,6 @@ export async function changePlaylistType(
         playlistId: true,
         type: true,
         subType: true,
-        numberOfTracks: true,
         payment: { select: { paymentId: true } },
       },
     });
@@ -549,38 +545,11 @@ export async function changePlaylistType(
       };
     }
 
-    // Re-look-up the OrderType categorization FK (no pricing involved). For
-    // physical products fall back to the largest tier when the track count
-    // exceeds every maxCards tier (mirrors Printer.getOrderType clamping).
-    let orderType = await deps.prisma.orderType.findFirst({
-      where: {
-        type: target.orderTypeProduct,
-        digital: target.digital,
-        ...(target.digital ? {} : { maxCards: { gte: php.numberOfTracks } }),
-      },
-      orderBy: { maxCards: 'asc' },
-      select: { id: true },
-    });
-    if (!orderType && !target.digital) {
-      orderType = await deps.prisma.orderType.findFirst({
-        where: { type: target.orderTypeProduct, digital: false },
-        orderBy: { maxCards: 'desc' },
-        select: { id: true },
-      });
-    }
-    if (!orderType) {
-      return {
-        success: false,
-        error: `No matching OrderType found for "${productType}" (${php.numberOfTracks} tracks).`,
-      };
-    }
-
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
       data: {
         type: target.type,
         subType: target.subType,
-        orderTypeId: orderType.id,
         // Reset stale printer/PDF state — regeneration repopulates these.
         printApiUploaded: false,
         eligableForPrinter: false,

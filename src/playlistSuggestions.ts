@@ -22,7 +22,7 @@ const ART_DIR = 'suggestion_art';
 
 /** Public path of the thumbnail; the HTML view points every card here. */
 export function suggestionArtPath(playlistId: string): string {
-  return `/vibe/playlist-suggestions/art/${encodeURIComponent(playlistId)}`;
+  return `/business/playlist-suggestions/art/${encodeURIComponent(playlistId)}`;
 }
 
 /**

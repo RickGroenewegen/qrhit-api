@@ -575,12 +575,9 @@ export class MerchantCenterService {
   private async uploadPlaylist(playlist: any, progress?: string): Promise<string[]> {
     const productIds: string[] = [];
 
-    // Get actual prices from OrderType like the summary component does
-    const numberOfTracks = playlist.numberOfTracks;
-
-    // Get order type for the physical cards variant
+    // The price the summary component shows for the physical cards
     const cardsOrderType = await this.order.getOrderType(
-      numberOfTracks,
+      playlist.numberOfTracks,
       false,
       'cards',
       playlist.playlistId,
@@ -590,11 +587,7 @@ export class MerchantCenterService {
     const productTypes = [
       {
         type: 'physical',
-        price:
-          cardsOrderType?.amount ||
-          cardsOrderType?.amountWithMargin ||
-          playlist.price ||
-          29.99,
+        price: cardsOrderType.amount || playlist.price || 29.99,
       },
     ];
 

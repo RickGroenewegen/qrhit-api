@@ -252,7 +252,6 @@ describe('generate()', () => {
   it.each([
     ['a Schneiders deck', {}, { printerType: 'schneiders' }],
     ['a Tromp deck', {}, { printerType: 'tromp' }],
-    ['a company-list (vibe) order', { vibe: true }, {}],
   ])('gives %s a year-mix seed once, before storing the tracks', async (_label, paymentOver, playlistOver) => {
     const { mollie } = arrange(paymentOver, playlistOver);
 
@@ -816,7 +815,7 @@ describe('finalizeOrder()', () => {
     expect(outbound.calls('Mail', 'sendFinalizedMail')).toHaveLength(0);
   });
 
-  it('selects printer templates: order template > CompanyList override (company orders only) > vibe > schneiders', async () => {
+  it('selects printer templates: order template > schneiders > printer', async () => {
     const cases = [
       {
         // An admin-chosen order template applies to any order on any printer.
@@ -830,21 +829,11 @@ describe('finalizeOrder()', () => {
         expected: 'facta',
       },
       {
-        paymentOver: { vibe: true },
-        playlistOver: { orderType: 'physical', template: 'company_x' },
-        expected: 'company_x',
-      },
-      {
-        // The forced template sticks to the shared playlist row; a public
-        // order of the same playlist must still print the regular layout.
+        // The playlist's own template (CompanyList.forceTemplate) is not used:
+        // the row is shared by every order of that playlist.
         paymentOver: {},
         playlistOver: { orderType: 'physical', template: 'company_x' },
         expected: 'printer',
-      },
-      {
-        paymentOver: { vibe: true },
-        playlistOver: { orderType: 'physical' },
-        expected: 'printer_vibe',
       },
       {
         paymentOver: {},

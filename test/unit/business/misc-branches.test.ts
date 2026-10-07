@@ -1,28 +1,28 @@
 /**
- * Unit tests for src/vibe.ts — remaining branches: error catches, invoice line
+ * Unit tests for src/business.ts — remaining branches: error catches, invoice line
  * variants, finalize edge cases and Excel cell-type handling.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { h, resetAll } from './vibe-mocks';
+import { h, resetAll } from './business-mocks';
 
-vi.mock('../../../src/prisma', async () => (await import('./vibe-mocks')).prismaModule());
-vi.mock('../../../src/cache', async () => (await import('./vibe-mocks')).cacheModule());
-vi.mock('../../../src/utils', async () => (await import('./vibe-mocks')).utilsModule());
-vi.mock('../../../src/auth', async () => (await import('./vibe-mocks')).authModule());
-vi.mock('../../../src/mollie', async () => (await import('./vibe-mocks')).mollieModule());
-vi.mock('../../../src/discount', async () => (await import('./vibe-mocks')).discountModule());
-vi.mock('../../../src/data', async () => (await import('./vibe-mocks')).dataModule());
-vi.mock('../../../src/spotify', async () => (await import('./vibe-mocks')).spotifyModule());
-vi.mock('../../../src/generator', async () => (await import('./vibe-mocks')).generatorModule());
-vi.mock('../../../src/translation', async () => (await import('./vibe-mocks')).translationModule());
-vi.mock('../../../src/logger', async () => (await import('./vibe-mocks')).loggerModule());
-vi.mock('sharp', async () => (await import('./vibe-mocks')).sharpModule());
-vi.mock('fs/promises', async () => (await import('./vibe-mocks')).fsModule());
+vi.mock('../../../src/prisma', async () => (await import('./business-mocks')).prismaModule());
+vi.mock('../../../src/cache', async () => (await import('./business-mocks')).cacheModule());
+vi.mock('../../../src/utils', async () => (await import('./business-mocks')).utilsModule());
+vi.mock('../../../src/auth', async () => (await import('./business-mocks')).authModule());
+vi.mock('../../../src/mollie', async () => (await import('./business-mocks')).mollieModule());
+vi.mock('../../../src/discount', async () => (await import('./business-mocks')).discountModule());
+vi.mock('../../../src/data', async () => (await import('./business-mocks')).dataModule());
+vi.mock('../../../src/spotify', async () => (await import('./business-mocks')).spotifyModule());
+vi.mock('../../../src/generator', async () => (await import('./business-mocks')).generatorModule());
+vi.mock('../../../src/translation', async () => (await import('./business-mocks')).translationModule());
+vi.mock('../../../src/logger', async () => (await import('./business-mocks')).loggerModule());
+vi.mock('sharp', async () => (await import('./business-mocks')).sharpModule());
+vi.mock('fs/promises', async () => (await import('./business-mocks')).fsModule());
 
 import ExcelJS from 'exceljs';
-import Vibe from '../../../src/vibe';
+import Business from '../../../src/business';
 
-const vibe = Vibe.getInstance();
+const business = Business.getInstance();
 
 process.env['API_URI'] = 'https://api.test';
 
@@ -33,7 +33,7 @@ beforeEach(() => {
 describe('error catch branches', () => {
   it('verifySubmission maps prisma errors', async () => {
     h.prisma.companyListSubmission.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.verifySubmission(9)).toMatchObject({
+    expect(await business.verifySubmission(9)).toMatchObject({
       success: false,
       error: 'Error verifying submission',
     });
@@ -41,7 +41,7 @@ describe('error catch branches', () => {
 
   it('getCompanyLists maps prisma errors', async () => {
     h.prisma.company.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.getCompanyLists(1)).toMatchObject({
+    expect(await business.getCompanyLists(1)).toMatchObject({
       success: false,
       error: 'Error retrieving company lists',
     });
@@ -49,7 +49,7 @@ describe('error catch branches', () => {
 
   it('deleteCompany maps prisma errors', async () => {
     h.prisma.company.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.deleteCompany(1)).toMatchObject({
+    expect(await business.deleteCompany(1)).toMatchObject({
       success: false,
       error: 'Error deleting company',
     });
@@ -57,7 +57,7 @@ describe('error catch branches', () => {
 
   it('deleteCompanyList maps prisma errors', async () => {
     h.prisma.companyList.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.deleteCompanyList(1, 2)).toMatchObject({
+    expect(await business.deleteCompanyList(1, 2)).toMatchObject({
       success: false,
       error: 'Error deleting company list',
     });
@@ -65,34 +65,30 @@ describe('error catch branches', () => {
 
   it('company event mutations map prisma errors', async () => {
     h.prisma.companyEvent.create.mockRejectedValue(new Error('x'));
-    expect(await vibe.createCompanyEvent(1, 2, 'c', null)).toMatchObject({
+    expect(await business.createCompanyEvent(1, 2, 'c', null)).toMatchObject({
       success: false,
       error: 'Failed to create company event',
     });
     h.prisma.companyEvent.findFirst.mockResolvedValue({ id: 3 });
     h.prisma.companyEvent.update.mockRejectedValue(new Error('x'));
-    expect(await vibe.updateCompanyEvent(1, 3, 'c')).toMatchObject({
+    expect(await business.updateCompanyEvent(1, 3, 'c')).toMatchObject({
       success: false,
       error: 'Failed to update event',
     });
     h.prisma.companyEvent.findFirst.mockResolvedValue({ id: 3, attachmentUrl: null });
     h.prisma.companyEvent.delete.mockRejectedValue(new Error('x'));
-    expect(await vibe.deleteCompanyEvent(1, 3)).toMatchObject({
+    expect(await business.deleteCompanyEvent(1, 3)).toMatchObject({
       success: false,
       error: 'Failed to delete company event',
     });
   });
 
   it('pricing calculators catch malformed params objects', async () => {
-    expect(await vibe.calculatePricing(null as any)).toMatchObject({
-      success: false,
-      error: 'Error calculating pricing',
-    });
-    expect(await vibe.calculateTrompPricing(null as any)).toMatchObject({
+    expect(await business.calculateTrompPricing(null as any)).toMatchObject({
       success: false,
       error: 'Error calculating Tromp pricing',
     });
-    expect(await vibe.calculateSchneiderPricing(null as any)).toMatchObject({
+    expect(await business.calculateSchneiderPricing(null as any)).toMatchObject({
       success: false,
       error: 'Error calculating Schneider pricing',
     });
@@ -100,7 +96,7 @@ describe('error catch branches', () => {
 
   it('getQuotationPDF surfaces lookup failures and missing companies', async () => {
     h.prisma.quotation.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
+    expect(await business.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
       success: false,
       error: 'Failed to fetch quotation',
     });
@@ -111,7 +107,7 @@ describe('error catch branches', () => {
       quotationNumber: 'QRS1',
     });
     h.prisma.company.findMany.mockResolvedValue([]); // no companies at all
-    expect(await vibe.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
+    expect(await business.getQuotationPDF(1, 4, ['admin'])).toMatchObject({
       success: false,
       error: 'Company not found',
     });
@@ -123,7 +119,7 @@ describe('error catch branches', () => {
       companyListId: 0,
     });
     h.prisma.companyListSubmission.delete.mockResolvedValue({});
-    expect(await vibe.deleteSubmission(8)).toEqual({ success: true });
+    expect(await business.deleteSubmission(8)).toEqual({ success: true });
     expect(h.prisma.companyList.update).not.toHaveBeenCalled();
   });
 });
@@ -165,7 +161,7 @@ describe('getState — successful non-empty ranking', () => {
       },
     ]);
 
-    const res = await vibe.getState(5);
+    const res = await business.getState(5);
     expect(res.success).toBe(true);
     expect(res.data.ranking).toHaveLength(1);
     expect(res.data.ranking[0]).toMatchObject({ id: 10, score: 3, withinLimit: true });
@@ -200,7 +196,7 @@ describe('updateCompanyList — remaining date/number branches', () => {
       slug: '',
       ...data,
     }));
-    const res = await vibe.updateCompanyList(
+    const res = await business.updateCompanyList(
       1,
       2,
       makeRequest([
@@ -215,48 +211,6 @@ describe('updateCompanyList — remaining date/number branches', () => {
     expect('minimumNumberOfTracks' in data).toBe(false);
     // Empty slug -> clearCompanyListCache bails out
     expect(h.cacheDel).not.toHaveBeenCalled();
-  });
-});
-
-describe('generatePDF — forceTemplate edge cases on the queued path', () => {
-  function arrange(list: any) {
-    h.prisma.companyList.findUnique.mockImplementation(async (args: any) =>
-      args.include ? list : { id: 5, numberOfTracks: 5, numberOfCards: 200 }
-    );
-    h.prisma.companyList.update.mockResolvedValue({ id: 5, slug: 'lijst' });
-    h.discount.createDiscountCode.mockResolvedValue({ code: 'D' });
-    h.mollie.getPaymentUri.mockResolvedValue({ data: { generationQueued: true } });
-  }
-
-  const list = {
-    id: 5,
-    name: 'L',
-    slug: 'lijst',
-    playlistId: null,
-    paymentId: null,
-    playlistUrl: 'https://open.spotify.com/playlist/pl1',
-    background: null,
-    background2: null,
-    hideCircle: false,
-    forceTemplate: 'classic',
-    showNames: false,
-    numberOfCards: 100,
-    Company: { id: 1, name: 'A' },
-  };
-
-  it('logs and continues when the playlist for forceTemplate is missing', async () => {
-    arrange(list);
-    h.prisma.playlist.findUnique.mockResolvedValue(null);
-    const res = await vibe.generatePDF(5, { getPaymentUri: h.mollie.getPaymentUri } as any, '1.1.1.1');
-    expect(res.success).toBe(true);
-    expect(h.prisma.playlist.update).not.toHaveBeenCalled();
-  });
-
-  it('swallows forceTemplate lookup errors', async () => {
-    arrange(list);
-    h.prisma.playlist.findUnique.mockRejectedValue(new Error('db'));
-    const res = await vibe.generatePDF(5, { getPaymentUri: h.mollie.getPaymentUri } as any, '1.1.1.1');
-    expect(res.success).toBe(true);
   });
 });
 
@@ -293,7 +247,7 @@ describe('finalizeList — edge cases', () => {
     h.prisma.companyListSubmission.findMany.mockResolvedValue([]);
     h.prisma.companyList.update.mockResolvedValue({ id: 1, slug: 's' });
 
-    const res = await vibe.finalizeList(1);
+    const res = await business.finalizeList(1);
     expect(res.success).toBe(true);
     expect(res.data.tracks).toEqual([]);
     // Both playlist attempts fail with "No tracks provided"
@@ -317,7 +271,7 @@ describe('finalizeList — edge cases', () => {
       data: { playlistUrl: 'https://sp/full' },
     });
 
-    const res = await vibe.finalizeList(1);
+    const res = await business.finalizeList(1);
     expect(res.success).toBe(true);
     expect(res.data.tracks).toEqual([]); // limited list stays empty
     // Limited playlist gets no tracks -> only the FULL playlist is created
@@ -346,13 +300,13 @@ describe('finalizeList — edge cases', () => {
       return { id: 1, slug: 's' };
     });
 
-    const res = await vibe.finalizeList(1);
+    const res = await business.finalizeList(1);
     expect(res.success).toBe(true); // status update still succeeded
   });
 
   it('maps unexpected errors', async () => {
     h.prisma.companyList.findUnique.mockRejectedValue(new Error('x'));
-    expect(await vibe.finalizeList(1)).toMatchObject({
+    expect(await business.finalizeList(1)).toMatchObject({
       success: false,
       error: 'Error finalizing list',
     });
@@ -387,7 +341,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
         }),
       }),
     });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.success).toBe(true);
     expect(res.items![0].description).toBe(
       'QRSong! Luxe doos - Luxe doos met 200 kaarten en bedrukte chips'
@@ -413,7 +367,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
       name: 'L',
       calculationTromp: JSON.stringify({ printingType: 'klein', pricing: pricing() }),
     });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'qrsong', 'full');
     expect(res.items![0].description).toBe(
       'QRSong! muziekkaarten set - Klein voorbedrukt doosje met 100 kaarten'
     );
@@ -429,7 +383,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
         pricing: pricing({ unitPrice: 4.72, customAppFee: 350, votingPortalFee: 500 }),
       }),
     });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.success).toBe(true);
     const descriptions = res.items!.map((i) => i.description);
     expect(descriptions).toEqual([
@@ -450,7 +404,7 @@ describe('buildInvoiceLineItems — description and extras variants', () => {
         pricing: pricing({ customAppFee: 395 }),
       }),
     });
-    const res = await vibe.buildInvoiceLineItems(1, 2, 'schneider', 'full');
+    const res = await business.buildInvoiceLineItems(1, 2, 'schneider', 'full');
     expect(res.items).toContainEqual({
       description: 'App in eigen stijl - eenmalige kosten, maatwerk app ontwikkeling',
       amount: '1',
@@ -497,7 +451,7 @@ describe('importCompaniesFromExcel — cell types and skipped rows', () => {
     sheet.addRow(['Rich Co', '', 'No', 'Mail']);
 
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    const res = await vibe.importCompaniesFromExcel(buffer, 1);
+    const res = await business.importCompaniesFromExcel(buffer, 1);
     expect(res.success).toBe(true);
     expect(res.data.imported).toBe(1);
 

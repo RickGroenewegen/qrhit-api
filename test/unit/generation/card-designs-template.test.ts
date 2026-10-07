@@ -84,7 +84,7 @@ async function render(template: string, designs: any[], startIndex = 0): Promise
     source,
     {
       subdir: 'sub',
-      payment: { vibe: false },
+      payment: {},
       playlist: { name: 'P' },
       php,
       tracks,
