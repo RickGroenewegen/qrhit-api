@@ -138,7 +138,7 @@ class PDF {
 
   /**
    * Public wrapper to render an arbitrary URL to a PDF buffer via Lambda.
-   * Used by finalCheck to re-render the live card route for comparison.
+   * Used by the Merchant Center feed (merchantcenter.ts).
    */
   public async renderUrlToPdfBuffer(
     url: string,

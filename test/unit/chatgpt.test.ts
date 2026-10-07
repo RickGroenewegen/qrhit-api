@@ -902,67 +902,6 @@ describe('ChatGPT.generateWrongOptions', () => {
 });
 
 // ---------------------------------------------------------------------------
-// askWithImages
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.askWithImages', () => {
-  const imgPath = path.join(process.env['PUBLIC_DIR']!, 'chatgpt-test-img.png');
-
-  beforeAll(async () => {
-    await fs.writeFile(imgPath, Buffer.from('fake-png-bytes'));
-  });
-
-  it('sends images as base64 data URIs and parses the JSON answer', async () => {
-    createMock.mockResolvedValueOnce({
-      choices: [{ message: { content: '{"ok":true,"count":2}' } }],
-    });
-
-    const result = await gpt.askWithImages('Describe', [imgPath], {
-      systemPrompt: 'You are a vision bot',
-    });
-    expect(result).toEqual({ ok: true, count: 2 });
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.6-sol');
-    expect(payload.response_format).toEqual({ type: 'json_object' });
-    expect(payload.messages[0]).toEqual({
-      role: 'system',
-      content: 'You are a vision bot',
-    });
-    const userContent = payload.messages[1].content;
-    expect(userContent[0]).toEqual({ type: 'text', text: 'Describe' });
-    expect(userContent[1].image_url.url).toBe(
-      `data:image/png;base64,${Buffer.from('fake-png-bytes').toString('base64')}`
-    );
-  });
-
-  it('returns the raw string when expectJson is false (no response_format)', async () => {
-    createMock.mockResolvedValueOnce({
-      choices: [{ message: { content: 'plain answer' } }],
-    });
-    const result = await gpt.askWithImages('Describe', [imgPath], {
-      expectJson: false,
-    });
-    expect(result).toBe('plain answer');
-    expect(createMock.mock.calls[0][0].response_format).toBeUndefined();
-    // No system prompt was given, so the only message is the user message
-    expect(createMock.mock.calls[0][0].messages).toHaveLength(1);
-  });
-
-  it('returns null when the JSON answer is unparseable', async () => {
-    createMock.mockResolvedValueOnce({
-      choices: [{ message: { content: 'not json' } }],
-    });
-    expect(await gpt.askWithImages('Describe', [imgPath])).toBeNull();
-  });
-
-  it('returns null when the API call fails', async () => {
-    createMock.mockRejectedValueOnce(new Error('vision down'));
-    expect(await gpt.askWithImages('Describe', [imgPath])).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // generateBlogImage
 // ---------------------------------------------------------------------------
 

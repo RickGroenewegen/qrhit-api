@@ -4,6 +4,7 @@ import Mail from '../mail';
 import Push from '../push';
 import Suggestion from '../suggestion';
 import Designer from '../designer';
+import DesignScreen from '../designScreen';
 import Reviews from '../reviews';
 import AudioClient from '../audio';
 import Generator from '../generator';
@@ -617,6 +618,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
     return result;
   });
+
+  // Hitster screen of one picked image, while designing (src/designScreen.ts)
+  fastify.post(
+    '/designer/screen',
+    { bodyLimit: 1_500_000 },
+    async (request: any) => {
+      const { image, filename, type } = request.body || {};
+      return DesignScreen.getInstance().screen({ image, filename, type }, request.clientIp);
+    }
+  );
 
   // Get card design for user suggestions
   fastify.get(

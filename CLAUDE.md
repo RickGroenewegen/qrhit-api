@@ -552,6 +552,54 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Hitster detector: the designer's screen and finalCheck
+
+A small model of our own (`src/hitsterDetector.ts`,
+`assets/hitster/hitster.onnx`, 12 MB) judges whether a picture shows Hitster
+material: about 70 ms per picture on one core, on `onnxruntime-node`, no paid
+API. Built 2026-10-06; how it is trained, and the tool for labelling and
+retraining, is `ml/hitster/README.md`. It is used twice:
+
+- **While designing**: `POST /designer/screen` (`src/designScreen.ts`) tells
+  the card and box designers whether a picture the customer just picked is
+  Hitster, and they show a message. Ordering anyway is allowed.
+- **Before printing**: `finalCheck.ts` runs the model on every picture that
+  prints on a physical order (each design's front and back background, logo
+  and QR logo; the box front, logo and back) plus a text search of the PDFs
+  for the word (typed box text). A hit puts the order on hold and mails the
+  customer the pictures with the reason (`handleFinalCheckFailure` in
+  `generator.ts`, `sendDesignAlterMail`). This replaced, at Rick's request
+  (2026-10-06), the GPT checks finalCheck used to do (design drift between
+  the stored and a live-rendered PDF, Hitster on rendered pages, text
+  readability): no language model is asked anything any more. The model
+  runs on the uploads, not on rendered pages: it was trained on uploads, and
+  every rendered card carries a QR code and track text it never saw.
+
+- **What counts as Hitster** (Rick, 2026-10-06): the word in any lettering,
+  near-spellings included ("HITSER", "Hitstor", "HITSTAR"), and the look on
+  its own: the coloured rings of the back of their cards, the chrome speaker
+  and the "THE MUSIC CARD GAME" pill of the box. Not Hitster: JITSTER, a name
+  or word with "-ster" (Brittster, Swiftster, Sipster), HITSPEL.
+- The model scores four classes per 16 x 16 cell; a picture is flagged when
+  any class reaches `HITSTER_THRESHOLD` (default 0.5). The answer carries the
+  marks and where they are.
+- **The input must be prepared exactly as in training** (`prepareHitsterInput`
+  mirrors `ml/hitster/preprocess.py`; `ml/hitster/node/parity.ts` proves they
+  agree). In particular transparency goes onto a grey that contrasts with the
+  artwork, never onto white: a white "HITSTER" on transparent flattened onto
+  white is an empty picture. The designers' small copy uses the same rule.
+- Verdicts are cached in Redis per picture content and model file (size +
+  mtime), so a new model never answers from old verdicts.
+- `DESIGN_SCREEN_MODE` (off / warn, default warn; block is reserved) travels
+  with every answer. Anything that goes wrong answers "unchecked", which the
+  designers treat as no opinion. 400 screens per address per day.
+- **`.npmrc` has `onnxruntime-node-install=skip`.** Without it the package's
+  postinstall downloads the CUDA 12 libraries (hundreds of MB) on every
+  `npm install` on a Linux x64 box; we run on CPU.
+- A new model: copy `ml/hitster/runs/<name>/hitster.onnx` over
+  `assets/hitster/hitster.onnx`, run `test/unit/hitster-detector.test.ts`
+  (it runs the shipped model on the Hitster box photo), deploy.
+
 ## Scan-app themes and the App Designer
 
 The scan app (`qrhit-app`) themes itself from `GET /theme/:slug`: a ThemeConfig
