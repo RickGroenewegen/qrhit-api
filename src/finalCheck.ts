@@ -1,18 +1,28 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import { PDFParse } from 'pdf-parse';
+import sharp from 'sharp';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
+import PDF from './pdf';
+import { resolveQrSubDir } from './qrPaths';
 import HitsterDetector, { HitsterClass } from './hitsterDetector';
 import { hitsterHoldThreshold } from './hitsterThresholds';
 import { IMAGE_FILENAME } from './cardDesigns';
+import { measureDrift } from './designDrift';
 
 /**
  * The last check of a physical order before it goes to the printer: is there
  * Hitster material on the cards or the box?
  *
- * The judge is our own Hitster detector (src/hitsterDetector.ts), run on every
+ * First, did the design drift? The first card of every design is rendered
+ * again from the live design route and compared with the stored PDF, pixel
+ * by pixel (src/designDrift.ts). A drift holds the order for a person to
+ * look, without a mail to the customer ("design-mismatch"); a live render
+ * that fails skips the comparison.
+ *
+ * Then Hitster. The judge is our own Hitster detector (src/hitsterDetector.ts), run on every
  * picture the customer put on the order: each design's front and back
  * background, logo and QR logo, and the box's front, logo and back. Which
  * pictures print is decided as the print templates decide it (a card
@@ -145,6 +155,19 @@ const CLASS_LABELS: Record<HitsterClass, string> = {
   pill: 'the "THE MUSIC CARD GAME" pill',
 };
 
+// The printer_sheets layout (views/pdf_printer_sheets.ejs): an A4 page with
+// 15mm margins holding rows of three 60mm cards; the back page mirrors every
+// row for duplex printing.
+const SHEET = { widthMm: 210, marginMm: 15, cardMm: 60, perRow: 3, perPage: 12 };
+
+/** One design's front and back, as page pictures. */
+interface DesignPages {
+  // 1-based design number; null for a single-design deck
+  design: number | null;
+  front: Buffer;
+  back: Buffer;
+}
+
 // The folder each card design field's uploads are in (src/designer.ts)
 const IMAGE_FIELDS = {
   background: 'background',
@@ -203,6 +226,7 @@ class FinalCheck {
   private logger = new Logger();
   private prisma = PrismaInstance.getInstance();
   private detector = HitsterDetector.getInstance();
+  private pdf = new PDF();
 
   public static getInstance(): FinalCheck {
     if (!FinalCheck.instance) FinalCheck.instance = new FinalCheck();
@@ -283,6 +307,9 @@ class FinalCheck {
       };
     }
 
+    // Did the design drift since the PDF was made?
+    const drift = await this.driftProblems(payment, php, pdfPath);
+
     // The pictures, each through the model once (one file can sit in
     // several places)
     const problems: FinalCheckProblem[] = [];
@@ -354,28 +381,31 @@ class FinalCheck {
     const textProblems = await this.textProblems(payment.paymentId, php, pdfPath);
     problems.push(...textProblems);
 
-    if (problems.length === 0 && unchecked.length === 0) {
-      this.log(payment.paymentId, php.id, 'no Hitster material ✓');
+    if (problems.length === 0 && unchecked.length === 0 && drift.length === 0) {
+      this.log(payment.paymentId, php.id, 'design as stored, no Hitster material ✓');
       return { ok: true };
     }
 
-    // Nothing found, but not everything could be looked at: on hold for a
-    // person to look, without a mail to the customer
+    // Nothing Hitster, but the design drifted or not everything could be
+    // looked at: on hold for a person to look, without a mail to the customer
     if (problems.length === 0) {
+      const held = [...drift, ...unchecked];
       return {
         ok: false,
-        reason: 'picture-unchecked',
+        reason: drift.length ? 'design-mismatch' : 'picture-unchecked',
         userActionable: false,
-        details: unchecked.map(describeFinalCheckProblem).join(' | '),
+        details: held.map(describeFinalCheckProblem).join(' | '),
         ...failBase,
-        problems: unchecked,
+        problems: held,
       };
     }
 
-    // The card wins the correction tab when both are at fault
+    // Hitster is what the customer can fix, so it is what they are mailed
+    // about; the rest is listed beside it for the dashboard. The card wins
+    // the correction tab when both are at fault.
     const onCard = problems.some((p) => p.place.startsWith('card'));
     const correctionTab: FinalCheckCorrectionTab = onCard ? 'card' : 'box';
-    const all = [...problems, ...unchecked];
+    const all = [...problems, ...drift, ...unchecked];
     return {
       ok: false,
       reason: 'hitster',
@@ -386,6 +416,158 @@ class FinalCheck {
       flaggedImages,
       correctionTab,
     };
+  }
+
+  /**
+   * The first card of every design in the stored PDF against a fresh render
+   * of the live design route, front and back (src/designDrift.ts). A live
+   * render that fails (the Lambda) skips the comparison; a stored PDF that
+   * cannot be rasterised throws, which holds the order (generator.ts).
+   */
+  private async driftProblems(
+    payment: { paymentId: string; qrSubDir: string | null },
+    php: any,
+    pdfPath: string
+  ): Promise<FinalCheckProblem[]> {
+    const designCount = 1 + (php.extraDesigns?.length ?? 0);
+    const isSheets = (php.subType || 'none') === 'sheets';
+    // A printer PDF opens with the how-to card when there is one; sheets
+    // never carry it.
+    const firstCardPage = !isSheets && php.addHowToCard ? 3 : 1;
+
+    let live: Buffer;
+    try {
+      live = await this.renderLivePdf(payment, php, isSheets, designCount, firstCardPage);
+    } catch (e) {
+      this.log(payment.paymentId, php.id, `live render failed (${(e as Error).message}), design comparison skipped`, 'yellow');
+      return [];
+    }
+    const stored = await this.designPages(await fs.readFile(pdfPath), isSheets, designCount, firstCardPage);
+    const fresh = await this.designPages(live, isSheets, designCount, firstCardPage);
+
+    const problems: FinalCheckProblem[] = [];
+    for (const [index, pages] of stored.entries()) {
+      for (const side of ['front', 'back'] as const) {
+        const measure = await measureDrift(pages[side], fresh[index][side]);
+        const changed = Math.round(measure.changed * 100);
+        const colours = Math.round(measure.colours * 100);
+        this.log(
+          payment.paymentId,
+          php.id,
+          `design comparison ${pages.design ? `design ${pages.design} ` : ''}${side}: ${changed}% of the card differs, colours moved ${colours}%${
+            measure.drifted ? white.bold(' → drifted') : ''
+          }`,
+          measure.drifted ? 'yellow' : 'blue'
+        );
+        if (measure.drifted) {
+          problems.push({
+            check: 'design-mismatch',
+            design: pages.design,
+            place: side === 'front' ? 'card-front' : 'card-back',
+            message: `${changed}% of the card differs from a fresh render, colours moved ${colours}%`,
+          });
+        }
+      }
+    }
+    return problems;
+  }
+
+  /**
+   * The front and back of the first card of every design, as PNGs. A printer
+   * PDF has one card per page pair; a sheet holds twelve cards per page,
+   * fronts on page 1 and backs on page 2, so a deck with several designs gets
+   * each design's card cut out of the sheet.
+   */
+  private async designPages(pdf: Buffer, isSheets: boolean, designCount: number, firstCardPage: number): Promise<DesignPages[]> {
+    const numberOf = (index: number) => (designCount > 1 ? index + 1 : null);
+    if (isSheets) {
+      const [front, back] = await this.screenshots(pdf, [1, 2]);
+      if (designCount === 1) return [{ design: null, front, back }];
+      const pages: DesignPages[] = [];
+      for (let card = 0; card < Math.min(designCount, SHEET.perPage); card++) {
+        const row = Math.floor(card / SHEET.perRow);
+        const column = card % SHEET.perRow;
+        pages.push({
+          design: numberOf(card),
+          front: await this.cropSheetCard(front, row, column),
+          // The back page mirrors each row for duplex printing
+          back: await this.cropSheetCard(back, row, SHEET.perRow - 1 - column),
+        });
+      }
+      return pages;
+    }
+    const fronts = Array.from({ length: designCount }, (_, index) => firstCardPage + 2 * index);
+    const images = await this.screenshots(pdf, fronts.flatMap((front) => [front, front + 1]));
+    return fronts.map((_, index) => ({ design: numberOf(index), front: images[2 * index], back: images[2 * index + 1] }));
+  }
+
+  /** One 60mm card cut out of a rendered sheet page (see SHEET). */
+  private async cropSheetCard(page: Buffer, row: number, column: number): Promise<Buffer> {
+    const { width } = await sharp(page).metadata();
+    const pxPerMm = (width || 0) / SHEET.widthMm;
+    const size = Math.floor(SHEET.cardMm * pxPerMm);
+    return sharp(page)
+      .extract({
+        left: Math.round((SHEET.marginMm + column * SHEET.cardMm) * pxPerMm),
+        top: Math.round((SHEET.marginMm + row * SHEET.cardMm) * pxPerMm),
+        width: size,
+        height: size,
+      })
+      .png()
+      .toBuffer();
+  }
+
+  /** The (1-based) pages of a PDF as PNGs, in the order asked. */
+  private async screenshots(pdf: Buffer, pageNumbers: number[]): Promise<Buffer[]> {
+    const parser = new PDFParse({ data: new Uint8Array(pdf) });
+    try {
+      const result = await parser.getScreenshot({ partial: pageNumbers, scale: 1.0, imageBuffer: true, imageDataUrl: false });
+      return pageNumbers.map((pageNumber) => {
+        const page = (result.pages || []).find((p) => p.pageNumber === pageNumber);
+        if (!page?.data) {
+          throw new Error(`pdf-parse getScreenshot returned no usable data for page ${pageNumber}`);
+        }
+        return Buffer.from(page.data as Uint8Array);
+      });
+    } finally {
+      try {
+        await parser.destroy();
+      } catch {}
+    }
+  }
+
+  /**
+   * The first pages of the order as the live design route draws them now.
+   * A printer render runs to the first card of the last design (past the
+   * how-to card, when there is one); a sheet holds them all on its first two
+   * pages.
+   */
+  private async renderLivePdf(
+    payment: { paymentId: string; qrSubDir: string | null },
+    php: any,
+    isSheets: boolean,
+    designCount: number,
+    firstCardPage: number
+  ): Promise<Buffer> {
+    const template = isSheets ? 'printer_sheets' : 'printer';
+    const endIndex = isSheets ? 11 : designCount - 1;
+    const subdir = await resolveQrSubDir(payment.qrSubDir, php.id);
+    const eco = php.eco ? 1 : 0;
+    const url = `${process.env['API_URI']}/qr/pdf/${php.playlist.playlistId}/${payment.paymentId}/${template}/0/${endIndex}/${subdir}/${eco}/0/0`;
+    const options: any = {
+      marginTop: 0,
+      marginRight: 0,
+      marginBottom: 0,
+      marginLeft: 0,
+      pageRanges: isSheets ? '1-2' : `1-${firstCardPage + 2 * designCount - 1}`,
+    };
+    if (isSheets) {
+      options.format = 'a4';
+    } else {
+      options.width = 60;
+      options.height = 60;
+    }
+    return this.pdf.renderUrlToPdfBuffer(url, options);
   }
 
   /**

@@ -30,12 +30,47 @@ vi.mock('../../src/hitsterDetector', () => ({
 }));
 
 const pdfTextMock = vi.fn(async (_params: any) => ({ pages: [{ text: 'Normal song title' }] }));
+// Screenshots: the pages asked for, each named after its PDF and number
+const { screenshotMock } = vi.hoisted(() => ({ screenshotMock: vi.fn() }));
 vi.mock('pdf-parse', () => ({
   PDFParse: class {
-    constructor(_opts: any) {}
+    source: string;
+    constructor(opts: any) {
+      this.source = Buffer.from(opts.data).toString();
+    }
     getText = pdfTextMock;
+    getScreenshot = (params: any) => screenshotMock(this.source, params);
     destroy = vi.fn(async () => {});
   },
+}));
+
+// The live render of the design route, and the pixel comparison of two pages
+const { renderMock, driftMock, extractMock } = vi.hoisted(() => ({
+  renderMock: vi.fn(),
+  driftMock: vi.fn(),
+  extractMock: vi.fn(),
+}));
+vi.mock('../../src/pdf', () => ({
+  default: class {
+    renderUrlToPdfBuffer = renderMock;
+  },
+}));
+vi.mock('../../src/qrPaths', () => ({ resolveQrSubDir: async () => 'qrsub' }));
+vi.mock('../../src/designDrift', () => ({ measureDrift: driftMock }));
+vi.mock('sharp', () => ({
+  default: vi.fn((input: Buffer) => {
+    const chain: any = {
+      // A4 at scale 1: 210mm = 595px
+      metadata: async () => ({ width: 595 }),
+      extract: (region: any) => {
+        extractMock(input.toString(), region);
+        return chain;
+      },
+      png: () => chain,
+      toBuffer: async () => Buffer.from(`${input.toString()} cut`),
+    };
+    return chain;
+  }),
 }));
 
 const { missing, fsAccessMock, fsReadFileMock } = vi.hoisted(() => {
@@ -106,6 +141,15 @@ describe('FinalCheck.runCheck', () => {
     missing.clear();
     pdfTextMock.mockReset();
     pdfTextMock.mockResolvedValue({ pages: [{ text: 'Normal song title' }] });
+    renderMock.mockReset();
+    renderMock.mockResolvedValue(Buffer.from('live pdf'));
+    screenshotMock.mockReset();
+    screenshotMock.mockImplementation(async (source: string, params: any) => ({
+      pages: params.partial.map((n: number) => ({ pageNumber: n, data: Buffer.from(`${source} page ${n}`) })),
+    }));
+    driftMock.mockReset();
+    driftMock.mockResolvedValue({ changed: 0.02, colours: 0.01, drifted: false });
+    extractMock.mockReset();
   });
 
   it('passes an order without physical cards', async () => {
@@ -314,6 +358,104 @@ describe('FinalCheck.runCheck', () => {
     const result = await finalCheck.runCheck(payment);
     expect(result).toMatchObject({ ok: false, paymentHasPlaylistId: 2 });
     expect(asked().some((f) => f.endsWith('third0001.png'))).toBe(false);
+  });
+});
+
+describe('FinalCheck design comparison', () => {
+  const stored = '/tmp/test-public/pdf/test-file.pdf';
+
+  beforeEach(() => {
+    prismaMock.paymentHasPlaylist.findMany.mockReset();
+    detectMock.mockReset();
+    detectMock.mockResolvedValue({ scores: {}, marks: [] });
+    hitsterFiles.clear();
+    missing.clear();
+    pdfTextMock.mockReset();
+    pdfTextMock.mockResolvedValue({ pages: [{ text: 'clean' }] });
+    renderMock.mockReset();
+    renderMock.mockResolvedValue(Buffer.from('live pdf'));
+    screenshotMock.mockReset();
+    screenshotMock.mockImplementation(async (source: string, params: any) => ({
+      pages: params.partial.map((n: number) => ({ pageNumber: n, data: Buffer.from(`${source} page ${n}`) })),
+    }));
+    driftMock.mockReset();
+    driftMock.mockResolvedValue({ changed: 0.02, colours: 0.01, drifted: false });
+    extractMock.mockReset();
+  });
+
+  /** Which stored and live pages were compared, as "stored page → live page". */
+  const compared = () =>
+    driftMock.mock.calls.map(([a, b]: Buffer[]) => `${a.toString().replace(`bytes of ${stored} `, 'stored ')} → ${b.toString().replace('live pdf ', 'live ')}`);
+
+  it('compares the front and back of every design with a fresh render of the design route', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ addHowToCard: true, extraDesigns: [{ position: 2 }] })]);
+    expect(await finalCheck.runCheck(payment)).toEqual({ ok: true });
+    const [url, options] = renderMock.mock.calls[0];
+    expect(url).toContain('/qr/pdf/spotify-playlist-123/pay-abc123/printer/0/1/qrsub/0/0/0');
+    expect(options).toMatchObject({ width: 60, height: 60, pageRanges: '1-6' });
+    // Past the how-to card: cards on pages 3-4 and 5-6
+    expect(compared()).toEqual(['stored page 3 → live page 3', 'stored page 4 → live page 4', 'stored page 5 → live page 5', 'stored page 6 → live page 6']);
+  });
+
+  it('holds the order for a person, without mailing the customer, when a design drifted', async () => {
+    driftMock.mockImplementation(async (a: Buffer) =>
+      a.toString().endsWith('page 4') ? { changed: 0.62, colours: 0.48, drifted: true } : { changed: 0.01, colours: 0, drifted: false }
+    );
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ extraDesigns: [{ position: 2 }] })]);
+    const result = await finalCheck.runCheck(payment);
+    expect(result).toMatchObject({ ok: false, reason: 'design-mismatch', userActionable: false, designCount: 2 });
+    if (result.ok) return;
+    expect(result.problems).toEqual([
+      { check: 'design-mismatch', design: 2, place: 'card-back', message: '62% of the card differs from a fresh render, colours moved 48%' },
+    ]);
+    expect(result.details).toBe('Design 2 back: 62% of the card differs from a fresh render, colours moved 48%');
+    expect(result.flaggedImages).toBeUndefined();
+  });
+
+  it('mails about Hitster when it is there, and lists a drift beside it', async () => {
+    driftMock.mockResolvedValue({ changed: 0.5, colours: 0.5, drifted: true });
+    hitsterFiles.set('logocccc1.png', { class: 'word', score: 0.99 });
+    detectMock.mockImplementation(async (buffer: Buffer) => {
+      const hit = hitsterFiles.get(buffer.toString().split('/').pop()!);
+      return { scores: {}, marks: hit ? [{ ...hit, box: { x: 0, y: 0, width: 1, height: 1 } }] : [] };
+    });
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    const result = await finalCheck.runCheck(payment);
+    expect(result).toMatchObject({ ok: false, reason: 'hitster', userActionable: true });
+    if (result.ok) return;
+    expect(result.problems.map((p) => p.check)).toEqual(['hitster', 'design-mismatch', 'design-mismatch']);
+  });
+
+  it('skips the comparison when the live render fails', async () => {
+    renderMock.mockRejectedValue(new Error('Lambda timeout'));
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    expect(await finalCheck.runCheck(payment)).toEqual({ ok: true });
+    expect(driftMock).not.toHaveBeenCalled();
+  });
+
+  it('holds the order when the stored PDF cannot be rasterised', async () => {
+    screenshotMock.mockImplementation(async (source: string, params: any) => ({
+      pages: source.startsWith('bytes of') ? [] : params.partial.map((n: number) => ({ pageNumber: n, data: Buffer.from(`p${n}`) })),
+    }));
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    await expect(finalCheck.runCheck(payment)).rejects.toThrow(/no usable data for page 1/);
+  });
+
+  it('renders a sheet as A4 and cuts each design out of it, backs mirrored per row', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ subType: 'sheets', extraDesigns: [{ position: 2 }] }),
+    ]);
+    await finalCheck.runCheck(payment);
+    const [url, options] = renderMock.mock.calls[0];
+    expect(url).toContain('/printer_sheets/0/11/');
+    expect(options).toMatchObject({ format: 'a4', pageRanges: '1-2' });
+    // 595px for 210mm: 15mm margin = 43px, a 60mm card = 170px
+    const stored1 = extractMock.mock.calls.filter(([page]) => page === `bytes of ${stored} page 1`).map(([, r]) => r.left);
+    const stored2 = extractMock.mock.calls.filter(([page]) => page === `bytes of ${stored} page 2`).map(([, r]) => r.left);
+    expect(stored1).toEqual([43, 213]);
+    // Design 1's back is in the third column of the back page, design 2's in the second
+    expect(stored2).toEqual([383, 213]);
+    expect(driftMock).toHaveBeenCalledTimes(4);
   });
 });
 

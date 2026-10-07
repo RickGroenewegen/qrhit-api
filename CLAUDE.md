@@ -574,6 +574,18 @@ retraining, is `ml/hitster/README.md`. It is used twice:
   readability): no language model is asked anything any more. The model
   runs on the uploads, not on rendered pages: it was trained on uploads, and
   every rendered card carries a QR code and track text it never saw.
+- **Design drift, without GPT** (2026-10-07): finalCheck renders the first
+  card of every design again from the live design route and compares it
+  with the stored PDF in `src/designDrift.ts`: both small (64 px) and
+  blurred, a page drifted only when more than `DRIFT_SHARE` (0.3) of it
+  differs clearly and its colour mix moved more than `DRIFT_COLOURS` (0.25).
+  That ignores compression, hinting, a card number and a QR code with
+  another payload (about a quarter of a front, same colours), and catches a
+  wrong or missing background, other artwork or a blank render. A drift
+  holds the order as `design-mismatch` without a mail; a failing live render
+  (Lambda) skips the comparison. Every comparison logs its two numbers, so
+  the thresholds can be tuned from the logs. Readability is no longer
+  checked after payment: the card designer gives a contrast tip instead.
 
 - **What counts as Hitster** (Rick, 2026-10-06): the word in any lettering,
   near-spellings included ("HITSER", "Hitstor", "HITSTAR"), and the look on
