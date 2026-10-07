@@ -61,7 +61,7 @@ vi.mock('../../src/designDrift', () => ({ measureDrift: driftMock }));
 const { readQrMock } = vi.hoisted(() => ({ readQrMock: vi.fn() }));
 vi.mock('../../src/qrRead', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/qrRead')>()),
-  readQr: readQrMock,
+  readQrCodes: readQrMock,
 }));
 vi.mock('sharp', () => ({
   default: vi.fn((input: Buffer) => {
@@ -158,7 +158,7 @@ describe('FinalCheck.runCheck', () => {
     extractMock.mockReset();
     // Every card's QR code reads, and leads to order line 1
     readQrMock.mockReset();
-    readQrMock.mockResolvedValue('https://api.qrsong.io/qr2/77/1');
+    readQrMock.mockResolvedValue(['https://api.qrsong.io/qr2/77/1']);
   });
 
   it('passes an order without physical cards', async () => {
@@ -392,7 +392,7 @@ describe('FinalCheck design comparison', () => {
     extractMock.mockReset();
     // Every card's QR code reads, and leads to order line 1
     readQrMock.mockReset();
-    readQrMock.mockResolvedValue('https://api.qrsong.io/qr2/77/1');
+    readQrMock.mockResolvedValue(['https://api.qrsong.io/qr2/77/1']);
   });
 
   /** Which stored and live pages were compared, as "stored page → live page". */
@@ -490,7 +490,7 @@ describe('FinalCheck QR codes on the print', () => {
     driftMock.mockResolvedValue({ changed: 0.02, colours: 0.01, drifted: false });
     extractMock.mockReset();
     readQrMock.mockReset();
-    readQrMock.mockResolvedValue('https://api.qrsong.io/qr2/77/1');
+    readQrMock.mockResolvedValue(['https://api.qrsong.io/qr2/77/1']);
   });
 
   it("reads the front of every design's first card from the stored print, at three times the size", async () => {
@@ -502,8 +502,18 @@ describe('FinalCheck QR codes on the print', () => {
     ]);
   });
 
+  it('passes a code that reads at the second size only: one render size can trip the decoder', async () => {
+    readQrMock.mockImplementation(async (page: Buffer) => (page.toString().endsWith('@3') ? [] : ['https://api.qrsong.io/qr2/77/1']));
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    expect(await finalCheck.runCheck(payment)).toEqual({ ok: true });
+    expect(readQrMock.mock.calls.map(([page]: Buffer[]) => page.toString())).toEqual([
+      'bytes of /tmp/test-public/pdf/test-file.pdf page 1 @3',
+      'bytes of /tmp/test-public/pdf/test-file.pdf page 1',
+    ]);
+  });
+
   it('holds the order, without mailing the customer, when a code does not scan on the print', async () => {
-    readQrMock.mockImplementation(async (page: Buffer) => (page.toString().includes('page 3') ? null : 'https://api.qrsong.io/qr2/77/1'));
+    readQrMock.mockImplementation(async (page: Buffer) => (page.toString().includes('page 3') ? [] : ['https://api.qrsong.io/qr2/77/1']));
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ extraDesigns: [{ position: 2 }] })]);
     const result = await finalCheck.runCheck(payment);
     expect(result).toMatchObject({ ok: false, reason: 'qr-unreadable', userActionable: false });
@@ -515,7 +525,7 @@ describe('FinalCheck QR codes on the print', () => {
   });
 
   it('holds the order when a code reads but leads somewhere else', async () => {
-    readQrMock.mockResolvedValue('https://api.qrsong.io/qr2/77/999');
+    readQrMock.mockResolvedValue(['https://api.qrsong.io/qr2/77/999']);
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     const result = await finalCheck.runCheck(payment);
     expect(result).toMatchObject({ ok: false, reason: 'qr-unreadable' });
@@ -526,7 +536,7 @@ describe('FinalCheck QR codes on the print', () => {
   });
 
   it('still mails about Hitster, listing the unreadable code beside it', async () => {
-    readQrMock.mockResolvedValue(null);
+    readQrMock.mockResolvedValue([]);
     detectMock.mockResolvedValue({ scores: {}, marks: [{ class: 'word', score: 0.98, box: { x: 0, y: 0, width: 1, height: 1 } }] });
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp({ background: null, backgroundBack: null })]);
     const result = await finalCheck.runCheck(payment);
@@ -536,7 +546,7 @@ describe('FinalCheck QR codes on the print', () => {
   });
 
   it('a design drift comes before an unreadable code as the reason', async () => {
-    readQrMock.mockResolvedValue(null);
+    readQrMock.mockResolvedValue([]);
     driftMock.mockResolvedValue({ changed: 0.5, colours: 0.5, drifted: true });
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     const result = await finalCheck.runCheck(payment);

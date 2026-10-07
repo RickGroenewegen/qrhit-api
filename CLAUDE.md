@@ -588,11 +588,27 @@ retraining, is `ml/hitster/README.md`. It is used twice:
   checked after payment: the card designer gives a contrast tip instead.
 - **The QR code on the print** (2026-10-07): finalCheck reads the code on
   the front of every design's first card from the stored PDF, rendered at
-  3x (`src/qrRead.ts`, jsQR, light on dark tried too: the app scans
-  inverted codes). It must read and lead to this order line
-  (`/qr2/<track>/<php>`). If not, the order is held as `qr-unreadable`
-  without a mail (Rick: unusable cards never print). The designer warns
-  first, with the same kind of scan in the browser.
+  3x and, when nothing reads there, once more at 2x (`src/qrRead.ts`,
+  ZXing-C++ through `zxing-wasm`, light on dark tried too: the app scans
+  inverted codes). A single-design sheet is read whole: twelve codes on
+  one page. A code must lead to this order line (`/qr2/<track>/<php>`). If
+  none does, the order is held as `qr-unreadable` without a mail (Rick:
+  unusable cards never print). The designer warns first, with a scan in
+  the browser (zxing's JS port, only for a code that is not black on
+  white).
+  - **Not jsQR.** The first version used it and held order 100009135 for
+    a clean black on white code: jsQR misses some codes at some render
+    sizes (that one read at 1x, 2x, 4x and 6x, not at 3x). On 13 recent
+    printed orders it failed 4 at 3x, and both sheets at every size (it
+    does not find one code among twelve). ZXing-C++ read all 14 at every
+    size, in a few ms. zxing's JS port is no better: it failed an orange
+    code at most sizes. `qr-logo.ts` still uses jsQR to check that a logo
+    leaves the code readable; a miss there only makes the logo smaller.
+  - The wasm binary is read from `node_modules`
+    (`require.resolve('zxing-wasm/reader/zxing_reader.wasm')`): by default
+    the package downloads it from jsDelivr. A decoder that fails to load
+    throws, which holds the order like any other check that throws; it is
+    never reported as an unreadable code.
 
 - **What counts as Hitster** (Rick, 2026-10-06): the word in any lettering,
   near-spellings included ("HITSER", "Hitstor", "HITSTAR"), and the look on

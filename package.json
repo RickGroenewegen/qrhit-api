@@ -120,7 +120,8 @@
     "uninstall": "^0.0.0",
     "wikipedia": "^2.5.0",
     "ws": "^8.21.3",
-    "ytmusic-api": "^5.3.1"
+    "ytmusic-api": "^5.3.1",
+    "zxing-wasm": "^3.1.4"
   },
   "overrides": {
     "hono": "^4.12.4",

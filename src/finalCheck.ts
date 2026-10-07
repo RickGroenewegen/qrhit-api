@@ -11,7 +11,7 @@ import HitsterDetector, { HitsterClass } from './hitsterDetector';
 import { hitsterHoldThreshold } from './hitsterThresholds';
 import { IMAGE_FILENAME } from './cardDesigns';
 import { measureDrift } from './designDrift';
-import { isCardLink, readQr } from './qrRead';
+import { isCardLink, readQrCodes } from './qrRead';
 
 /**
  * The last check of a physical order before it goes to the printer: is there
@@ -476,23 +476,31 @@ class FinalCheck {
    * The QR code on the front of every design's first card, as it prints: it
    * has to read (light on dark too, as the app scans it) and lead to this
    * order line (generator.ts: /qr2/<track>/<php>). Rendered at three times
-   * the size of the comparison, so the modules are several pixels wide.
+   * the size of the comparison, so the modules are several pixels wide; a
+   * code that does not read there is tried once more at twice the size,
+   * because one render size can trip a decoder (jsQR held a clean code that
+   * way). A single-design sheet is read whole, twelve codes on one page.
    * Rick, 2026-10-07: a code that does not read on the print holds the
    * order, without a mail to the customer.
    */
   private async qrProblems(payment: { paymentId: string }, php: any, storedPdf: Buffer): Promise<FinalCheckProblem[]> {
     const { designCount, isSheets, firstCardPage } = this.layout(php);
     const pages = await this.designPages(storedPdf, isSheets, designCount, firstCardPage, 3);
+    let smaller: DesignPages[] | null = null;
     const problems: FinalCheckProblem[] = [];
-    for (const page of pages) {
-      const text = await readQr(page.front);
+    for (const [index, page] of pages.entries()) {
+      let texts = await readQrCodes(page.front);
+      if (!texts.some((text) => isCardLink(text, php.id))) {
+        smaller ??= await this.designPages(storedPdf, isSheets, designCount, firstCardPage, 2);
+        texts = [...texts, ...(await readQrCodes(smaller[index].front))];
+      }
       const label = page.design ? `design ${page.design} ` : '';
-      if (text && isCardLink(text, php.id)) {
+      if (texts.some((text) => isCardLink(text, php.id))) {
         this.log(payment.paymentId, php.id, `QR code ${label}front reads ✓`);
         continue;
       }
-      const message = text
-        ? `the QR code reads as ${text.slice(0, 80)}, not a card link of this order line`
+      const message = texts.length
+        ? `the QR code reads as ${texts[0].slice(0, 80)}, not a card link of this order line`
         : 'the QR code on the card does not scan';
       this.log(payment.paymentId, php.id, `QR code ${label}front: ${message}`, 'yellow');
       problems.push({ check: 'qr-unreadable', design: page.design, place: 'card-front', message });
