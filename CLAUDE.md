@@ -581,8 +581,21 @@ retraining, is `ml/hitster/README.md`. It is used twice:
   and the "THE MUSIC CARD GAME" pill of the box. Not Hitster: JITSTER, a name
   or word with "-ster" (Brittster, Swiftster, Sipster), HITSPEL.
 - The model scores four classes per 16 x 16 cell; a picture is flagged when
-  any class reaches `HITSTER_THRESHOLD` (default 0.5). The answer carries the
-  marks and where they are.
+  any class reaches the threshold (`src/hitsterThresholds.ts`). **Two
+  thresholds** (Rick, 2026-10-07): the designer warns from
+  `HITSTER_THRESHOLD` (0.5), finalCheck holds an order from
+  `HITSTER_HOLD_THRESHOLD` (0.7). On v3's test set 0.7 catches 91% and holds
+  about 1% of clean orders for nothing, against 95% and 1.7% at 0.5.
+- **finalCheck fails closed.** Which pictures it checks is decided as the
+  print templates decide what prints (a card background unless its type is
+  `solid`, a box background when it is `image`, the filename rule
+  `IMAGE_FILENAME` of `cardDesigns.ts`), so nothing prints unchecked. A
+  printed picture that cannot be checked (not on disk, unreadable, too large)
+  holds the order as `picture-unchecked`, without a mail to the customer.
+- Pictures over 50 megapixels are refused from their header, before they are
+  decoded (the screen is public, and a 1 MB PNG can unpack to hundreds of
+  megapixels); everything else is shrunk to 1280 px first, as every
+  training picture was.
 - **The input must be prepared exactly as in training** (`prepareHitsterInput`
   mirrors `ml/hitster/preprocess.py`; `ml/hitster/node/parity.ts` proves they
   agree). In particular transparency goes onto a grey that contrasts with the

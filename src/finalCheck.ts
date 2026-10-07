@@ -5,7 +5,8 @@ import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import HitsterDetector, { HitsterClass } from './hitsterDetector';
-import { hitsterThreshold } from './designScreen';
+import { hitsterHoldThreshold } from './hitsterThresholds';
+import { IMAGE_FILENAME } from './cardDesigns';
 
 /**
  * The last check of a physical order before it goes to the printer: is there
@@ -13,23 +14,30 @@ import { hitsterThreshold } from './designScreen';
  *
  * The judge is our own Hitster detector (src/hitsterDetector.ts), run on every
  * picture the customer put on the order: each design's front and back
- * background, logo and QR logo, and the box's front, logo and back. Only
- * pictures that print count (a background set to a solid colour does not).
- * Next to it, a plain text search of the PDFs for the word, for text typed on
- * the box. No language model is asked anything (Rick, 2026-10-06: this
- * replaced the GPT checks of design drift, Hitster and readability).
+ * background, logo and QR logo, and the box's front, logo and back. Which
+ * pictures print is decided as the print templates decide it (a card
+ * background prints unless its type is "solid", a box background when it is
+ * "image"; the filename rule is cardDesigns' IMAGE_FILENAME), so nothing
+ * prints unchecked. Next to it, a plain text search of the PDFs for the word,
+ * for text typed on the box. No language model is asked anything (Rick,
+ * 2026-10-06: this replaced the GPT checks of design drift, Hitster and
+ * readability).
  *
- * A hit puts the order on hold and mails the customer the pictures with the
- * reason (generator.ts, handleFinalCheckFailure). The designers already warn
- * when such a picture is picked (POST /designer/screen); ordering anyway is
- * allowed, and this is where it is caught.
+ * A hit at HITSTER_HOLD_THRESHOLD (src/hitsterThresholds.ts) puts the order on
+ * hold and mails the customer the pictures with the reason (generator.ts,
+ * handleFinalCheckFailure). The designers already warn when such a picture is
+ * picked (POST /designer/screen); ordering anyway is allowed, and this is
+ * where it is caught. A picture that cannot be checked (not on disk,
+ * unreadable, too large) holds the order too, "picture-unchecked", without a
+ * mail to the customer: it fails closed.
  */
 
 export type FinalCheckFailureReason =
   | 'pdf-missing'
   | 'design-mismatch'
   | 'hitster'
-  | 'unreadable';
+  | 'unreadable'
+  | 'picture-unchecked';
 
 export interface FinalCheckFlaggedImage {
   // i18n label key, resolved to a human name in the design-alter mail
@@ -137,9 +145,6 @@ const CLASS_LABELS: Record<HitsterClass, string> = {
   pill: 'the "THE MUSIC CARD GAME" pill',
 };
 
-// A filename the designer stored: nothing that could leave its folder.
-const IMAGE_FILENAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}\.(?:png|jpe?g|webp)$/i;
-
 // The folder each card design field's uploads are in (src/designer.ts)
 const IMAGE_FIELDS = {
   background: 'background',
@@ -148,7 +153,12 @@ const IMAGE_FIELDS = {
   qrLogo: 'logo',
 } as const;
 
-/** The pictures that print on a php's cards and box. */
+/**
+ * The pictures that print on a php's cards and box, decided as the print
+ * templates decide it (views/pdf_printer*.ejs, pdf_box_insert.ejs): a card
+ * background prints unless its type is "solid", a box background only when
+ * it is "image", a logo whenever it is set.
+ */
 export function orderPictures(php: any): OrderPicture[] {
   const designs = [
     { position: 1, ...php },
@@ -157,18 +167,19 @@ export function orderPictures(php: any): OrderPicture[] {
   const several = designs.length > 1;
   const pictures: OrderPicture[] = [];
   const add = (picture: Omit<OrderPicture, 'filename'>, filename: unknown) => {
-    if (typeof filename === 'string' && IMAGE_FILENAME.test(filename)) {
-      pictures.push({ ...picture, filename });
+    const name = typeof filename === 'string' ? filename.trim() : '';
+    if (name && IMAGE_FILENAME.test(name)) {
+      pictures.push({ ...picture, filename: name });
     }
   };
 
   for (const design of designs) {
     const number = several ? design.position : null;
     const label = several ? `design ${design.position} ` : '';
-    if ((design.backgroundFrontType || 'image') === 'image') {
+    if (design.backgroundFrontType !== 'solid') {
       add({ key: 'cardFront', place: 'card-front', design: number, what: `${label}front background`, folder: IMAGE_FIELDS.background }, design.background);
     }
-    if ((design.backgroundBackType || 'image') === 'image') {
+    if (design.backgroundBackType !== 'solid') {
       add({ key: 'cardBack', place: 'card-back', design: number, what: `${label}back background`, folder: IMAGE_FIELDS.backgroundBack }, design.backgroundBack);
     }
     add({ key: 'cardFront', place: 'card-front', design: number, what: `${label}logo`, folder: IMAGE_FIELDS.logo }, design.logo);
@@ -176,7 +187,7 @@ export function orderPictures(php: any): OrderPicture[] {
   }
 
   if (php.boxEnabled) {
-    if ((php.boxFrontBackgroundType || 'image') === 'image') {
+    if (php.boxFrontBackgroundType === 'image') {
       add({ key: 'boxFront', place: 'box-front', design: null, what: 'box front background', folder: 'background' }, php.boxFrontBackground);
     }
     add({ key: 'boxFront', place: 'box-front', design: null, what: 'box logo', folder: 'logo' }, php.boxFrontLogo);
@@ -275,39 +286,55 @@ class FinalCheck {
     // The pictures, each through the model once (one file can sit in
     // several places)
     const problems: FinalCheckProblem[] = [];
+    const unchecked: FinalCheckProblem[] = [];
     const flaggedImages: FinalCheckFlaggedImage[] = [];
-    const verdicts = new Map<string, Promise<{ buffer: Buffer; found: string[] } | null>>();
-    const threshold = hitsterThreshold();
+    type Verdict = { buffer: Buffer; found: string[] } | { unchecked: string };
+    const verdicts = new Map<string, Promise<Verdict>>();
+    const threshold = hitsterHoldThreshold();
     for (const picture of orderPictures(php)) {
       const file = path.join(process.env['PUBLIC_DIR'] as string, picture.folder, picture.filename);
       if (!verdicts.has(file)) {
         verdicts.set(
           file,
-          (async () => {
+          (async (): Promise<Verdict> => {
             let buffer: Buffer;
             try {
               buffer = await fs.readFile(file);
             } catch {
-              this.log(payment.paymentId, php.id, `${picture.what}: ${white.bold(picture.filename)} is not on disk, skipped`, 'yellow');
-              return null;
+              return { unchecked: 'is not on disk' };
             }
             const started = Date.now();
-            const verdict = await this.detector.detect(buffer, threshold);
-            const found = verdict.marks.map((m) => `${CLASS_LABELS[m.class]} (${m.score.toFixed(2)})`);
-            this.log(
-              payment.paymentId,
-              php.id,
-              `${picture.what} ${white.bold(picture.filename)}: ${
-                found.length ? white.bold(found.join(', ')) : 'clean'
-              } in ${Date.now() - started} ms`,
-              found.length ? 'yellow' : 'blue'
-            );
-            return { buffer, found };
+            try {
+              const verdict = await this.detector.detect(buffer, threshold);
+              const found = verdict.marks.map((m) => `${CLASS_LABELS[m.class]} (${m.score.toFixed(2)})`);
+              this.log(
+                payment.paymentId,
+                php.id,
+                `${picture.what} ${white.bold(picture.filename)}: ${
+                  found.length ? white.bold(found.join(', ')) : 'clean'
+                } in ${Date.now() - started} ms`,
+                found.length ? 'yellow' : 'blue'
+              );
+              return { buffer, found };
+            } catch (e) {
+              return { unchecked: `could not be checked (${(e as Error).message})` };
+            }
           })()
         );
       }
       const verdict = await verdicts.get(file)!;
-      if (!verdict?.found.length) continue;
+      // A picture that prints but cannot be checked holds the order
+      if ('unchecked' in verdict) {
+        this.log(payment.paymentId, php.id, `${picture.what} ${white.bold(picture.filename)} ${verdict.unchecked}`, 'yellow');
+        unchecked.push({
+          check: 'picture-unchecked',
+          design: picture.design,
+          place: picture.place,
+          message: `the ${picture.what.replace(/^design \d+ /, '')} ${picture.filename} ${verdict.unchecked}`,
+        });
+        continue;
+      }
+      if (!verdict.found.length) continue;
       problems.push({
         check: 'hitster',
         design: picture.design,
@@ -327,21 +354,35 @@ class FinalCheck {
     const textProblems = await this.textProblems(payment.paymentId, php, pdfPath);
     problems.push(...textProblems);
 
-    if (problems.length === 0) {
+    if (problems.length === 0 && unchecked.length === 0) {
       this.log(payment.paymentId, php.id, 'no Hitster material ✓');
       return { ok: true };
+    }
+
+    // Nothing found, but not everything could be looked at: on hold for a
+    // person to look, without a mail to the customer
+    if (problems.length === 0) {
+      return {
+        ok: false,
+        reason: 'picture-unchecked',
+        userActionable: false,
+        details: unchecked.map(describeFinalCheckProblem).join(' | '),
+        ...failBase,
+        problems: unchecked,
+      };
     }
 
     // The card wins the correction tab when both are at fault
     const onCard = problems.some((p) => p.place.startsWith('card'));
     const correctionTab: FinalCheckCorrectionTab = onCard ? 'card' : 'box';
+    const all = [...problems, ...unchecked];
     return {
       ok: false,
       reason: 'hitster',
       userActionable: true,
-      details: problems.map(describeFinalCheckProblem).join(' | '),
+      details: all.map(describeFinalCheckProblem).join(' | '),
       ...failBase,
-      problems,
+      problems: all,
       flaggedImages,
       correctionTab,
     };

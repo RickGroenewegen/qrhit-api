@@ -98,8 +98,9 @@ type DesignClient = Pick<PrismaClient, 'paymentHasPlaylistDesign' | '$transactio
 
 // An uploaded image is a bare filename in PUBLIC_DIR/background or /logo, and
 // the templates put it inside url('...') and src="...". Anything else is
-// dropped rather than escaped.
-const IMAGE_FILENAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$/;
+// dropped rather than escaped. finalCheck checks every picture this lets
+// through, so it uses the same rule.
+export const IMAGE_FILENAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$/;
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 // A CSS font-family list as the designer writes it ('"Fira Sans", Arial,
 // sans-serif'). It lands in a <style> block, so no ; { } < > ( ) or escapes.

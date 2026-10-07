@@ -25,6 +25,11 @@ const PAGES: Record<string, string> = {
 };
 const MAX_BYTES = 40 * 1024 * 1024;
 const GRID = SIZE / STRIDE;
+// The pages serve customer uploads and write labels: only to this machine's
+// own browser tabs. A site that points its name at 127.0.0.1 (DNS
+// rebinding) arrives with its own Host; a cross-site POST with its Origin.
+const OWN_HOSTS = new Set([`localhost:${PORT}`, `127.0.0.1:${PORT}`]);
+const OWN_ORIGINS = new Set([...OWN_HOSTS].map((host) => `http://${host}`));
 const NAME = /^[a-z0-9]{8,64}$/i;
 const TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 
@@ -154,6 +159,13 @@ function send(response: http.ServerResponse, status: number, data: unknown, type
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://localhost:${PORT}`);
+  if (!OWN_HOSTS.has(request.headers.host || '')) {
+    return send(response, 403, { error: 'only for localhost' });
+  }
+  const origin = request.headers.origin;
+  if (request.method !== 'GET' && origin && !OWN_ORIGINS.has(origin)) {
+    return send(response, 403, { error: 'not from this page' });
+  }
   try {
     if (request.method === 'GET' && PAGES[url.pathname]) {
       return send(response, 200, await readFile(PAGES[url.pathname]), 'text/html; charset=utf-8');
@@ -180,6 +192,11 @@ const server = http.createServer(async (request, response) => {
       return response.end(await readFile(info.path));
     }
     if (request.method === 'POST' && url.pathname === '/label') {
+      // JSON only: a cross-site form or no-cors fetch cannot send it without
+      // a preflight, and this server answers no preflight
+      if (!(request.headers['content-type'] || '').startsWith('application/json')) {
+        return send(response, 415, { error: 'JSON only' });
+      }
       const { name, label } = JSON.parse((await body(request)).toString('utf8') || '{}');
       if (!NAME.test(name) || !['pos', 'neg', 'clear'].includes(label) || !(await uploads()).has(name)) {
         return send(response, 400, { error: 'name and label (pos, neg, clear) needed' });

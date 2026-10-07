@@ -10,7 +10,10 @@ import type { InferenceSession } from 'onnxruntime-node';
  *
  * The picture is prepared exactly as the model was trained (ml/hitster/
  * preprocess.py; ml/hitster/node/parity.ts checks the two agree):
- *  1. EXIF orientation applied.
+ *  1. EXIF orientation applied, and shrunk to at most 1280 px (every
+ *     training picture was). A picture over 50 megapixels is refused before
+ *     it is decoded: POST /designer/screen is public, and a 1 MB PNG can
+ *     unpack to hundreds of megapixels.
  *  2. Transparency flattened onto dark grey under light artwork, light grey
  *     under dark artwork. Never onto white: a white logo would vanish.
  *  3. Letterboxed: long side scaled to SIZE, centred on a SIZE x SIZE canvas
@@ -29,6 +32,8 @@ export const HITSTER_CLASSES = ['word', 'rings', 'speaker', 'pill'] as const;
 export type HitsterClass = (typeof HITSTER_CLASSES)[number];
 
 const GRID = SIZE / STRIDE;
+const MAX_INPUT_PIXELS = 50_000_000;
+const WORK_SIDE = 1280;
 const PAD = { r: 114, g: 114, b: 114 };
 const DARK_UNDER = [32, 32, 32];
 const LIGHT_UNDER = [235, 235, 235];
@@ -67,10 +72,23 @@ function roundHalfEven(value: number): number {
   return floor % 2 === 0 ? floor : floor + 1;
 }
 
-/** Steps 1-2: the picture as raw RGB, transparency flattened by contrast. */
-async function flatten(input: Buffer): Promise<{ data: Buffer; width: number; height: number }> {
-  const { data, info } = await sharp(input, { limitInputPixels: 200_000_000 })
+/**
+ * Steps 1-2: the picture as raw RGB of at most WORK_SIDE pixels,
+ * transparency flattened by contrast, plus the size of the picture as given
+ * (after EXIF rotation), which marks are reported in.
+ */
+async function flatten(
+  input: Buffer
+): Promise<{ data: Buffer; width: number; height: number; originalWidth: number; originalHeight: number }> {
+  // The header only: a picture too large to decode is refused here
+  const meta = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+  const original = meta.autoOrient ?? { width: meta.width, height: meta.height };
+  if (!original.width || !original.height || original.width * original.height > MAX_INPUT_PIXELS) {
+    throw new Error(`hitster: picture of ${original.width}x${original.height} refused`);
+  }
+  const { data, info } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate()
+    .resize(WORK_SIDE, WORK_SIDE, { fit: 'inside', withoutEnlargement: true })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -98,7 +116,7 @@ async function flatten(input: Buffer): Promise<{ data: Buffer; width: number; he
         : data[i * 4 + c];
     }
   }
-  return { data: rgb, width, height };
+  return { data: rgb, width, height, originalWidth: original.width, originalHeight: original.height };
 }
 
 /** Steps 1-4: the model input for one picture. */
@@ -137,7 +155,15 @@ export async function prepareHitsterInput(input: Buffer): Promise<HitsterLetterb
       tensor[c * plane + i] = (canvas[i * 3 + c] / 255 - MEAN[c]) / STD[c];
     }
   }
-  return { tensor, scale, offsetX, offsetY, width: flat.width, height: flat.height };
+  // Marks are reported in pixels of the picture as given, not of the shrunk copy
+  return {
+    tensor,
+    scale: SIZE / Math.max(flat.originalWidth, flat.originalHeight),
+    offsetX,
+    offsetY,
+    width: flat.originalWidth,
+    height: flat.originalHeight,
+  };
 }
 
 /** Scores and marks from the model's cell probabilities, (classes, GRID, GRID). */

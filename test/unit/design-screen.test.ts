@@ -25,7 +25,8 @@ vi.mock('../../src/hitsterDetector', () => ({
   default: { getInstance: () => detector },
 }));
 
-import DesignScreen, { designScreenMode, hitsterThreshold } from '../../src/designScreen';
+import DesignScreen, { designScreenMode } from '../../src/designScreen';
+import { hitsterHoldThreshold, hitsterThreshold } from '../../src/hitsterThresholds';
 
 const screen = DesignScreen.getInstance();
 const JPEG = `data:image/jpeg;base64,${Buffer.from('a picture').toString('base64')}`;
@@ -66,6 +67,11 @@ describe('DesignScreen', () => {
     expect(hitsterThreshold()).toBe(0.35);
     process.env['HITSTER_THRESHOLD'] = '7';
     expect(hitsterThreshold()).toBe(0.5);
+    // finalCheck holds an order from a higher score than the designer warns at
+    delete process.env['HITSTER_HOLD_THRESHOLD'];
+    expect(hitsterHoldThreshold()).toBe(0.7);
+    process.env['HITSTER_HOLD_THRESHOLD'] = '0.85';
+    expect(hitsterHoldThreshold()).toBe(0.85);
   });
 
   it('screens nothing when the mode is off', async () => {

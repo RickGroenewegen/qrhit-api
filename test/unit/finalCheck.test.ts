@@ -28,7 +28,6 @@ const { detectMock, hitsterFiles } = vi.hoisted(() => ({
 vi.mock('../../src/hitsterDetector', () => ({
   default: { getInstance: () => ({ detect: detectMock }) },
 }));
-vi.mock('../../src/designScreen', () => ({ hitsterThreshold: () => 0.5 }));
 
 const pdfTextMock = vi.fn(async (_params: any) => ({ pages: [{ text: 'Normal song title' }] }));
 vi.mock('pdf-parse', () => ({
@@ -63,6 +62,8 @@ vi.mock('../../src/logger', () => ({
 }));
 
 process.env['PUBLIC_DIR'] = '/tmp/test-public';
+// finalCheck holds from HITSTER_HOLD_THRESHOLD: its default here
+delete process.env['HITSTER_HOLD_THRESHOLD'];
 
 import FinalCheck, { correctionTabForFlaggedKeys, orderPictures } from '../../src/finalCheck';
 
@@ -131,7 +132,20 @@ describe('FinalCheck.runCheck', () => {
       file('background', 'backbbbb1.jpg'),
       file('logo', 'logocccc1.png'),
     ]);
-    expect(detectMock.mock.calls[0][1]).toBe(0.5);
+    // The hold threshold, stricter than the designer's warning at 0.5
+    expect(detectMock.mock.calls[0][1]).toBe(0.7);
+  });
+
+  it('checks every picture the templates print: any card background type but solid, any safe filename', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ backgroundFrontType: null, background: 'frontaaaa1', backgroundBackType: 'gradient', backgroundBack: 'backbbbb1.gif' }),
+    ]);
+    await finalCheck.runCheck(payment);
+    expect(asked()).toEqual([
+      file('background', 'frontaaaa1'),
+      file('background', 'backbbbb1.gif'),
+      file('logo', 'logocccc1.png'),
+    ]);
   });
 
   it('asks the model about a picture once, wherever it is used', async () => {
@@ -166,13 +180,40 @@ describe('FinalCheck.runCheck', () => {
     ]);
   });
 
-  it('skips backgrounds that print as a solid colour, unsafe names, and pictures not on disk', async () => {
-    missing.add(file('logo', 'logocccc1.png'));
+  it('skips backgrounds that print as a solid colour, and names the templates would not print', async () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
-      makePhp({ backgroundFrontType: 'solid', backgroundBack: '../../etc/passwd.png' }),
+      makePhp({ backgroundFrontType: 'solid', backgroundBack: '../../etc/passwd.png', logo: '.hidden.png' }),
     ]);
     expect(await finalCheck.runCheck(payment)).toEqual({ ok: true });
     expect(asked()).toEqual([]);
+  });
+
+  it('holds the order, without mailing the customer, when a printed picture cannot be checked', async () => {
+    missing.add(file('logo', 'logocccc1.png'));
+    detectMock.mockImplementation(async (buffer: Buffer) => {
+      if (buffer.toString().includes('backbbbb1')) throw new Error('hitster: picture of 9000x9000 refused');
+      return { scores: {}, marks: [] };
+    });
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    const result = await finalCheck.runCheck(payment);
+    expect(result).toMatchObject({ ok: false, reason: 'picture-unchecked', userActionable: false });
+    if (result.ok) return;
+    expect(result.problems).toEqual([
+      { check: 'picture-unchecked', design: null, place: 'card-back', message: 'the back background backbbbb1.jpg could not be checked (hitster: picture of 9000x9000 refused)' },
+      { check: 'picture-unchecked', design: null, place: 'card-front', message: 'the logo logocccc1.png is not on disk' },
+    ]);
+    expect(result.flaggedImages).toBeUndefined();
+  });
+
+  it('mails about the Hitster picture and lists an unchecked one beside it', async () => {
+    missing.add(file('logo', 'logocccc1.png'));
+    hitsterFiles.set('frontaaaa1.png', { class: 'rings', score: 0.99 });
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    const result = await finalCheck.runCheck(payment);
+    expect(result).toMatchObject({ ok: false, reason: 'hitster', userActionable: true });
+    if (result.ok) return;
+    expect(result.problems.map((p) => p.check)).toEqual(['hitster', 'picture-unchecked']);
+    expect(result.flaggedImages?.map((i) => i.filename)).toEqual(['front-background.png']);
   });
 
   it('checks the box pictures only when there is a box, and sends the customer to the box tab', async () => {

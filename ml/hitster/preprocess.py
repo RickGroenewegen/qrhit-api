@@ -2,7 +2,8 @@
 How a picture becomes model input, the same in training, scoring and (ported
 1:1 to TypeScript) in the browser and the Lambda:
 
-1. EXIF orientation applied.
+1. EXIF orientation applied, and shrunk to at most WORK_SIDE pixels (the
+   downloads already are; the API refuses anything over 50 megapixels).
 2. Transparency flattened onto a plain colour that contrasts with what is
    drawn: dark grey under light artwork, light grey under dark artwork. A
    white logo on transparent would vanish on white.
@@ -17,6 +18,7 @@ from PIL import Image, ImageOps
 
 SIZE = 512
 STRIDE = 16
+WORK_SIDE = 1280
 PAD = (114, 114, 114)
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
@@ -66,6 +68,8 @@ def to_tensor_array(image: Image.Image) -> np.ndarray:
 def load(path, size: int = SIZE):
     image = Image.open(path)
     image = ImageOps.exif_transpose(image)
+    if max(image.size) > WORK_SIDE:
+        image.thumbnail((WORK_SIDE, WORK_SIDE), Image.LANCZOS)
     flat = flatten(image)
     canvas, *_ = letterbox(flat, size)
     return to_tensor_array(canvas)

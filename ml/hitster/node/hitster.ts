@@ -4,7 +4,7 @@
  * screen would load once per process and ask per picture.
  *
  * Steps (see preprocess.py for why):
- *  1. EXIF orientation applied.
+ *  1. EXIF orientation applied, shrunk to at most 1280 px.
  *  2. Transparency flattened onto dark grey under light artwork, light grey
  *     under dark artwork (never onto white: a white logo would vanish).
  *  3. Letterboxed: long side scaled to SIZE, centred on a SIZE x SIZE canvas
@@ -58,10 +58,25 @@ function roundHalfEven(value: number): number {
   return floor % 2 === 0 ? floor : floor + 1;
 }
 
-/** Steps 1-2: an RGB raw buffer of the picture, transparency flattened by contrast. */
-async function flatten(input: Buffer): Promise<{ data: Buffer; width: number; height: number }> {
-  const { data, info } = await sharp(input, { limitInputPixels: 200_000_000 })
+const MAX_INPUT_PIXELS = 50_000_000;
+const WORK_SIDE = 1280;
+
+/**
+ * Steps 1-2: an RGB raw buffer of the picture shrunk to at most WORK_SIDE,
+ * transparency flattened by contrast. Over 50 megapixels is refused from the
+ * header, before decoding (as src/hitsterDetector.ts does).
+ */
+async function flatten(
+  input: Buffer
+): Promise<{ data: Buffer; width: number; height: number; originalWidth: number; originalHeight: number }> {
+  const meta = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+  const original = meta.autoOrient ?? { width: meta.width, height: meta.height };
+  if (!original.width || !original.height || original.width * original.height > MAX_INPUT_PIXELS) {
+    throw new Error(`hitster: picture of ${original.width}x${original.height} refused`);
+  }
+  const { data, info } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
     .rotate()
+    .resize(WORK_SIDE, WORK_SIDE, { fit: 'inside', withoutEnlargement: true })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -86,7 +101,7 @@ async function flatten(input: Buffer): Promise<{ data: Buffer; width: number; he
       rgb[i * 3 + 1] = data[i * 4 + 1];
       rgb[i * 3 + 2] = data[i * 4 + 2];
     }
-    return { data: rgb, width, height };
+    return { data: rgb, width, height, originalWidth: original.width, originalHeight: original.height };
   }
   const under = drawn && lumSum / drawn > 140 ? DARK_UNDER : LIGHT_UNDER;
   for (let i = 0; i < pixels; i++) {
@@ -95,7 +110,7 @@ async function flatten(input: Buffer): Promise<{ data: Buffer; width: number; he
       rgb[i * 3 + c] = Math.round(data[i * 4 + c] * a + under[c] * (1 - a));
     }
   }
-  return { data: rgb, width, height };
+  return { data: rgb, width, height, originalWidth: original.width, originalHeight: original.height };
 }
 
 /** Steps 1-4: the model input for one picture. */
@@ -128,7 +143,15 @@ export async function preprocess(input: Buffer): Promise<Letterbox> {
       tensor[c * plane + i] = (canvas[i * 3 + c] / 255 - MEAN[c]) / STD[c];
     }
   }
-  return { tensor, scale, offsetX, offsetY, width: flat.width, height: flat.height };
+  // Positions are in pixels of the picture as given, not of the shrunk copy
+  return {
+    tensor,
+    scale: SIZE / Math.max(flat.originalWidth, flat.originalHeight),
+    offsetX,
+    offsetY,
+    width: flat.originalWidth,
+    height: flat.originalHeight,
+  };
 }
 
 export class HitsterDetector {

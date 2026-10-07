@@ -37,7 +37,8 @@ export type FinalCheckHoldReason =
   | 'hitster-card-box'
   | 'unreadable'
   | 'pdf-missing'
-  | 'design-mismatch';
+  | 'design-mismatch'
+  | 'picture-unchecked';
 
 export function finalCheckHoldReason(
   check: Extract<FinalCheckResult, { ok: false }>

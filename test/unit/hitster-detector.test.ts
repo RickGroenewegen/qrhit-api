@@ -50,6 +50,27 @@ describe('prepareHitsterInput', () => {
     expect(pixelAt(box.tensor, 256, 256)).toEqual([255, 255, 255]);
   });
 
+  it('refuses a picture over 50 megapixels from its header, before decoding it', async () => {
+    // 9000 x 6000 of one colour compresses to almost nothing: the shape of a
+    // decompression bomb sent to the public screen
+    const bomb = await sharp({ create: { width: 9000, height: 6000, channels: 3, background: { r: 0, g: 0, b: 0 } } })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    expect(bomb.length).toBeLessThan(1_000_000);
+    // sharp's own header check, or ours behind it
+    await expect(prepareHitsterInput(bomb)).rejects.toThrow(/exceeds pixel limit|9000x6000 refused/);
+  });
+
+  it('works on a shrunk copy of a large picture but reports in its own pixels', async () => {
+    const large = await sharp({ create: { width: 4000, height: 2000, channels: 3, background: { r: 10, g: 200, b: 10 } } })
+      .jpeg()
+      .toBuffer();
+    const box = await prepareHitsterInput(large);
+    expect([box.width, box.height]).toEqual([4000, 2000]);
+    expect(box.scale).toBeCloseTo(SIZE / 4000);
+    expect([box.offsetX, box.offsetY]).toEqual([0, 128]);
+  });
+
   it('puts a dark logo on transparent onto light grey', async () => {
     const logo = await sharp({ create: { width: 100, height: 100, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: await sharp({ create: { width: 40, height: 40, channels: 4, background: { r: 10, g: 10, b: 10, alpha: 1 } } }).png().toBuffer(), left: 30, top: 30 }])

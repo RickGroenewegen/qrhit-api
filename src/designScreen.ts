@@ -6,6 +6,7 @@ import Logger from './logger';
 import Cache from './cache';
 import Utils from './utils';
 import HitsterDetector, { HitsterClass } from './hitsterDetector';
+import { hitsterThreshold } from './hitsterThresholds';
 
 /**
  * Hitster screen of one image in the card or box designer, while the
@@ -27,7 +28,9 @@ import HitsterDetector, { HitsterClass } from './hitsterDetector';
  *   off    nothing is screened
  *   warn   a flagged image gets a message (the default)
  *   block  reserved: a flagged image has to be replaced before continuing
- * HITSTER_THRESHOLD (default 0.5) is the score at which a picture is flagged.
+ * HITSTER_THRESHOLD (default 0.5, src/hitsterThresholds.ts) is the score at
+ * which a picture is flagged here; finalCheck holds an order from its own,
+ * higher HITSTER_HOLD_THRESHOLD.
  */
 
 export type DesignScreenMode = 'off' | 'warn' | 'block';
@@ -60,11 +63,6 @@ const UPLOAD_FILENAME = /^[a-z0-9]{8,64}\.(?:png|jpe?g|webp)$/i;
 export function designScreenMode(): DesignScreenMode {
   const mode = (process.env['DESIGN_SCREEN_MODE'] || 'warn').toLowerCase();
   return mode === 'off' || mode === 'block' ? mode : 'warn';
-}
-
-export function hitsterThreshold(): number {
-  const value = parseFloat(process.env['HITSTER_THRESHOLD'] || '');
-  return value > 0 && value < 1 ? value : 0.5;
 }
 
 function today(): string {
