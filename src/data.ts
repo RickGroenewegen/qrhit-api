@@ -13,7 +13,7 @@ import cluster from 'cluster';
 import { backfillLegacyDefaultBackground } from './legacyBackground';
 import { Music } from './music';
 import PushoverClient from './pushover';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
 import { DataDeps } from './data/types';
@@ -38,7 +38,7 @@ class Data {
   private translate = new Translation();
   private utils = new Utils();
   private music = new Music();
-  private openai = new ChatGPT();
+  private aiTasks = new AiTasks();
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
   private appTheme = AppTheme.getInstance();

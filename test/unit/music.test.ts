@@ -2,13 +2,13 @@
  * Unit tests for src/music.ts (Music class).
  *
  * The Music class queries MusicBrainz, Discogs, Wikipedia + Google via axios,
- * caches ISRC lookups, and uses ChatGPT to weight the final release year.
+ * caches ISRC lookups, and uses AiTasks to weight the final release year.
  *
  * All I/O is mocked:
  *  - axios (instance + global) → controlled responses
  *  - src/prisma               → in-memory map
  *  - src/cache                → in-memory map
- *  - src/chatgpt              → returns deterministic year
+ *  - src/aiTasks              → returns deterministic year
  *
  * No network, no DB.
  */
@@ -39,10 +39,10 @@ vi.mock('../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
 }));
 
-// ─── ChatGPT mock ─────────────────────────────────────────────────────────
+// ─── AiTasks mock ─────────────────────────────────────────────────────────
 const chatGptAskMock = vi.fn(async (_prompt: string) => ({ year: 1985 }));
-vi.mock('../../src/chatgpt', () => ({
-  ChatGPT: class {
+vi.mock('../../src/aiTasks', () => ({
+  AiTasks: class {
     ask = chatGptAskMock;
   },
 }));

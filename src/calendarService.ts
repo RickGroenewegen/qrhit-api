@@ -5,7 +5,7 @@ import Logger from './logger';
 import { color } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import Utils from './utils';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
 import PushoverClient from './pushover';
 import Translation from './translation';
 import Cache from './cache';
@@ -72,7 +72,7 @@ class CalendarService {
   private logger = new Logger();
   private prisma = PrismaInstance.getInstance();
   private utils = new Utils();
-  private chatgpt = new ChatGPT();
+  private aiTasks = new AiTasks();
   private pushover = new PushoverClient();
   private translation = new Translation();
   private cache = Cache.getInstance();
@@ -444,18 +444,18 @@ class CalendarService {
       const locales = this.translation.allLocales.filter((l) => l !== 'en');
       const data: any = {};
 
-      const nameTranslations = await this.chatgpt.translateText(name, locales);
+      const nameTranslations = await this.aiTasks.translateText(name, locales);
       for (const loc of locales) {
         if (nameTranslations[loc]) data[`name_${loc}`] = nameTranslations[loc];
       }
       if (description && description.trim()) {
-        const descTranslations = await this.chatgpt.translateText(description, locales);
+        const descTranslations = await this.aiTasks.translateText(description, locales);
         for (const loc of locales) {
           if (descTranslations[loc]) data[`description_${loc}`] = descTranslations[loc];
         }
       }
       if (body && body.trim()) {
-        const bodyTranslations = await this.chatgpt.translateText(body, locales);
+        const bodyTranslations = await this.aiTasks.translateText(body, locales);
         for (const loc of locales) {
           if (bodyTranslations[loc]) data[`body_${loc}`] = bodyTranslations[loc];
         }
@@ -537,7 +537,7 @@ class CalendarService {
   ): Promise<void> {
     const key = this.eventImageJobKey(jobId);
     try {
-      const image = await this.chatgpt.generateEventImage(name, description);
+      const image = await this.aiTasks.generateEventImage(name, description);
       if (image && baseEventId) {
         // Persist immediately so it survives the modal being closed during the
         // (slow) generation. Failure here is logged but still reported as done.
@@ -732,7 +732,7 @@ class CalendarService {
       for (let i = 0; i < playlists.length; i += CHUNK) {
         await Promise.all(
           playlists.slice(i, i + CHUNK).map(async (p) => {
-            const keys = await this.chatgpt.determineBaseEvents(
+            const keys = await this.aiTasks.determineBaseEvents(
               p.name,
               p.description_en,
               p.genre?.name_en ?? null,

@@ -75,6 +75,11 @@ vi.mock('../../src/utils', () => ({
 }));
 
 const openaiCreate = vi.hoisted(() => vi.fn());
+// Every task on its OpenAI route, so the SDK mock below answers it.
+vi.mock('../../src/llm/tasks', async (importOriginal) =>
+  (await import('../helpers/llm-openai-routes')).openAiRoutes(await importOriginal<any>())
+);
+
 vi.mock('openai', () => ({
   default: class {
     chat = { completions: { create: openaiCreate } };
@@ -947,9 +952,9 @@ describe('promotional mails', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Custom mail + AI translation helper
+// Custom mail
 // ---------------------------------------------------------------------------
-describe('sendCustomMail / translateToLocale', () => {
+describe('sendCustomMail', () => {
   it('sendCustomMail converts newlines for html and keeps them in text', async () => {
     await mail.sendCustomMail(
       'cust@example.com',
@@ -964,30 +969,6 @@ describe('sendCustomMail / translateToLocale', () => {
     expect(raw).toContain('line one<br>line two');
     expect(raw).toContain('line one\nline two');
     expect(raw).toContain('Hello'); // en greeting
-  });
-
-  it('translateToLocale returns the model output', async () => {
-    openaiCreate.mockResolvedValue({
-      choices: [{ message: { content: 'Bonjour le monde' } }],
-    });
-    const out = await mail.translateToLocale('Hallo wereld', 'fr');
-    expect(out).toBe('Bonjour le monde');
-    expect(openaiCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messages: expect.arrayContaining([
-          expect.objectContaining({
-            role: 'system',
-            content: expect.stringContaining('French'),
-          }),
-        ]),
-      })
-    );
-  });
-
-  it('translateToLocale falls back to the original content on error', async () => {
-    openaiCreate.mockRejectedValue(new Error('api down'));
-    const out = await mail.translateToLocale('Hallo wereld', 'de');
-    expect(out).toBe('Hallo wereld');
   });
 });
 
@@ -1007,17 +988,15 @@ describe('sendContactForm', () => {
 
   function stubOpenAiContactCalls() {
     openaiCreate.mockImplementation(async (req: any) => {
-      if (req.functions) {
+      if (req.response_format?.json_schema?.name === 'processTranslation') {
         return {
           choices: [
             {
               message: {
-                function_call: {
-                  arguments: JSON.stringify({
-                    detectedLocale: 'en',
-                    dutchTranslation: 'Hoi, waar is mijn bestelling QR123?',
-                  }),
-                },
+                content: JSON.stringify({
+                  detectedLocale: 'en',
+                  dutchTranslation: 'Hoi, waar is mijn bestelling QR123?',
+                }),
               },
             },
           ],

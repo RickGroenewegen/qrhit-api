@@ -1,24 +1,15 @@
 import fs from 'fs/promises'; // Use promises API for async operations
 import path from 'path';
-import OpenAI from 'openai';
 import Logger from './logger';
 import Utils from './utils'; // Import Utils
-import { TTS_MODEL } from './llmModels';
+import { llm } from './llm';
 
 class AudioClient {
   private static instance: AudioClient;
-  private openai: OpenAI;
   private logger = new Logger(); // Instantiate logger
   private utils = new Utils(); // Instantiate Utils
 
-  private constructor() {
-    // Ensure the OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      this.logger.log('OPENAI_API_KEY environment variable is not defined');
-      throw new Error('OPENAI_API_KEY environment variable is not defined');
-    }
-    this.openai = new OpenAI(); // Initializes with API key from env automatically
-  }
+  private constructor() {}
 
   public static getInstance(): AudioClient {
     if (!AudioClient.instance) {
@@ -28,9 +19,7 @@ class AudioClient {
   }
 
   /**
-   * Generates audio from text using OpenAI's TTS model.
-   * @param inputText The text to convert to speech.
-   * @param voice The voice to use (e.g., 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'coral').
+   * Generates audio from text with the speechTest route (src/llm/tasks.ts).
    * @param inputText The text to convert to speech.
    * @param instructions Optional instructions for the speech generation.
    * @returns The full path to the generated speech file.
@@ -40,7 +29,6 @@ class AudioClient {
     instructions?: string
   ): Promise<string> {
     const voice = 'ash'; // Hardcoded voice
-    const model = TTS_MODEL;
     const randomString = this.utils.generateRandomString(); // Generate random string using Utils
     const outputFilename = `${randomString}.mp3`; // Use random string for filename
 
@@ -55,16 +43,13 @@ class AudioClient {
 
     try {
       this.logger.log(
-        `Generating audio for text: "${inputText}" using voice: ${voice}, model: ${model}, saving to: ${speechFile}`
+        `Generating audio for text: "${inputText}" using voice: ${voice}, saving to: ${speechFile}`
       );
-      const mp3 = await this.openai.audio.speech.create({
-        model: model, // Use hardcoded model
-        voice: voice, // Use hardcoded voice
-        input: inputText,
+      const { data: buffer } = await llm.speech('speechTest', {
+        voice,
+        text: inputText,
         instructions: instructions || '',
       });
-
-      const buffer = Buffer.from(await mp3.arrayBuffer());
 
       // Ensure the output directory exists
       await fs.mkdir(outputDirectory, { recursive: true });
@@ -74,11 +59,13 @@ class AudioClient {
       return speechFile;
     } catch (error) {
       this.logger.log(`Error generating audio: ${(error as Error).message}`);
-      if (error instanceof OpenAI.APIError) {
-        this.logger.log(`OpenAI API Error Status: ${error.status}`);
-        this.logger.log(`OpenAI API Error Message: ${error.message}`);
-        this.logger.log(`OpenAI API Error Code: ${error.code}`);
-        this.logger.log(`OpenAI API Error Type: ${error.type}`);
+      // Provider errors reach us unchanged; these are the fields their SDKs set.
+      const details = error as { status?: unknown; code?: unknown; type?: unknown };
+      if (details?.status !== undefined) {
+        this.logger.log(`TTS API Error Status: ${details.status}`);
+        this.logger.log(`TTS API Error Message: ${(error as Error).message}`);
+        this.logger.log(`TTS API Error Code: ${details.code}`);
+        this.logger.log(`TTS API Error Type: ${details.type}`);
       }
       throw error; // Re-throw the error after logging
     }

@@ -42,6 +42,7 @@ import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import businessRoutes from './routes/businessRoutes';
 import toolkitRoutes from './routes/toolkitRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
+import aiCostRoutes from './routes/aiCostRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
 import AppTheme from './apptheme';
@@ -167,6 +168,7 @@ class Server {
     await appDesignRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await aiCostRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await discountRoutes(this.fastify, getAuthHandler);
     await businessRoutes(this.fastify, getAuthHandler);
     await toolkitRoutes(this.fastify, getAuthHandler);

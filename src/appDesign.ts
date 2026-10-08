@@ -9,7 +9,7 @@ import PrismaInstance from './prisma';
 import AppTheme from './apptheme';
 import Cache from './cache';
 import { FONTS } from './fonts';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
 import { round2 } from './services/discount-allocation';
 
 /**
@@ -509,7 +509,7 @@ class AppDesign {
   private logger = new Logger();
   private appTheme = AppTheme.getInstance();
   private cache = Cache.getInstance();
-  private chatgpt = new ChatGPT();
+  private aiTasks = new AiTasks();
 
   private constructor() {}
 
@@ -1108,7 +1108,7 @@ class AppDesign {
       const fontIds = FONTS.filter((f) => f.id && f.googleFontName).map(
         (f) => f.id
       );
-      const suggestion = await this.chatgpt.suggestAppPalette(
+      const suggestion = await this.aiTasks.suggestAppPalette(
         `data:image/jpeg;base64,${small.toString('base64')}`,
         fontIds
       );

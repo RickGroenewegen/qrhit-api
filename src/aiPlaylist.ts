@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { Prisma } from '@prisma/client';
 import { color, white } from 'console-log-colors';
 import { CronJob } from 'cron';
@@ -10,7 +9,9 @@ import Cache from './cache';
 import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
-import { LLM_MODEL_FAST } from './llmModels';
+import { llm, LlmOutputError } from './llm';
+import type { LlmRequest, LlmSchema, TextTask } from './llm';
+import { taskConfig } from './llm/tasks';
 import { LOCALES } from './data/shared/shared-data.generated';
 import {
   ArtistBalance,
@@ -72,12 +73,9 @@ export interface AIPlaylistSnapshot {
 }
 
 const SERVICE_TYPE = 'ai';
-// Luna with reasoning off, measured 2026-09-17 on a 100-candidate batch:
-// terra + 'low' took 26s for keywords and 6.5s per curation batch, luna +
-// 'none' 10s and 1.5s, with the same picks. Curation batches run one after
-// another, so the per-call time is multiplied.
-const MODEL = LLM_MODEL_FAST;
-const REASONING_EFFORT = 'none' as const;
+// The models are the aiKeywords and aiCurate routes in src/llm/tasks.ts. The
+// customer watches a progress bar, so both run with thinking off, and
+// curation batches run one after another, so their per-call time multiplies.
 const KEYWORD_LIMIT = 100;
 const PER_KEYWORD_LIMIT = 50;
 // An artist the customer asked for by name is searched this deep at most, so
@@ -129,7 +127,6 @@ class AIPlaylistGenerator {
   private spotify = Spotify.getInstance();
   private cache = Cache.getInstance();
   private utils = new Utils();
-  private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
   /** In-flight snapshots keyed by jobId so `broadcastProgress` can co-write. */
   private snapshots: Map<string, AIPlaylistSnapshot> = new Map();
   private cleanupJob: CronJob | null = null;
@@ -291,7 +288,7 @@ class AIPlaylistGenerator {
   public async run(data: AIPlaylistJobData): Promise<void> {
     const { jobId, prompt, trackCount, locale } = data;
     const t0 = Date.now();
-    const cost = new CostTracker(MODEL);
+    const cost = new CostTracker();
 
     // Short user-visible id appended to the Spotify playlist name so two
     // generations with the same theme don't collide under the existing
@@ -329,7 +326,7 @@ class AIPlaylistGenerator {
           prompt,
           locale,
           requestedCount: trackCount,
-          model: MODEL,
+          model: taskConfig('aiKeywords').primary.model,
           status: 'running',
         },
       });
@@ -685,6 +682,9 @@ class AIPlaylistGenerator {
           endYear: fields.endYear ?? null,
           spotifyPlaylistId: fields.spotifyPlaylistId ?? null,
           spotifyPlaylistUrl: fields.spotifyPlaylistUrl ?? null,
+          // The models that actually answered (a route change or a fallback
+          // can differ from the one written when the row was created).
+          ...(fields.cost.label() ? { model: fields.cost.label() } : {}),
           inputTokens: fields.cost.inputTokens,
           outputTokens: fields.cost.outputTokens,
           totalCostUsd: parseFloat(fields.cost.costUsd.toFixed(6)),
@@ -718,6 +718,26 @@ class AIPlaylistGenerator {
     }
   }
 
+  /**
+   * One structured call whose tokens and cost, failed attempts included, go
+   * into the run's tracker. Throws the LlmOutputError of an unusable answer
+   * so each step decides what that means; provider errors propagate.
+   */
+  private async askJson<T>(
+    task: TextTask,
+    req: LlmRequest & { schema: LlmSchema },
+    cost: CostTracker
+  ): Promise<T> {
+    try {
+      const result = await llm.json<T>(task, req);
+      cost.recordCall(result);
+      return result.data;
+    } catch (err) {
+      if (err instanceof LlmOutputError) cost.recordCall(err);
+      throw err;
+    }
+  }
+
   private async thinkKeywords(
     jobId: string,
     prompt: string,
@@ -738,8 +758,19 @@ class AIPlaylistGenerator {
 
     const localeHint = this.describeLocale(locale);
 
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    type KeywordAnswer = {
+      keywords?: string[];
+      artistKeywords?: string[];
+      titleKeywords?: string[];
+      startYear: number | null;
+      endYear: number | null;
+      title?: string;
+      requestedArtists?: unknown;
+      onlyRequestedArtists?: unknown;
+      maxPerArtist?: unknown;
+      requestedArtistsMayExceedLimit?: unknown;
+    };
+    const parsed = await this.askJson<KeywordAnswer>('aiKeywords', {
       messages: [
         {
           role: 'system',
@@ -753,10 +784,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nUser locale: ${locale}\n\nReturn as many keywords as the theme genuinely warrants (1 if a single artist, more for broad themes; max ${KEYWORD_LIMIT}) and a year range only if explicitly implied.`,
         },
       ],
-      reasoning_effort: REASONING_EFFORT,
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
+      schema: {
             name: 'returnKeywords',
             schema: {
               type: 'object',
@@ -829,34 +857,15 @@ class AIPlaylistGenerator {
                 'requestedArtistsMayExceedLimit',
               ],
             },
-        },
       },
+    }, cost).catch((err) => {
+      if (!(err instanceof LlmOutputError)) throw err;
+      throw new Error(
+        err.kind === 'unparseable'
+          ? 'Failed to parse keyword tool call arguments'
+          : 'Keyword generation returned no tool call'
+      );
     });
-
-    cost.recordFromResponse(result);
-
-    const content = result?.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('Keyword generation returned no tool call');
-    }
-
-    let parsed: {
-      keywords?: string[];
-      artistKeywords?: string[];
-      titleKeywords?: string[];
-      startYear: number | null;
-      endYear: number | null;
-      title?: string;
-      requestedArtists?: unknown;
-      onlyRequestedArtists?: unknown;
-      maxPerArtist?: unknown;
-      requestedArtistsMayExceedLimit?: unknown;
-    };
-    try {
-      parsed = JSON.parse(content);
-    } catch (e) {
-      throw new Error('Failed to parse keyword tool call arguments');
-    }
 
     const requestedArtists = (
       Array.isArray(parsed.requestedArtists) ? parsed.requestedArtists : []
@@ -1019,8 +1028,7 @@ class AIPlaylistGenerator {
       messageKey: 'submit.aiMsg.thinkingMore',
     });
 
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    const parsed = await this.askJson<{ keywords: string[] }>('aiKeywords', {
       messages: [
         {
           role: 'system',
@@ -1036,10 +1044,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}\n\nAlready tried (do not repeat any of these):\n${alreadyTried.join(', ')}\n\nReturn up to ${KEYWORD_LIMIT} additional keywords (artist names mainly). Empty list is OK.`,
         },
       ],
-      reasoning_effort: REASONING_EFFORT,
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
+      schema: {
             name: 'returnMoreKeywords',
             schema: {
               type: 'object',
@@ -1052,20 +1057,12 @@ class AIPlaylistGenerator {
               },
               required: ['keywords'],
             },
-        },
       },
+    }, cost).catch((err) => {
+      if (err instanceof LlmOutputError) return null;
+      throw err;
     });
-
-    cost.recordFromResponse(result);
-
-    const content = result?.choices[0]?.message?.content;
-    if (!content) return [];
-    let parsed: { keywords: string[] };
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      return [];
-    }
+    if (!parsed) return [];
 
     const seen = new Set(alreadyTried.map((k) => k.toLowerCase()));
     const out: SearchKeyword[] = [];
@@ -1608,8 +1605,7 @@ class AIPlaylistGenerator {
       ? 'INCLUSIVE MODE: the candidate list is small relative to what the user asked for. Include every track that is a reasonable match for the theme. Only drop tracks that clearly do NOT fit. Don\'t filter for "iconic" — ordinary good fits count.'
       : 'SELECTIVE MODE: there are plenty of candidates. Be selective and pick the strongest fits.';
 
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    const parsed = await this.askJson<{ trackIds: string[] }>('aiCurate', {
       messages: [
         {
           role: 'system',
@@ -1622,10 +1618,7 @@ class AIPlaylistGenerator {
           content: `Theme:\n${prompt}${yearHint}${spreadGuidance}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title (year)):\n${trackList}`,
         },
       ],
-      reasoning_effort: REASONING_EFFORT,
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
+      schema: {
             name: 'returnPicks',
             schema: {
               type: 'object',
@@ -1638,23 +1631,13 @@ class AIPlaylistGenerator {
               },
               required: ['trackIds'],
             },
-        },
       },
+    }, cost).catch((err) => {
+      if (err instanceof LlmOutputError) return null;
+      throw err;
     });
 
-    cost.recordFromResponse(result);
-
-    const content = result?.choices[0]?.message?.content;
-    if (!content) return [];
-
-    try {
-      const parsed = JSON.parse(content) as {
-        trackIds: string[];
-      };
-      return (parsed.trackIds || []).filter(Boolean);
-    } catch {
-      return [];
-    }
+    return (parsed?.trackIds || []).filter(Boolean);
   }
 
   private async createSpotifyPlaylist(

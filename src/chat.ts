@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import Cache from './cache';
@@ -10,7 +9,8 @@ import cluster from 'cluster';
 import Shipping from './shipping';
 import { CronJob } from 'cron';
 import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS, APP_DESIGN_PRICE } from './config/constants';
-import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
+import { formatCostUsd, llm } from './llm';
+import type { LlmMessage } from './llm';
 
 interface RequiredDataItem {
   name: string;
@@ -37,9 +37,6 @@ interface ChatHistoryMessage {
 }
 
 export class ChatService {
-  private openai = new OpenAI({
-    apiKey: process.env['OPENAI_TOKEN'],
-  });
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private cache = Cache.getInstance();
@@ -201,9 +198,7 @@ export class ChatService {
    */
   private async translateContentToDutch(content: string): Promise<string | null> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: LLM_MODEL_FAST,
-        reasoning_effort: 'none',
+      const { data } = await llm.text('chatTranslate', {
         temperature: 0.3,
         messages: [
           {
@@ -213,7 +208,7 @@ export class ChatService {
           { role: 'user', content },
         ],
       });
-      return response.choices[0]?.message?.content || null;
+      return data || null;
     } catch (error) {
       this.logger.log(`[Chat] Translation error: ${error}`);
       return null;
@@ -258,9 +253,7 @@ export class ChatService {
     const targetLang = Translation.LOCALE_NAMES[targetLocale] || 'English';
 
     try {
-      const result = await this.openai.chat.completions.create({
-        model: LLM_MODEL_FAST,
-        reasoning_effort: 'none',
+      const { data } = await llm.text('chatTranslate', {
         temperature: 0.3,
         messages: [
           {
@@ -274,7 +267,7 @@ export class ChatService {
         ],
       });
 
-      return result.choices[0]?.message?.content || content;
+      return data || content;
     } catch (error) {
       this.logger.log(color.red.bold(`[translateToLocale] Error: ${error}`));
       return content;
@@ -348,9 +341,7 @@ export class ChatService {
    */
   public async translateToDutch(messageId: number, content: string): Promise<void> {
     try {
-      const result = await this.openai.chat.completions.create({
-        model: LLM_MODEL_FAST,
-        reasoning_effort: 'none',
+      const { data: translatedContent, costUsd } = await llm.text('chatTranslate', {
         temperature: 0.3,
         messages: [
           {
@@ -364,13 +355,12 @@ export class ChatService {
         ],
       });
 
-      const translatedContent = result.choices[0]?.message?.content;
       if (translatedContent) {
         await this.prisma.chatMessage.update({
           where: { id: messageId },
           data: { translatedContent },
         });
-        this.logger.log(color.green.bold(`[translateToDutch] `) + color.green(`Translated message `) + color.white.bold(`${messageId}`));
+        this.logger.log(color.green.bold(`[translateToDutch] `) + color.green(`Translated message `) + color.white.bold(`${messageId}`) + color.green(' (') + color.white.bold(formatCostUsd(costUsd)) + color.green(')'));
       }
     } catch (error) {
       this.logger.log(color.red.bold(`[translateToDutch] Error: ${error}`));
@@ -414,7 +404,7 @@ export class ChatService {
   }
 
   /**
-   * Get relevant topics using function calling
+   * Get relevant topics (structured output)
    */
   public async getTopics(question: string, chatHistory: ChatHistoryMessage[]): Promise<string[]> {
     // Build topics summary for function calling
@@ -428,9 +418,7 @@ export class ChatService {
       ? `\n\nPrevious conversation:\n${chatHistory.map((m) => `${m.role}: ${m.content}`).join('\n')}`
       : '';
 
-    const result = await this.openai.chat.completions.create({
-      model: LLM_MODEL_FAST,
-      reasoning_effort: 'none',
+    const parsed = await llm.tryJson<{ slugs?: string[] }>('chatTopics', {
       temperature: 0.3,
       messages: [
         {
@@ -446,40 +434,32 @@ If the question is a greeting or general chat, return an empty array.`,
           content: `Available topics:\n${JSON.stringify(topicsSummary, null, 2)}${historyContext}\n\nUser question: ${question}`,
         },
       ],
-      function_call: { name: 'selectTopics' },
-      functions: [
-        {
-          name: 'selectTopics',
-          description: 'Select relevant knowledge topics to answer the user question',
-          parameters: {
-            type: 'object',
-            properties: {
-              slugs: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Array of topic slugs that are relevant to the question',
-              },
-              reasoning: {
-                type: 'string',
-                description: 'Brief explanation of why these topics were selected',
-              },
+      schema: {
+        name: 'selectTopics',
+        description: 'Select relevant knowledge topics to answer the user question',
+        schema: {
+          type: 'object',
+          properties: {
+            slugs: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of topic slugs that are relevant to the question',
             },
-            required: ['slugs'],
+            reasoning: {
+              type: 'string',
+              description: 'Brief explanation of why these topics were selected',
+            },
           },
+          required: ['slugs'],
         },
-      ],
+      },
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      try {
-        const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
-        return parsed.slugs || [];
-      } catch (error) {
-        this.logger.log(color.red.bold(`Error parsing topics: ${error}`));
-        return [];
-      }
+    if (!parsed) {
+      this.logger.log(color.red.bold('[Chat] No usable topic selection'));
+      return [];
     }
-    return [];
+    return parsed.slugs || [];
   }
 
   /**
@@ -499,9 +479,7 @@ If the question is a greeting or general chat, return an empty array.`,
   ): Promise<{ [key: string]: string | null }> {
     const dataNames = requiredData.map(d => d.name);
 
-    const result = await this.openai.chat.completions.create({
-      model: LLM_MODEL_FAST,
-      reasoning_effort: 'none',
+    const parsed = await llm.tryJson<{ [key: string]: string | null }>('chatExtract', {
       temperature: 0,
       messages: [
         {
@@ -517,14 +495,22 @@ Only extract data that was clearly provided by the user.`,
           content: `Conversation:\n${chatHistory.map(m => `${m.role}: ${m.content}`).join('\n')}\nuser: ${currentQuestion}\n\nExtract: ${dataNames.join(', ')}`,
         },
       ],
-      response_format: { type: 'json_object' },
+      schema: {
+        name: 'extractRequiredData',
+        schema: {
+          type: 'object',
+          properties: Object.fromEntries(
+            requiredData.map((d) => [
+              d.name,
+              { type: ['string', 'null'], description: d.description },
+            ])
+          ),
+          required: dataNames,
+        },
+      },
     });
 
-    try {
-      return JSON.parse(result.choices[0]?.message?.content || '{}');
-    } catch {
-      return {};
-    }
+    return parsed ?? {};
   }
 
   /**
@@ -762,7 +748,7 @@ Only extract data that was clearly provided by the user.`,
       chatHistory
     );
 
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    const messages: LlmMessage[] = [
       {
         role: 'system',
         content: `You are a friendly and helpful customer support assistant for QRSong! - a service that creates QR music game cards from Spotify playlists.
@@ -795,23 +781,11 @@ ${knowledgeContext}${toolContext}`,
       content: question,
     });
 
-    const stream = await this.openai.chat.completions.create({
-      model: LLM_MODEL_STANDARD,
-      reasoning_effort: 'none',
-      temperature: 0.3,
-      stream: true,
-      messages,
-    });
-
-    let fullResponse = '';
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullResponse += content;
-        onToken(content);
-      }
-    }
+    const { data: fullResponse } = await llm.stream(
+      'chatAnswer',
+      { temperature: 0.3, messages },
+      onToken
+    );
 
     return fullResponse;
   }

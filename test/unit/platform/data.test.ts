@@ -206,7 +206,7 @@ vi.mock('../../../src/translation', () => ({
 }));
 
 vi.mock('../../../src/music', () => ({ Music: class {} }));
-vi.mock('../../../src/chatgpt', () => ({ ChatGPT: class {} }));
+vi.mock('../../../src/aiTasks', () => ({ AiTasks: class {} }));
 vi.mock('../../../src/analytics', () => ({
   default: { getInstance: () => ({}) },
 }));

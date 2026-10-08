@@ -25,13 +25,13 @@ vi.mock('../../src/mollie', () => ({
 
 // OpenAI must never be called from tests. The palette helper is stubbed per
 // case; the fallback path runs sharp for real on the uploaded image.
-const chatgptMock = vi.hoisted(() => ({
+const aiTasksMock = vi.hoisted(() => ({
   suggestAppPalette: vi.fn(),
 }));
 
-vi.mock('../../src/chatgpt', () => ({
-  ChatGPT: class ChatGPTMock {
-    suggestAppPalette = chatgptMock.suggestAppPalette;
+vi.mock('../../src/aiTasks', () => ({
+  AiTasks: class AiTasksMock {
+    suggestAppPalette = aiTasksMock.suggestAppPalette;
   },
   thumbnailNameFor: (filename: string) =>
     filename.replace(/\.[a-z0-9]+$/i, '') + '_thumb.webp',
@@ -325,7 +325,7 @@ describe('app design (account upgrade)', () => {
     });
 
     it('suggests a palette from OpenAI and validates it', async () => {
-      chatgptMock.suggestAppPalette.mockResolvedValueOnce({
+      aiTasksMock.suggestAppPalette.mockResolvedValueOnce({
         backgroundColor: '#123456',
         textColor: '#ffffff',
         accentColor: 'not-a-color',
@@ -353,7 +353,7 @@ describe('app design (account upgrade)', () => {
     });
 
     it('falls back to the dominant colour when the model gives nothing', async () => {
-      chatgptMock.suggestAppPalette.mockResolvedValueOnce(null);
+      aiTasksMock.suggestAppPalette.mockResolvedValueOnce(null);
       const res = await app.inject({
         method: 'POST',
         url: '/api/app-design/ai-theme',

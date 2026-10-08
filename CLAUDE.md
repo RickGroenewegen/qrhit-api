@@ -244,7 +244,7 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **AWS Services** - SES for email, Lambda, EC2
 - **Firebase** - Push notifications and additional services
 - **Print APIs** - For physical card production
-- **OpenAI/ChatGPT** - AI-powered features
+- **Anthropic and OpenAI** - AI-powered features, all through the LLM layer (`src/llm`)
 - **Trustpilot** - Customer reviews
 
 #### 4. Business Logic Modules
@@ -324,37 +324,76 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **Feature flags** for development vs production behavior
 - **AWS configuration** for cloud services
 
-## OpenAI models and structured output
+## LLM layer: one source for every model call
 
-Every OpenAI model name lives in `src/llmModels.ts` (sol / terra / luna text
-tiers, the image model, the TTS model); prices per 1M tokens are in
-`src/aiPricing.ts`. Bump the constants there, nowhere else. The root
-`translate.js` scripts in each repo are the exception: they are standalone and
-name the model inline.
+Every language, image and speech model call goes through `src/llm` (built
+2026-10-08). Nothing else in `src/` imports an AI SDK; a test fails if
+something does (`test/unit/llm/single-source.test.ts`). The root `translate.js`
+and `hits.js` are standalone dev scripts and stay outside it.
 
-The GPT-5.6 family changed two Chat Completions rules, verified against the
-live API on 2026-09-16:
+| what | where |
+|---|---|
+| **which provider, model and effort each task uses** (the switchboard), with a fallback route per task | `src/llm/tasks.ts` |
+| every model with its prices (the only place a price lives) and what it accepts | `src/llm/models.ts` |
+| `llm.json` / `tryJson` / `text` / `stream` / `image` / `speech`, the fallback, the log line | `src/llm/index.ts` |
+| one adapter per provider; a new provider is one file plus a line in `providers/index.ts` | `src/llm/providers/` |
+| OpenAI-to-Anthropic schema conversion | `src/llm/schema.ts` |
+| the cost ledger, one row per model run | `src/llm/ledger.ts` → table `llm_calls` |
+| the prompts and answer handling of most tasks | `src/aiTasks.ts` (was `chatgpt.ts`) |
 
-- `temperature` other than 1 returns 400 unless `reasoning_effort: 'none'`.
-- Function tools (`tools` / legacy `functions`) return 400 whenever reasoning
-  is on. OpenAI's answer is the Responses API; ours is
-  `response_format: { type: 'json_schema' }`, which works with every
-  reasoning level. Structured calls read `message.content` and parse it.
-- `max_tokens` is rejected; use `max_completion_tokens`.
+- **A task is a kind of call**, with a readable label and description for the
+  admin AI costs page. To move a task, change its route in `tasks.ts`, update
+  the snapshot in `test/unit/llm/tasks.test.ts` on purpose, and deploy.
+- **Every text task falls back once to its OpenAI route** (the one it used
+  before the layer) when the primary fails: provider down, the Anthropic credit
+  used up, no `ANTHROPIC_API_KEY` in the process (the layer warns once), a
+  refusal, an unusable answer. A request we built wrong (`LlmRequestError`)
+  never falls back. A stream falls back only before its first token.
+- **`json()` throws `LlmOutputError`** for an unusable answer (refused, cut
+  off, empty, not JSON) and rethrows provider errors; `tryJson()` returns null
+  for the first. The error carries the attempts and their cost.
+- **Costs** are priced at call time from `models.ts` and stored per attempt in
+  `llm_calls` (role `primary` or `fallback`, status `ok` / `error` / `refusal`
+  / `truncated` / `unparseable` / `empty` / `unavailable`). A price change
+  never rewrites history. The ledger is off under test unless `LLM_LEDGER=on`.
+  The admin page is `/:lang/dashboard/ai-costs` (Financial), fed by
+  `GET /admin/ai-costs` (`routes/aiCostRoutes.ts`).
+- **Live check**: `npx tsx scripts/llm-smoke.ts [task...]` runs every text task
+  once on its primary route (about $0.05) and lists the ledger rows;
+  `--compare [--routes=provider/model:effort,...]` compares release years.
 
-Pick `reasoning_effort` per call, not globally: `'none'` for translation,
-classification and copy (fast, allows a temperature), `'low'` where the answer
-has to be right (release years, quiz alternatives, order extraction),
-`'medium'` for year audits, trivia facts and blog generation.
+**Anthropic rules the adapter follows** (all a 400 otherwise; Claude 5.5 models):
 
-The AI playlist generator (`aiPlaylist.ts`) is the exception to "structured
-work runs on terra": it uses luna with reasoning `'none'`, because a customer
-watches a progress bar while it runs and the curation batches are sequential.
-Measured on 2026-09-17, terra + `'low'` took 26s for the keyword call and 6.5s
-per 100-candidate batch against 10s and 1.5s for luna + `'none'`, with the same
-tracks picked. Most of the gap is terra's token speed, not the reasoning.
-`chat.ts` and `mail.ts` still use legacy `functions` on the luna tier with
-reasoning off, which the API accepts.
+- No `temperature` / `top_p` / `top_k`, and no assistant prefill: the last
+  message is a user turn, and a conversation that opens with an assistant turn
+  gets a short user turn in front.
+- Thinking per model: Opus 5.5 always thinks (effort is the only control),
+  Sonnet 5.5 turns it off with `between_tools`, Haiku 5.5 with `disabled`
+  (both only at effort high or below). The layer's `'none'` effort maps to
+  exactly that. `max_tokens` is required and counts the thinking.
+- Structured output is `output_config.format`; every object needs
+  `additionalProperties: false`, and `minLength` / `maxLength` / `minimum` /
+  `maximum` are not supported (`schema.ts` handles both, and rewrites
+  `type: ['integer', 'null']` to `anyOf`).
+- Opus and Sonnet ask for the server-side refusal fallback (`fallbacks:
+  'default'`, beta `server-side-fallback-2026-07-01`); its runs are priced at
+  their own model and recorded as fallback rows. Haiku has none.
+- Haiku 5.5 bills a prompt over 100K tokens at 5x; the layer warns when one
+  does. The largest prompt here is the catalogue matcher at about 45K.
+- Prompt caching (`system` blocks with `cache: '5m' | '1h'`) is available but
+  unused: no system prompt is both large and repeated within five minutes.
+
+**OpenAI routes keep the GPT-5.6 rules** (verified 2026-09-16), which the
+OpenAI adapter applies: `temperature` other than 1 only with
+`reasoning_effort: 'none'`; function tools are a 400 with reasoning on, so
+structured output is `response_format: { type: 'json_schema' }`;
+`max_completion_tokens`, not `max_tokens`.
+
+The customer-facing playlist generator runs with thinking off (`aiKeywords`,
+`aiCurate`): a customer watches a progress bar and the curation batches are
+sequential. On OpenAI (2026-09-17) terra + `'low'` took 26 s for keywords and
+6.5 s per batch against 10 s and 1.5 s for luna + `'none'`; on Anthropic
+(2026-10-08) Sonnet 5.5 took 2.9 s for keywords and Haiku 5.5 1.6 s per batch.
 
 ## AI playlist generator: artists and catalogue suggestions
 
@@ -434,11 +473,13 @@ three of our featured playlists and up to three found on Spotify.
 `/featured/:locale`. Customers often describe something the catalogue
 already has (Disney, Schlager, Eurovision, all Taylor Swift songs).
 
-- One LLM call over the whole catalogue: about 600 lines and 37k tokens, 1.5 s
-  on luna with reasoning off. Words cannot do it: requests come in any
-  language and half the playlist names say nothing about the content. The
-  catalogue is the first part of the prompt and the same all day (Redis,
-  ordered by score then id), so OpenAI's prompt cache covers it.
+- One LLM call over the whole catalogue (task `aiSuggestFeatured`): about 600
+  lines and 37k tokens (1.5 s on luna with reasoning off, 2026-09-30). Words
+  cannot do it: requests come in any language and half the playlist names say
+  nothing about the content. The catalogue is the first part of the prompt and
+  the same all day (Redis, ordered by score then id), so OpenAI's prompt cache
+  covers it on an OpenAI route; on Haiku it stays under the 100K-token line
+  where the price goes up 5x.
 - The catalogue line uses `description_en`, the page copy, not the customer's
   blurb that `/featured` serves for promotional lists: it names genre, years
   and artists. Descriptions are cut **by character**; half an emoji is a lone
@@ -1191,7 +1232,7 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
 - `generateForPlaylist` builds a brief from the stored tracks (count, year
   span, decade split, most frequent artists, an evenly spread sample of at
   most 120 "artist - title (year)" lines) plus the customer's text and the
-  Spotify description as intent, has `ChatGPT.writeSeoPlaylistDescription`
+  Spotify description as intent, has `AiTasks.writeSeoPlaylistDescription`
   write English copy whose first sentence is a standalone meta description,
   then `translateSeoDescription` localises it (playlist name and "QRSong!"
   untouched, "QR music cards" rendered as the market's search term). A
@@ -1211,7 +1252,7 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   modal on the Featured page) is for a customer text that beats anything the
   writer makes of it (playlist 2650, "Symphony!", is the example). While it
   is on, approval and "Translate description" skip the writer:
-  `ChatGPT.translateLiterally` names the language `promotionalDescription` is
+  `AiTasks.translateLiterally` names the language `promotionalDescription` is
   written in and translates it word for word, and that locale gets the text
   itself. The bulk action skips the row; "Write SEO description" on it
   switches keeping off. The Edit form's description is always

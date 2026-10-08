@@ -9,7 +9,6 @@ import { color, blue, white } from 'console-log-colors';
 import fs from 'fs/promises';
 import PrintEnBind from './printers/printenbind';
 import Spotify from './spotify';
-import { ChatGPT } from './chatgpt';
 import Translation from './translation';
 import PDF from './pdf';
 import { APP_DESIGN_PRICE } from './config/constants';

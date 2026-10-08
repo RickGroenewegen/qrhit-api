@@ -40,7 +40,7 @@ export async function sanitizeTitleOrArtist(
     // the split is cosmetic and the hyphenation fallback below does the job.
     let segments: string[] = [];
     try {
-      segments = await deps.openai.splitArtistOrString(longWord, type);
+      segments = await deps.aiTasks.splitArtistOrString(longWord, type);
     } catch (error: any) {
       deps.logger.log(
         color.yellow.bold(

@@ -29,7 +29,7 @@ vi.mock('../../src/apptheme', () => ({
 vi.mock('../../src/cache', () => ({
   default: { getInstance: () => ({ get: vi.fn(), set: vi.fn(), del: vi.fn() }) },
 }));
-vi.mock('../../src/chatgpt', () => ({ ChatGPT: class {} }));
+vi.mock('../../src/aiTasks', () => ({ AiTasks: class {} }));
 
 import AppDesign, { validateCheckoutDesigns } from '../../src/appDesign';
 

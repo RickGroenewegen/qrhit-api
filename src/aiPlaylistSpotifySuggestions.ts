@@ -1,11 +1,10 @@
-import OpenAI from 'openai';
 import { createHash } from 'crypto';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import Cache from './cache';
 import Spotify, { PlaylistSearchHit } from './spotify';
-import { estimateCostUsd } from './aiPricing';
-import { LLM_MODEL_FAST } from './llmModels';
+import { llm, LlmOutputError } from './llm';
+import type { LlmRequest, LlmSchema, TextTask } from './llm';
 import { oneLine, truncate } from './aiPlaylistSuggestions';
 
 /**
@@ -25,9 +24,11 @@ import { oneLine, truncate } from './aiPlaylistSuggestions';
  *      that from getting in the way of the order flow),
  *   3. the model picks from what came back, strictly: most of it is somebody's
  *      private mix with a lookalike name.
+ *
+ * The models are the aiSpotifyQuery and aiSpotifyPick routes in
+ * src/llm/tasks.ts.
  */
 
-const MODEL = LLM_MODEL_FAST;
 const MAX_SUGGESTIONS = 3;
 const MIN_PROMPT_LENGTH = 3;
 // A playlist has at least as many tracks as the customer asked for (never
@@ -99,9 +100,25 @@ class AIPlaylistSpotifySuggestions {
   private logger = new Logger();
   private cache = Cache.getInstance();
   private spotify = Spotify.getInstance();
-  private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
 
   private constructor() {}
+
+  /**
+   * One structured call. An unusable answer reads as an empty object; its
+   * cost is counted all the same. Provider errors propagate.
+   */
+  private async askJson<T>(
+    task: TextTask,
+    req: LlmRequest & { schema: LlmSchema },
+    track: (call: { costUsd: number }) => void
+  ): Promise<Partial<T>> {
+    const answer = await llm.json<T>(task, req).catch((err) => {
+      if (err instanceof LlmOutputError) return err;
+      throw err;
+    });
+    track(answer);
+    return answer instanceof LlmOutputError ? {} : answer.data ?? {};
+  }
 
   public static getInstance(): AIPlaylistSpotifySuggestions {
     if (!AIPlaylistSpotifySuggestions.instance) {
@@ -141,12 +158,8 @@ class AIPlaylistSpotifySuggestions {
 
       const t0 = Date.now();
       let costUsd = 0;
-      const track = (result: any) => {
-        costUsd += estimateCostUsd(
-          MODEL,
-          result?.usage?.prompt_tokens ?? 0,
-          result?.usage?.completion_tokens ?? 0
-        );
+      const track = (call: { costUsd: number }) => {
+        costUsd += call.costUsd;
       };
 
       const queries = await this.queries(theme, locale, track);
@@ -200,10 +213,9 @@ class AIPlaylistSpotifySuggestions {
   private async queries(
     theme: string,
     locale: string,
-    track: (result: any) => void
+    track: (call: { costUsd: number }) => void
   ): Promise<string[]> {
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    const parsed = await this.askJson<{ queries?: unknown }>('aiSpotifyQuery', {
       messages: [
         {
           role: 'system',
@@ -220,29 +232,17 @@ class AIPlaylistSpotifySuggestions {
           content: `Customer's language: ${locale}\nWhat the customer wants:\n${theme}`,
         },
       ],
-      reasoning_effort: 'none',
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'returnQueries',
-          schema: {
-            type: 'object',
-            properties: {
-              queries: { type: 'array', items: { type: 'string' } },
-            },
-            required: ['queries'],
+      schema: {
+        name: 'returnQueries',
+        schema: {
+          type: 'object',
+          properties: {
+            queries: { type: 'array', items: { type: 'string' } },
           },
+          required: ['queries'],
         },
       },
-    });
-    track(result);
-
-    let parsed: { queries?: unknown } = {};
-    try {
-      parsed = JSON.parse(result?.choices[0]?.message?.content || '{}');
-    } catch {
-      parsed = {};
-    }
+    }, track);
     const seen = new Set<string>();
     const queries: string[] = [];
     for (const raw of Array.isArray(parsed.queries) ? parsed.queries : []) {
@@ -261,7 +261,7 @@ class AIPlaylistSpotifySuggestions {
     theme: string,
     candidates: PlaylistSearchHit[],
     minTracks: number,
-    track: (result: any) => void
+    track: (call: { costUsd: number }) => void
   ): Promise<SpotifySuggestion[]> {
     // Every candidate is large enough already; among good matches the one
     // nearest to what was asked is the better offer.
@@ -269,8 +269,7 @@ class AIPlaylistSpotifySuggestions {
       minTracks > 0
         ? `\nThe customer asked for ${minTracks} tracks. Of playlists that fit equally well, prefer the one closest to that size.`
         : '';
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    const parsed = await this.askJson<{ playlistIds?: unknown }>('aiSpotifyPick', {
       messages: [
         {
           role: 'system',
@@ -290,29 +289,17 @@ class AIPlaylistSpotifySuggestions {
             .join('\n')}`,
         },
       ],
-      reasoning_effort: 'none',
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'returnPlaylists',
-          schema: {
-            type: 'object',
-            properties: {
-              playlistIds: { type: 'array', items: { type: 'string' } },
-            },
-            required: ['playlistIds'],
+      schema: {
+        name: 'returnPlaylists',
+        schema: {
+          type: 'object',
+          properties: {
+            playlistIds: { type: 'array', items: { type: 'string' } },
           },
+          required: ['playlistIds'],
         },
       },
-    });
-    track(result);
-
-    let parsed: { playlistIds?: unknown } = {};
-    try {
-      parsed = JSON.parse(result?.choices[0]?.message?.content || '{}');
-    } catch {
-      parsed = {};
-    }
+    }, track);
     const byId = new Map(candidates.map((hit) => [hit.id, hit]));
     const picked: SpotifySuggestion[] = [];
     for (const id of Array.isArray(parsed.playlistIds) ? parsed.playlistIds : []) {

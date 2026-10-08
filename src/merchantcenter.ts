@@ -12,13 +12,12 @@ import fs from 'fs/promises';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
-import OpenAI from 'openai';
+import { formatCostUsd, llm } from './llm';
 import PrismaInstance from './prisma';
 import Fx from './services/fx';
 import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
-import { IMAGE_MODEL } from './llmModels';
 import {
   LOCALE_COUNTRY_PAIRS,
   ProductVariant,
@@ -115,7 +114,6 @@ export class MerchantCenterService {
   private auth: any;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
-  private openai = new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] });
   private pdfService = new PDF();
 
   // Mapping of locale-country combinations we publish products for. Shared
@@ -1122,16 +1120,6 @@ export class MerchantCenterService {
       );
       const baseBuf = await fs.readFile(baseImagePath);
 
-      const baseFile = new File([new Uint8Array(baseBuf)], 'product_base.png', {
-        type: 'image/png',
-      });
-      const frontFile = new File([new Uint8Array(frontPng)], 'card_front.png', {
-        type: 'image/png',
-      });
-      const backFile = new File([new Uint8Array(backPng)], 'card_back.png', {
-        type: 'image/png',
-      });
-
       const prompt =
         'Create a product photo using the EXACT composition, camera angle, lighting, shadows and white background of the first reference image (product_base.png). ' +
         'The base image contains three distinct card elements: ' +
@@ -1145,26 +1133,22 @@ export class MerchantCenterService {
 
       this.logger.log(
         blue.bold(
-          `🤖 AI image: requesting OpenAI image edit for ${white.bold(playlistId)}`
+          `🤖 AI image: requesting an image edit for ${white.bold(playlistId)}`
         )
       );
 
-      const response = await this.openai.images.edit({
-        image: [baseFile, frontFile, backFile] as any,
+      // An answer without an image throws LlmOutputError, caught below.
+      const { data: outBuf, costUsd } = await llm.image('productPhoto', {
         prompt,
-        n: 1,
-        model: IMAGE_MODEL,
+        images: [
+          { data: baseBuf, filename: 'product_base.png', mimeType: 'image/png' },
+          { data: frontPng, filename: 'card_front.png', mimeType: 'image/png' },
+          { data: backPng, filename: 'card_back.png', mimeType: 'image/png' },
+        ],
         size: '1024x1024',
         quality: 'high',
       });
 
-      const b64 = response.data?.[0]?.b64_json;
-      if (!b64) {
-        this.logger.log(red('AI product image: OpenAI returned no image data'));
-        return null;
-      }
-
-      const outBuf = Buffer.from(b64, 'base64');
       const productsDir = path.join(process.env['PUBLIC_DIR']!, 'products');
       await fs.mkdir(productsDir, { recursive: true });
       const timestamp = Date.now();
@@ -1201,7 +1185,7 @@ export class MerchantCenterService {
 
       const url = `${apiUri}/public/products/${outFilename}`;
       this.logger.log(
-        green.bold(`✓ AI image saved: ${white.bold(outFilename)}`)
+        green.bold(`✓ AI image saved: ${white.bold(outFilename)} (${white.bold(formatCostUsd(costUsd))})`)
       );
       // Flip the merchant-sync flag so the next upload pass picks this
       // playlist up and pushes the new image to Google Merchant Center.

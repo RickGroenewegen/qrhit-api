@@ -15,8 +15,7 @@ import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import crypto from 'crypto';
 import cluster from 'cluster';
-import OpenAI from 'openai';
-import { LLM_MODEL_FAST, LLM_MODEL_STANDARD } from './llmModels';
+import { formatCostUsd, llm } from './llm';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
 import BusinessContacts from './businessContacts';
@@ -55,7 +54,6 @@ class Mail {
   private pushover = new PushoverClient();
   private utils = new Utils();
   private logger = new Logger();
-  private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
 
   private constructor() {
     this.initializeSES();
@@ -1386,47 +1384,43 @@ class Mail {
   }
 
   /**
-   * Detect language and translate contact email message to Dutch using function calling
+   * Detect language and translate contact email message to Dutch (structured output)
    */
   private async translateContactEmailToDutch(emailId: number, message: string): Promise<void> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: LLM_MODEL_FAST,
-        reasoning_effort: 'none',
+      const { data: result, costUsd } = await llm.tryJsonWithCost<{
+        detectedLocale: string;
+        dutchTranslation: string;
+      }>('contactTranslate', {
         temperature: 0.3,
         messages: [
           {
             role: 'system',
-            content: 'Detect the language of the text and translate it to Dutch. Use the provided function to return both the detected language code and the Dutch translation.',
+            content: 'Detect the language of the text and translate it to Dutch. Return both the detected language code and the Dutch translation.',
           },
           { role: 'user', content: message },
         ],
-        functions: [
-          {
-            name: 'processTranslation',
-            description: 'Process the detected language and Dutch translation of the message',
-            parameters: {
-              type: 'object',
-              properties: {
-                detectedLocale: {
-                  type: 'string',
-                  description: 'ISO 639-1 language code of the detected language (e.g., en, nl, de, fr, es, it, pt, pl, sv, ru, cn, jp, hin)',
-                },
-                dutchTranslation: {
-                  type: 'string',
-                  description: 'The message translated to Dutch. If the original is already in Dutch, return the original text.',
-                },
+        schema: {
+          name: 'processTranslation',
+          description: 'Process the detected language and Dutch translation of the message',
+          schema: {
+            type: 'object',
+            properties: {
+              detectedLocale: {
+                type: 'string',
+                description: 'ISO 639-1 language code of the detected language (e.g., en, nl, de, fr, es, it, pt, pl, sv, ru, cn, jp, hin)',
               },
-              required: ['detectedLocale', 'dutchTranslation'],
+              dutchTranslation: {
+                type: 'string',
+                description: 'The message translated to Dutch. If the original is already in Dutch, return the original text.',
+              },
             },
+            required: ['detectedLocale', 'dutchTranslation'],
           },
-        ],
-        function_call: { name: 'processTranslation' },
+        },
       });
 
-      const functionCall = response.choices[0]?.message?.function_call;
-      if (functionCall?.arguments) {
-        const result = JSON.parse(functionCall.arguments);
+      if (result) {
         const { detectedLocale, dutchTranslation } = result;
 
         await prisma.contactEmail.update({
@@ -1436,7 +1430,7 @@ class Mail {
             translatedMessage: dutchTranslation,
           },
         });
-        this.logger.log(color.green(`[ContactEmail] Detected locale: ${detectedLocale}, translated message ${emailId} to Dutch`));
+        this.logger.log(color.green(`[ContactEmail] Detected locale: ${detectedLocale}, translated message ${emailId} to Dutch (${formatCostUsd(costUsd)})`));
       }
     } catch (error) {
       this.logger.log(color.red(`[ContactEmail] Translation error: ${error}`));
@@ -1463,9 +1457,7 @@ class Mail {
       );
 
       // Generate draft reply with knowledge and tool results
-      const response = await this.openai.chat.completions.create({
-        model: LLM_MODEL_STANDARD,
-        reasoning_effort: 'none',
+      const { data: draftReply, costUsd } = await llm.text('contactDraft', {
         temperature: 0.5,
         messages: [
           {
@@ -1488,43 +1480,15 @@ ${knowledgeContext}${toolContext}`,
         ],
       });
 
-      const draftReply = response.choices[0]?.message?.content;
       if (draftReply) {
         await prisma.contactEmail.update({
           where: { id: emailId },
           data: { draftReply },
         });
-        this.logger.log(color.green(`[ContactEmail] Generated draft reply for email ${emailId}`));
+        this.logger.log(color.green(`[ContactEmail] Generated draft reply for email ${emailId} (${formatCostUsd(costUsd)})`));
       }
     } catch (error) {
       this.logger.log(color.red(`[ContactEmail] Draft reply generation error: ${error}`));
-    }
-  }
-
-  /**
-   * Translate content to a specific locale
-   */
-  public async translateToLocale(content: string, targetLocale: string): Promise<string> {
-    const targetLang = this.translation.getLanguageName(targetLocale);
-
-    try {
-      const result = await this.openai.chat.completions.create({
-        model: LLM_MODEL_FAST,
-        reasoning_effort: 'none',
-        temperature: 0.3,
-        messages: [
-          {
-            role: 'system',
-            content: `Translate the following Dutch text to ${targetLang}. Keep any formatting intact. Only return the translation, nothing else.`,
-          },
-          { role: 'user', content },
-        ],
-      });
-
-      return result.choices[0]?.message?.content || content;
-    } catch (error) {
-      this.logger.log(color.red(`[translateToLocale] Error: ${error}`));
-      return content;
     }
   }
 

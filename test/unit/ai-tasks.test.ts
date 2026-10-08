@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
-import fs from 'fs/promises';
-import path from 'path';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Collaborator mocks (no network, no DB, no native sharp work)
@@ -33,6 +31,11 @@ const {
     sharpFactory: vi.fn(() => chain),
   };
 });
+
+// Every task on its OpenAI route, so the SDK mock below answers it.
+vi.mock('../../src/llm/tasks', async (importOriginal) =>
+  (await import('../helpers/llm-openai-routes')).openAiRoutes(await importOriginal<any>())
+);
 
 vi.mock('openai', () => ({
   default: class OpenAIMock {
@@ -77,9 +80,9 @@ vi.mock('../../src/translation', () => ({
 
 vi.mock('sharp', () => ({ default: sharpFactory }));
 
-import { ChatGPT } from '../../src/chatgpt';
+import { AiTasks } from '../../src/aiTasks';
 
-const gpt = new ChatGPT();
+const gpt = new AiTasks();
 
 /**
  * Builds a chat completion response carrying a structured (json_schema)
@@ -120,7 +123,7 @@ beforeEach(() => {
 // ask (year detection)
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.ask', () => {
+describe('AiTasks.ask', () => {
   it('returns the parsed year payload and sends the parseYear function schema', async () => {
     createMock.mockResolvedValueOnce(
       toolCallResponse('parseYear', {
@@ -133,11 +136,13 @@ describe('ChatGPT.ask', () => {
 
     const answer = await gpt.ask('"Thriller" by Michael Jackson');
 
+    // The answer plus what it cost (100 in + 50 out tokens of gpt-5.6-terra).
     expect(answer).toEqual({
       year: 1982,
       reasoning: 'Released on Thriller',
       certainty: 95,
       source: 'https://example.com',
+      costUsd: (100 * 2 + 50 * 12) / 1e6,
     });
 
     const payload = createMock.mock.calls[0][0];
@@ -176,7 +181,7 @@ describe('ChatGPT.ask', () => {
 // verifyList
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.verifyList', () => {
+describe('AiTasks.verifyList', () => {
   it('returns [] when the playlist is unknown', async () => {
     prismaQueryRaw.mockResolvedValueOnce([]);
     expect(await gpt.verifyList(1, 'unknown')).toEqual([]);
@@ -260,118 +265,10 @@ describe('ChatGPT.verifyList', () => {
 });
 
 // ---------------------------------------------------------------------------
-// generatePlaylistDescription
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.generatePlaylistDescription', () => {
-  const tracks = [
-    { artist: 'A', name: 'One' },
-    { artist: 'B', name: 'Two' },
-  ];
-
-  it('returns per-language descriptions and requests one schema property per locale', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('generateDescriptions', {
-        description_en: 'EN text',
-        description_nl: 'NL tekst',
-      })
-    );
-
-    const result = await gpt.generatePlaylistDescription('Party', tracks, [
-      'en',
-      'nl',
-    ]);
-    expect(result).toEqual({
-      description_en: 'EN text',
-      description_nl: 'NL tekst',
-    });
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.6-terra');
-    expect(payload.reasoning_effort).toBe('none');
-    expect(payload.response_format.json_schema.name).toBe('generateDescriptions');
-    expect(
-      Object.keys(payload.response_format.json_schema.schema.properties)
-    ).toEqual(['description_en', 'description_nl']);
-    expect(payload.response_format.json_schema.schema.required).toEqual([
-      'description_en',
-      'description_nl',
-    ]);
-    expect(payload.messages[1].content).toContain('Number of songs: 2');
-    expect(payload.messages[1].content).toContain('"One" by A');
-  });
-
-  it('defaults languages to the Translation locales', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('generateDescriptions', {
-        description_en: 'x',
-        description_nl: 'y',
-      })
-    );
-    await gpt.generatePlaylistDescription('Party', tracks);
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.response_format.json_schema.schema.required).toEqual([
-      'description_en',
-      'description_nl',
-    ]);
-  });
-
-  it('returns {} on a malformed JSON response', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('generateDescriptions', null, 'oops')
-    );
-    expect(
-      await gpt.generatePlaylistDescription('Party', tracks, ['en'])
-    ).toEqual({});
-  });
-});
-
-// ---------------------------------------------------------------------------
-// determineGenre
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.determineGenre', () => {
-  const genres = [
-    { id: 5, slug: 'rock' },
-    { id: 9, slug: 'pop' },
-  ];
-  const tracks = [{ artist: 'A', name: 'One' }];
-
-  it('returns the matched genre id and includes 0 (NoMatch) in the enum', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('determineGenre', { genreId: 9, reasoning: 'pop' })
-    );
-
-    expect(await gpt.determineGenre('Hits', tracks, genres)).toBe(9);
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.response_format.json_schema.name).toBe('determineGenre');
-    expect(payload.response_format.json_schema.schema.properties.genreId.enum).toEqual(
-      [0, 5, 9]
-    );
-    expect(payload.messages[1].content).toContain('5: (rock)');
-  });
-
-  it('converts GenreId.NoMatch (0) to null', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('determineGenre', { genreId: 0, reasoning: 'mixed' })
-    );
-    expect(await gpt.determineGenre('Hits', tracks, genres)).toBeNull();
-  });
-
-  it('returns null on a malformed JSON response', async () => {
-    createMock.mockResolvedValueOnce(
-      toolCallResponse('determineGenre', null, '!')
-    );
-    expect(await gpt.determineGenre('Hits', tracks, genres)).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // translateGenreNames
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.translateGenreNames', () => {
+describe('AiTasks.translateGenreNames', () => {
   it('returns {} when no target locales are given', async () => {
     expect(await gpt.translateGenreNames('Rock', [])).toEqual({});
     expect(createMock).not.toHaveBeenCalled();
@@ -400,78 +297,10 @@ describe('ChatGPT.translateGenreNames', () => {
 });
 
 // ---------------------------------------------------------------------------
-// askBlog / askBlogStream
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.askBlog', () => {
-  it('returns the generated blog and uses the sol model with medium reasoning', async () => {
-    const blog = { title: 'My post', summary: 'Sum', content: '<p>Hi</p>' };
-    createMock.mockResolvedValueOnce(toolCallResponse('generateBlog', blog));
-
-    expect(await gpt.askBlog('Write about parties')).toEqual(blog);
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.model).toBe('gpt-5.6-sol');
-    expect(payload.reasoning_effort).toBe('medium');
-    expect(payload.response_format.json_schema.name).toBe('generateBlog');
-    expect(payload.response_format.json_schema.schema.required).toEqual([
-      'title',
-      'content',
-    ]);
-    expect(payload.messages[1].content).toBe('Write about parties');
-  });
-
-  it('returns empty fields on a malformed response', async () => {
-    createMock.mockResolvedValueOnce(toolCallResponse('generateBlog', null, '['));
-    expect(await gpt.askBlog('x')).toEqual({ title: '', content: '', summary: '' });
-  });
-
-  it('returns empty fields when there is no tool call', async () => {
-    createMock.mockResolvedValueOnce(noToolCallResponse);
-    expect(await gpt.askBlog('x')).toEqual({ title: '', content: '', summary: '' });
-  });
-});
-
-describe('ChatGPT.askBlogStream', () => {
-  it('streams chunks, extracts a short first paragraph as summary', async () => {
-    async function* stream() {
-      yield { choices: [{ delta: { content: '<p>Short intro.</p>' } }] };
-      yield { choices: [{ delta: { content: '<h2>Main</h2><p>Body</p>' } }] };
-      yield { choices: [{ delta: {} }] }; // empty delta is skipped
-    }
-    createMock.mockResolvedValueOnce(stream());
-
-    const chunks: string[] = [];
-    const result = await gpt.askBlogStream('topic', (c) => chunks.push(c));
-
-    expect(chunks).toEqual(['<p>Short intro.</p>', '<h2>Main</h2><p>Body</p>']);
-    expect(result.title).toBe('Generated Blog Post');
-    expect(result.summary).toBe('Short intro.');
-    expect(result.content).toBe('<h2>Main</h2><p>Body</p>');
-
-    const payload = createMock.mock.calls[0][0];
-    expect(payload.stream).toBe(true);
-    expect(payload.model).toBe('gpt-5.6-sol');
-  });
-
-  it('keeps a long first paragraph in the content and returns no summary', async () => {
-    const longPara = `<p>${'x'.repeat(320)}</p>`;
-    async function* stream() {
-      yield { choices: [{ delta: { content: longPara } }] };
-    }
-    createMock.mockResolvedValueOnce(stream());
-
-    const result = await gpt.askBlogStream('topic', () => {});
-    expect(result.summary).toBeUndefined();
-    expect(result.content).toBe(longPara);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // translateText / translateMessage
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.translateText', () => {
+describe('AiTasks.translateText', () => {
   it('returns {} for empty input without calling OpenAI', async () => {
     expect(await gpt.translateText('', ['nl'])).toEqual({});
     expect(await gpt.translateText('hello', [])).toEqual({});
@@ -497,7 +326,7 @@ describe('ChatGPT.translateText', () => {
   });
 });
 
-describe('ChatGPT.translateLiterally', () => {
+describe('AiTasks.translateLiterally', () => {
   it('returns nothing for empty input without calling OpenAI', async () => {
     expect(await gpt.translateLiterally('', 'P', ['nl'])).toEqual({
       sourceLocale: null,
@@ -547,7 +376,7 @@ describe('ChatGPT.translateLiterally', () => {
   });
 });
 
-describe('ChatGPT.translateMessage', () => {
+describe('AiTasks.translateMessage', () => {
   it('returns the translated subject and message', async () => {
     createMock.mockResolvedValueOnce(
       toolCallResponse('translate_email', {
@@ -585,7 +414,7 @@ describe('ChatGPT.translateMessage', () => {
 // splitArtistOrString / extractOrders
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.splitArtistOrString', () => {
+describe('AiTasks.splitArtistOrString', () => {
   it('returns the produced segments', async () => {
     createMock.mockResolvedValueOnce(
       toolCallResponse('splitText', { segments: ['Raderberger', 'boorebürger'] })
@@ -617,7 +446,7 @@ describe('ChatGPT.splitArtistOrString', () => {
   });
 });
 
-describe('ChatGPT.extractOrders', () => {
+describe('AiTasks.extractOrders', () => {
   it('returns extracted orders with low reasoning and no temperature', async () => {
     const orders = [
       { orderId: '123', date: '01-02-2026', amount: 19.95 },
@@ -649,7 +478,7 @@ describe('ChatGPT.extractOrders', () => {
 // generateQuizQuestions
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.generateQuizQuestions', () => {
+describe('AiTasks.generateQuizQuestions', () => {
   it('generates year questions locally and the other types via the LLM', async () => {
     createMock.mockImplementation(async (payload: any) => {
       const name = payload.response_format.json_schema.name;
@@ -784,7 +613,7 @@ describe('ChatGPT.generateQuizQuestions', () => {
 // regenerateQuizQuestion
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.regenerateQuizQuestion', () => {
+describe('AiTasks.regenerateQuizQuestion', () => {
   const track = { name: 'Billie Jean', artist: 'Michael Jackson', year: 1982 };
 
   it('regenerates year questions locally', async () => {
@@ -869,7 +698,7 @@ describe('ChatGPT.regenerateQuizQuestion', () => {
 // generateWrongOptions
 // ---------------------------------------------------------------------------
 
-describe('ChatGPT.generateWrongOptions', () => {
+describe('AiTasks.generateWrongOptions', () => {
   const track = { name: 'Song', artist: 'Artist' };
 
   it('returns at most 3 wrong options', async () => {
@@ -901,45 +730,3 @@ describe('ChatGPT.generateWrongOptions', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// generateBlogImage
-// ---------------------------------------------------------------------------
-
-describe('ChatGPT.generateBlogImage', () => {
-  beforeAll(async () => {
-    const imagesDir = path.join(process.env['ASSETS_DIR']!, 'images');
-    await fs.mkdir(imagesDir, { recursive: true });
-    await fs.writeFile(path.join(imagesDir, 'cards.png'), Buffer.from('cards'));
-  });
-
-  it('edits the base image, compresses it with sharp and returns the filename', async () => {
-    imagesEditMock.mockResolvedValueOnce({
-      data: [{ b64_json: Buffer.from('generated-image').toString('base64') }],
-    });
-
-    const filename = await gpt.generateBlogImage('A party scene');
-
-    expect(filename).toMatch(/^blog_\d+\.jpg$/);
-    const editArgs = imagesEditMock.mock.calls[0][0];
-    expect(editArgs.model).toBe('gpt-image-2.5-sunburst');
-    expect(editArgs.prompt).toBe('A party scene');
-    expect(editArgs.size).toBe('1536x1024');
-    expect(editArgs.quality).toBe('high');
-
-    expect(sharpChain.jpeg).toHaveBeenCalledWith({ quality: 85, progressive: true });
-    expect(sharpChain.resize).toHaveBeenCalledWith(1280, 720, { fit: 'cover' });
-    expect(sharpChain.toFile).toHaveBeenCalledWith(
-      path.join(process.env['PUBLIC_DIR']!, 'blog_images', filename!)
-    );
-  });
-
-  it('returns null when no image data is returned', async () => {
-    imagesEditMock.mockResolvedValueOnce({ data: [] });
-    expect(await gpt.generateBlogImage('x')).toBeNull();
-  });
-
-  it('returns null when the image API throws', async () => {
-    imagesEditMock.mockRejectedValueOnce(new Error('img down'));
-    expect(await gpt.generateBlogImage('x')).toBeNull();
-  });
-});

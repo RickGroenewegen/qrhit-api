@@ -2,7 +2,7 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import Cache from './cache';
 import Data from './data';
-import { ChatGPT, SeoDescriptionBrief } from './chatgpt';
+import { AiTasks, SeoDescriptionBrief } from './aiTasks';
 import Translation from './translation';
 import { CACHE_KEY_PLAYLIST } from './spotify';
 import { color } from 'console-log-colors';
@@ -169,7 +169,7 @@ export function buildSeoBrief(
  * description_<locale> columns, and playlists without one fell back to the
  * raw streaming-service description in the meta tags. Both are replaced by
  * an English description written from the tracklist (see
- * ChatGPT.writeSeoPlaylistDescription) that is then localised. The row's
+ * AiTasks.writeSeoPlaylistDescription) that is then localised. The row's
  * seoDescriptionGenerated flag records that this has happened.
  */
 class SeoDescriptions {
@@ -177,7 +177,7 @@ class SeoDescriptions {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private cache = Cache.getInstance();
-  private chatgpt = new ChatGPT();
+  private aiTasks = new AiTasks();
   private translation = new Translation();
 
   private constructor() {}
@@ -240,13 +240,13 @@ class SeoDescriptions {
       )
     );
 
-    const english = await this.chatgpt.writeSeoPlaylistDescription(brief);
+    const english = await this.aiTasks.writeSeoPlaylistDescription(brief);
     if (!english) {
       throw new Error('The model returned no description');
     }
 
     const otherLocales = this.translation.allLocales.filter((l) => l !== 'en');
-    const translations = await this.chatgpt.translateSeoDescription(
+    const translations = await this.aiTasks.translateSeoDescription(
       english,
       playlist.name,
       otherLocales

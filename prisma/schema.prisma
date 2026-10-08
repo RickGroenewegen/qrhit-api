@@ -920,6 +920,34 @@ model AISearch {
   @@map("aisearches")
 }
 
+// One row per model run made through the LLM layer (src/llm): a primary
+// attempt, our fallback to another provider, or Anthropic's server-side
+// fallback inside the same call. The cost is priced once, at call time, from
+// src/llm/models.ts, so a later price change never rewrites a row. Read by the
+// admin AI costs page.
+model LlmCall {
+  id               Int      @id @default(autoincrement())
+  task             String   @db.VarChar(64)
+  kind             String   @db.VarChar(16) // text | image | speech
+  provider         String   @db.VarChar(32)
+  model            String   @db.VarChar(64)
+  role             String   @db.VarChar(16) // primary | fallback
+  status           String   @db.VarChar(16) // ok | error | refusal | truncated | unparseable | empty | unavailable
+  inputTokens      Int      @default(0)
+  outputTokens     Int      @default(0)
+  cacheReadTokens  Int      @default(0)
+  cacheWriteTokens Int      @default(0)
+  costUsd          Float    @default(0)
+  estimated        Boolean  @default(false)
+  durationMs       Int      @default(0)
+  error            String?  @db.VarChar(255)
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([task, createdAt])
+  @@map("llm_calls")
+}
+
 model BingoFile {
   id                   Int                @id @default(autoincrement())
   paymentHasPlaylistId Int

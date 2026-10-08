@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { resetDb, prisma } from '../helpers/db';
 import CalendarService from '../../src/calendarService';
-import { ChatGPT } from '../../src/chatgpt';
+import { AiTasks } from '../../src/aiTasks';
 
 /**
  * Event-calendar prefill + CRUD against the test database. Verifies
@@ -14,8 +14,8 @@ describe('CalendarService', () => {
   beforeAll(async () => {
     // Never hit OpenAI from tests: createBaseEvent fires an async name
     // translation, and the backfill uses determineBaseEvents.
-    vi.spyOn(ChatGPT.prototype, 'translateText').mockResolvedValue({});
-    vi.spyOn(ChatGPT.prototype, 'determineBaseEvents').mockResolvedValue([]);
+    vi.spyOn(AiTasks.prototype, 'translateText').mockResolvedValue({});
+    vi.spyOn(AiTasks.prototype, 'determineBaseEvents').mockResolvedValue([]);
     await resetDb();
   });
 
