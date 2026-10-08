@@ -125,7 +125,6 @@ model Payment {
   // (a gift box bought once the cards had shipped); profit subtracts it
   // next to printApiPrice, also when it is recomputed.
   extraPrintCost           Float                @default(0)
-  printApiInvoicePrice     Float                @default(0)
   clientIp                 String?
   totalPrice               Float
   totalPriceWithoutTax     Float                @default(0)
