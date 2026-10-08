@@ -189,13 +189,13 @@ class SpotifyApi {
 
     const authUrl = await this.createAuthorizationUrl();
 
+    // The URL carries a working one-time state: it goes to Pushover only,
+    // never to the logs.
     this.logger.log(
       color.red.bold(
         `[${color.white.bold(
           'spotify'
-        )}] Refresh token invalid_grant - discarded stored tokens. Re-authorization required: ${color.white.bold(
-          authUrl || 'auth url unavailable'
-        )}`
+        )}] Refresh token invalid_grant - discarded stored tokens. Re-authorization required (link sent via Pushover, or Bulk actions > Tokens)`
       )
     );
 
