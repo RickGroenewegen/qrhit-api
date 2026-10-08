@@ -909,35 +909,6 @@ export async function searchTracks(
   };
 }
 
-export async function getTracksMissingSpotifyLink(
-  deps: DataDeps,
-  searchTerm: string = ''
-): Promise<any[]> {
-  if (searchTerm && searchTerm.trim().length > 0) {
-    const likePattern = `%${searchTerm}%`;
-    const tracks = await deps.prisma.$queryRaw<any[]>`
-      SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, spotifyLinkIgnored
-      FROM tracks
-      WHERE (spotifyLink IS NULL OR spotifyLink = '')
-      AND spotifyLinkIgnored = false
-      AND (artist LIKE ${likePattern} OR name LIKE ${likePattern})
-      ORDER BY id DESC
-      LIMIT 100
-    `;
-    return tracks;
-  } else {
-    const tracks = await deps.prisma.$queryRaw<any[]>`
-      SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, spotifyLinkIgnored
-      FROM tracks
-      WHERE (spotifyLink IS NULL OR spotifyLink = '')
-      AND spotifyLinkIgnored = false
-      ORDER BY id DESC
-      LIMIT 100
-    `;
-    return tracks;
-  }
-}
-
 export async function getTracksMissingSpotifyLinkCount(deps: DataDeps): Promise<number> {
   const result = await deps.prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*) as count

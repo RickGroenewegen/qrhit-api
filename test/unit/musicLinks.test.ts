@@ -72,13 +72,10 @@ vi.mock('../../src/providers/MusicProviderFactory', () => ({
 
 import {
   TRACK_LINKS_CACHE_PREFIX,
-  getYouTubeLink,
-  addSpotifyLinks,
   prefillLinkCache,
   logLink,
   getLink,
   getPlaylistLinkCoverage,
-  getTracksWithoutMusicLinks,
   updateTrackMusicLinks,
   findMissingServiceLinks,
 } from '../../src/data/musicLinks';
@@ -142,61 +139,6 @@ function makeDeps(overrides: Record<string, any> = {}): any {
 describe('TRACK_LINKS_CACHE_PREFIX', () => {
   it('equals "track_links_v6"', () => {
     expect(TRACK_LINKS_CACHE_PREFIX).toBe('track_links_v6');
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════
-// getYouTubeLink
-// ══════════════════════════════════════════════════════════════════════════
-
-describe('getYouTubeLink', () => {
-  it('always returns null — the function body is dead code after the early return', async () => {
-    const deps = makeDeps();
-    const result = await getYouTubeLink(deps, 'ABBA', 'Waterloo');
-    expect(result).toBeNull();
-    // The axios instance should never be called because of the early return
-    expect(deps.axiosInstance.request).not.toHaveBeenCalled();
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════
-// addSpotifyLinks
-// ══════════════════════════════════════════════════════════════════════════
-
-describe('addSpotifyLinks', () => {
-  it('returns 0 when the tracks list is empty', async () => {
-    const deps = makeDeps();
-    deps.prisma.track.findMany.mockResolvedValue([]);
-    const result = await addSpotifyLinks(deps);
-    expect(result).toBe(0);
-  });
-
-  it('returns 0 when getYouTubeLink returns null (which it always does)', async () => {
-    const deps = makeDeps();
-    deps.prisma.track.findMany.mockResolvedValue([
-      { id: 1, artist: 'ABBA', name: 'Waterloo', spotifyLink: 'https://open.spotify.com/track/abc123' },
-    ]);
-    // NOTE: suspected bug: addSpotifyLinks iterates tracks and calls
-    // getYouTubeLink, but getYouTubeLink always returns null (dead code).
-    // Therefore processed will always be 0. This function does nothing useful.
-    const result = await addSpotifyLinks(deps);
-    expect(result).toBe(0);
-    // DB update must never be called because youtubeId is always null
-    expect(deps.prisma.track.update).not.toHaveBeenCalled();
-  });
-
-  it('queries tracks that have spotifyLink but no youtubeLink', async () => {
-    const deps = makeDeps();
-    deps.prisma.track.findMany.mockResolvedValue([]);
-    await addSpotifyLinks(deps);
-    expect(deps.prisma.track.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          youtubeLink: null,
-          spotifyLink: { not: null },
-        }),
-      })
-    );
   });
 });
 
@@ -768,48 +710,6 @@ describe('getPlaylistLinkCoverage', () => {
 
     expect(result.spotify).toBe(0);
     expect(result.totalTracks).toBe(0);
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════
-// getTracksWithoutMusicLinks
-// ══════════════════════════════════════════════════════════════════════════
-
-describe('getTracksWithoutMusicLinks', () => {
-  it('returns tracks from the DB', async () => {
-    const deps = makeDeps();
-    const tracks = [
-      { id: 1, name: 'Song A', artist: 'Artist A', spotifyLink: 'sp-link', musicFetchAttempts: 0 },
-      { id: 2, name: 'Song B', artist: 'Artist B', spotifyLink: 'sp-link-2', musicFetchAttempts: 1 },
-    ];
-    deps.prisma.track.findMany.mockResolvedValue(tracks);
-
-    const result = await getTracksWithoutMusicLinks(deps, 50);
-
-    expect(result).toEqual(tracks);
-    expect(deps.prisma.track.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 50 })
-    );
-  });
-
-  it('uses default limit of 100 when limit is not specified', async () => {
-    const deps = makeDeps();
-    deps.prisma.track.findMany.mockResolvedValue([]);
-
-    await getTracksWithoutMusicLinks(deps);
-
-    expect(deps.prisma.track.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 100 })
-    );
-  });
-
-  it('returns [] when the DB throws', async () => {
-    const deps = makeDeps();
-    deps.prisma.track.findMany.mockRejectedValue(new Error('db connection failed'));
-
-    const result = await getTracksWithoutMusicLinks(deps);
-
-    expect(result).toEqual([]);
   });
 });
 

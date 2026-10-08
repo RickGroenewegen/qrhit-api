@@ -204,10 +204,6 @@ class PrintEnBind {
   // Orders
   // ---------------------------------------------------------------------------
 
-  public async testOrder(...args: Parameters<PrintEnBindV2['testOrder']>) {
-    return (await this.active()).testOrder(...args);
-  }
-
   public async createOrder(...args: Parameters<PrintEnBindV2['createOrder']>) {
     return (await this.active()).createOrder(...args);
   }
@@ -228,12 +224,6 @@ class PrintEnBind {
     ...args: Parameters<PrintEnBindV2['updateProductionMethod']>
   ) {
     return (await this.active()).updateProductionMethod(...args);
-  }
-
-  public async processPrintApiWebhook(
-    ...args: Parameters<PrintEnBindV2['processPrintApiWebhook']>
-  ) {
-    return (await this.active()).processPrintApiWebhook(...args);
   }
 
   // ---------------------------------------------------------------------------

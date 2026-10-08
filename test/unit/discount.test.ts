@@ -282,37 +282,6 @@ describe('Discount.updateDiscountCode', () => {
 });
 
 // ──────────────────────────────────────────────
-// getAllDiscounts
-// ──────────────────────────────────────────────
-
-describe('Discount.getAllDiscounts', () => {
-  it('returns empty list when no discounts', async () => {
-    const svc = makeSvc();
-    const res = await svc.getAllDiscounts();
-    expect(res.success).toBe(true);
-    expect(res.discounts).toEqual([]);
-  });
-
-  it('enriches discounts with totalSpent and amountLeft', async () => {
-    discountCodeStore.set('RICH', { id: 1, code: 'RICH', amount: 100 });
-    discountUsesStore.push({ discountCodeId: 1, amount: 30 });
-    const svc = makeSvc();
-    const res = await svc.getAllDiscounts();
-    expect(res.success).toBe(true);
-    expect(res.discounts![0].totalSpent).toBe(30);
-    expect(res.discounts![0].amountLeft).toBe(70);
-  });
-
-  it('returns error on DB exception', async () => {
-    prismaMock.discountCode.findMany.mockRejectedValueOnce(new Error('fail'));
-    const svc = makeSvc();
-    const res = await svc.getAllDiscounts();
-    expect(res.success).toBe(false);
-    expect(res.error).toContain('Failed to fetch discounts');
-  });
-});
-
-// ──────────────────────────────────────────────
 // removeDiscountUsesByPaymentId
 // ──────────────────────────────────────────────
 

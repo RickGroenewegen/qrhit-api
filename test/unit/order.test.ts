@@ -313,9 +313,7 @@ describe('printer delegation', () => {
     await order.createOrder(payment, playlists, 'cards');
     await order.orderInlayCard(payment, playlists);
     await order.calculateOrder({ items: [] });
-    await order.testOrder();
     await order.calculateShippingCosts(['NL', 'DE']);
-    await order.processPrintApiWebhook('order-123');
     await order.getOrderType(120, true, 'cards', 'pl-1', 'none');
 
     expect(
@@ -327,13 +325,9 @@ describe('printer delegation', () => {
     expect(
       outbound.calls('PrintEnBind', 'calculateOrder')[0].args
     ).toEqual([{ items: [] }]);
-    expect(outbound.calls('PrintEnBind', 'testOrder')).toHaveLength(1);
     expect(
       outbound.calls('PrintEnBind', 'calculateShippingCosts')[0].args
     ).toEqual([['NL', 'DE']]);
-    expect(
-      outbound.calls('PrintEnBind', 'processPrintApiWebhook')[0].args
-    ).toEqual(['order-123']);
     expect(outbound.calls('PrintEnBind', 'getOrderType')[0].args).toEqual([
       120,
       true,

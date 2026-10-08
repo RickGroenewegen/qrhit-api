@@ -14,14 +14,10 @@ import { flushTestRedis } from '../helpers/redis';
  * music-routes2: covers music/hitlist endpoints NOT exercised by music-hitlist.test.ts.
  *
  * Target groups:
- *  - POST /music/playlists (missing url and serviceType)
- *  - POST /music/playlists/tracks (missing params)
  *  - POST /resolve_shortlink (validation)
  *  - POST /qrlink_unknown (validation)
  *  - GET /qr2/:trackId/:php (EJS template rendering)
  *  - GET /qrlink2/:trackId/:php (returns empty link for unknown track)
- *  - POST /hitlist/search-musicfetch (validation path)
- *  - POST /hitlist/spotify-auth-complete (validation)
  *  - GET /spotify_callback (no code → error)
  */
 describe('music routes — wave 2 coverage', () => {
@@ -48,82 +44,6 @@ describe('music routes — wave 2 coverage', () => {
 
   afterAll(async () => {
     await closeTestApp(app);
-  });
-
-  // ====================================================================
-  // POST /music/playlists
-  // ====================================================================
-
-  describe('POST /music/playlists', () => {
-    it('returns error when neither url nor serviceType+playlistId provided', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists',
-        payload: {},
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-      expect(res.json().error).toContain('Missing');
-    });
-
-    it('returns error for unsupported serviceType', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists',
-        payload: { serviceType: 'fakeservice', playlistId: 'abc123' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-      expect(res.json().error).toContain('Unsupported');
-    });
-
-    it('attempts to get playlist from url (fails gracefully for invalid url)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists',
-        payload: { url: 'https://example.com/not-a-music-service' },
-      });
-      // No music service matched → success:false or throws and returns error
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-    });
-  });
-
-  // ====================================================================
-  // POST /music/playlists/tracks
-  // ====================================================================
-
-  describe('POST /music/playlists/tracks', () => {
-    it('returns error when neither url nor serviceType+playlistId provided', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists/tracks',
-        payload: {},
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-      expect(res.json().error).toContain('Missing');
-    });
-
-    it('returns error for unsupported serviceType', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists/tracks',
-        payload: { serviceType: 'fakeservice', playlistId: 'abc123' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-    });
-
-    it('attempts to get tracks from url (fails gracefully for invalid url)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/playlists/tracks',
-        payload: { url: 'https://example.com/not-a-playlist' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-    });
   });
 
   // ====================================================================
@@ -286,60 +206,6 @@ describe('music routes — wave 2 coverage', () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body).toHaveProperty('link');
-    });
-  });
-
-  // ====================================================================
-  // POST /hitlist/search-musicfetch
-  // ====================================================================
-
-  describe('POST /hitlist/search-musicfetch', () => {
-    it('returns search results (or error) for empty search string', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/search-musicfetch',
-        payload: { searchString: '' },
-      });
-      // Returns results or error — depends on external service
-      expect([200, 500]).toContain(res.statusCode);
-    });
-
-    it('returns search results for valid search string', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/search-musicfetch',
-        payload: { searchString: 'ABBA' },
-      });
-      expect([200, 500]).toContain(res.statusCode);
-    });
-  });
-
-  // ====================================================================
-  // POST /hitlist/spotify-auth-complete
-  // ====================================================================
-
-  describe('POST /hitlist/spotify-auth-complete', () => {
-    it('returns error when code is missing', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/spotify-auth-complete',
-        payload: {},
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(false);
-      expect(res.json().error).toContain('Missing authorization code');
-    });
-
-    it('fails gracefully with invalid code (no real Spotify API in test)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/spotify-auth-complete',
-        payload: { code: 'invalid-auth-code' },
-      });
-      // Will fail since test env has no real Spotify token exchange
-      expect(res.statusCode).toBe(200);
-      // Either success:false (code exchange failed) or success:true (unlikely)
-      expect(typeof res.json().success).toBe('boolean');
     });
   });
 

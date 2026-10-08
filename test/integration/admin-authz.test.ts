@@ -32,7 +32,7 @@ describe('authorization matrix', () => {
     { name: 'admin payment verify', method: 'GET', url: '/verify/0', group: 'admin' },
     { name: 'auto-mode read', method: 'GET', url: '/admin/auto-mode', group: 'admin' },
     { name: 'auto-mode write', method: 'POST', url: '/admin/auto-mode', group: 'admin' },
-    { name: 'account overview', method: 'GET', url: '/account/overview', group: 'users' },
+    { name: 'customer profile', method: 'GET', url: '/api/account/customer-profile', group: 'users' },
   ];
 
   for (const c of cases) {

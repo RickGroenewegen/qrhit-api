@@ -14,9 +14,9 @@ import { createTestUser, authHeader } from '../helpers/auth';
 import Utils from '../../src/utils';
 
 /**
- * Support chat (public + admin) and the voting-portal account routes.
+ * Support chat (public + admin).
  */
-describe('chat and voting portal routes', () => {
+describe('chat routes', () => {
   let app: FastifyInstance;
   let adminHeaders: Record<string, string>;
   let chatId: number;
@@ -247,108 +247,6 @@ describe('chat and voting portal routes', () => {
       expect(res.statusCode).toBe(200);
       const chat = await prisma().chat.findUnique({ where: { id: chatId } });
       expect(chat).toBeNull();
-    });
-  });
-
-  describe('voting portal account routes', () => {
-    let companyUser: Awaited<ReturnType<typeof createTestUser>>;
-    let listId: number;
-    let foreignListId: number;
-
-    beforeAll(async () => {
-      const company = await prisma().company.create({
-        data: { name: 'Portal Company BV' },
-      });
-      const otherCompany = await prisma().company.create({
-        data: { name: 'Foreign Company BV' },
-      });
-      companyUser = await createTestUser({ groups: ['users'] });
-      await prisma().user.update({
-        where: { id: companyUser.user.id },
-        data: { companyId: company.id },
-      });
-      const list = await prisma().companyList.create({
-        data: {
-          companyId: company.id,
-          name: 'Portal List',
-          slug: 'portal-list',
-          numberOfTracks: 5,
-          numberOfCards: 100,
-        },
-      });
-      listId = list.id;
-      const foreign = await prisma().companyList.create({
-        data: {
-          companyId: otherCompany.id,
-          name: 'Foreign List',
-          slug: 'foreign-list',
-          numberOfTracks: 5,
-          numberOfCards: 100,
-        },
-      });
-      foreignListId = foreign.id;
-    });
-
-    it('updates the own voting portal', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/account/voting-portal/${listId}`,
-        headers: authHeader(companyUser.token),
-        payload: {
-          name: 'Portal List v2',
-          slug: 'portal-list',
-          description: 'Stem mee!',
-          startAt: '2026-07-01T00:00:00.000Z',
-          endAt: null,
-          numberOfTracks: 5,
-          numberOfCards: 150,
-          minimumNumberOfTracks: 3,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().companyList.findUnique({ where: { id: listId } });
-      expect(row!.name).toBe('Portal List v2');
-      expect(row!.numberOfCards).toBe(150);
-      expect(row!.description_nl).toBe('Stem mee!');
-    });
-
-    it('denies updating a list of another company', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/account/voting-portal/${foreignListId}`,
-        headers: authHeader(companyUser.token),
-        payload: {
-          name: 'Hacked',
-          slug: 'foreign-list',
-          description: '',
-          startAt: null,
-          endAt: null,
-          numberOfTracks: 5,
-          numberOfCards: 100,
-          minimumNumberOfTracks: 1,
-        },
-      });
-      expect(res.statusCode).toBe(403);
-    });
-
-    it('404s an unknown voting portal', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/account/voting-portal/999999',
-        headers: authHeader(companyUser.token),
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('deletes the own voting portal', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/account/voting-portal/${listId}`,
-        headers: authHeader(companyUser.token),
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().companyList.findUnique({ where: { id: listId } });
-      expect(row).toBeNull();
     });
   });
 });

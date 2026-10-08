@@ -21,7 +21,6 @@ import Mollie from '../../src/mollie';
  * admin-extra.test.ts, admin-authz.test.ts, or admin-orders.test.ts.
  *
  * Groups targeted here:
- *  - printer invoices (CRUD: GET/POST/PUT/DELETE + process)
  *  - payment printer-hold / express flags
  *  - playlist blocked / judged / games-enabled / allow-duplicates / amount / type / track-count
  *  - admin/playlist/:id/box-design
@@ -33,7 +32,6 @@ import Mollie from '../../src/mollie';
  *  - admin/supplement-excel/status/:jobId (no-queue path)
  *  - admin/supplement-excel/download (traversal guard + 404)
  *  - admin/gameset/create (validation)
- *  - admin/tracks/missing-music-links
  *  - admin/tracks/fetch-music-links
  *  - admin/external-cards/import (background start)
  *  - admin/external-cards/fetch-music-links
@@ -159,120 +157,6 @@ describe('admin routes — wave 2 coverage', () => {
   afterAll(async () => {
     await closeTestApp(app);
     vi.restoreAllMocks();
-  });
-
-  // ====================================================================
-  // PRINTER INVOICES
-  // ====================================================================
-
-  describe('printer invoices', () => {
-    let invoiceId: number;
-
-    it('GET /admin/printerinvoices starts empty (or with existing)', async () => {
-      const res = await app.inject({ method: 'GET', url: '/admin/printerinvoices', headers });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().invoices)).toBe(true);
-    });
-
-    it('POST /admin/printerinvoices — rejects missing fields', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/printerinvoices',
-        headers,
-        payload: { invoiceNumber: 'INV-2026-001' }, // missing required fields
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('POST /admin/printerinvoices — creates invoice', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/printerinvoices',
-        headers,
-        payload: {
-          invoiceNumber: 'INV-WAVE2-001',
-          description: 'Wave2 print run',
-          totalPriceExclVat: 1200,
-          totalPriceInclVat: 1452,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      invoiceId = res.json().invoice.id;
-    });
-
-    it('PUT /admin/printerinvoices/:id — 400 on NaN id', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/admin/printerinvoices/abc',
-        headers,
-        payload: {
-          invoiceNumber: 'INV-WAVE2-001-UPD',
-          description: 'Updated',
-          totalPriceExclVat: 1300,
-          totalPriceInclVat: 1573,
-        },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('PUT /admin/printerinvoices/:id — updates invoice', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/admin/printerinvoices/${invoiceId}`,
-        headers,
-        payload: {
-          invoiceNumber: 'INV-WAVE2-001-UPD',
-          description: 'Updated desc',
-          totalPriceExclVat: 1300,
-          totalPriceInclVat: 1573,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
-    it('POST /admin/printerinvoices/:id/process — 400 on NaN id', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/printerinvoices/abc/process',
-        headers,
-        payload: {},
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('POST /admin/printerinvoices/:id/process — runs process logic', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/admin/printerinvoices/${invoiceId}/process`,
-        headers,
-        payload: {},
-      });
-      // The endpoint passes through to processInvoiceData which may return
-      // various statuses depending on invoice state. We just verify auth works.
-      expect([200, 400, 404, 500]).toContain(res.statusCode);
-    });
-
-    it('DELETE /admin/printerinvoices/:id — 400 on NaN id', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/admin/printerinvoices/xyz',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('DELETE /admin/printerinvoices/:id — deletes invoice', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/admin/printerinvoices/${invoiceId}`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
   });
 
   // ====================================================================
@@ -970,18 +854,7 @@ describe('admin routes — wave 2 coverage', () => {
   // TRACKS — missing music links + fetch
   // ====================================================================
 
-  describe('tracks: missing-music-links and fetch-music-links', () => {
-    it('GET /admin/tracks/missing-music-links — returns list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/tracks/missing-music-links',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(typeof res.json().count).toBe('number');
-    });
-
+  describe('tracks: fetch-music-links', () => {
     it('POST /admin/tracks/fetch-music-links — accepts request and starts background task', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -1318,9 +1191,6 @@ describe('admin routes — wave 2 coverage', () => {
 
   describe('auth: unauthenticated requests are rejected (401)', () => {
     const endpoints = [
-      { method: 'GET',    url: '/admin/printerinvoices' },
-      { method: 'POST',   url: '/admin/printerinvoices' },
-      { method: 'GET',    url: '/admin/tracks/missing-music-links' },
       { method: 'POST',   url: '/admin/tracks/fetch-music-links' },
       { method: 'POST',   url: '/admin/external-cards/import' },
       { method: 'POST',   url: '/admin/external-cards/fetch-music-links' },
@@ -1351,15 +1221,6 @@ describe('admin routes — wave 2 coverage', () => {
   });
 
   describe('auth: customer (users group) gets 403 on admin endpoints', () => {
-    it('GET /admin/printerinvoices → 403 for users-only JWT', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/printerinvoices',
-        headers: customerHeaders,
-      });
-      expect(res.statusCode).toBe(403);
-    });
-
     it('POST /admin/process_playback_counts → 403 for users-only JWT', async () => {
       const res = await app.inject({
         method: 'POST',

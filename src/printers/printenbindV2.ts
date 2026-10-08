@@ -1231,34 +1231,6 @@ class PrintEnBindV2 {
     }
   }
 
-  /**
-   * Connectivity check: GET /me returns the customer the token belongs to.
-   */
-  public async testOrder(): Promise<any | null> {
-    const result = await this.pbFetch('GET', '/me');
-    if (!result.ok) {
-      this.logger.log(
-        color.red.bold(
-          `Print&Bind API check failed (${color.white.bold(
-            this.pbBaseUrl()
-          )}): ${this.describePbError(result)}`
-        )
-      );
-      return null;
-    }
-    const customer = result.data?.data ?? null;
-    this.logger.log(
-      color.blue.bold(
-        `Print&Bind API reachable at ${color.white.bold(
-          this.pbBaseUrl()
-        )} as ${color.white.bold(customer?.name ?? 'unknown')}${
-          this.isLiveApi() ? ' (live)' : ' (sandbox)'
-        }`
-      )
-    );
-    return customer;
-  }
-
   private async getAuthToken(): Promise<string | null> {
     return process.env['PRINTENBIND_API_KEY'] || null;
   }
@@ -1912,8 +1884,6 @@ class PrintEnBindV2 {
 
     return pdfPath;
   }
-
-  public async processPrintApiWebhook(printApiOrderId: string) {}
 
   /**
    * Ask Print&Bind what delivery costs for a cart: one `POST

@@ -70,11 +70,8 @@
 
 ### 2.3 Authentication Endpoints
 - `POST /validate` - Login/email validation
-- `POST /account/register` - User registration with CAPTCHA
-- `POST /account/verify` - Email verification
-- `POST /account/reset-password-request` - Request password reset
-- `POST /account/reset-password` - Complete password reset
-- `GET /account/reset-password-check/:hash` - Validate reset token
+- `POST /api/account/customer-register-request`, `customer-verify-pincode`, `customer-set-password` - Customer sign-up by pincode
+- `POST /api/account/forgot-password-request` - Password reset by pincode
 
 ---
 
@@ -173,11 +170,6 @@
 - Inventory management
 
 ### 5.2 Print-Related Endpoints
-- `GET /admin/printerinvoices` - List supplier invoices
-- `POST /admin/printerinvoices` - Create supplier invoice
-- `PUT /admin/printerinvoices/:id` - Update invoice
-- `DELETE /admin/printerinvoices/:id` - Delete invoice
-- `POST /admin/printerinvoices/:id/process` - Process invoice data
 - `POST /admin/supplement-excel` - Async Excel processing for bulk ops
 - `GET /admin/supplement-excel/status/:jobId` - Check job status
 - `GET /admin/supplement-excel/download/:filename` - Download result
@@ -232,18 +224,14 @@
 - `POST /qrlink_unknown` - Resolve unknown URLs to Spotify URI
 - `GET /featured/:locale` - Get featured playlists
 - `POST /hitlist/search` - Search track database
-- `POST /hitlist/search-musicfetch` - Search with music fetching
-- `POST /hitlist/tracks` - Get track details by IDs
 - `GET /qrlink/:trackId` - Get music links (Spotify, YouTube, Apple Music, etc.)
 - `GET /qrlink2/:trackId/:php` - Extended link format with multiple platforms
 - `GET /qr/:trackId` - QR code landing page
-- `POST /admin/tracks/missing-music-links` - Find tracks needing links
 - `POST /admin/tracks/fetch-music-links` - Bulk fetch music links
 - `POST /admin/tracks/search` - Search for tracks
 - `POST /admin/tracks/update` - Update track data
 - `GET /admin/yearcheck` - Find unchecked tracks
 - `POST /admin/yearcheck` - Update track year
-- `GET /admin/add_spotify` - Add Spotify links to tracks
 
 ---
 
@@ -347,7 +335,6 @@
 - `POST /push/register` - Register device token
 - `GET /push/messages` - Get notification history
 - `POST /admin/push/broadcast` - Send broadcast notification
-- `POST /newsletter_subscribe` - Newsletter signup
 - `GET /unsubscribe/:hash` - Newsletter unsubscribe
 - `POST /contact` - Contact form emails
 
@@ -404,16 +391,7 @@
 - Rate-limited API calls
 
 ### 11.3 Queue Management Endpoints
-- `GET /admin/queue/status` - Queue health
-- `GET /admin/queue/detailed` - Full queue details with jobs
-- `GET /admin/queue/jobs/:status` - Jobs by status (with pagination)
-- `GET /admin/queue/job/:jobId` - Individual job details
-- `POST /admin/queue/job/:jobId/retry` - Reprocess failed job
-- `DELETE /admin/queue/job/:jobId` - Remove job
-- `POST /admin/queue/pause` - Pause all processing
-- `POST /admin/queue/resume` - Resume processing
-- `POST /admin/queue/retry-failed` - Retry all failed jobs
-- `POST /admin/queue/clear` - Clear entire queue
+- `GET /queue/job/:jobId` - Individual job details (polled by the qrsong toolkit)
 
 ---
 
@@ -478,7 +456,6 @@
 
 ### 14.3 Admin Discount Endpoints
 - `POST /admin/discount/create` - Create discount code
-- `GET /admin/discount/all` - List all codes
 - `DELETE /admin/discount/:id` - Delete code
 - `PUT /admin/discount/:id` - Update code
 
@@ -628,11 +605,8 @@
 ### 20.2 Hitlist Endpoints
 - `POST /hitlist` - Get voting list
 - `POST /hitlist/search` - Search available tracks
-- `POST /hitlist/search-musicfetch` - Advanced music search
-- `POST /hitlist/tracks` - Get tracks by IDs
 - `POST /hitlist/submit` - Submit voting results
 - `POST /hitlist/verify` - Verify submission
-- `POST /hitlist/spotify-auth-complete` - Complete Spotify OAuth
 - `GET /spotify_callback` - Spotify OAuth callback
 
 ---
@@ -731,9 +705,8 @@
 - Password management
 
 ### 24.2 Account Endpoints
-- `GET /account/overview` - User profile data
-- `PUT /account/voting-portal/:id` - Update voting portal
-- `DELETE /account/voting-portal/:id` - Delete voting portal
+- `GET /api/account/customer-profile` - User profile data
+- `GET /api/account/customer-purchases` - Order history
 
 ---
 
@@ -790,21 +763,12 @@
 ### 27.1 Development Endpoints (Dev Mode Only)
 - `POST /test_audio` - Test audio generation
 - `POST /push` - Test push notifications
-- `POST /qrtest` - Test QR code generation
-- `GET /testorder` - Test order flow
 - `GET /calculate_shipping` - Recalculate shipping
 - `GET /generate/:paymentId` - Manual generation
-- `GET /mail/:paymentId` - Manual email
-- `GET /release/:query` - AI year detection
-- `GET /yearv2/:id/:isrc/:artist/:title/:spotifyReleaseYear` - Year detection
 - `GET /dev/translate_genres` - Translate genres
-- `GET /test_shipping/:paymentId` - Test shipping integration
-- `GET /test_tracking/:paymentId` - Test tracking
 - `GET /dev_update_shipping_statuses` - Manual shipping update
-- `GET /youtube/:artist/:title` - Get YouTube link
 
 ### 27.2 Utility Endpoints
-- `GET /ip` - Get client IP
 - `GET /test` - Server health check
 - `GET /cache` - Cache management
 

@@ -28,7 +28,6 @@ import PDF from '../../src/pdf';
  *  - GET/POST/PUT/DELETE /business/companies/:companyId/lists/:listId/delivery-addresses
  *  - GET /business/companies/:companyId/lists/:listId/order-email
  *  - PUT /business/companies/:companyId/favorite
- *  - GET /business/production-lists
  *  - Auth matrix: 401 without token, 403 for plain users
  */
 describe('company routes — wave 3 coverage', () => {
@@ -650,33 +649,12 @@ describe('company routes — wave 3 coverage', () => {
   });
 
   // ====================================================================
-  // PRODUCTION LISTS
-  // ====================================================================
-
-  describe('GET /business/production-lists', () => {
-    it('returns production lists (includes secondList with status=production)', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/production-lists',
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().lists)).toBe(true);
-      // secondList is in production status
-      expect(res.json().lists.some((l: any) => l.id === secondListId)).toBe(true);
-    });
-  });
-
-  // ====================================================================
   // AUTH: 401 + 403
   // ====================================================================
 
   describe('auth matrix', () => {
     const adminOnlyEndpoints = [
-      { method: 'GET',  url: '/business/bookkeeping/status' },
       { method: 'GET',  url: '/business/sales-invoices/inv-test/pdf' },
-      { method: 'GET',  url: '/business/production-lists' },
     ] as const;
 
     for (const ep of adminOnlyEndpoints) {

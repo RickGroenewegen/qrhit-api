@@ -153,10 +153,6 @@ class Order {
     };
   }
 
-  public async processPrintApiWebhook(printApiOrderId: string) {
-    await this.printer.processPrintApiWebhook(printApiOrderId);
-  }
-
   public async getInvoice(invoiceId: string): Promise<string> {
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${invoiceId}.pdf`;
 
@@ -242,10 +238,6 @@ class Order {
     if (!user) return false;
     const AppDesign = (await import('./appDesign')).default;
     return AppDesign.getInstance().isEntitled(user.id);
-  }
-
-  public async testOrder() {
-    return await this.printer.testOrder();
   }
 
   public async calculateShippingCosts(countryCodes?: string[]) {

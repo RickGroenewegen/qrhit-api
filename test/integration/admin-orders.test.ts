@@ -879,15 +879,6 @@ describe('admin order routes', () => {
         expect(Array.isArray(body.data)).toBe(true);
       }
     });
-
-    it('kicks off the unfinalized check', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/check_unfinalized',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-    });
   });
 
   describe('line item updates', () => {

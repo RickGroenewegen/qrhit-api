@@ -584,48 +584,6 @@ class ExternalCardService {
       });
     }
   }
-
-  /**
-   * Get statistics about external cards
-   */
-  public async getStats(): Promise<{
-    total: number;
-    jumbo: number;
-    country: number;
-    musicmatch: number;
-    withSpotify: number;
-    withAppleMusic: number;
-    withTidal: number;
-    withYoutubeMusic: number;
-    withDeezer: number;
-    withAmazonMusic: number;
-  }> {
-    const [total, jumbo, country, musicmatch, withSpotify, withAppleMusic, withTidal, withYoutubeMusic, withDeezer, withAmazonMusic] = await Promise.all([
-      this.prisma.externalCard.count(),
-      this.prisma.externalCard.count({ where: { cardType: 'jumbo' } }),
-      this.prisma.externalCard.count({ where: { cardType: 'country' } }),
-      this.prisma.externalCard.count({ where: { cardType: 'musicmatch' } }),
-      this.prisma.externalCard.count({ where: { spotifyLink: { not: null } } }),
-      this.prisma.externalCard.count({ where: { appleMusicLink: { not: null } } }),
-      this.prisma.externalCard.count({ where: { tidalLink: { not: null } } }),
-      this.prisma.externalCard.count({ where: { youtubeMusicLink: { not: null } } }),
-      this.prisma.externalCard.count({ where: { deezerLink: { not: null } } }),
-      this.prisma.externalCard.count({ where: { amazonMusicLink: { not: null } } }),
-    ]);
-
-    return {
-      total,
-      jumbo,
-      country,
-      musicmatch,
-      withSpotify,
-      withAppleMusic,
-      withTidal,
-      withYoutubeMusic,
-      withDeezer,
-      withAmazonMusic,
-    };
-  }
 }
 
 export default ExternalCardService;

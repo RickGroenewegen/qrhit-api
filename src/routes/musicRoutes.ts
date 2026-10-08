@@ -7,8 +7,6 @@ import { color } from 'console-log-colors';
 import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
-import MusicServiceRegistry from '../services/MusicServiceRegistry';
-import TrackEnrichment from '../trackEnrichment';
 import PrismaInstance from '../prisma';
 import { AppleMusicProvider } from '../providers';
 import AppleStorefront from '../appleStorefront';
@@ -32,8 +30,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const logger = new Logger();
   const utils = new Utils();
   const translation = new Translation();
-  const musicRegistry = MusicServiceRegistry.getInstance();
-  const trackEnrichment = TrackEnrichment.getInstance();
   const prisma = PrismaInstance.getInstance();
   const appleMusicProvider = AppleMusicProvider.getInstance();
   const appleStorefront = AppleStorefront.getInstance();
@@ -48,116 +44,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   await fastify.register(tidalRoutes);
   await fastify.register(deezerRoutes);
   await fastify.register(appleMusicRoutes);
-
-  // ============================================
-  // Unified Music Service Routes (Auto-detect service from URL)
-  // ============================================
-
-  // Get playlist info from any supported service
-  fastify.post('/music/playlists', async (request: any, reply) => {
-    const { url, serviceType, playlistId } = request.body;
-
-    // If URL is provided, auto-detect service
-    if (url) {
-      const result = await musicRegistry.getPlaylistFromUrl(url);
-      return result;
-    }
-
-    // If serviceType and playlistId are provided, use specific provider
-    if (serviceType && playlistId) {
-      const provider = musicRegistry.getProviderByString(serviceType);
-      if (!provider) {
-        return {
-          success: false,
-          error: `Unsupported service type: ${serviceType}`,
-        };
-      }
-      return await provider.getPlaylist(playlistId);
-    }
-
-    return {
-      success: false,
-      error: 'Missing url or (serviceType and playlistId) parameters',
-    };
-  });
-
-  // Get tracks from any supported service
-  fastify.post('/music/playlists/tracks', async (request: any, reply) => {
-    const { url, serviceType, playlistId } = request.body;
-
-    let result: any;
-
-    // If URL is provided, auto-detect service
-    if (url) {
-      result = await musicRegistry.getTracksFromUrl(url);
-    } else if (serviceType && playlistId) {
-      // If serviceType and playlistId are provided, use specific provider
-      const provider = musicRegistry.getProviderByString(serviceType);
-      if (!provider) {
-        return {
-          success: false,
-          error: `Unsupported service type: ${serviceType}`,
-        };
-      }
-      result = await provider.getTracks(playlistId);
-    } else {
-      return {
-        success: false,
-        error: 'Missing url or (serviceType and playlistId) parameters',
-      };
-    }
-
-    // Enrich tracks with year data from the database using artist+title matching
-    if (result?.success && result.data?.tracks) {
-      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
-    }
-
-    return result;
-  });
-
-  // Recognize URL and return service info
-  fastify.post('/music/recognize-url', async (request: any, reply) => {
-    const { url } = request.body;
-
-    if (!url) {
-      return {
-        success: false,
-        error: 'Missing url parameter',
-      };
-    }
-
-    const result = musicRegistry.recognizeUrl(url);
-
-    if (!result.recognized) {
-      return {
-        success: false,
-        error: 'URL not recognized as a supported music service',
-      };
-    }
-
-    return {
-      success: true,
-      data: {
-        serviceType: result.serviceType,
-        playlistId: result.playlistId,
-        isValid: result.validation?.isValid,
-        resourceType: result.validation?.resourceType,
-        errorType: result.validation?.errorType,
-        serviceConfig: result.provider?.config,
-      },
-    };
-  });
-
-  // Get list of available music services
-  fastify.get('/music/services', async (_request, reply) => {
-    return {
-      success: true,
-      data: {
-        services: musicRegistry.getAvailableServiceTypes(),
-        configs: musicRegistry.getServiceConfigs(),
-      },
-    };
-  });
 
   // ============================================
   // Shared/Legacy Routes
@@ -667,11 +553,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     //return await spotify.searchTracks(searchString);
   });
 
-  fastify.post('/hitlist/search-musicfetch', async (request: any, _reply) => {
-    const { searchString } = request.body;
-    return await hitlist.searchTracksMusicFetch(searchString);
-  });
-
   // Get the #1 song for a given date (for birthday #1 feature)
   fastify.get('/hitlist/number-one/:date', async (request: any, reply) => {
     const { date } = request.params;
@@ -681,16 +562,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'No #1 found for this date' });
     }
     return result;
-  });
-
-  fastify.post('/hitlist/tracks', async (request: any, _reply) => {
-    const { trackIds } = request.body;
-
-    if (!trackIds || !Array.isArray(trackIds) || trackIds.length === 0) {
-      return { success: false, error: 'Invalid track IDs' };
-    }
-
-    return await spotify.getTracksByIds(trackIds);
   });
 
   fastify.post('/hitlist/submit', async (request: any, reply) => {
@@ -754,40 +625,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     };
   });
 
-  // Complete Spotify authorization
-  fastify.post(
-    '/hitlist/spotify-auth-complete',
-    async (request: any, reply) => {
-      const { code } = request.body;
-
-      if (!code) {
-        return { success: false, error: 'Missing authorization code' };
-      }
-
-      const token = await spotify.getTokensFromAuthCode(code);
-
-      if (token) {
-        logger.log(
-          color.green.bold(
-            'Spotify authorization successful via POST. Token stored.'
-          )
-        );
-        return {
-          success: true,
-          message: 'Spotify authorization successful.',
-        };
-      } else {
-        logger.log(
-          color.red.bold('Failed to exchange Spotify auth code via POST.')
-        );
-        return {
-          success: false,
-          error: 'Failed to complete Spotify authorization.',
-        };
-      }
-    }
-  );
-
   // Spotify callback
   fastify.get('/spotify_callback', async (request: any, reply) => {
     const { code } = request.query;
@@ -837,18 +674,4 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       `);
     }
   });
-
-  // Development routes
-  if (process.env['ENVIRONMENT'] == 'development') {
-    fastify.get('/youtube/:artist/:title', async (request: any, reply: any) => {
-      const result = await data.getYouTubeLink(
-        request.params.artist,
-        request.params.title
-      );
-      reply.send({
-        success: true,
-        youtubeLink: result,
-      });
-    });
-  }
 }

@@ -13,7 +13,6 @@ import { CronJob } from 'cron';
 import { PrismaClient } from '@prisma/client';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
-import crypto from 'crypto';
 import cluster from 'cluster';
 import { formatCostUsd, llm } from './llm';
 import { ChatService } from './chat';
@@ -78,107 +77,6 @@ class Mail {
       result[key] = translations[key].replace(/\{\{amount\}\}/g, amount);
     }
     return result;
-  }
-
-  /**
-   * Send a password reset email to a user.
-   * @param email The user's email address
-   * @param fullname The user's full name
-   * @param resetToken The password reset token
-   * @param locale The user's locale (default: 'en')
-   */
-  public async sendPasswordResetMail(
-    email: string,
-    fullname: string,
-    resetToken: string,
-    locale: string = 'en'
-  ): Promise<void> {
-    if (!this.ses) return;
-
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-
-    // Fetch translations for password reset mail
-    const translations = await this.translation.getTranslationsByPrefix(
-      locale,
-      'password_reset'
-    );
-
-    const resetLink = `${process.env['FRONTEND_URI']}/${locale}/account/reset-password/${resetToken}`;
-
-    const mailParams = {
-      fullname: fullname || email.split('@')[0],
-      resetLink,
-      productName: process.env['PRODUCT_NAME'],
-      currentYear: new Date().getFullYear(),
-      translations,
-    };
-
-    try {
-      // Read the logo file and convert it to Base64
-      const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
-
-      const html = await this.templates.render(
-        'mails/password_reset_html',
-        mailParams
-      );
-      const text = await this.templates.render(
-        'mails/password_reset_text',
-        mailParams
-      );
-
-      const subject = this.translation.translate(
-        'password_reset.subject',
-        locale
-      );
-
-      const attachments: Attachment[] = [
-        {
-          contentType: 'image/png',
-          filename: 'logo.png',
-          data: logoBase64,
-          isInline: true,
-          cid: 'logo',
-        },
-      ];
-
-      const rawEmail = await this.renderRaw(
-        {
-          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-          to: email,
-          subject,
-          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
-          text,
-          attachments,
-          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['REPLY_TO_EMAIL'],
-        },
-        false // No BCC for password reset emails
-      );
-
-      const emailBuffer = Buffer.from(rawEmail);
-
-      // Prepare and send the raw email
-      const command = new SendRawEmailCommand({
-        RawMessage: {
-          Data: emailBuffer,
-        },
-      });
-
-      await this.ses.send(command);
-      this.logger.log(
-        color.blue.bold(`Password reset email sent to ${white.bold(email)}`)
-      );
-    } catch (error) {
-      console.error('Error while sending password reset email:', error);
-      this.logger.log(
-        color.red.bold(
-          `Failed to send password reset email to ${white.bold(
-            email
-          )}: ${error}`
-        )
-      );
-    }
   }
 
   /**
@@ -663,109 +561,6 @@ class Mail {
       this.logger.log(
         color.red.bold(
           `Failed to send forgot password pincode email to ${white.bold(
-            email
-          )}: ${error}`
-        )
-      );
-    }
-  }
-
-  /**
-   * Send a QRSong verification email to a user for account verification.
-   * @param email The user's email address
-   * @param fullname The user's full name
-   * @param verificationHash The verification hash for the user
-   * @param locale The user's locale (default: 'en')
-   */
-  public async sendQRSongVerificationMail(
-    email: string,
-    fullname: string,
-    verificationHash: string,
-    locale: string = 'en'
-  ): Promise<void> {
-    if (!this.ses) return;
-
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-
-    // Fetch translations for QRSong verification mail
-    const translations = await this.translation.getTranslationsByPrefix(
-      locale,
-      'qrsong_verification'
-    );
-
-    const verificationLink = `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`;
-
-    const mailParams = {
-      fullname: fullname || email.split('@')[0],
-      verificationLink,
-      productName: process.env['PRODUCT_NAME'],
-      currentYear: new Date().getFullYear(),
-      translations,
-    };
-
-    try {
-      // Read the logo file and convert it to Base64
-      const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
-
-      const html = await this.templates.render(
-        'mails/qrsong_verification_html',
-        mailParams
-      );
-      const text = await this.templates.render(
-        'mails/qrsong_verification_text',
-        mailParams
-      );
-
-      const subject = this.translation.translate(
-        'qrsong_verification.subject',
-        locale
-      );
-
-      const attachments: Attachment[] = [
-        {
-          contentType: 'image/png',
-          filename: 'logo.png',
-          data: logoBase64,
-          isInline: true,
-          cid: 'logo',
-        },
-      ];
-
-      const rawEmail = await this.renderRaw(
-        {
-          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-          to: email,
-          subject,
-          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
-          text,
-          attachments,
-          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['REPLY_TO_EMAIL'],
-        },
-        false // No BCC for verification emails
-      );
-
-      const emailBuffer = Buffer.from(rawEmail);
-
-      // Prepare and send the raw email
-      const command = new SendRawEmailCommand({
-        RawMessage: {
-          Data: emailBuffer,
-        },
-      });
-
-      await this.ses.send(command);
-      this.logger.log(
-        color.blue.bold(
-          `QRSong verification email sent to ${white.bold(email)}`
-        )
-      );
-    } catch (error) {
-      console.error('Error while sending QRSong verification email:', error);
-      this.logger.log(
-        color.red.bold(
-          `Failed to send QRSong verification email to ${white.bold(
             email
           )}: ${error}`
         )
@@ -2130,53 +1925,6 @@ ${params.html}
 
   private wrapBase64(base64: string): string {
     return base64.replace(/(.{76})/g, '$1\n');
-  }
-
-  public async subscribeToNewsletter(
-    email: string,
-    captchaToken: string
-  ): Promise<boolean> {
-    // Verify reCAPTCHA token
-    const { isHuman } = await this.utils.verifyRecaptcha(captchaToken);
-
-    if (!isHuman) {
-      throw new Error('Verification failed');
-    }
-
-    try {
-      // Try to find existing user
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
-      });
-
-      if (existingUser) {
-        // Update existing user
-        await prisma.user.update({
-          where: { email },
-          data: {
-            marketingEmails: true,
-            sync: true,
-          },
-        });
-      } else {
-        // Create new user
-        const hash = crypto.randomBytes(8).toString('hex').slice(0, 16);
-        await prisma.user.create({
-          data: {
-            email,
-            userId: email,
-            displayName: email.split('@')[0],
-            hash: hash,
-            marketingEmails: true,
-            sync: true,
-          },
-        });
-      }
-      return true;
-    } catch (error) {
-      console.error('Error subscribing to newsletter:', error);
-      return false;
-    }
   }
 
   public async unsubscribe(hash: string): Promise<boolean> {

@@ -17,7 +17,7 @@ import { Music } from '../../src/music';
 /**
  * Public music + voting (hitlist) routes: company list lookup by slug,
  * vote submission incl. async track processing, verification, track link
- * resolution (/qrlink), featured playlists, URL recognition and Top40.
+ * resolution (/qrlink), featured playlists and Top40.
  *
  * Spotify and the multi-source year detection are mocked at the class
  * boundary — everything else (DB writes, scoring, card names) is real.
@@ -289,26 +289,6 @@ describe('music and hitlist routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.tracks[0].name).toBe('Song 1');
     });
-
-    it('rejects /hitlist/tracks without ids', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/tracks',
-        payload: { trackIds: [] },
-      });
-      expect(res.json().success).toBe(false);
-    });
-
-    it('returns track details by ids', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/hitlist/tracks',
-        payload: { trackIds: ['sp-track-7'] },
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.data[0].artist).toBe('Artist 7');
-    });
   });
 
   describe('top 40 number one', () => {
@@ -332,47 +312,6 @@ describe('music and hitlist routes', () => {
       const body = res.json();
       expect(body.artist).toBe('Anouk');
       expect(body.title).toBe('Girl');
-    });
-  });
-
-  describe('music service registry', () => {
-    it('recognizes a spotify playlist url', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/recognize-url',
-        payload: {
-          url: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
-        },
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.data.serviceType).toBe('spotify');
-      expect(body.data.playlistId).toBe('37i9dQZF1DXcBWIGoYBM5M');
-    });
-
-    it('rejects a missing url', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/recognize-url',
-        payload: {},
-      });
-      expect(res.json().success).toBe(false);
-    });
-
-    it('rejects an unrecognized url', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/music/recognize-url',
-        payload: { url: 'https://example.com/some/page' },
-      });
-      expect(res.json().success).toBe(false);
-    });
-
-    it('lists available services including spotify', async () => {
-      const res = await app.inject({ method: 'GET', url: '/music/services' });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.data.services).toContain('spotify');
     });
   });
 

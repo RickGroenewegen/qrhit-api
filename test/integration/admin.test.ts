@@ -115,17 +115,6 @@ describe('admin routes', () => {
       expect(res.json().code).toMatch(/^[0-9A-Z]{4}(-[0-9A-Z]{4}){3}$/);
     });
 
-    it('lists all discounts', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/discount/all',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const { discounts } = res.json();
-      expect(discounts.length).toBeGreaterThanOrEqual(2);
-    });
-
     it('searches discounts by term', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -566,17 +555,6 @@ describe('admin routes', () => {
       });
     });
 
-    it('lists all featured playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/featured/all',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const { data } = res.json();
-      expect(data.some((p: any) => p.playlistId === 'featured-1')).toBe(true);
-    });
-
     it('searches featured playlists', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -600,32 +578,6 @@ describe('admin routes', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().count).toBe(1);
-    });
-
-    it('lists pending promotional playlists with submitter info', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional/pending',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const { data } = res.json();
-      expect(data).toHaveLength(1);
-      expect(data[0].name).toBe('My cool playlist');
-      expect(data[0].userEmail).toBe(customer.user.email);
-    });
-
-    it('lists accepted promotional playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional/accepted',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const { data } = res.json();
-      expect(data.some((p: any) => p.playlistId === 'promo-accepted-1')).toBe(
-        true
-      );
     });
 
     it('requires a boolean for the featured flag', async () => {
@@ -798,16 +750,6 @@ describe('admin routes', () => {
         headers,
       });
       expect(res.statusCode).toBe(200);
-    });
-
-    it('returns aggregate stats', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/external-cards/stats',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
     });
   });
 

@@ -111,19 +111,6 @@ export default async function discountRoutes(
     }
   );
 
-  fastify.get(
-    '/admin/discount/all',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const result = await discount.getAllDiscounts();
-      if (result.success) {
-        reply.send({ success: true, discounts: result.discounts });
-      } else {
-        reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
   fastify.post(
     '/admin/discount/search',
     getAuthHandler(['admin']),

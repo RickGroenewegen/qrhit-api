@@ -101,19 +101,4 @@ export default async function youtubeMusicRoutes(fastify: FastifyInstance) {
 
     return result;
   });
-
-  // Search YouTube Music tracks
-  fastify.post('/youtube-music/search', async (request: any, reply) => {
-    const { query, limit = 20, offset = 0 } = request.body;
-
-    if (!query) {
-      return {
-        success: false,
-        error: 'Missing query parameter',
-      };
-    }
-
-    const result = await ytMusicProvider.searchTracks(query, limit, offset);
-    return result;
-  });
 }

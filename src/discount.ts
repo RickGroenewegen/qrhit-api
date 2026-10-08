@@ -390,27 +390,6 @@ class Discount {
   }
 
   /**
-   * Get all discount codes from the database.
-   */
-  public async getAllDiscounts(): Promise<{
-    success: boolean;
-    discounts?: any[];
-    error?: string;
-  }> {
-    try {
-      const discounts = await this.prisma.discountCode.findMany({
-        orderBy: { createdAt: 'desc' },
-      });
-      const discountsWithBalance = await Promise.all(
-        discounts.map((d) => this.withUsage(d))
-      );
-      return { success: true, discounts: discountsWithBalance };
-    } catch (error) {
-      return { success: false, error: 'Failed to fetch discounts' };
-    }
-  }
-
-  /**
    * Search discounts with pagination and filtering.
    */
   public async searchDiscounts(params: {

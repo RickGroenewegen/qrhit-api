@@ -427,27 +427,6 @@ describe('business company routes', () => {
       expect(res.statusCode).toBe(404);
     });
 
-    it('shows lists with status production in production-lists', async () => {
-      await prisma().companyList.update({
-        where: { id: listId },
-        data: { status: 'production' },
-      });
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/production-lists',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.lists.some((l: any) => l.id === listId)).toBe(true);
-      // restore for later tests
-      await prisma().companyList.update({
-        where: { id: listId },
-        data: { status: 'new' },
-      });
-    });
-
     // The admin no longer has list statuses; a list in production deletes
     // like any other. Uses a list of its own: the shared one is still needed.
     it('deletes a list whatever its status', async () => {

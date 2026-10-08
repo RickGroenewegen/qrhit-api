@@ -31,9 +31,8 @@ import Generator from '../../src/generator';
  *  - admin/discount create/search/update
  *  - admin/featured/* endpoints
  *  - admin/playlist/:id/featured, featured-hidden, howto-card
- *  - admin/promotional/accepted, pending, pending-count
+ *  - admin/promotional/pending-count
  *  - admin/promotional/:id/resend-email, translate
- *  - admin/promotional-playlists
  *  - admin/run-printer-pass
  *  - admin/calculate-shipping-costs
  *  - admin/calculate-playlist-scores
@@ -43,7 +42,6 @@ import Generator from '../../src/generator';
  *  - admin/translate-fields
  *  - admin/tracks/toggle-spotify-ignored, missing-spotify-count
  *  - admin/tracks/service-search, spotify-search
- *  - admin/hitlists/number-one/:date
  *  - admin/broken-links CRUD
  *  - admin/unknown-links CRUD
  *  - admin/spotify/provider-status + toggle-provider
@@ -180,29 +178,7 @@ describe('admin routes — wave 3 coverage', () => {
 
   describe('queue endpoints — Redis path', () => {
     // NOTE: REDIS_URL is set in .env (inherited by test env), so the "Queue not configured"
-    // early-exit branch is NOT taken. Endpoints proceed to use BullMQ. We just verify
-    // they are accessible (200) and return a JSON body with either success or error key.
-
-    const queueEndpoints = [
-      { method: 'GET',    url: '/queue/status' },
-      { method: 'GET',    url: '/queue/detailed' },
-      { method: 'GET',    url: '/queue/jobs/waiting' },
-      { method: 'POST',   url: '/queue/retry-failed' },
-      { method: 'POST',   url: '/queue/clear' },
-      { method: 'POST',   url: '/queue/pause' },
-      { method: 'POST',   url: '/queue/resume' },
-    ] as const;
-
-    for (const ep of queueEndpoints) {
-      it(`${ep.method} ${ep.url} → 200 with JSON body`, async () => {
-        const res = await app.inject({ method: ep.method, url: ep.url, headers });
-        expect(res.statusCode).toBe(200);
-        const body = res.json();
-        // Queue may return success:true or an error key depending on Redis state
-        expect(body).toBeTruthy();
-      });
-    }
-
+    // early-exit branch is NOT taken.
     it('GET /queue/job/:jobId → 200 (job not found is handled gracefully)', async () => {
       const res = await app.inject({
         method: 'GET',
@@ -213,35 +189,6 @@ describe('admin routes — wave 3 coverage', () => {
       const body = res.json();
       // Either { error: 'Job not found' } or { success: true, job: ... }
       expect(body).toBeTruthy();
-    });
-
-    it('POST /queue/job/:jobId/retry → 200 (error handled for non-existent job)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/queue/job/non-existent-job-id/retry',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-    });
-
-    it('DELETE /queue/job/:jobId → 200 (error handled for non-existent job)', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/queue/job/non-existent-job-id',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-    });
-
-    it('GET /queue/jobs/:status → validates status values', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/queue/jobs/invalid-status',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.error).toBeTruthy();
     });
   });
 
@@ -499,16 +446,6 @@ describe('admin routes — wave 3 coverage', () => {
       expect(Array.isArray(res.json().discounts)).toBe(true);
     });
 
-    it('GET /admin/discount/all — lists all discounts', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/discount/all',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
     it('PUT /admin/discount/:id — 400 for NaN id', async () => {
       const res = await app.inject({
         method: 'PUT',
@@ -536,17 +473,6 @@ describe('admin routes — wave 3 coverage', () => {
   // ====================================================================
 
   describe('featured playlist endpoints', () => {
-    it('GET /admin/featured/all — returns all featured playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/featured/all',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().data)).toBe(true);
-    });
-
     it('POST /admin/featured/search — returns paginated results', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -632,27 +558,6 @@ describe('admin routes — wave 3 coverage', () => {
       expect(typeof res.json().count).toBe('number');
     });
 
-    it('GET /admin/promotional/pending — returns pending playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional/pending',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().data)).toBe(true);
-    });
-
-    it('GET /admin/promotional/accepted — returns accepted playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional/accepted',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
     it('POST /admin/promotional/:id/accept — runs accept flow', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -679,15 +584,6 @@ describe('admin routes — wave 3 coverage', () => {
         headers,
       });
       expect([200, 404, 500]).toContain(res.statusCode);
-    });
-
-    it('GET /admin/promotional-playlists — returns all promotional playlists', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional-playlists',
-        headers,
-      });
-      expect([200, 500]).toContain(res.statusCode);
     });
   });
 
@@ -1100,17 +996,6 @@ describe('admin routes — wave 3 coverage', () => {
       expect(res.json().success).toBe(false);
     });
 
-    it('POST /tracks/missing-spotify — returns missing Spotify tracks', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/tracks/missing-spotify',
-        headers,
-        payload: { searchTerm: '' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
     it('POST /tracks/find-missing-service-links — 400 for missing service', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -1130,31 +1015,6 @@ describe('admin routes — wave 3 coverage', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().success).toBe(true);
-    });
-  });
-
-  // ====================================================================
-  // HITLISTS - number-one
-  // ====================================================================
-
-  describe('GET /admin/hitlists/number-one/:date', () => {
-    it('400 for invalid date format', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/hitlists/number-one/not-a-date',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('404 when no #1 track exists for that date', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/hitlists/number-one/2026-01-01',
-        headers,
-      });
-      // No hitlist data in test DB → 404
-      expect([200, 404]).toContain(res.statusCode);
     });
   });
 
@@ -1955,15 +1815,6 @@ describe('admin routes — wave 3 coverage', () => {
       });
       expect(res.statusCode).toBe(200);
     });
-
-    it('GET /admin/external-cards/stats — returns stats', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/external-cards/stats',
-        headers,
-      });
-      expect([200, 500]).toContain(res.statusCode);
-    });
   });
 
   // ====================================================================
@@ -1988,11 +1839,11 @@ describe('admin routes — wave 3 coverage', () => {
 
   describe('auth: unauthenticated requests are rejected', () => {
     const endpoints = [
-      { method: 'GET',    url: '/queue/status' },
+      { method: 'GET',    url: '/queue/job/any-job' },
       { method: 'POST',   url: '/admin/create' },
       { method: 'GET',    url: '/lastplays' },
       { method: 'POST',   url: '/push/broadcast' },
-      { method: 'GET',    url: '/admin/featured/all' },
+      { method: 'POST',   url: '/admin/featured/search' },
       { method: 'GET',    url: '/admin/broken-links' },
       { method: 'GET',    url: '/admin/unknown-links' },
       { method: 'GET',    url: '/admin/spotify/provider-status' },

@@ -316,18 +316,6 @@ describe('admin routes — extended coverage', () => {
   // =================== TRACKS: MISSING SPOTIFY ===================
 
   describe('tracks missing spotify', () => {
-    it('POST /tracks/missing-spotify returns list', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/tracks/missing-spotify',
-        headers,
-        payload: { searchTerm: '' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().data)).toBe(true);
-    });
-
     it('GET /tracks/missing-spotify-count returns count', async () => {
       const res = await app.inject({
         method: 'GET',
@@ -657,19 +645,6 @@ describe('admin routes — extended coverage', () => {
     });
   });
 
-  // =================== PROMOTIONAL PLAYLISTS LISTING ===================
-
-  describe('GET /admin/promotional-playlists', () => {
-    it('returns promotional playlists list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/promotional-playlists',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-    });
-  });
-
   // =================== CALCULATE SHIPPING COSTS ===================
 
   describe('POST /admin/calculate-shipping-costs', () => {
@@ -943,16 +918,6 @@ describe('admin routes — extended coverage', () => {
     });
   });
 
-  // =================== QUEUE ENDPOINTS ===================
-
-  describe('queue endpoints (no REDIS_URL = no-op)', () => {
-    it('GET /queue/status responds', async () => {
-      const res = await app.inject({ method: 'GET', url: '/queue/status', headers });
-      // REDIS_URL may not be set in test env — either success or "not configured"
-      expect([200]).toContain(res.statusCode);
-    });
-  });
-
   // =================== SEND CUSTOM EMAIL ===================
 
   describe('POST /admin/send-custom-email — validation', () => {
@@ -1003,28 +968,6 @@ describe('admin routes — extended coverage', () => {
     });
   });
 
-  // =================== HITLIST ADMIN ===================
-
-  describe('admin hitlist endpoints', () => {
-    it('GET /admin/hitlists/number-one/:date rejects bad date', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/hitlists/number-one/not-a-date',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('GET /admin/hitlists/number-one/:date 404s for date with no data', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/hitlists/number-one/1800-01-01',
-        headers,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-  });
-
   // =================== AUTH MATRIX FOR NEW ENDPOINTS ===================
 
   describe('auth: unauthenticated requests are rejected', () => {
@@ -1032,7 +975,6 @@ describe('admin routes — extended coverage', () => {
       { method: 'GET', url: '/admin/chats' },
       { method: 'GET', url: '/admin/chats/support-count' },
       { method: 'POST', url: '/admin/calculate-playlist-scores' },
-      { method: 'GET', url: '/admin/promotional-playlists' },
       { method: 'POST', url: '/admin/translate-fields' },
       { method: 'POST', url: '/admin/run-printer-pass' },
       { method: 'POST', url: '/admin/printer-costs/calculate' },

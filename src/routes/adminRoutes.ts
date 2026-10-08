@@ -11,7 +11,6 @@ import Data from '../data';
 import Charts from '../charts';
 import Push from '../push';
 import Printer from '../printer';
-import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
 import Mollie from '../mollie';
 import Bookkeeping from '../bookkeeping';
@@ -70,7 +69,6 @@ export default async function adminRoutes(
   const designer = Designer.getInstance();
   const push = Push.getInstance();
   const calendar = CalendarService.getInstance();
-  const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
   const mollie = new Mollie();
   const bookkeeping = Bookkeeping.getInstance();
@@ -299,83 +297,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Queue status endpoints
-  fastify.get('/queue/status', getAuthHandler(['admin']), async () => {
-    if (!process.env['REDIS_URL']) {
-      return { error: 'Queue not configured' };
-    }
-
-    const generatorQueue = GeneratorQueue.getInstance();
-    const status = await generatorQueue.getQueueStatus();
-    return { success: true, status };
-  });
-
-  // Get detailed queue status with jobs
-  fastify.get(
-    '/queue/detailed',
-    getAuthHandler(['admin']),
-    async (request: any) => {
-      if (!process.env['REDIS_URL']) {
-        return { error: 'Queue not configured' };
-      }
-
-      try {
-        const generatorQueue = GeneratorQueue.getInstance();
-        const detailedStatus = await generatorQueue.getDetailedQueueStatus();
-        return { success: true, ...detailedStatus };
-      } catch (error: any) {
-        console.error('Error getting detailed queue status:', error);
-        return {
-          error: 'Failed to get queue details',
-          message: error.message || 'Unknown error',
-        };
-      }
-    }
-  );
-
-  // Get jobs by status with pagination
-  fastify.get(
-    '/queue/jobs/:status',
-    getAuthHandler(['admin']),
-    async (request: any) => {
-      if (!process.env['REDIS_URL']) {
-        return { error: 'Queue not configured' };
-      }
-
-      const { status } = request.params;
-      const { start = 0, end = 50 } = request.query;
-
-      const validStatuses = [
-        'waiting',
-        'active',
-        'completed',
-        'failed',
-        'delayed',
-      ];
-      if (!validStatuses.includes(status)) {
-        return {
-          error: 'Invalid status. Must be one of: ' + validStatuses.join(', '),
-        };
-      }
-
-      try {
-        const generatorQueue = GeneratorQueue.getInstance();
-        const jobs = await generatorQueue.getJobsByStatus(
-          status as any,
-          parseInt(start),
-          parseInt(end)
-        );
-        return { success: true, jobs, status };
-      } catch (error: any) {
-        console.error('Error getting jobs by status:', error);
-        return {
-          error: 'Failed to get jobs',
-          message: error.message || 'Unknown error',
-        };
-      }
-    }
-  );
-
+  // Generation job status (the qrsong toolkit polls it)
   fastify.get(
     '/queue/job/:jobId',
     getAuthHandler(['admin']),
@@ -394,110 +316,6 @@ export default async function adminRoutes(
       return { success: true, job };
     }
   );
-
-  // Retry a specific job
-  fastify.post(
-    '/queue/job/:jobId/retry',
-    getAuthHandler(['admin']),
-    async (request: any) => {
-      if (!process.env['REDIS_URL']) {
-        return { error: 'Queue not configured' };
-      }
-
-      try {
-        const generatorQueue = GeneratorQueue.getInstance();
-        await generatorQueue.retryJob(request.params.jobId);
-        return { success: true, message: 'Job requeued for retry' };
-      } catch (error: any) {
-        console.error('Error retrying job:', error);
-        return {
-          error: 'Failed to retry job',
-          message: error.message || 'Unknown error',
-        };
-      }
-    }
-  );
-
-  // Remove a specific job
-  fastify.delete(
-    '/queue/job/:jobId',
-    getAuthHandler(['admin']),
-    async (request: any) => {
-      if (!process.env['REDIS_URL']) {
-        return { error: 'Queue not configured' };
-      }
-
-      try {
-        const generatorQueue = GeneratorQueue.getInstance();
-        await generatorQueue.removeJob(request.params.jobId);
-        return { success: true, message: 'Job removed' };
-      } catch (error: any) {
-        console.error('Error removing job:', error);
-        return {
-          error: 'Failed to remove job',
-          message: error.message || 'Unknown error',
-        };
-      }
-    }
-  );
-
-  // Pause the queue
-  fastify.post('/queue/pause', getAuthHandler(['admin']), async () => {
-    if (!process.env['REDIS_URL']) {
-      return { error: 'Queue not configured' };
-    }
-
-    try {
-      const generatorQueue = GeneratorQueue.getInstance();
-      await generatorQueue.pauseQueue();
-      return { success: true, message: 'Queue paused' };
-    } catch (error: any) {
-      console.error('Error pausing queue:', error);
-      return {
-        error: 'Failed to pause queue',
-        message: error.message || 'Unknown error',
-      };
-    }
-  });
-
-  // Resume the queue
-  fastify.post('/queue/resume', getAuthHandler(['admin']), async () => {
-    if (!process.env['REDIS_URL']) {
-      return { error: 'Queue not configured' };
-    }
-
-    try {
-      const generatorQueue = GeneratorQueue.getInstance();
-      await generatorQueue.resumeQueue();
-      return { success: true, message: 'Queue resumed' };
-    } catch (error: any) {
-      console.error('Error resuming queue:', error);
-      return {
-        error: 'Failed to resume queue',
-        message: error.message || 'Unknown error',
-      };
-    }
-  });
-
-  fastify.post('/queue/retry-failed', getAuthHandler(['admin']), async () => {
-    if (!process.env['REDIS_URL']) {
-      return { error: 'Queue not configured' };
-    }
-
-    const generatorQueue = GeneratorQueue.getInstance();
-    await generatorQueue.retryFailedJobs();
-    return { success: true, message: 'Failed jobs requeued for retry' };
-  });
-
-  fastify.post('/queue/clear', getAuthHandler(['admin']), async () => {
-    if (!process.env['REDIS_URL']) {
-      return { error: 'Queue not configured' };
-    }
-
-    const generatorQueue = GeneratorQueue.getInstance();
-    await generatorQueue.clearQueue();
-    return { success: true, message: 'Queue cleared' };
-  });
 
   // Get orders with search
   fastify.post(
@@ -974,26 +792,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Get pending promotional playlists
-  fastify.get(
-    '/admin/promotional/pending',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const playlists = await data.getPendingPromotionalPlaylists();
-      reply.send({ success: true, data: playlists });
-    }
-  );
-
-  // Get accepted promotional playlists
-  fastify.get(
-    '/admin/promotional/accepted',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const playlists = await data.getAcceptedPromotionalPlaylists();
-      reply.send({ success: true, data: playlists });
-    }
-  );
-
   // Accept promotional playlist (translates description to all locales and sends approval email)
   fastify.post(
     '/admin/promotional/:playlistId/accept',
@@ -1227,16 +1025,6 @@ export default async function adminRoutes(
       }
       const playlists = await data.getPlaylistSuggestions(parsed.opts.locale, parsed.opts);
       reply.send({ success: true, count: playlists.length });
-    }
-  );
-
-  // Get all featured playlists (featured = 1)
-  fastify.get(
-    '/admin/featured/all',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const playlists = await data.getAllFeaturedPlaylists();
-      reply.send({ success: true, data: playlists });
     }
   );
 
@@ -2170,17 +1958,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Get tracks missing Spotify link
-  fastify.post(
-    '/tracks/missing-spotify',
-    getAuthHandler(['admin']),
-    async (request: any, _reply) => {
-      const { searchTerm = '' } = request.body;
-      const tracks = await data.getTracksMissingSpotifyLink(searchTerm);
-      return { success: true, data: tracks };
-    }
-  );
-
   // Get count of tracks missing Spotify link
   fastify.get(
     '/tracks/missing-spotify-count',
@@ -2347,16 +2124,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Check unfinalized
-  fastify.get(
-    '/check_unfinalized',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      data.checkUnfinalizedPayments();
-      reply.send({ success: true });
-    }
-  );
-
   // Process playback counts for review eligibility
   fastify.post(
     '/admin/process_playback_counts',
@@ -2389,16 +2156,6 @@ export default async function adminRoutes(
         success: true,
         data: report,
       });
-    }
-  );
-
-  // Add Spotify links
-  fastify.get(
-    '/add_spotify',
-    getAuthHandler(['admin']),
-    async (_request: any, reply) => {
-      const result = data.addSpotifyLinks();
-      return { success: true, processed: result };
     }
   );
 
@@ -3325,127 +3082,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Printer invoice management
-  fastify.get(
-    '/admin/printerinvoices',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      try {
-        const invoices = await printerInvoice.getAllPrinterInvoices();
-        reply.send({ success: true, invoices });
-      } catch (error) {
-        reply.status(500).send({
-          success: false,
-          error: 'Failed to fetch printer invoices',
-        });
-      }
-    }
-  );
-
-  fastify.post(
-    '/admin/printerinvoices',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const {
-        invoiceNumber,
-        description,
-        totalPriceExclVat,
-        totalPriceInclVat,
-      } = request.body;
-      if (
-        !invoiceNumber ||
-        typeof invoiceNumber !== 'string' ||
-        typeof description !== 'string' ||
-        typeof totalPriceExclVat !== 'number' ||
-        typeof totalPriceInclVat !== 'number'
-      ) {
-        reply
-          .status(400)
-          .send({ success: false, error: 'Invalid or missing fields' });
-        return;
-      }
-      try {
-        const result = await printerInvoice.createPrinterInvoice({
-          invoiceNumber,
-          description,
-          totalPriceExclVat,
-          totalPriceInclVat,
-        });
-        if (result.success) {
-          reply.send({ success: true, invoice: result.invoice });
-        } else {
-          reply.status(400).send({ success: false, error: result.error });
-        }
-      } catch (error) {
-        reply.status(500).send({
-          success: false,
-          error: 'Failed to create printer invoice',
-        });
-      }
-    }
-  );
-
-  fastify.put(
-    '/admin/printerinvoices/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const {
-        invoiceNumber,
-        description,
-        totalPriceExclVat,
-        totalPriceInclVat,
-      } = request.body;
-      const result = await printerInvoice.updatePrinterInvoice(id, {
-        invoiceNumber,
-        description,
-        totalPriceExclVat,
-        totalPriceInclVat,
-      });
-      if (result.success) {
-        reply.send({ success: true, invoice: result.invoice });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  fastify.post(
-    '/admin/printerinvoices/:id/process',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await printerInvoice.processInvoiceData(id, request.body);
-      reply.send(result);
-    }
-  );
-
-  fastify.delete(
-    '/admin/printerinvoices/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        reply.status(400).send({ success: false, error: 'Invalid id' });
-        return;
-      }
-      const result = await printerInvoice.deletePrinterInvoice(id);
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(400).send({ success: false, error: result.error });
-      }
-    }
-  );
-
   // Print & Bind API version toggle (bulk actions): v1 = legacy JSON API,
   // v2 = REST API. Stored as an app setting so it survives restarts.
   fastify.get(
@@ -3719,30 +3355,6 @@ export default async function adminRoutes(
   );
 
   // MusicFetch bulk action endpoints
-  fastify.get(
-    '/admin/tracks/missing-music-links',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const { limit = 100 } = request.query;
-        const tracks = await data.getTracksWithoutMusicLinks(
-          parseInt(limit) || 100
-        );
-        reply.send({
-          success: true,
-          count: tracks.length,
-          tracks,
-        });
-      } catch (error: any) {
-        console.error('Error fetching tracks missing music links:', error);
-        reply.status(500).send({
-          success: false,
-          error: error.message || 'Failed to fetch tracks',
-        });
-      }
-    }
-  );
-
   fastify.post(
     '/admin/tracks/fetch-music-links',
     getAuthHandler(['admin']),
@@ -4055,30 +3667,6 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to fetch music links',
-        });
-      }
-    }
-  );
-
-  // Get external card statistics
-  fastify.get(
-    '/admin/external-cards/stats',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const ExternalCardService = (await import('../externalCardService')).default;
-        const externalCardService = ExternalCardService.getInstance();
-        const stats = await externalCardService.getStats();
-
-        reply.send({
-          success: true,
-          stats,
-        });
-      } catch (error: any) {
-        console.error('Error fetching external card stats:', error);
-        reply.status(500).send({
-          success: false,
-          error: error.message || 'Failed to fetch external card stats',
         });
       }
     }
@@ -5143,24 +4731,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Get all promotional playlists (admin dashboard)
-  fastify.get(
-    '/admin/promotional-playlists',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const result = await promotional.getAllPromotionalPlaylists();
-        return reply.send(result);
-      } catch (error: any) {
-        console.error('Error getting promotional playlists:', error);
-        return reply.status(500).send({
-          success: false,
-          error: error.message || 'Failed to get promotional playlists'
-        });
-      }
-    }
-  );
-
   // Calculate shipping costs for specified countries
   fastify.post(
     '/admin/calculate-shipping-costs',
@@ -5495,50 +5065,6 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to import hitlist',
-        });
-      }
-    }
-  );
-
-  // Get #1 track for a specific date
-  fastify.get(
-    '/admin/hitlists/number-one/:date',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const { date } = request.params;
-        const parsedDate = new Date(date);
-
-        if (isNaN(parsedDate.getTime())) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Invalid date format. Use YYYY-MM-DD',
-          });
-        }
-
-        const Top40 = (await import('../top40')).default;
-        const top40 = Top40.getInstance();
-        const result = await top40.getNumberOneOnDate(parsedDate);
-
-        if (!result) {
-          return reply.status(404).send({
-            success: false,
-            error: 'No #1 track found for this date',
-          });
-        }
-
-        reply.send({
-          success: true,
-          artist: result.artist,
-          title: result.title,
-          year: result.year,
-          weekNumber: result.weekNumber,
-        });
-      } catch (error: any) {
-        console.error('Error getting #1 track:', error);
-        reply.status(500).send({
-          success: false,
-          error: error.message || 'Failed to get #1 track',
         });
       }
     }

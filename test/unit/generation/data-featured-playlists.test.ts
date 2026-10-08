@@ -28,10 +28,8 @@ vi.mock('../../../src/data/misc', () => ({
 
 import {
   getFeaturedPlaylists,
-  getAllFeaturedPlaylists,
   searchFeaturedPlaylists,
   getPendingPromotionalPlaylists,
-  getAcceptedPromotionalPlaylists,
   updatePlaylistFeatured,
   updateFeaturedHidden,
   updateFeaturedLocale,
@@ -222,101 +220,6 @@ describe('getFeaturedPlaylists', () => {
     expect(result).toEqual([{ id: 9, name: 'cached' }]);
     expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
     expect(cache.set).not.toHaveBeenCalled();
-  });
-});
-
-describe('getAllFeaturedPlaylists', () => {
-  const p1 = {
-    id: 1,
-    playlistId: 'pl1',
-    name: 'N1',
-    slug: 's1',
-    image: 'i1',
-    customImage: null,
-    featuredHidden: false,
-    featuredLocale: null,
-    promotionalActive: false,
-    promotionalAccepted: false,
-    promotionalTitle: null,
-    promotionalDescription: null,
-    promotionalUserId: null,
-  };
-  const p2 = {
-    ...p1,
-    id: 2,
-    playlistId: 'pl2',
-    name: 'N2',
-    promotionalActive: true,
-    promotionalAccepted: true,
-    promotionalTitle: 'T2',
-    promotionalDescription: 'D2',
-    promotionalUserId: 9,
-  };
-
-  it('joins purchase counts and user info, subtracting the owner purchase for promos', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.playlist.findMany.mockResolvedValue([p1, p2]);
-    prisma.paymentHasPlaylist.groupBy.mockResolvedValue([
-      { playlistId: 2, _count: { playlistId: 3 } },
-    ]);
-    prisma.user.findUnique.mockResolvedValue({
-      email: 'e@x.com',
-      displayName: 'Rick',
-    });
-
-    const result = await getAllFeaturedPlaylists(deps);
-
-    expect(prisma.playlist.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          featured: true,
-          NOT: { promotionalActive: true, promotionalAccepted: false },
-        },
-        orderBy: [{ id: 'desc' }],
-      })
-    );
-    expect(prisma.paymentHasPlaylist.groupBy).toHaveBeenCalledWith({
-      by: ['playlistId'],
-      where: { playlistId: { in: [1, 2] }, payment: { status: 'paid' } },
-      _count: { playlistId: true },
-    });
-
-    expect(result[0]).toEqual({
-      id: 1,
-      playlistId: 'pl1',
-      name: 'N1',
-      slug: 's1',
-      image: 'i1',
-      customImage: null,
-      description: '',
-      featuredHidden: false,
-      featuredLocale: null,
-      isPromotional: false,
-      userEmail: null,
-      userDisplayName: null,
-      purchaseCount: 0,
-    });
-    // Promotional: title/description override, count 3 minus owner = 2.
-    expect(result[1]).toMatchObject({
-      id: 2,
-      name: 'T2',
-      description: 'D2',
-      isPromotional: true,
-      userEmail: 'e@x.com',
-      userDisplayName: 'Rick',
-      purchaseCount: 2,
-    });
-    expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { id: 9 },
-      select: { email: true, displayName: true },
-    });
-  });
-
-  it('returns [] on errors', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.playlist.findMany.mockRejectedValue(new Error('boom'));
-    expect(await getAllFeaturedPlaylists(deps)).toEqual([]);
-    expect(deps.logger.log).toHaveBeenCalled();
   });
 });
 
@@ -595,49 +498,6 @@ describe('getPendingPromotionalPlaylists', () => {
     const { deps, prisma } = makeDeps();
     prisma.playlist.findMany.mockRejectedValue(new Error('x'));
     expect(await getPendingPromotionalPlaylists(deps)).toEqual([]);
-  });
-});
-
-describe('getAcceptedPromotionalPlaylists', () => {
-  it('returns accepted promos including featuredLocale', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.playlist.findMany.mockResolvedValue([
-      {
-        id: 2,
-        playlistId: 'pl2',
-        name: 'Orig',
-        slug: 's',
-        image: 'i',
-        customImage: null,
-        promotionalTitle: 'T',
-        promotionalDescription: 'D',
-        promotionalLocale: 'nl',
-        promotionalUserId: 9,
-        featuredLocale: 'nl,de',
-      },
-    ]);
-    prisma.user.findUnique.mockResolvedValue({ email: 'a@x', displayName: 'A' });
-
-    const result = await getAcceptedPromotionalPlaylists(deps);
-
-    expect(prisma.playlist.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { promotionalActive: true, promotionalAccepted: true },
-      })
-    );
-    expect(result[0]).toMatchObject({
-      name: 'T',
-      description: 'D',
-      featuredLocale: 'nl,de',
-      userEmail: 'a@x',
-      userDisplayName: 'A',
-    });
-  });
-
-  it('returns [] on errors', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.playlist.findMany.mockRejectedValue(new Error('x'));
-    expect(await getAcceptedPromotionalPlaylists(deps)).toEqual([]);
   });
 });
 

@@ -71,13 +71,6 @@ class MusicServiceRegistry {
   }
 
   /**
-   * Get all available service types
-   */
-  getAvailableServiceTypes(): ServiceType[] {
-    return Array.from(this.providers.keys());
-  }
-
-  /**
    * Recognize a URL and determine which service it belongs to
    */
   recognizeUrl(url: string): UrlRecognitionResult {
@@ -198,17 +191,6 @@ class MusicServiceRegistry {
       ...result,
       serviceType: recognition.serviceType,
     };
-  }
-
-  /**
-   * Get service configuration for display purposes
-   */
-  getServiceConfigs() {
-    const configs: Record<string, any> = {};
-    for (const [serviceType, provider] of this.providers) {
-      configs[serviceType] = provider.config;
-    }
-    return configs;
   }
 }
 

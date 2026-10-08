@@ -32,7 +32,6 @@ import UpgradeInvoices from '../upgradeInvoice';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
-  getCurrencyForCountry,
   SupportedCurrency,
 } from '../data/currency-map';
 
@@ -242,17 +241,6 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         currencies: SUPPORTED_CURRENCIES,
         rates: rates?.rates ?? { EUR: 1 },
         asOf: rates?.asOf ?? null,
-      },
-    };
-  });
-
-  // Get suggested currency for a country code
-  fastify.get('/currency/for-country/:countryCode', async (request: any) => {
-    const { countryCode } = request.params;
-    return {
-      success: true,
-      data: {
-        currency: getCurrencyForCountry(countryCode),
       },
     };
   });
@@ -562,27 +550,4 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       review
     );
   });
-
-  // Print API webhook
-  fastify.post('/printapi/webhook', async (request: any, _reply) => {
-    await order.processPrintApiWebhook(request.body.orderId);
-    return { success: true };
-  });
-
-  // Development routes
-  if (process.env['ENVIRONMENT'] == 'development') {
-    fastify.get(
-      '/generate_invoice/:paymentId',
-      async (request: any, _reply) => {
-        const payment = await mollie.getPayment(request.params.paymentId);
-        if (payment) {
-          const pdfPath = await order.createInvoice(payment);
-          // Send tracking email would go here
-          return { success: true };
-        } else {
-          return { success: false };
-        }
-      }
-    );
-  }
 }

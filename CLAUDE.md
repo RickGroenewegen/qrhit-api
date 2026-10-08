@@ -1608,9 +1608,8 @@ The frontend consumes this API through the following key endpoints:
 
 #### Authentication & User Management
 - **POST** `/validate` - JWT token validation
-- **POST** `/account/register` - User registration
-- **POST** `/account/verify` - Email verification
-- **POST** `/account/reset-password-request` - Password reset
+- **POST** `/api/account/customer-register-request`, `customer-verify-pincode`, `customer-set-password` - Customer sign-up by pincode
+- **POST** `/api/account/forgot-password-request` - Password reset by pincode
 
 #### Spotify & Music Features
 - **GET** `/spotify/auth` - Spotify OAuth initiation
@@ -1626,7 +1625,6 @@ The frontend consumes this API through the following key endpoints:
 
 #### Public Endpoints
 - **POST** `/contact` - Contact form submissions
-- **POST** `/newsletter_subscribe` - Newsletter subscriptions
 - **GET** `/reviews/:locale/:amount/:landingPage` - Customer reviews
 
 #### Company/Business Features
@@ -1635,8 +1633,6 @@ The frontend consumes this API through the following key endpoints:
 - **GET** `/list/:listId` - Get individual list details with submissions
 - **POST** `/business/submit` - Submit track suggestions to company voting lists
 - **GET** `/business/submissions/:companyId` - Get company submission data
-- **PUT** `/account/voting-portal/:id` - Update voting portal settings
-- **DELETE** `/account/voting-portal/:id` - Delete voting portals
 
 ### Development Workflow
 1. **Frontend Development**: Use Angular dev server (port 4200)

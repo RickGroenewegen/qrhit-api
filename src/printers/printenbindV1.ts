@@ -1338,10 +1338,6 @@ class PrintEnBindV1 {
     }
   }
 
-  public async testOrder() {
-    const authToken = await this.getAuthToken();
-  }
-
   /**
    * The legacy API takes the token raw in the Authorization header; it is
    * the same token the REST API uses.
@@ -2204,8 +2200,6 @@ class PrintEnBindV1 {
 
     return pdfPath;
   }
-
-  public async processPrintApiWebhook(printApiOrderId: string) {}
 
   public async calculateShippingCosts(countryCodes?: string[]): Promise<void> {
     const authToken = await this.getAuthToken();

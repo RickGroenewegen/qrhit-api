@@ -120,14 +120,6 @@ class Data {
 
   // ── Music Links ──────────────────────────────────────────────
 
-  public async getYouTubeLink(artist: string, name: string): Promise<string | null> {
-    return musicLinksModule.getYouTubeLink(this.deps, artist, name);
-  }
-
-  public async addSpotifyLinks(): Promise<number> {
-    return musicLinksModule.addSpotifyLinks(this.deps);
-  }
-
   private async prefillLinkCache(): Promise<void> {
     return musicLinksModule.prefillLinkCache(this.deps);
   }
@@ -148,10 +140,6 @@ class Data {
 
   public async getPlaylistLinkCoverage(playlistId: number) {
     return musicLinksModule.getPlaylistLinkCoverage(this.deps, playlistId);
-  }
-
-  public async getTracksWithoutMusicLinks(limit: number = 100): Promise<any[]> {
-    return musicLinksModule.getTracksWithoutMusicLinks(this.deps, limit);
   }
 
   public async updateTrackMusicLinks(
@@ -226,10 +214,6 @@ class Data {
     limit: number = 50
   ) {
     return tracksModule.searchTracks(this.deps, searchTerm, missingService, playlistItemId, page, limit);
-  }
-
-  public async getTracksMissingSpotifyLink(searchTerm: string = ''): Promise<any[]> {
-    return tracksModule.getTracksMissingSpotifyLink(this.deps, searchTerm);
   }
 
   public async getTracksMissingSpotifyLinkCount(): Promise<number> {
@@ -481,10 +465,6 @@ class Data {
     return usersModule.verifyPayment(this.deps, paymentId);
   }
 
-  public async checkUnfinalizedPayments(): Promise<string[]> {
-    return usersModule.checkUnfinalizedPayments(this.deps);
-  }
-
   public async getTaxRate(countryCode: string, date: Date = new Date()): Promise<number | null> {
     return usersModule.getTaxRate(this.deps, countryCode, date);
   }
@@ -508,10 +488,6 @@ class Data {
 
   public async getFeaturedPlaylists(locale: string, skipLocaleFilter: boolean = false): Promise<any> {
     return featuredPlaylistsModule.getFeaturedPlaylists(this.deps, locale, skipLocaleFilter);
-  }
-
-  public async getAllFeaturedPlaylists(): Promise<any[]> {
-    return featuredPlaylistsModule.getAllFeaturedPlaylists(this.deps);
   }
 
   public async getPlaylistSuggestions(
@@ -551,10 +527,6 @@ class Data {
 
   public async getPendingPromotionalPlaylists(): Promise<any[]> {
     return featuredPlaylistsModule.getPendingPromotionalPlaylists(this.deps);
-  }
-
-  public async getAcceptedPromotionalPlaylists(): Promise<any[]> {
-    return featuredPlaylistsModule.getAcceptedPromotionalPlaylists(this.deps);
   }
 
   public async updatePlaylistFeatured(playlistId: string, featured: boolean) {

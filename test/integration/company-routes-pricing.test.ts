@@ -31,8 +31,15 @@ describe('business pricing and quotation views', () => {
     const admin = await createTestUser({ groups: ['admin'] });
     headers = authHeader(admin.token);
 
+    // Company-level calculations are only read now (lists fall back to them);
+    // calculators save per list since 2026-04-13.
     const company = await prisma().company.create({
-      data: { name: 'Pricing Company BV', contact: 'Contact Person' },
+      data: {
+        name: 'Pricing Company BV',
+        contact: 'Contact Person',
+        calculationTromp: '{"quantity":100,"printingType":"eigen"}',
+        calculationSchneider: '{"quantity":50,"cardCount":96,"profitMargin":2}',
+      },
     });
     companyId = company.id;
     const list = await prisma().companyList.create({
@@ -52,49 +59,6 @@ describe('business pricing and quotation views', () => {
   });
 
   describe('company-level calculations', () => {
-    it('saves the Tromp calculation', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/calculation-tromp`,
-        headers,
-        payload: { calculationTromp: '{"quantity":100,"printingType":"eigen"}' },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
-    it('saves the Schneider calculation', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/calculation-schneider`,
-        headers,
-        payload: {
-          calculationSchneider: '{"quantity":50,"cardCount":96,"profitMargin":2}',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-    });
-
-    it('404s for an unknown company', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/companies/999999/calculation-schneider',
-        headers,
-        payload: { calculationSchneider: '{}' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('400s for a non-numeric company id', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/companies/abc/calculation-schneider',
-        headers,
-        payload: { calculationSchneider: '{}' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
     it('has no company-level calculation save without a printer', async () => {
       const res = await app.inject({
         method: 'PUT',

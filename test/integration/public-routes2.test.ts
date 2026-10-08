@@ -22,7 +22,6 @@ import Utils from '../../src/utils';
  *  - GET /reviews_details (trustpilot company details)
  *  - GET /test (diagnostics)
  *  - POST /push/register (valid + invalid)
- *  - newsletter endpoints edge cases
  *  - POST /broken-links failure path (result.success === false branch)
  *  - POST /chunk-error with a real non-bot user agent (hits Redis counter)
  *  - POST /chunk-error with a bot user agent (short-circuit)
@@ -97,31 +96,6 @@ describe('public routes — wave 2 coverage', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().success).toBe(true);
-    });
-  });
-
-  // ====================================================================
-  // POST /newsletter_subscribe — edge cases not in public.test.ts
-  // ====================================================================
-
-  describe('POST /newsletter_subscribe', () => {
-    it('400 for missing email', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/newsletter_subscribe',
-        payload: {},
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('400 for clearly invalid email (no @)', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/newsletter_subscribe',
-        payload: { email: 'notanemail' },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().success).toBe(false);
     });
   });
 

@@ -276,24 +276,7 @@ describe('updateDiscountCode', () => {
   });
 });
 
-describe('getAllDiscounts / deleteDiscountCode', () => {
-  it('annotates each discount with totalSpent and amountLeft', async () => {
-    h.prisma.discountCode.findMany.mockResolvedValueOnce([
-      { id: 1, amount: 50 },
-      { id: 2, amount: 20 },
-    ]);
-    h.prisma.discountCodedUses.aggregate
-      .mockResolvedValueOnce({ _sum: { amount: 12.5 } })
-      .mockResolvedValueOnce({ _sum: { amount: null } });
-
-    const result = await discount.getAllDiscounts();
-    expect(result.success).toBe(true);
-    expect(result.discounts).toEqual([
-      { id: 1, amount: 50, totalSpent: 12.5, amountLeft: 37.5, usesCount: 0 },
-      { id: 2, amount: 20, totalSpent: 0, amountLeft: 20, usesCount: 0 },
-    ]);
-  });
-
+describe('deleteDiscountCode', () => {
   it('reports delete failures without throwing', async () => {
     h.prisma.discountCode.delete.mockRejectedValueOnce(new Error('missing'));
     expect(await discount.deleteDiscountCode(1)).toEqual({

@@ -301,47 +301,6 @@ describe('renderRaw', () => {
 // Simple transactional mails (logo attachment + locale translations)
 // ---------------------------------------------------------------------------
 describe('account & verification mails', () => {
-  it('sendPasswordResetMail sends the reset link with the en subject', async () => {
-    await mail.sendPasswordResetMail('user@example.com', 'John', 'tok-123');
-    expect(sesSend).toHaveBeenCalledTimes(1);
-    const raw = lastRaw();
-    expect(raw).toContain('To: user@example.com');
-    expect(raw).toContain('Subject: Reset Your Password');
-    expect(raw).toContain('Reply-To: reply@qrsong.io');
-    expect(raw).toContain(
-      'http://localhost:4200/en/account/reset-password/tok-123'
-    );
-    // Inline logo got swapped to the CID reference
-    expect(raw).toContain('<img src="cid:logo"');
-    expect(raw).not.toContain('Bcc:');
-  });
-
-  it('sendPasswordResetMail falls back to the email local-part when fullname is empty', async () => {
-    await mail.sendPasswordResetMail('jdoe@example.com', '', 'tok-1', 'en');
-    expect(lastRaw()).toContain('jdoe');
-  });
-
-  it('sendPasswordResetMail swallows errors (missing logo) without sending', async () => {
-    process.env['ASSETS_DIR'] = BOGUS_ASSETS;
-    await expect(
-      mail.sendPasswordResetMail('user@example.com', 'John', 'tok-123')
-    ).resolves.toBeUndefined();
-    expect(sesSend).not.toHaveBeenCalled();
-  });
-
-  it('sendQRSongVerificationMail sends the verification link', async () => {
-    await mail.sendQRSongVerificationMail(
-      'new@example.com',
-      'Newbie',
-      'verhash',
-      'en'
-    );
-    const raw = lastRaw();
-    expect(raw).toContain('To: new@example.com');
-    expect(raw).toContain('Subject: Verify Your QRSong Account');
-    expect(raw).toContain('http://localhost:4200/en/account/verify/verhash');
-  });
-
   it('sendCustomerRegistrationPincode includes the pincode', async () => {
     await mail.sendCustomerRegistrationPincode(
       'pin@example.com',
@@ -350,9 +309,14 @@ describe('account & verification mails', () => {
       'en'
     );
     const raw = lastRaw();
+    expect(sesSend).toHaveBeenCalledTimes(1);
     expect(raw).toContain('Subject: Your QRSong! Verification Code');
     expect(raw).toContain('654321');
     expect(raw).toContain('To: pin@example.com');
+    expect(raw).toContain('Reply-To: reply@qrsong.io');
+    // Inline logo got swapped to the CID reference
+    expect(raw).toContain('<img src="cid:logo"');
+    expect(raw).not.toContain('Bcc:');
   });
 
   it('sendForgotPasswordPincode includes the pincode and subject', async () => {
@@ -1136,50 +1100,9 @@ describe('sendBusinessLeadNotification', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Newsletter subscribe / unsubscribe
+// Newsletter unsubscribe
 // ---------------------------------------------------------------------------
 describe('newsletter', () => {
-  it('subscribeToNewsletter throws when captcha fails', async () => {
-    utilsMock.verifyRecaptcha.mockResolvedValue({ isHuman: false, score: 0 });
-    await expect(
-      mail.subscribeToNewsletter('x@example.com', 'tok')
-    ).rejects.toThrow('Verification failed');
-  });
-
-  it('subscribeToNewsletter re-subscribes an existing user', async () => {
-    prismaMock.user.findUnique.mockResolvedValue({ id: 3 });
-    prismaMock.user.update.mockResolvedValue({});
-    const ok = await mail.subscribeToNewsletter('x@example.com', 'tok');
-    expect(ok).toBe(true);
-    expect(prismaMock.user.update).toHaveBeenCalledWith({
-      where: { email: 'x@example.com' },
-      data: { marketingEmails: true, sync: true },
-    });
-    expect(prismaMock.user.create).not.toHaveBeenCalled();
-  });
-
-  it('subscribeToNewsletter creates a new user with a 16-char hash', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(null);
-    prismaMock.user.create.mockResolvedValue({});
-    const ok = await mail.subscribeToNewsletter('new@example.com', 'tok');
-    expect(ok).toBe(true);
-    const arg = prismaMock.user.create.mock.calls[0][0];
-    expect(arg.data).toMatchObject({
-      email: 'new@example.com',
-      userId: 'new@example.com',
-      displayName: 'new',
-      marketingEmails: true,
-      sync: true,
-    });
-    expect(arg.data.hash).toMatch(/^[0-9a-f]{16}$/);
-  });
-
-  it('subscribeToNewsletter returns false on database errors', async () => {
-    prismaMock.user.findUnique.mockRejectedValue(new Error('db down'));
-    const ok = await mail.subscribeToNewsletter('x@example.com', 'tok');
-    expect(ok).toBe(false);
-  });
-
   it('unsubscribe disables marketing mails for a known hash', async () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 12 });
     prismaMock.user.update.mockResolvedValue({});
@@ -1345,11 +1268,9 @@ describe('sender guard and error paths', () => {
     const realSes = (mail as any).ses;
     (mail as any).ses = null;
     try {
-      await mail.sendPasswordResetMail('a@x.io', 'A', 't');
       await mail.sendDesignAlterMail('a@x.io', 'A', 'en', 'p', 'h', 'pl', 'hitster');
       await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
       await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
-      await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');
       await mail.sendEmail('digital', makePayment(), [makePlaylist()]);
       await mail.sendTrackingEmail(makePayment(), 't', '');
       await mail.sendBoxInstructionsEmail(makePayment());
@@ -1380,7 +1301,6 @@ describe('sender guard and error paths', () => {
     await mail.sendDesignAlterMail('a@x.io', 'A', 'en', 'p', 'h', 'pl', 'hitster');
     await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
     await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
-    await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');
     await mail.sendTrackingEmail(makePayment(), 't', '');
     await mail.sendBoxInstructionsEmail(makePayment());
     await mail.sendToPrinterMail(makePayment(), makePlaylist());

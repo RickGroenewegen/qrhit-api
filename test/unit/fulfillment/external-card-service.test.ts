@@ -491,36 +491,6 @@ describe('importAllExternalCards', () => {
   });
 });
 
-describe('getStats', () => {
-  it('returns the ten counters in their query order', async () => {
-    const values = [100, 10, 20, 30, 40, 50, 60, 70, 80, 90];
-    for (const v of values) {
-      prismaMock.externalCard.count.mockResolvedValueOnce(v as any);
-    }
-
-    expect(await service.getStats()).toEqual({
-      total: 100,
-      jumbo: 10,
-      country: 20,
-      musicmatch: 30,
-      withSpotify: 40,
-      withAppleMusic: 50,
-      withTidal: 60,
-      withYoutubeMusic: 70,
-      withDeezer: 80,
-      withAmazonMusic: 90,
-    });
-    expect(prismaMock.externalCard.count).toHaveBeenNthCalledWith(2, {
-      where: { cardType: 'jumbo' },
-    });
-    expect(prismaMock.externalCard.count).toHaveBeenNthCalledWith(5, {
-      where: { spotifyLink: { not: null } },
-    });
-    expect(prismaMock.externalCard.count).toHaveBeenNthCalledWith(10, {
-      where: { amazonMusicLink: { not: null } },
-    });
-  });
-});
 
 describe('nightly import cron', () => {
   const ORIGINAL_KEY = process.env['MUSICFETCH_API_KEY'];

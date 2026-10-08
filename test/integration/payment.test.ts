@@ -351,30 +351,6 @@ describe('payment routes', () => {
     });
   });
 
-  describe('GET /currency/for-country/:countryCode', () => {
-    it('maps NO to NOK (case-insensitive)', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/currency/for-country/NO',
-      });
-      expect(res.json()).toEqual({ success: true, data: { currency: 'NOK' } });
-
-      const lower = await app.inject({
-        method: 'GET',
-        url: '/currency/for-country/no',
-      });
-      expect(lower.json().data.currency).toBe('NOK');
-    });
-
-    it('falls back to EUR for unknown countries', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/currency/for-country/XX',
-      });
-      expect(res.json()).toEqual({ success: true, data: { currency: 'EUR' } });
-    });
-  });
-
   describe('POST /order/volume-discount', () => {
     it('returns the volume discount for two digital playlists (1000 cards → 12.5% tier)', async () => {
       const item = {

@@ -1056,60 +1056,6 @@ class Business {
   }
 
   /**
-   * Get all lists that are in production, across all companies.
-   * Used for the "Live orders" overview in the dashboard.
-   */
-  public async getProductionLists(): Promise<any> {
-    try {
-      const lists = await (this.prisma as any).companyList.findMany({
-        where: { status: 'production' },
-        include: {
-          Company: { select: { id: true, name: true } },
-          CompanyListDeliveryAddress: true,
-          CompanyFile: { where: { category: 'design' }, select: { id: true } },
-        },
-        orderBy: { updatedAt: 'desc' },
-      });
-
-      const rows = lists.map((list: any) => {
-        const column = variantCalculationColumn(listPrinterVariant(list.printer));
-        let boxes = Number(list.numberOfBoxes) || 0;
-        if (!boxes) {
-          try {
-            const state = JSON.parse(list[column] || '{}');
-            boxes = Number(state.quantity) || 0;
-          } catch {
-            /* ignore */
-          }
-        }
-        return {
-          id: list.id,
-          companyId: list.companyId,
-          companyName: list.Company?.name || '',
-          name: list.name,
-          slug: list.slug,
-          printer: listPrinterVariant(list.printer),
-          status: list.status,
-          numberOfCards: list.numberOfCards,
-          numberOfBoxes: boxes,
-          buyPrice: list.buyPrice,
-          sellPrice: list.sellPrice,
-          desiredDeliveryDate: list.desiredDeliveryDate,
-          deliveryAddressCount: list.CompanyListDeliveryAddress.length,
-          designFileCount: list.CompanyFile.length,
-          createdAt: list.createdAt,
-          updatedAt: list.updatedAt,
-        };
-      });
-
-      return { success: true, data: rows };
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error getting production lists: ${error}`));
-      return { success: false, error: 'Error getting production lists' };
-    }
-  }
-
-  /**
    * Build the (hard-coded Dutch) printer order e-mail for a list.
    * Returns subject + html + text so the admin can copy/paste it into
    * their own mail client. Works for both Tromp and Schneider lists.

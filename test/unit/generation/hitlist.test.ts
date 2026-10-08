@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { outbound } from '../../helpers/recording-mock';
 
 /**
  * Pure unit tests for src/hitlist.ts: submission flow (dup-email guard,
  * voting window, cardName construction, verification mail), async track
  * processing (scoring/filtering/dedupe, track upserts, birthday track),
- * verification, cached company-list lookup and the MusicFetch search.
+ * verification and cached company-list lookup.
  *
- * Everything (prisma, cache, spotify, business, data, utils, axios) is mocked;
+ * Everything (prisma, cache, spotify, business, data, utils) is mocked;
  * mail is asserted through the global recording mock.
  */
 
@@ -94,13 +94,9 @@ vi.mock('../../../src/translation', () => ({
     allLocales = ['en', 'nl'];
   },
 }));
-vi.mock('axios');
-
-import axios from 'axios';
 import Hitlist from '../../../src/hitlist';
 
 const hitlist = Hitlist.getInstance();
-const axiosGet = vi.mocked(axios.get);
 
 /** Allow the un-awaited processSubmissionAsync chain to settle. */
 const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
@@ -154,7 +150,6 @@ beforeEach(() => {
   h.spotifySearchTracks.mockReset();
   h.markSpotifyForReload.mockClear();
   h.updateTrackYear.mockClear();
-  axiosGet.mockReset();
 });
 
 describe('Hitlist.submit', () => {
@@ -721,107 +716,5 @@ describe('Hitlist.searchTracks', () => {
     const failure = { success: false, error: 'rate limited' };
     h.spotifySearchTracks.mockResolvedValue(failure);
     expect(await hitlist.searchTracks('queen')).toBe(failure);
-  });
-});
-
-describe('Hitlist.searchTracksMusicFetch', () => {
-  const ORIGINAL_KEY = process.env['MUSICFETCH_API_KEY'];
-
-  beforeEach(() => {
-    process.env['MUSICFETCH_API_KEY'] = 'mf-key';
-  });
-
-  afterEach(() => {
-    if (ORIGINAL_KEY === undefined) {
-      delete process.env['MUSICFETCH_API_KEY'];
-    } else {
-      process.env['MUSICFETCH_API_KEY'] = ORIGINAL_KEY;
-    }
-  });
-
-  it('rejects short search strings without calling the API', async () => {
-    expect(await hitlist.searchTracksMusicFetch('x')).toEqual({
-      success: false,
-      error: 'Search string too short',
-    });
-    expect(axiosGet).not.toHaveBeenCalled();
-  });
-
-  it('fails when the API key is not configured', async () => {
-    delete process.env['MUSICFETCH_API_KEY'];
-    expect(await hitlist.searchTracksMusicFetch('queen')).toEqual({
-      success: false,
-      error: 'MusicFetch API key not configured',
-    });
-    expect(axiosGet).not.toHaveBeenCalled();
-  });
-
-  it('rejects responses without a result body', async () => {
-    axiosGet.mockResolvedValue({ data: {} } as any);
-    expect(await hitlist.searchTracksMusicFetch('queen')).toEqual({
-      success: false,
-      error: 'Invalid response from MusicFetch API',
-    });
-  });
-
-  it('maps tracks to Spotify ids and filters out unusable entries', async () => {
-    axiosGet.mockResolvedValue({
-      data: {
-        result: {
-          tracks: [
-            {
-              link: 'https://open.spotify.com/track/abc123',
-              name: 'T1',
-              artists: [{ name: 'A1' }],
-              image: { url: 'img1' },
-            },
-            // No /track/ id in the link -> filtered.
-            { link: 'https://example.com/x', name: 'T2', artists: [{ name: 'A2' }] },
-            // Missing name -> filtered.
-            {
-              link: 'https://open.spotify.com/track/def456',
-              name: '',
-              artists: [{ name: 'A3' }],
-            },
-          ],
-        },
-      },
-    } as any);
-
-    const res = await hitlist.searchTracksMusicFetch('hello world');
-
-    expect(axiosGet).toHaveBeenCalledWith(
-      `https://api.musicfetch.io/search?query=${encodeURIComponent(
-        'hello world'
-      )}&types=track,artist`,
-      { headers: { 'x-token': 'mf-key' }, timeout: 10000 }
-    );
-    expect(res).toEqual({
-      success: true,
-      data: {
-        tracks: [
-          {
-            id: 'abc123',
-            trackId: 'abc123',
-            name: 'T1',
-            artist: 'A1',
-            image: 'img1',
-            link: 'https://open.spotify.com/track/abc123',
-          },
-        ],
-        totalCount: 1,
-        offset: 0,
-        limit: 1,
-        hasMore: false,
-      },
-    });
-  });
-
-  it('returns a generic error when the request fails', async () => {
-    axiosGet.mockRejectedValue(new Error('timeout'));
-    expect(await hitlist.searchTracksMusicFetch('queen')).toEqual({
-      success: false,
-      error: 'Error searching MusicFetch tracks',
-    });
   });
 });

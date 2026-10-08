@@ -14,7 +14,7 @@ import { createTestUser, authHeader } from '../helpers/auth';
 /**
  * Customer self-service account flows: register-by-purchase (pincode),
  * password set/login/change, profile, purchases, last-order, logout,
- * forgot-password, login rate limiting and /account/overview.
+ * forgot-password and login rate limiting.
  */
 describe('customer account routes', () => {
   let app: FastifyInstance;
@@ -430,20 +430,6 @@ describe('customer account routes', () => {
       const { orderInfo } = res.json();
       expect(orderInfo.fullname).toBe('No Orders');
       expect(orderInfo.email).toBe(user.email);
-    });
-
-    it('serves the account overview', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/account/overview',
-        headers: authHeader(shopperToken),
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.data.user.email).toBe(shopperEmail);
-      expect(body.data.playlists).toHaveLength(1);
-      expect(body.data.playlists[0].name).toBe('Shopper Mix');
     });
   });
 

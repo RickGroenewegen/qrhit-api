@@ -102,16 +102,6 @@ export default async function companyRoutes(
   // Bookkeeping (MoneyBird) — invoice creation
   // ============================================
 
-  // Returns { provider, connected, reason? }.
-  fastify.get(
-    '/business/bookkeeping/status',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const status = await bookkeeping.getStatus();
-      reply.send({ provider: bookkeeping.providerName(), ...status });
-    }
-  );
-
   // The list's existing MoneyBird invoices per payment option ('full' |
   // 'down' | 'remaining', null when not created), plus what each option
   // would invoice (excl. VAT), so the admin sees the amounts before creating
@@ -556,62 +546,6 @@ export default async function companyRoutes(
         // Only the delivery fields that are in the body; others stay as they are.
         ...pickDeliveryFields(request.body || {}),
       });
-
-      if (!result.success) {
-        let statusCode = 500;
-        if (result.error === 'Company not found') {
-          statusCode = 404;
-        }
-        reply.status(statusCode).send({ error: result.error });
-        return;
-      }
-
-      reply.send({ success: true, company: result.data.company });
-    }
-  );
-
-  // Update company Tromp calculation
-  fastify.put(
-    '/business/companies/:companyId/calculation-tromp',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const { calculationTromp } = request.body;
-
-      if (isNaN(companyId)) {
-        reply.status(400).send({ error: 'Invalid company ID' });
-        return;
-      }
-
-      const result = await business.updateCompany(companyId, { calculationTromp });
-
-      if (!result.success) {
-        let statusCode = 500;
-        if (result.error === 'Company not found') {
-          statusCode = 404;
-        }
-        reply.status(statusCode).send({ error: result.error });
-        return;
-      }
-
-      reply.send({ success: true, company: result.data.company });
-    }
-  );
-
-  // Update company Schneider calculation
-  fastify.put(
-    '/business/companies/:companyId/calculation-schneider',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const { calculationSchneider } = request.body;
-
-      if (isNaN(companyId)) {
-        reply.status(400).send({ error: 'Invalid company ID' });
-        return;
-      }
-
-      const result = await business.updateCompany(companyId, { calculationSchneider });
 
       if (!result.success) {
         let statusCode = 500;
@@ -1143,22 +1077,6 @@ export default async function companyRoutes(
         data: { favorite },
       });
       reply.send({ success: true, favorite: updated.favorite });
-    }
-  );
-
-  // ---- Live orders (production lists) ----
-
-  // Get all lists with status "production" across companies
-  fastify.get(
-    '/business/production-lists',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const result = await business.getProductionLists();
-      if (!result.success) {
-        reply.status(500).send({ error: result.error });
-        return;
-      }
-      reply.send({ success: true, lists: result.data });
     }
   );
 

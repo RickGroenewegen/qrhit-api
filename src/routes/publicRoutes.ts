@@ -8,10 +8,6 @@ import DesignScreen from '../designScreen';
 import Reviews from '../reviews';
 import AudioClient from '../audio';
 import Generator from '../generator';
-import Qr from '../qr';
-import Order from '../order';
-import { AiTasks } from '../aiTasks';
-import { Music } from '../music';
 import Data from '../data';
 import Utils from '../utils';
 import Logger from '../logger';
@@ -59,10 +55,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const reviews = Reviews.getInstance();
   const audio = AudioClient.getInstance();
   const generator = Generator.getInstance();
-  const qr = new Qr();
-  const order = Order.getInstance();
-  const aiTasks = new AiTasks();
-  const music = new Music();
   const data = Data.getInstance();
   const utils = new Utils();
   const logger = new Logger();
@@ -364,11 +356,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return await mail.sendContactForm(request.body, request.clientIp);
   });
 
-  // Get IP address
-  fastify.get('/ip', async (request, reply) => {
-    return { ip: request.ip, clientIp: request.clientIp };
-  });
-
   // Test endpoint
   fastify.get('/test', async (request: any, _reply) => {
     const interfaces = os.networkInterfaces();
@@ -383,20 +370,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
 
     return { success: true, localIp, version: '1.0.0' };
-  });
-
-  // Newsletter subscription
-  fastify.post('/newsletter_subscribe', async (request: any, reply) => {
-    const { email, captchaToken } = request.body;
-    if (!email || !utils.isValidEmail(email)) {
-      reply
-        .status(400)
-        .send({ success: false, error: 'Invalid email address' });
-      return;
-    }
-
-    const result = await mail.subscribeToNewsletter(email, captchaToken);
-    return { success: result };
   });
 
   // Newsletter unsubscribe
@@ -1058,21 +1031,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       reply.send({ success: true });
     });
 
-    // QR test
-    fastify.post('/qrtest', async (request: any, _reply) => {
-      const result = await qr.generateQR(
-        `${request.body.url}`,
-        `/mnt/efs/qrsong/${request.body.filename}`
-      );
-      return { success: true };
-    });
-
-    // Test order
-    fastify.get('/testorder', async (request: any, _reply) => {
-      await order.testOrder();
-      return { success: true };
-    });
-
     // Generate order
     fastify.get('/generate/:paymentId', async (request: any, _reply) => {
       const userAgent = request.headers['user-agent'] || '';
@@ -1087,33 +1045,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       );
       return { success: true, jobId };
     });
-
-    // Send mail
-    fastify.get('/mail/:paymentId', async (request: any, _reply) => {
-      // This would need mollie and data instances
-      return { success: true };
-    });
-
-    // OpenAI release query
-    fastify.get('/release/:query', async (request: any, _reply) => {
-      const year = await aiTasks.ask(request.params.query);
-      return { success: true, year };
-    });
-
-    // Music year detection
-    fastify.get(
-      '/yearv2/:id/:isrc/:artist/:title/:spotifyReleaseYear',
-      async (request: any, _reply) => {
-        const result = await music.getReleaseDate(
-          parseInt(request.params.id),
-          request.params.isrc,
-          request.params.artist,
-          request.params.title,
-          parseInt(request.params.spotifyReleaseYear)
-        );
-        return { success: true, data: result };
-      }
-    );
 
     // Translate genres
     fastify.get('/dev/translate_genres', async (_request: any, reply: any) => {
@@ -1130,38 +1061,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         reply
           .status(500)
           .send({ success: false, error: 'Failed to translate genres' });
-      }
-    });
-
-    // Test shipping
-    fastify.get('/test_shipping/:paymentId', async (request: any, reply: any) => {
-      try {
-        const result = await shipping.createShipment(request.params.paymentId);
-        reply.send({ success: true, data: result });
-      } catch (error) {
-        logger.log(
-          `Error in /test_shipping route: ${(error as Error).message}`
-        );
-        reply.status(500).send({
-          success: false,
-          error: (error as Error).message,
-        });
-      }
-    });
-
-    // Test get tracking info
-    fastify.get('/test_tracking/:paymentId', async (request: any, reply: any) => {
-      try {
-        const { result, updatedPayment } = await shipping.getTrackingInfo(request.params.paymentId);
-        reply.send({ success: true, trackingData: result, payment: updatedPayment });
-      } catch (error) {
-        logger.log(
-          `Error in /test_tracking route: ${(error as Error).message}`
-        );
-        reply.status(500).send({
-          success: false,
-          error: (error as Error).message,
-        });
       }
     });
 

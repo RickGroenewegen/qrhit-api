@@ -94,7 +94,6 @@ const h = vi.hoisted(() => {
       'updateTrack',
       'storeTracks',
       'searchTracks',
-      'getTracksMissingSpotifyLink',
       'getTracksMissingSpotifyLinkCount',
       'toggleSpotifyLinkIgnored',
     ] as const),
@@ -105,22 +104,17 @@ const h = vi.hoisted(() => {
       'updateTrackCheck',
     ] as const),
     musicLinks: fns([
-      'getYouTubeLink',
-      'addSpotifyLinks',
       'prefillLinkCache',
       'logLink',
       'getLink',
       'getPlaylistLinkCoverage',
-      'getTracksWithoutMusicLinks',
       'updateTrackMusicLinks',
       'findMissingServiceLinks',
     ] as const),
     featuredPlaylists: fns([
       'getFeaturedPlaylists',
-      'getAllFeaturedPlaylists',
       'searchFeaturedPlaylists',
       'getPendingPromotionalPlaylists',
-      'getAcceptedPromotionalPlaylists',
       'updatePlaylistFeatured',
       'updateFeaturedHidden',
       'updateFeaturedLocale',
@@ -650,17 +644,6 @@ describe('delegation wrappers', () => {
       20,
       'id',
       'desc'
-    );
-  });
-
-  it('getTracksWithoutMusicLinks defaults the limit to 100', async () => {
-    const { data } = await makeData();
-    h.musicLinks.getTracksWithoutMusicLinks.mockResolvedValueOnce([]);
-
-    await data.getTracksWithoutMusicLinks();
-    expect(h.musicLinks.getTracksWithoutMusicLinks).toHaveBeenCalledWith(
-      data,
-      100
     );
   });
 

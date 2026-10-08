@@ -110,91 +110,6 @@ describe('company routes — wave 2 coverage', () => {
   });
 
   // ====================================================================
-  // BOOKKEEPING STATUS
-  // ====================================================================
-
-  describe('GET /business/bookkeeping/status', () => {
-    it('returns provider info (not connected in test env)', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/bookkeeping/status',
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      // provider name should be present; connected can be either value
-      expect(typeof body.provider).toBe('string');
-      expect(typeof body.connected).toBe('boolean');
-    });
-
-    it('rejects unauthenticated access', async () => {
-      const res = await app.inject({ method: 'GET', url: '/business/bookkeeping/status' });
-      expect(res.statusCode).toBe(401);
-    });
-
-    it('rejects non-admin users', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/bookkeeping/status',
-        headers: plainUserHeaders,
-      });
-      expect(res.statusCode).toBe(403);
-    });
-  });
-
-  // ====================================================================
-  // COMPANY-LEVEL CALCULATION UPDATES
-  // ====================================================================
-
-  describe('company calculation PUT endpoints', () => {
-    it('PUT /business/companies/:id/calculation-tromp — updates tromp calculation', async () => {
-      const calc = JSON.stringify({ quantity: 100, profitMargin: 2 });
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/calculation-tromp`,
-        headers: adminHeaders,
-        payload: { calculationTromp: calc },
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().company.findUnique({ where: { id: companyId } });
-      expect(row!.calculationTromp).toBe(calc);
-    });
-
-    it('PUT /business/companies/:id/calculation-tromp — 404 for unknown company', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/companies/999999/calculation-tromp',
-        headers: adminHeaders,
-        payload: { calculationTromp: '{}' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('PUT /business/companies/:id/calculation-schneider — updates schneider calculation', async () => {
-      const calc = JSON.stringify({ quantity: 50, cardCount: 96 });
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/calculation-schneider`,
-        headers: adminHeaders,
-        payload: { calculationSchneider: calc },
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().company.findUnique({ where: { id: companyId } });
-      expect(row!.calculationSchneider).toBe(calc);
-    });
-
-    it('PUT /business/companies/:id/calculation-schneider — 404 for unknown company', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/companies/999999/calculation-schneider',
-        headers: adminHeaders,
-        payload: { calculationSchneider: '{}' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-  });
-
-  // ====================================================================
   // LIST-LEVEL CALCULATION GET + PUT
   // ====================================================================
 
@@ -711,16 +626,6 @@ describe('company routes — wave 2 coverage', () => {
       });
       expect(res.statusCode).toBe(403);
       await prisma().company.delete({ where: { id: orphan2.id } });
-    });
-
-    it('PUT /business/companies/:cId/calculation-tromp — 403 for plain users (admin-only)', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/calculation-tromp`,
-        headers: plainUserHeaders,
-        payload: { calculationTromp: '{}' },
-      });
-      expect(res.statusCode).toBe(403);
     });
 
     it('GET /business/companies/:cId/lists/:lId/delivery-addresses → 200 for admin', async () => {

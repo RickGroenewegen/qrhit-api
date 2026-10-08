@@ -53,7 +53,6 @@ import {
   updateTrack,
   storeTracks,
   searchTracks,
-  getTracksMissingSpotifyLink,
   getTracksMissingSpotifyLinkCount,
   toggleSpotifyLinkIgnored,
 } from '../../../src/data/tracks';
@@ -781,35 +780,6 @@ describe('searchTracks', () => {
     const { sql } = flatten(prisma.$queryRaw.mock.calls[0]);
     expect(sql).not.toContain('WHERE');
     expect(res.total).toBe(0); // empty count result coerces to 0
-  });
-});
-
-describe('getTracksMissingSpotifyLink', () => {
-  it('applies the LIKE filter when searching', async () => {
-    const { deps, prisma } = makeDeps();
-    const rows = [{ id: 1 }];
-    prisma.$queryRaw.mockResolvedValue(rows);
-
-    const res = await getTracksMissingSpotifyLink(deps, 'queen');
-
-    expect(res).toBe(rows);
-    const { sql, values } = flatten(prisma.$queryRaw.mock.calls[0]);
-    expect(sql).toContain("(spotifyLink IS NULL OR spotifyLink = '')");
-    expect(sql).toContain('spotifyLinkIgnored = false');
-    expect(sql).toContain('(artist LIKE ? OR name LIKE ?)');
-    expect(values).toEqual(['%queen%', '%queen%']);
-  });
-
-  it('omits the LIKE filter without a search term', async () => {
-    const { deps, prisma } = makeDeps();
-    prisma.$queryRaw.mockResolvedValue([]);
-
-    await getTracksMissingSpotifyLink(deps);
-
-    const { sql, values } = flatten(prisma.$queryRaw.mock.calls[0]);
-    expect(sql).not.toContain('LIKE');
-    expect(sql).toContain('LIMIT 100');
-    expect(values).toEqual([]);
   });
 });
 
