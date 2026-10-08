@@ -74,6 +74,11 @@ vi.mock('../../../src/pushover', () => ({
   },
 }));
 
+// The one-time login state is stored in Redis; a fixed one keeps it out.
+vi.mock('../../../src/oauthState', () => ({
+  issueOAuthState: vi.fn(async () => 'test-state'),
+}));
+
 import SpotifyApi2 from '../../../src/spotify_api2';
 
 const CLIENT_ID = 'test-client-id';
@@ -204,20 +209,20 @@ describe('SpotifyApi2.getAccessToken', () => {
   });
 });
 
-describe('SpotifyApi2.getAuthorizationUrl', () => {
-  it('builds the same authorize URL as v1', () => {
-    expect(makeApi().getAuthorizationUrl()).toBe(
+describe('SpotifyApi2.createAuthorizationUrl', () => {
+  it('builds the same authorize URL as v1, with the one-time state', async () => {
+    expect(await makeApi().createAuthorizationUrl()).toBe(
       `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}` +
         `&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-        `&scope=${encodeURIComponent('playlist-modify-public')}`
+        `&scope=${encodeURIComponent('playlist-modify-public')}&state=test-state`
     );
   });
 
-  it('returns null without a client id', () => {
+  it('returns null without a client id', async () => {
     const saved = process.env['SPOTIFY_CLIENT_ID'];
     try {
       delete process.env['SPOTIFY_CLIENT_ID'];
-      expect(new SpotifyApi2().getAuthorizationUrl()).toBeNull();
+      expect(await new SpotifyApi2().createAuthorizationUrl()).toBeNull();
     } finally {
       process.env['SPOTIFY_CLIENT_ID'] = saved;
     }
@@ -264,12 +269,11 @@ describe('SpotifyApi2.getPlaylist', () => {
   it('maps 401 to needsReAuth and clears the cached token', async () => {
     h.axiosGet.mockRejectedValueOnce(axiosError(401));
     const res = await makeApi().getPlaylist('pl1');
-    expect(res).toMatchObject({
+    expect(res).toEqual({
       success: false,
       error: 'Spotify authorization error (token likely expired/invalid)',
       needsReAuth: true,
     });
-    expect(res.authUrl).toContain('https://accounts.spotify.com/authorize?client_id=');
     expect(h.deleteSetting).toHaveBeenCalledWith('spotify_access_token');
     expect(h.deleteSetting).toHaveBeenCalledWith('spotify_token_expires_at');
   });

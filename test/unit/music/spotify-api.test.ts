@@ -291,21 +291,24 @@ describe('SpotifyApi.getTokensFromAuthCode', () => {
   });
 });
 
-describe('SpotifyApi.getAuthorizationUrl', () => {
-  it('builds the authorize URL with client id, encoded redirect uri and scope', () => {
+describe('SpotifyApi.createAuthorizationUrl', () => {
+  it('builds the authorize URL with client id, encoded redirect uri, scope and a stored one-time state', async () => {
     const api = makeApi();
-    expect(api.getAuthorizationUrl()).toBe(
+    const url = await api.createAuthorizationUrl();
+    const state = new URL(url!).searchParams.get('state')!;
+    expect(url).toBe(
       `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}` +
         `&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-        `&scope=${encodeURIComponent('playlist-modify-public')}`
+        `&scope=${encodeURIComponent('playlist-modify-public')}&state=${state}`
     );
+    expect(h.cacheSet).toHaveBeenCalledWith(`oauth_state:spotify:${state}`, '1', expect.any(Number));
   });
 
-  it('returns null when the client id is missing', () => {
+  it('returns null when the client id is missing', async () => {
     const savedId = process.env['SPOTIFY_CLIENT_ID'];
     try {
       delete process.env['SPOTIFY_CLIENT_ID'];
-      expect(new SpotifyApi().getAuthorizationUrl()).toBeNull();
+      expect(await new SpotifyApi().createAuthorizationUrl()).toBeNull();
     } finally {
       process.env['SPOTIFY_CLIENT_ID'] = savedId;
     }
@@ -361,14 +364,13 @@ describe('SpotifyApi.getPlaylist', () => {
     expect(h.cacheSet).toHaveBeenCalledWith('spotify_tracks_provider', 'v2');
   });
 
-  it('asks for re-auth (with auth URL) when no access token can be obtained', async () => {
+  it('asks for re-auth (without a login URL) when no access token can be obtained', async () => {
     const res = await makeApi().getPlaylist('pl1');
-    expect(res).toMatchObject({
+    expect(res).toEqual({
       success: false,
       error: 'Spotify authentication required',
       needsReAuth: true,
     });
-    expect(res.authUrl).toContain('https://accounts.spotify.com/authorize?client_id=');
     expect(h.axiosGet).not.toHaveBeenCalled();
   });
 

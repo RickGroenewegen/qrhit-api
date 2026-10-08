@@ -123,7 +123,7 @@ vi.mock('../../src/spotify_api', () => ({
     createOrUpdatePlaylist = vi.fn();
     deletePlaylist = vi.fn();
     getTokensFromAuthCode = vi.fn();
-    getAuthorizationUrl = vi.fn(() => null);
+    createAuthorizationUrl = vi.fn(async () => null);
   },
 }));
 

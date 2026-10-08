@@ -826,18 +826,6 @@ class AppleMusicProvider implements IMusicProvider {
     await this.cache.set(missKey, '1', 3600);
     return appleMusicLink;
   }
-
-  // OAuth methods not applicable for Apple Music (uses Developer Token)
-  getAuthorizationUrl(): string | null {
-    return null;
-  }
-
-  async handleAuthCallback(_code: string): Promise<ApiResult & { data?: { accessToken: string } }> {
-    return {
-      success: false,
-      error: 'OAuth not applicable for Apple Music. Uses Developer Token authentication.',
-    };
-  }
 }
 
 export default AppleMusicProvider;

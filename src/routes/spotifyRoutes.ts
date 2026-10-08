@@ -8,16 +8,6 @@ export default async function spotifyRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
   const utils = new Utils();
 
-  // Get Spotify authorization URL (returns the URL so a caller/admin can start re-auth)
-  fastify.get('/spotify/auth-url', async (_request, reply) => {
-    const authUrl = spotify.getAuthorizationUrl();
-    if (!authUrl) {
-      reply.send({ success: false, error: 'Missing Spotify Client ID' });
-      return;
-    }
-    reply.send({ success: true, authUrl });
-  });
-
   // Get Spotify playlist tracks
   fastify.post('/spotify/playlists/tracks', async (request: any, _reply) => {
     const userAgent = request.headers['user-agent'] || '';

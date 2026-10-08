@@ -3,6 +3,7 @@ import { color } from 'console-log-colors';
 import Settings from './settings';
 import Logger from './logger';
 import PushoverClient from './pushover';
+import { issueOAuthState } from './oauthState';
 
 // Authorization URL (user-facing login page)
 const TIDAL_LOGIN_URL = 'https://login.tidal.com';
@@ -19,9 +20,6 @@ class TidalApi {
   private settings = Settings.getInstance();
   private logger = new Logger();
   private pushover = new PushoverClient();
-
-  // PKCE state stored temporarily during auth flow
-  private codeVerifier: string | null = null;
 
   private clientId: string;
   private clientSecret: string;
@@ -63,16 +61,15 @@ class TidalApi {
   }
 
   /**
-   * Get the OAuth authorization URL with PKCE
-   * User should be redirected to this URL to authorize
+   * Get the OAuth authorization URL with PKCE and a one-time state, which
+   * /tidal/callback requires. Admins only: whoever completes the login
+   * becomes the API's Tidal account. The PKCE verifier is stored with the
+   * state, so the callback finds it on any worker.
    */
-  getAuthorizationUrl(): string {
-    // Generate and store PKCE verifier
-    this.codeVerifier = this.generateCodeVerifier();
-    const codeChallenge = this.generateCodeChallenge(this.codeVerifier);
-
-    // Store verifier in settings for later use (in case of server restart)
-    this.settings.setSetting('tidal_code_verifier', this.codeVerifier);
+  async createAuthorizationUrl(): Promise<string> {
+    const verifier = this.generateCodeVerifier();
+    const codeChallenge = this.generateCodeChallenge(verifier);
+    const state = await issueOAuthState('tidal', verifier);
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -81,6 +78,7 @@ class TidalApi {
       scope: 'playlists.read',
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
+      state,
     });
 
     return `${TIDAL_LOGIN_URL}/authorize?${params.toString()}`;
@@ -88,21 +86,13 @@ class TidalApi {
 
   /**
    * Exchange authorization code for access token
+   * @param verifier The PKCE verifier stored with the login's state.
    */
   async exchangeCodeForToken(
-    code: string
+    code: string,
+    verifier: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Retrieve code verifier
-      let verifier = this.codeVerifier;
-      if (!verifier) {
-        verifier = await this.settings.getSetting('tidal_code_verifier');
-      }
-
-      if (!verifier) {
-        return { success: false, error: 'PKCE code verifier not found' };
-      }
-
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -148,10 +138,6 @@ class TidalApi {
       }
       const expiresAt = Date.now() + tokenData.expires_in * 1000;
       await this.settings.setSetting('tidal_token_expires_at', expiresAt.toString());
-
-      // Clear code verifier
-      this.codeVerifier = null;
-      await this.settings.setSetting('tidal_code_verifier', '');
 
       return { success: true };
     } catch (error: any) {
@@ -269,7 +255,6 @@ class TidalApi {
     await this.settings.setSetting('tidal_refresh_token', '');
     await this.settings.setSetting('tidal_token_expires_at', '');
     await this.settings.setSetting('tidal_refresh_token_obtained_at', '');
-    await this.settings.setSetting('tidal_code_verifier', '');
   }
 
   /**

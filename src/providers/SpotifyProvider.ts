@@ -336,32 +336,6 @@ class SpotifyProvider implements IMusicProvider {
   }
 
   /**
-   * Get Spotify OAuth authorization URL
-   */
-  getAuthorizationUrl(): string | null {
-    return this.spotify.getAuthorizationUrl();
-  }
-
-  /**
-   * Handle Spotify OAuth callback
-   */
-  async handleAuthCallback(code: string): Promise<ApiResult & { data?: { accessToken: string } }> {
-    const accessToken = await this.spotify.getTokensFromAuthCode(code);
-
-    if (!accessToken) {
-      return {
-        success: false,
-        error: 'Failed to get access token',
-      };
-    }
-
-    return {
-      success: true,
-      data: { accessToken },
-    };
-  }
-
-  /**
    * Create a playlist on Spotify
    * Note: Uses stored tokens from OAuth flow, not passed accessToken
    */

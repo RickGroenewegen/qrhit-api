@@ -190,16 +190,6 @@ export interface IMusicProvider {
   resolveShortlink?(url: string): Promise<ApiResult & { data?: { resolvedUrl: string } }>;
 
   /**
-   * Get OAuth authorization URL (only for providers that support OAuth)
-   */
-  getAuthorizationUrl?(): string | null;
-
-  /**
-   * Handle OAuth callback (only for providers that support OAuth)
-   */
-  handleAuthCallback?(code: string): Promise<ApiResult & { data?: { accessToken: string } }>;
-
-  /**
    * Create a playlist (only for providers that support this)
    */
   createPlaylist?(

@@ -47,6 +47,16 @@ vi.mock('../../src/pushover', () => ({
   },
 }));
 
+// The one-time login state (carrying the PKCE verifier) is stored in Redis;
+// record what is issued instead.
+const issuedStates = vi.hoisted(() => [] as { provider: string; value: string }[]);
+vi.mock('../../src/oauthState', () => ({
+  issueOAuthState: vi.fn(async (provider: string, value: string) => {
+    issuedStates.push({ provider, value });
+    return 'test-state';
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Import under test (after mocks)
 // ---------------------------------------------------------------------------
@@ -74,6 +84,7 @@ beforeEach(() => {
   mockFetch = vi.fn();
   globalThis.fetch = mockFetch as any;
   settingsStore.clear();
+  issuedStates.length = 0;
   (TidalApi as any).instance = undefined;
 });
 
@@ -111,40 +122,42 @@ function seedExpiredToken(token = 'expired-token') {
 }
 
 // ---------------------------------------------------------------------------
-// 1. getAuthorizationUrl
+// 1. createAuthorizationUrl
 // ---------------------------------------------------------------------------
 
-describe('getAuthorizationUrl', () => {
-  it('returns a URL that starts with the Tidal login authorize endpoint', () => {
+describe('createAuthorizationUrl', () => {
+  it('returns a URL that starts with the Tidal login authorize endpoint', async () => {
     const api = getInstance();
-    const url = api.getAuthorizationUrl();
+    const url = await api.createAuthorizationUrl();
     expect(url).toMatch(/^https:\/\/login\.tidal\.com\/authorize\?/);
   });
 
-  it('includes required query params: client_id, redirect_uri, scope, code_challenge_method', () => {
+  it('includes required query params: client_id, redirect_uri, scope, code_challenge_method, state', async () => {
     const api = getInstance();
-    const url = api.getAuthorizationUrl();
+    const url = await api.createAuthorizationUrl();
     const parsed = new URL(url);
     expect(parsed.searchParams.get('client_id')).toBe('test-client-id');
     expect(parsed.searchParams.get('redirect_uri')).toBe(TIDAL_REDIRECT_URI);
     expect(parsed.searchParams.get('scope')).toBe('playlists.read');
     expect(parsed.searchParams.get('code_challenge_method')).toBe('S256');
     expect(parsed.searchParams.get('response_type')).toBe('code');
+    expect(parsed.searchParams.get('state')).toBe('test-state');
   });
 
-  it('stores the code verifier in settings', () => {
+  it('stores the code verifier with the one-time state', async () => {
     const api = getInstance();
-    api.getAuthorizationUrl();
-    expect(settingsStore.has('tidal_code_verifier')).toBe(true);
-    expect(settingsStore.get('tidal_code_verifier')).toBeTruthy();
+    await api.createAuthorizationUrl();
+    expect(issuedStates).toHaveLength(1);
+    expect(issuedStates[0].provider).toBe('tidal');
+    expect(issuedStates[0].value).toBeTruthy();
   });
 
-  it('code_challenge is the SHA-256 base64url of the stored verifier', () => {
+  it('code_challenge is the SHA-256 base64url of the stored verifier', async () => {
     const api = getInstance();
-    const url = api.getAuthorizationUrl();
+    const url = await api.createAuthorizationUrl();
     const parsed = new URL(url);
     const challenge = parsed.searchParams.get('code_challenge')!;
-    const storedVerifier = settingsStore.get('tidal_code_verifier')!;
+    const storedVerifier = issuedStates[0].value;
 
     const expected = crypto
       .createHash('sha256')
@@ -160,17 +173,8 @@ describe('getAuthorizationUrl', () => {
 // ---------------------------------------------------------------------------
 
 describe('exchangeCodeForToken', () => {
-  it('returns error when no verifier exists in memory or settings', async () => {
+  it('sends the code with the verifier of its login', async () => {
     const api = getInstance();
-    // settingsStore is empty, codeVerifier field is null
-    const result = await api.exchangeCodeForToken('auth-code-123');
-    expect(result).toEqual({ success: false, error: 'PKCE code verifier not found' });
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('uses the in-memory verifier set by getAuthorizationUrl', async () => {
-    const api = getInstance();
-    api.getAuthorizationUrl(); // populates this.codeVerifier
 
     mockFetch.mockResolvedValueOnce(
       makeResponse({
@@ -180,7 +184,7 @@ describe('exchangeCodeForToken', () => {
       })
     );
 
-    const result = await api.exchangeCodeForToken('code-abc');
+    const result = await api.exchangeCodeForToken('code-abc', 'verifier-abc');
     expect(result).toEqual({ success: true });
     expect(mockFetch).toHaveBeenCalledOnce();
 
@@ -189,30 +193,13 @@ describe('exchangeCodeForToken', () => {
     const body = new URLSearchParams(init.body as string);
     expect(body.get('grant_type')).toBe('authorization_code');
     expect(body.get('code')).toBe('code-abc');
+    expect(body.get('code_verifier')).toBe('verifier-abc');
     expect(body.get('client_id')).toBe('test-client-id');
     expect(body.get('client_secret')).toBe('test-secret');
   });
 
-  it('uses verifier from settings when in-memory codeVerifier is null', async () => {
-    settingsStore.set('tidal_code_verifier', 'settings-verifier-xyz');
-
-    mockFetch.mockResolvedValueOnce(
-      makeResponse({ access_token: 'at-2', expires_in: 3600 })
-    );
-
+  it('stores tokens on success', async () => {
     const api = getInstance();
-    // codeVerifier field is null (no getAuthorizationUrl called)
-    const result = await api.exchangeCodeForToken('code-xyz');
-    expect(result).toEqual({ success: true });
-
-    const [, init] = mockFetch.mock.calls[0];
-    const body = new URLSearchParams(init.body as string);
-    expect(body.get('code_verifier')).toBe('settings-verifier-xyz');
-  });
-
-  it('stores tokens and clears verifier on success', async () => {
-    const api = getInstance();
-    api.getAuthorizationUrl();
 
     mockFetch.mockResolvedValueOnce(
       makeResponse({
@@ -222,18 +209,15 @@ describe('exchangeCodeForToken', () => {
       })
     );
 
-    await api.exchangeCodeForToken('code-store');
+    await api.exchangeCodeForToken('code-store', 'verifier');
 
     expect(settingsStore.get('tidal_access_token')).toBe('at-stored');
     expect(settingsStore.get('tidal_refresh_token')).toBe('rt-stored');
     expect(settingsStore.get('tidal_token_expires_at')).toBeTruthy();
-    // verifier cleared
-    expect(settingsStore.get('tidal_code_verifier')).toBe('');
   });
 
   it('returns {success:false, error} using error_description on non-ok response', async () => {
     const api = getInstance();
-    api.getAuthorizationUrl();
 
     mockFetch.mockResolvedValueOnce(
       makeResponse(
@@ -242,27 +226,25 @@ describe('exchangeCodeForToken', () => {
       )
     );
 
-    const result = await api.exchangeCodeForToken('bad-code');
+    const result = await api.exchangeCodeForToken('bad-code', 'verifier');
     expect(result).toEqual({ success: false, error: 'Code expired or already used' });
   });
 
   it('falls back to "Token exchange failed" when error_description is missing', async () => {
     const api = getInstance();
-    api.getAuthorizationUrl();
 
     mockFetch.mockResolvedValueOnce(makeResponse({ error: 'server_error' }, 500));
 
-    const result = await api.exchangeCodeForToken('bad-code-2');
+    const result = await api.exchangeCodeForToken('bad-code-2', 'verifier');
     expect(result).toEqual({ success: false, error: 'Token exchange failed' });
   });
 
   it('returns {success:false, error} on fetch exception', async () => {
     const api = getInstance();
-    api.getAuthorizationUrl();
 
     mockFetch.mockRejectedValueOnce(new Error('network failure'));
 
-    const result = await api.exchangeCodeForToken('code-net');
+    const result = await api.exchangeCodeForToken('code-net', 'verifier');
     expect(result).toEqual({ success: false, error: 'network failure' });
   });
 });
@@ -435,7 +417,6 @@ describe('clearTokens', () => {
     settingsStore.set('tidal_access_token', 'at');
     settingsStore.set('tidal_refresh_token', 'rt');
     settingsStore.set('tidal_token_expires_at', '12345');
-    settingsStore.set('tidal_code_verifier', 'cv');
 
     const api = getInstance();
     await api.clearTokens();
@@ -443,7 +424,6 @@ describe('clearTokens', () => {
     expect(settingsStore.get('tidal_access_token')).toBe('');
     expect(settingsStore.get('tidal_refresh_token')).toBe('');
     expect(settingsStore.get('tidal_token_expires_at')).toBe('');
-    expect(settingsStore.get('tidal_code_verifier')).toBe('');
   });
 });
 

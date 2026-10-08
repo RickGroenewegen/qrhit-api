@@ -670,19 +670,21 @@ class TidalProvider implements IMusicProvider {
   }
 
   /**
-   * Get OAuth authorization URL
+   * Get OAuth authorization URL, with the one-time state the callback requires
    */
-  getAuthorizationUrl(): string | null {
-    return this.tidalApi.getAuthorizationUrl();
+  async createAuthorizationUrl(): Promise<string> {
+    return this.tidalApi.createAuthorizationUrl();
   }
 
   /**
    * Handle OAuth callback
+   * @param verifier The PKCE verifier stored with the login's state.
    */
   async handleAuthCallback(
-    code: string
+    code: string,
+    verifier: string
   ): Promise<ApiResult & { data?: { accessToken: string } }> {
-    const result = await this.tidalApi.exchangeCodeForToken(code);
+    const result = await this.tidalApi.exchangeCodeForToken(code, verifier);
 
     if (result.success) {
       return {

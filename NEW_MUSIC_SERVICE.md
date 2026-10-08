@@ -94,9 +94,9 @@ class NewServiceProvider implements IMusicProvider {
   async getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }> { }
   async getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }> { }
 
-  // OAuth methods (if needed)
-  getAuthorizationUrl(): string | null { }
-  async handleAuthCallback(code: string): Promise<ApiResult & { data?: { accessToken: string } }> { }
+  // OAuth methods (if needed), see TidalProvider and Step 6
+  async createAuthorizationUrl(): Promise<string> { }
+  async handleAuthCallback(code: string, verifier: string): Promise<ApiResult & { data?: { accessToken: string } }> { }
 }
 
 export default NewServiceProvider;
@@ -159,14 +159,20 @@ constructor() {
 **File:** `src/routes/musicRoutes.ts`
 
 ```typescript
-// OAuth (if needed)
-fastify.get('/new-service/auth', async () => {
-  return { success: true, authUrl: provider.getAuthorizationUrl() };
-});
-
-fastify.post('/new-service/callback', async (request) => {
-  const { code } = request.body;
-  return await provider.handleAuthCallback(code);
+// OAuth (if needed). The login connects the API's own account on the
+// service, and whoever completes it becomes that account. So the auth URL
+// route is admin-only (adminRoutes.ts, getAuthHandler(['admin'])) and carries
+// a one-time state from src/oauthState.ts (add the service to OAuthProvider);
+// the callback accepts nothing else. /tidal/auth and GET /tidal/callback are
+// the example (the state also carries the PKCE verifier there).
+fastify.get('/new-service/callback', async (request: any, reply) => {
+  const { code, state } = request.query;
+  const verifier = await consumeOAuthState('new-service', state);
+  if (!verifier) {
+    return reply.status(403).type('text/html').send('<p>This login link is not valid or has expired.</p>');
+  }
+  const result = await provider.handleAuthCallback(code, verifier);
+  // ... a fixed success/failure page; never echo error text from the service
 });
 
 // Data routes

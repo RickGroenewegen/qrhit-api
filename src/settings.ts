@@ -13,7 +13,6 @@ export type SettingKey =
   | 'tidal_refresh_token'
   | 'tidal_token_expires_at'
   | 'tidal_refresh_token_obtained_at' // When the current refresh token was issued (ms)
-  | 'tidal_code_verifier' // PKCE code verifier for OAuth flow
   | 'auto_mode' // Admin toggle: resolve undecidable years and approve customer corrections automatically
   | 'captcha_required' // Admin toggle: playlist loads need a reCAPTCHA (plugins/playlistGuardPlugin.ts)
   | 'printenbind_api_version'; // Admin toggle: 'v1' (legacy JSON API) or 'v2' (REST API); see printers/printenbind.ts

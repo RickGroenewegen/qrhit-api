@@ -508,18 +508,6 @@ class DeezerProvider implements IMusicProvider {
       };
     }
   }
-
-  // OAuth methods not supported (Deezer no longer accepts new apps)
-  getAuthorizationUrl(): string | null {
-    return null;
-  }
-
-  async handleAuthCallback(_code: string): Promise<ApiResult & { data?: { accessToken: string } }> {
-    return {
-      success: false,
-      error: 'OAuth not supported for Deezer (new applications no longer accepted).',
-    };
-  }
 }
 
 export default DeezerProvider;

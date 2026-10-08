@@ -653,18 +653,6 @@ describe('YouTubeMusicProvider.searchTracks', () => {
   });
 });
 
-describe('YouTubeMusicProvider OAuth stubs', () => {
-  it('does not provide an authorization URL', () => {
-    expect(newProvider().getAuthorizationUrl()).toBeNull();
-  });
-
-  it('rejects OAuth callbacks', async () => {
-    const result = await newProvider().handleAuthCallback('code');
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('OAuth not supported');
-  });
-});
-
 describe('YouTubeMusicProvider.getInstance', () => {
   it('returns a singleton', () => {
     expect(YouTubeMusicProvider.getInstance()).toBe(YouTubeMusicProvider.getInstance());

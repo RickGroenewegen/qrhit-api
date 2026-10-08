@@ -42,6 +42,7 @@ import Translation from '../translation';
 import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
+import { TidalProvider } from '../providers';
 import CalendarService from '../calendarService';
 import Settings from '../settings';
 import SeoDescriptions from '../seoDescriptions';
@@ -5417,6 +5418,30 @@ export default async function adminRoutes(
           error: error.message || 'Failed to get music token status',
         });
       }
+    }
+  );
+
+  // Login URLs that connect the API's own Spotify and Tidal accounts, opened
+  // by the admin bulk-actions panel. Each carries a one-time state that the
+  // callback requires, so only an admin can replace those accounts.
+  fastify.get(
+    '/spotify/auth-url',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const authUrl = await spotify.createAuthorizationUrl();
+      if (!authUrl) {
+        return reply.send({ success: false, error: 'Missing Spotify Client ID' });
+      }
+      return reply.send({ success: true, authUrl });
+    }
+  );
+
+  fastify.get(
+    '/tidal/auth',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const authUrl = await TidalProvider.getInstance().createAuthorizationUrl();
+      return reply.send({ success: true, authUrl });
     }
   );
 

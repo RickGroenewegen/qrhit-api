@@ -1469,13 +1469,14 @@ class Spotify {
   }
 
   /**
-   * Public method to get the Spotify authorization URL.
+   * Public method to get the Spotify authorization URL, with the one-time
+   * state the callback requires. Admins only.
    * Delegates to the SpotifyApi instance.
-   * @returns {string | null} The authorization URL or null.
+   * @returns {Promise<string | null>} The authorization URL or null.
    */
-  public getAuthorizationUrl(): string | null {
+  public async createAuthorizationUrl(): Promise<string | null> {
     // Delegate to the SpotifyApi instance
-    return this.spotifyApi.getAuthorizationUrl();
+    return this.spotifyApi.createAuthorizationUrl();
   }
 
   /**

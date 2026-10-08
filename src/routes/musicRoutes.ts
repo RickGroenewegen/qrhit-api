@@ -14,6 +14,7 @@ import AbuseGuard from '../abuse_guard';
 import DeckPrompt from '../deckPrompt';
 import CalendarService from '../calendarService';
 import Cache from '../cache';
+import { consumeOAuthState } from '../oauthState';
 
 // Import service-specific routes
 import spotifyRoutes from './spotifyRoutes';
@@ -624,9 +625,27 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     };
   });
 
-  // Spotify callback
+  // Spotify callback. The login is started by the admin route
+  // /spotify/auth-url (or the re-authorization alert); only their one-time
+  // state is accepted, because whoever completes it becomes the API's account.
   fastify.get('/spotify_callback', async (request: any, reply) => {
-    const { code } = request.query;
+    const { code, state } = request.query;
+
+    if (!(await consumeOAuthState('spotify', state))) {
+      logger.log(
+        color.red.bold('Spotify callback rejected: unknown, used or expired state')
+      );
+      reply.status(403).type('text/html').send(`
+        <html>
+          <head><title>Spotify Authorization Failed</title></head>
+          <body>
+            <h1>Authorization Failed</h1>
+            <p>This login link is not valid or has expired. Start again from the admin dashboard.</p>
+          </body>
+        </html>
+      `);
+      return;
+    }
 
     if (!code) {
       reply.type('text/html').send(`

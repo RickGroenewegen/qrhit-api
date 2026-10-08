@@ -18,7 +18,7 @@ import { flushTestRedis } from '../helpers/redis';
  *  - POST /qrlink_unknown (validation)
  *  - GET /qr2/:trackId/:php (EJS template rendering)
  *  - GET /qrlink2/:trackId/:php (returns empty link for unknown track)
- *  - GET /spotify_callback (no code → error)
+ *  - GET /spotify_callback (no valid one-time state → 403)
  */
 describe('music routes — wave 2 coverage', () => {
   let app: FastifyInstance;
@@ -214,21 +214,21 @@ describe('music routes — wave 2 coverage', () => {
   // ====================================================================
 
   describe('GET /spotify_callback', () => {
-    it('handles missing code (no query params)', async () => {
+    it('rejects a callback without a state (no query params)', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/spotify_callback',
       });
-      // Should handle gracefully — no code means failure
-      expect([200, 302, 400, 500]).toContain(res.statusCode);
+      expect(res.statusCode).toBe(403);
+      expect(res.body).toContain('not valid or has expired');
     });
 
-    it('handles error param from Spotify (user denied access)', async () => {
+    it('rejects a code with a state no admin login issued', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/spotify_callback?error=access_denied',
+        url: '/spotify_callback?code=attacker-code&state=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       });
-      expect([200, 302, 400, 500]).toContain(res.statusCode);
+      expect(res.statusCode).toBe(403);
     });
   });
 });

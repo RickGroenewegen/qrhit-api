@@ -850,14 +850,6 @@ class YouTubeMusicProvider implements IMusicProvider {
       return { success: false, error: error.message || 'Failed to search tracks' };
     }
   }
-
-  getAuthorizationUrl(): string | null {
-    return null;
-  }
-
-  async handleAuthCallback(_code: string): Promise<ApiResult & { data?: { accessToken: string } }> {
-    return { success: false, error: 'OAuth not supported for YouTube Music.' };
-  }
 }
 
 export default YouTubeMusicProvider;

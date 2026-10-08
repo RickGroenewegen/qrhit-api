@@ -24,7 +24,7 @@ const h = vi.hoisted(() => {
       getPlaylistItems: vi.fn(),
       getTracks: vi.fn(),
       searchTracks: vi.fn(),
-      getAuthorizationUrl: vi.fn(() => 'https://login.tidal.com/authorize?client_id=x'),
+      createAuthorizationUrl: vi.fn(async () => 'https://login.tidal.com/authorize?client_id=x'),
       exchangeCodeForToken: vi.fn(),
       isConnected: vi.fn(async () => true),
       clearTokens: vi.fn(async () => undefined),
@@ -74,7 +74,7 @@ beforeEach(() => {
   for (const fn of Object.values(h.tidal)) {
     if (typeof (fn as any).mockClear === 'function') (fn as any).mockReset();
   }
-  h.tidal.getAuthorizationUrl.mockReturnValue('https://login.tidal.com/authorize?client_id=x');
+  h.tidal.createAuthorizationUrl.mockResolvedValue('https://login.tidal.com/authorize?client_id=x');
 });
 
 afterEach(() => {
@@ -585,22 +585,22 @@ describe('TidalProvider.searchTracks', () => {
 });
 
 describe('TidalProvider OAuth + connection', () => {
-  it('delegates getAuthorizationUrl to the Tidal API', () => {
-    expect(newProvider().getAuthorizationUrl()).toBe(
+  it('delegates createAuthorizationUrl to the Tidal API', async () => {
+    expect(await newProvider().createAuthorizationUrl()).toBe(
       'https://login.tidal.com/authorize?client_id=x'
     );
   });
 
   it('returns a stored marker on successful auth callback', async () => {
     h.tidal.exchangeCodeForToken.mockResolvedValueOnce({ success: true });
-    const result = await newProvider().handleAuthCallback('the-code');
-    expect(h.tidal.exchangeCodeForToken).toHaveBeenCalledWith('the-code');
+    const result = await newProvider().handleAuthCallback('the-code', 'the-verifier');
+    expect(h.tidal.exchangeCodeForToken).toHaveBeenCalledWith('the-code', 'the-verifier');
     expect(result).toEqual({ success: true, data: { accessToken: 'stored' } });
   });
 
   it('propagates auth callback failures', async () => {
     h.tidal.exchangeCodeForToken.mockResolvedValueOnce({ success: false, error: 'bad code' });
-    const result = await newProvider().handleAuthCallback('x');
+    const result = await newProvider().handleAuthCallback('x', 'v');
     expect(result).toEqual({ success: false, error: 'bad code' });
   });
 

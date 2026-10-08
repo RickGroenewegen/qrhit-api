@@ -3,6 +3,7 @@ import Logger from './logger';
 import Settings from './settings';
 import Cache from './cache';
 import PushoverClient from './pushover';
+import { issueOAuthState } from './oauthState';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
 import { ProgressCallback } from './interfaces/IMusicProvider';
@@ -186,7 +187,7 @@ class SpotifyApi {
     await this.settings.deleteSetting('spotify_token_expires_at');
     await this.settings.deleteSetting('spotify_refresh_token_obtained_at');
 
-    const authUrl = this.getAuthorizationUrl();
+    const authUrl = await this.createAuthorizationUrl();
 
     this.logger.log(
       color.red.bold(
@@ -306,7 +307,6 @@ class SpotifyApi {
           success: false,
           error: 'Spotify authorization error (token likely expired/invalid)',
           needsReAuth: true,
-          authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
         };
       } else if (status === 400) {
         // Check for specific error messages that indicate an auth problem
@@ -324,7 +324,6 @@ class SpotifyApi {
             success: false,
             error: 'Spotify authorization error (token likely expired/invalid)',
             needsReAuth: true,
-            authUrl: this.getAuthorizationUrl() ?? undefined,
           };
         }
         return {
@@ -538,7 +537,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -595,7 +593,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -864,7 +861,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -942,7 +938,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined,
       };
     }
 
@@ -991,7 +986,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined,
       };
     }
 
@@ -1041,7 +1035,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -1252,10 +1245,12 @@ class SpotifyApi {
   }
 
   /**
-   * Generates the Spotify authorization URL.
-   * @returns {string | null} The authorization URL or null if configuration is missing.
+   * Generates the Spotify authorization URL with a one-time state, which
+   * /spotify_callback requires. Admins only: whoever completes the login
+   * becomes the API's Spotify account.
+   * @returns {Promise<string | null>} The authorization URL or null if configuration is missing.
    */
-  public getAuthorizationUrl(): string | null {
+  public async createAuthorizationUrl(): Promise<string | null> {
     if (!this.clientId) {
       this.logger.log(
         color.red.bold('Missing Spotify Client ID for generating auth URL.')
@@ -1263,11 +1258,12 @@ class SpotifyApi {
       return null;
     }
     const scope = 'playlist-modify-public'; // Define the required scope
+    const state = await issueOAuthState('spotify');
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${
       this.clientId
     }&response_type=code&redirect_uri=${encodeURIComponent(
       this.redirectUri
-    )}&scope=${encodeURIComponent(scope)}`;
+    )}&scope=${encodeURIComponent(scope)}&state=${state}`;
     return authUrl;
   }
 
@@ -1283,7 +1279,6 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined,
       };
     }
 

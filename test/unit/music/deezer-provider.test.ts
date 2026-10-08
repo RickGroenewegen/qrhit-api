@@ -486,18 +486,6 @@ describe('DeezerProvider.resolveShortlink', () => {
   });
 });
 
-describe('DeezerProvider OAuth stubs', () => {
-  it('does not provide an authorization URL', () => {
-    expect(newProvider().getAuthorizationUrl()).toBeNull();
-  });
-
-  it('rejects OAuth callbacks', async () => {
-    const result = await newProvider().handleAuthCallback('code');
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('OAuth not supported');
-  });
-});
-
 describe('DeezerProvider.getInstance', () => {
   it('returns a singleton', () => {
     expect(DeezerProvider.getInstance()).toBe(DeezerProvider.getInstance());

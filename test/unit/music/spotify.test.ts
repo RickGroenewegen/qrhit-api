@@ -34,7 +34,7 @@ const holder = vi.hoisted(() => {
       createOrUpdatePlaylist: vi.fn(async () => ({ success: true })),
       deletePlaylist: vi.fn(async () => ({ success: true })),
       getTokensFromAuthCode: vi.fn(async () => 'token-123'),
-      getAuthorizationUrl: vi.fn(() => 'https://auth.example'),
+      createAuthorizationUrl: vi.fn(async () => 'https://auth.example'),
     },
     spotifyApi2: {
       getPlaylist: vi.fn(),
@@ -982,7 +982,7 @@ describe('Spotify delegation methods', () => {
       'code1'
     );
 
-    expect(spotify.getAuthorizationUrl()).toBe('https://auth.example');
+    expect(await spotify.createAuthorizationUrl()).toBe('https://auth.example');
   });
 });
 

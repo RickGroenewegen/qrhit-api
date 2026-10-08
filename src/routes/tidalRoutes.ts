@@ -7,6 +7,7 @@ import TrackEnrichment from '../trackEnrichment';
 import ProgressWebSocketServer from '../progress-websocket';
 import { ServiceType } from '../enums/ServiceType';
 import Cache from '../cache';
+import { consumeOAuthState } from '../oauthState';
 
 const TIDAL_PLAYBACK_TOKEN_CACHE_KEY = 'tidal_playback_token';
 const TIDAL_AUTH_TOKEN_URL = 'https://auth.tidal.com/v1/oauth2/token';
@@ -95,47 +96,17 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get Tidal OAuth authorization URL
-  fastify.get('/tidal/auth', async (_request, reply) => {
-    const authUrl = tidalProvider.getAuthorizationUrl();
-    if (authUrl) {
-      return { success: true, authUrl };
-    }
-    return { success: false, error: 'Failed to generate authorization URL' };
-  });
-
   // Check Tidal connection status
   fastify.get('/tidal/status', async (_request, reply) => {
     const connected = await tidalProvider.isConnected();
     return { success: true, connected };
   });
 
-  // Handle Tidal OAuth callback
-  fastify.post('/tidal/callback', async (request: any, reply) => {
-    const { code } = request.body;
-
-    if (!code) {
-      return { success: false, error: 'Missing authorization code' };
-    }
-
-    const result = await tidalProvider.handleAuthCallback(code);
-
-    if (result.success) {
-      logger.log(
-        color.green.bold('Tidal authorization successful. Token stored.')
-      );
-      return { success: true, message: 'Tidal authorization successful' };
-    }
-
-    logger.log(
-      color.red.bold(`Tidal authorization failed: ${result.error}`)
-    );
-    return { success: false, error: result.error };
-  });
-
-  // Tidal OAuth callback (GET - for direct browser redirects)
+  // Tidal OAuth callback (GET - for direct browser redirects). The login is
+  // started by the admin route /tidal/auth; only its one-time state is
+  // accepted, and the state carries the PKCE verifier.
   fastify.get('/tidal/callback', async (request: any, reply) => {
-    const { code, error, error_description } = request.query;
+    const { code, error, error_description, state } = request.query;
 
     if (error) {
       logger.log(
@@ -146,7 +117,24 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
           <head><title>Tidal Authorization Failed</title></head>
           <body>
             <h1>Authorization Failed</h1>
-            <p>${error_description || error}</p>
+            <p>Tidal did not authorize the login.</p>
+          </body>
+        </html>
+      `);
+      return;
+    }
+
+    const verifier = await consumeOAuthState('tidal', state);
+    if (!verifier) {
+      logger.log(
+        color.red.bold('Tidal callback rejected: unknown, used or expired state')
+      );
+      reply.status(403).type('text/html').send(`
+        <html>
+          <head><title>Tidal Authorization Failed</title></head>
+          <body>
+            <h1>Authorization Failed</h1>
+            <p>This login link is not valid or has expired. Start again from the admin dashboard.</p>
           </body>
         </html>
       `);
@@ -166,7 +154,7 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
       return;
     }
 
-    const result = await tidalProvider.handleAuthCallback(code);
+    const result = await tidalProvider.handleAuthCallback(code, verifier);
 
     if (result.success) {
       logger.log(
@@ -191,7 +179,7 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
           <head><title>Tidal Authorization Error</title></head>
           <body>
             <h1>Authorization Error</h1>
-            <p>There was an error completing the Tidal authorization: ${result.error}</p>
+            <p>There was an error completing the Tidal authorization. Please try again.</p>
           </body>
         </html>
       `);
