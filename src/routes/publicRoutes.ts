@@ -15,7 +15,6 @@ import { Music } from '../music';
 import Data from '../data';
 import Utils from '../utils';
 import Logger from '../logger';
-import Review from '../review';
 import Mollie from '../mollie';
 import Cache from '../cache';
 import Shipping from '../shipping';
@@ -67,7 +66,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const data = Data.getInstance();
   const utils = new Utils();
   const logger = new Logger();
-  const review = Review.getInstance();
   const mollie = new Mollie();
   const cache = Cache.getInstance();
   const shipping = Shipping.getInstance();
@@ -387,12 +385,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return { success: true, localIp, version: '1.0.0' };
   });
 
-  // Upload contacts
-  fastify.get('/upload_contacts', async (request: any, _reply) => {
-    mail.uploadContacts();
-    return { success: true };
-  });
-
   // Newsletter subscription
   fastify.post('/newsletter_subscribe', async (request: any, reply) => {
     const { email, captchaToken } = request.body;
@@ -448,10 +440,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   fastify.get('/reviews_details', async (_request: any, _reply) => {
     return await reviews.getScores();
-  });
-
-  fastify.get('/unsent_reviews', async (request: any, _reply) => {
-    return await review.processReviewEmails();
   });
 
   // User suggestions

@@ -1,7 +1,5 @@
 import { DELIVERY_FIELDS, pickDeliveryFields } from '../deliveryAddress';
 import { FastifyInstance } from 'fastify';
-import * as crypto from 'crypto';
-import { verifyToken } from '../auth';
 import Business from '../business';
 import Bookkeeping from '../bookkeeping';
 import PrismaInstance from '../prisma';
@@ -1164,211 +1162,6 @@ export default async function companyRoutes(
     }
   );
 
-  // Generate or rotate the intake-form token for a list
-  fastify.post(
-    '/business/companies/:companyId/lists/:listId/intake-link',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const companyId = parseInt(request.params.companyId);
-      const listId = parseInt(request.params.listId);
-      if (isNaN(companyId) || isNaN(listId)) {
-        reply.status(400).send({ error: 'Invalid company or list ID' });
-        return;
-      }
-
-      const prisma = PrismaInstance.getInstance();
-      const list = await prisma.companyList.findUnique({ where: { id: listId } });
-      if (!list || list.companyId !== companyId) {
-        reply.status(404).send({ error: 'List not found' });
-        return;
-      }
-
-      const token = crypto.randomBytes(24).toString('base64url').slice(0, 32);
-
-      const updated = await (prisma as any).companyList.update({
-        where: { id: listId },
-        data: { intakeToken: token },
-      });
-
-      reply.send({ success: true, intakeToken: updated.intakeToken });
-    }
-  );
-
-  // Public intake form — fetch list + company data by token (no auth)
-  fastify.get(
-    '/business/intake/:token',
-    async (request: any, reply: any) => {
-      const token = String(request.params.token || '');
-      if (!token || token.length < 16) {
-        reply.status(400).send({ error: 'Invalid token' });
-        return;
-      }
-
-      const prisma = PrismaInstance.getInstance();
-      const list: any = await (prisma as any).companyList.findFirst({
-        where: { intakeToken: token },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          numberOfCards: true,
-          playlistSource: true,
-          playlistUrl: true,
-          languages: true,
-          meetingDate: true,
-          desiredDeliveryDate: true,
-          musicWishes: true,
-          designResponsibility: true,
-          gameExplanation: true,
-          personalizedApp: true,
-          approverName: true,
-          specialNotes: true,
-          Company: {
-            select: {
-              id: true,
-              name: true,
-              contact: true,
-              contactemail: true,
-              contactphone: true,
-              address: true,
-              housenumber: true,
-              city: true,
-              zipcode: true,
-              countrycode: true,
-            },
-          },
-        },
-      });
-
-      if (!list) {
-        reply.status(404).send({ error: 'Intake link is not valid' });
-        return;
-      }
-
-      const { Company, ...listFields } = list;
-      reply.send({
-        success: true,
-        company: Company,
-        list: listFields,
-      });
-    }
-  );
-
-  // Public intake form — save (partial) list + company data by token
-  fastify.put(
-    '/business/intake/:token',
-    async (request: any, reply: any) => {
-      const token = String(request.params.token || '');
-      if (!token || token.length < 16) {
-        reply.status(400).send({ error: 'Invalid token' });
-        return;
-      }
-
-      const body = request.body || {};
-      const prisma = PrismaInstance.getInstance();
-      const list = await (prisma as any).companyList.findFirst({
-        where: { intakeToken: token },
-        select: { id: true, companyId: true },
-      });
-      if (!list) {
-        reply.status(404).send({ error: 'Intake link is not valid' });
-        return;
-      }
-
-      // Whitelist fields accepted from the public form.
-      const listStringFields = [
-        'playlistSource',
-        'playlistUrl',
-        'musicWishes',
-        'designResponsibility',
-        'gameExplanation',
-        'approverName',
-        'specialNotes',
-      ];
-      const listNumberFields = ['numberOfCards'];
-      const listDateFields = ['meetingDate', 'desiredDeliveryDate'];
-      const listBooleanFields = ['personalizedApp'];
-
-      const listUpdate: Record<string, any> = {};
-
-      for (const f of listStringFields) {
-        if (body[f] === undefined) continue;
-        if (body[f] === null || body[f] === '') {
-          listUpdate[f] = null;
-        } else if (typeof body[f] === 'string') {
-          listUpdate[f] = body[f];
-        } else {
-          reply.status(400).send({ error: `${f} must be a string` });
-          return;
-        }
-      }
-      for (const f of listNumberFields) {
-        if (body[f] === undefined) continue;
-        if (body[f] === null) {
-          listUpdate[f] = null;
-        } else {
-          const n = Number(body[f]);
-          if (!Number.isFinite(n) || n < 0) {
-            reply.status(400).send({ error: `${f} must be a non-negative number` });
-            return;
-          }
-          listUpdate[f] = Math.round(n);
-        }
-      }
-      for (const f of listDateFields) {
-        if (body[f] === undefined) continue;
-        if (body[f] === null || body[f] === '') {
-          listUpdate[f] = null;
-        } else {
-          const d = new Date(body[f]);
-          if (isNaN(d.getTime())) {
-            reply.status(400).send({ error: `${f} must be a valid date` });
-            return;
-          }
-          listUpdate[f] = d;
-        }
-      }
-      for (const f of listBooleanFields) {
-        if (body[f] === undefined) continue;
-        listUpdate[f] = Boolean(body[f]);
-      }
-
-      if (Object.keys(listUpdate).length > 0) {
-        await (prisma as any).companyList.update({
-          where: { id: list.id },
-          data: listUpdate,
-        });
-      }
-
-      // Company fields (contact person, email, phone) can be edited too.
-      const companyStringFields = [
-        'contact',
-        'contactemail',
-        'contactphone',
-      ];
-      const companyUpdate: Record<string, any> = {};
-      for (const f of companyStringFields) {
-        if (body.company && body.company[f] !== undefined) {
-          const val = body.company[f];
-          if (val === null || val === '') {
-            companyUpdate[f] = null;
-          } else if (typeof val === 'string') {
-            companyUpdate[f] = val.trim() || null;
-          }
-        }
-      }
-
-      if (Object.keys(companyUpdate).length > 0) {
-        await prisma.company.update({
-          where: { id: list.companyId },
-          data: companyUpdate,
-        });
-      }
-
-      reply.send({ success: true });
-    }
-  );
-
   // Re-download a previously persisted quotation as PDF
   fastify.get(
     '/business/companies/:companyId/quotations/:quotationId/pdf',
@@ -2461,14 +2254,24 @@ export default async function companyRoutes(
     getAuthHandler(['admin', 'companyadmin', 'qrvoteadmin']),
     async (request: any, reply: any) => {
       try {
-        const token = request.headers.authorization?.split(' ')[1];
-        const decoded = verifyToken(token || '');
         const listId = parseInt(request.params.listId);
 
         const result = await business.getState(listId);
 
         if (!result.success) {
           reply.status(404).send({ error: result.error });
+          return;
+        }
+
+        // The state includes the voters' names and e-mail addresses: anyone
+        // but an admin only gets a list of their own company.
+        if (
+          !request.user.userGroups.includes('admin') &&
+          result.data.list?.companyId !== request.user.companyId
+        ) {
+          reply.status(403).send({
+            error: 'Forbidden: List does not belong to your company',
+          });
           return;
         }
 

@@ -760,17 +760,6 @@ describe('public designer and upgrade routes', () => {
       expect(ok.json().success).toBe(true);
     });
 
-    it('triggers contact upload (mocked Mail)', async () => {
-      const res = await app.inject({ method: 'GET', url: '/upload_contacts' });
-      expect(res.statusCode).toBe(200);
-      expect(outbound.calls('Mail', 'uploadContacts').length).toBeGreaterThan(0);
-    });
-
-    it('processes unsent review emails (none pending)', async () => {
-      const res = await app.inject({ method: 'GET', url: '/unsent_reviews' });
-      expect(res.statusCode).toBe(200);
-    });
-
     it('accepts chunk-error beacons and ignores bot user agents', async () => {
       const pushoverBefore = outbound.calls(
         'PushoverClient',

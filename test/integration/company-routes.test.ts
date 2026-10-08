@@ -11,11 +11,12 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
+import { generateToken } from '../../src/auth';
 
 /**
  * Integration coverage for the business company admin:
  * companyRoutes.ts + business.ts (companies, lists, submissions, delivery
- * addresses, intake forms, events, calculators, order email).
+ * addresses, events, calculators, order email).
  */
 describe('business company routes', () => {
   let app: FastifyInstance;
@@ -401,6 +402,22 @@ describe('business company routes', () => {
       expect(body.availableLocales).toContain('en');
     });
 
+    it("403s the state of another company's list for a company admin", async () => {
+      // The state carries the voters' names and e-mail addresses.
+      const token = generateToken(
+        plainUser.user.userId,
+        ['companyadmin'],
+        companyId + 1000000,
+        plainUser.user.id
+      );
+      const res = await app.inject({
+        method: 'GET',
+        url: `/business/state/${listId}`,
+        headers: authHeader(token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
     it('404s the state of an unknown list', async () => {
       const res = await app.inject({
         method: 'GET',
@@ -684,73 +701,6 @@ describe('business company routes', () => {
         method: 'GET',
         url: `/business/companies/${companyId}/lists/999999/order-email`,
         headers,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-  });
-
-  describe('intake form', () => {
-    let intakeToken: string;
-
-    it('generates an intake token', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/intake-link`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      intakeToken = res.json().intakeToken;
-      expect(intakeToken.length).toBeGreaterThanOrEqual(16);
-    });
-
-    it('serves the intake data publicly by token', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/intake/${intakeToken}`,
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.company.name).toBe('Acme Music BV');
-      expect(body.list.id).toBe(listId);
-    });
-
-    it('400s a too-short token', async () => {
-      const res = await app.inject({ method: 'GET', url: '/business/intake/abc' });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('404s an unknown token', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/intake/unknown-token-unknown-token',
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('saves intake fields publicly', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/intake/${intakeToken}`,
-        payload: {
-          musicWishes: 'Vooral jaren 90',
-          numberOfCards: 144,
-          personalizedApp: true,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const list = await prisma().companyList.findUnique({
-        where: { id: listId },
-      });
-      expect(list!.musicWishes).toBe('Vooral jaren 90');
-      expect(list!.numberOfCards).toBe(144);
-      expect(list!.personalizedApp).toBe(true);
-    });
-
-    it('404s saving with an unknown token', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/intake/unknown-token-unknown-token',
-        payload: { musicWishes: 'x' },
       });
       expect(res.statusCode).toBe(404);
     });

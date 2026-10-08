@@ -20,7 +20,6 @@ import Utils from '../../src/utils';
  *
  * Target groups:
  *  - GET /reviews_details (trustpilot company details)
- *  - GET /upload_contacts (triggers mail upload)
  *  - GET /test (diagnostics)
  *  - POST /push/register (valid + invalid)
  *  - newsletter endpoints edge cases
@@ -46,21 +45,6 @@ describe('public routes — wave 2 coverage', () => {
   afterAll(async () => {
     await closeTestApp(app);
     vi.restoreAllMocks();
-  });
-
-  // ====================================================================
-  // GET /upload_contacts
-  // ====================================================================
-
-  describe('GET /upload_contacts', () => {
-    it('triggers contact upload and returns success', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/upload_contacts',
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
   });
 
   // ====================================================================

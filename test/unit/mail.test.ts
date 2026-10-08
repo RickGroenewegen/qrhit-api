@@ -367,19 +367,6 @@ describe('account & verification mails', () => {
     expect(raw).toContain('111222');
   });
 
-  it('sendQRSongActivationMail includes deep link and activation code', async () => {
-    await mail.sendQRSongActivationMail(
-      'act@example.com',
-      'Activator',
-      'hash-9',
-      'en',
-      '424242'
-    );
-    const raw = lastRaw();
-    expect(raw).toContain('Subject: Your QRGames! Activation Code');
-    expect(raw).toContain('424242');
-  });
-
   it('sendVerificationEmail is a QRSong! mail linking to the voting page on the site', async () => {
     await mail.sendVerificationEmail(
       'vote@example.com',
@@ -1360,7 +1347,6 @@ describe('sender guard and error paths', () => {
     try {
       await mail.sendPasswordResetMail('a@x.io', 'A', 't');
       await mail.sendDesignAlterMail('a@x.io', 'A', 'en', 'p', 'h', 'pl', 'hitster');
-      await mail.sendQRSongActivationMail('a@x.io', 'A', 'h');
       await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
       await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
       await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');
@@ -1392,7 +1378,6 @@ describe('sender guard and error paths', () => {
     prismaMock.user.findUnique.mockResolvedValue({ hash: 'h' });
 
     await mail.sendDesignAlterMail('a@x.io', 'A', 'en', 'p', 'h', 'pl', 'hitster');
-    await mail.sendQRSongActivationMail('a@x.io', 'A', 'h');
     await mail.sendCustomerRegistrationPincode('a@x.io', 'A', '1');
     await mail.sendForgotPasswordPincode('a@x.io', 'A', '1');
     await mail.sendQRSongVerificationMail('a@x.io', 'A', 'h');

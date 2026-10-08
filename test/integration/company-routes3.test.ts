@@ -29,8 +29,6 @@ import PDF from '../../src/pdf';
  *  - GET /business/companies/:companyId/lists/:listId/order-email
  *  - PUT /business/companies/:companyId/favorite
  *  - GET /business/production-lists
- *  - POST /business/companies/:companyId/lists/:listId/intake-link
- *  - GET/PUT /business/intake/:token (public, no auth)
  *  - Auth matrix: 401 without token, 403 for plain users
  */
 describe('company routes — wave 3 coverage', () => {
@@ -667,103 +665,6 @@ describe('company routes — wave 3 coverage', () => {
       expect(Array.isArray(res.json().lists)).toBe(true);
       // secondList is in production status
       expect(res.json().lists.some((l: any) => l.id === secondListId)).toBe(true);
-    });
-  });
-
-  // ====================================================================
-  // INTAKE LINK + PUBLIC INTAKE FORM
-  // ====================================================================
-
-  describe('intake link and form endpoints', () => {
-    let intakeToken: string;
-
-    it('POST /business/companies/:companyId/lists/:listId/intake-link — 400 for NaN IDs', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/business/companies/abc/lists/def/intake-link',
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('POST /business/companies/:companyId/lists/:listId/intake-link — 404 for unknown list', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/999999/intake-link`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('POST /business/companies/:companyId/lists/:listId/intake-link — generates token', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/intake-link`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(typeof res.json().intakeToken).toBe('string');
-      intakeToken = res.json().intakeToken;
-    });
-
-    it('GET /business/intake/:token — 400 for short token', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/intake/short',
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('GET /business/intake/:token — 404 for non-existent token', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/business/intake/aaaaaaaaaaaaaaaaabcdefghijklmnop',
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('GET /business/intake/:token — 200 for valid token', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/intake/${intakeToken}`,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(res.json().list).toBeTruthy();
-      expect(res.json().company).toBeTruthy();
-    });
-
-    it('PUT /business/intake/:token — 400 for short token', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/intake/short',
-        payload: { name: 'Updated' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('PUT /business/intake/:token — 404 for non-existent token', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: '/business/intake/aaaaaaaaaaaaaaaaabcdefghijklmnop',
-        payload: { name: 'Updated' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('PUT /business/intake/:token — 200 when updating list data', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/intake/${intakeToken}`,
-        payload: {
-          playlistSource: 'spotify',
-          musicWishes: 'Pop and rock',
-          languages: 'nl',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
     });
   });
 

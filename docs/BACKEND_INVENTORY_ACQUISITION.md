@@ -75,8 +75,6 @@
 - `POST /account/reset-password-request` - Request password reset
 - `POST /account/reset-password` - Complete password reset
 - `GET /account/reset-password-check/:hash` - Validate reset token
-- `POST /api/account/games-request-activation` - Games activation code request
-- `POST /api/account/games-validate-activation` - Games activation validation
 
 ---
 
@@ -457,7 +455,6 @@
 - `POST /review/:paymentId` - Submit review
 - `GET /reviews/:locale/:amount/:landingPage` - Get Trustpilot reviews
 - `GET /reviews_details` - Company Trustpilot details
-- `GET /unsent_reviews` - Find unsent review emails
 - `POST /admin/process_playback_counts` - Update review eligibility
 
 ---
@@ -810,7 +807,6 @@
 - `GET /ip` - Get client IP
 - `GET /test` - Server health check
 - `GET /cache` - Cache management
-- `GET /upload_contacts` - Manual contact upload
 
 ---
 
