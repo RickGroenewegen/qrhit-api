@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
 import GeneratorQueue from './generatorQueue';
-import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import ErrorTracking from './errorTracking';
 
@@ -18,13 +17,11 @@ ErrorTracking.getInstance().init('worker');
 class QueueWorker {
   private logger = new Logger();
   private generatorQueue: GeneratorQueue;
-  private musicFetchQueue: MusicFetchQueue;
   private excelQueue: ExcelQueue;
   private shutdownInProgress = false;
 
   constructor() {
     this.generatorQueue = GeneratorQueue.getInstance();
-    this.musicFetchQueue = MusicFetchQueue.getInstance();
     this.excelQueue = ExcelQueue.getInstance();
     this.setupSignalHandlers();
   }
@@ -42,7 +39,6 @@ class QueueWorker {
       try {
         await Promise.all([
           this.generatorQueue.shutdown(),
-          this.musicFetchQueue.close(),
           this.excelQueue.close(),
         ]);
         this.logger.log(color.green.bold('Worker shutdown complete'));
@@ -77,29 +73,22 @@ class QueueWorker {
     try {
       await this.generatorQueue.initializeWorkers(workerCount);
 
-      // Start MusicFetch workers (1 worker to respect rate limits) - only in production
-      if (process.env['ENVIRONMENT'] === 'production') {
-        this.musicFetchQueue.startWorkers(1);
-      }
-
       // Start Excel workers (2 workers for concurrent Excel processing)
       this.excelQueue.startWorkers(2);
 
-      const musicFetchWorkers = process.env['ENVIRONMENT'] === 'production' ? 1 : 0;
       this.logger.log(
         color.green.bold(
           `Queue workers started successfully with ${white.bold(
             workerCount.toString()
-          )} Generator workers, ${white.bold(musicFetchWorkers.toString())} MusicFetch worker${musicFetchWorkers === 1 ? '' : 's'} and 2 Excel workers`
+          )} Generator workers and 2 Excel workers`
         )
       );
 
       // Log queue status every 30 seconds
       setInterval(async () => {
         try {
-          const [generatorStatus, musicFetchStatus, excelStatus] = await Promise.all([
+          const [generatorStatus, excelStatus] = await Promise.all([
             this.generatorQueue.getQueueStatus(),
-            this.musicFetchQueue.getQueueStatus(),
             this.excelQueue.getQueueStatus(),
           ]);
 
@@ -109,14 +98,6 @@ class QueueWorker {
             ` | Active: ${white.bold(generatorStatus.active.toString())}` +
             ` | Completed: ${white.bold(generatorStatus.completed.toString())}` +
             ` | Failed: ${white.bold(generatorStatus.failed.toString())}`
-          );
-
-          this.logger.log(
-            blue.bold('MusicFetch Queue:') +
-            ` Waiting: ${white.bold(musicFetchStatus.waiting.toString())}` +
-            ` | Active: ${white.bold(musicFetchStatus.active.toString())}` +
-            ` | Completed: ${white.bold(musicFetchStatus.completed.toString())}` +
-            ` | Failed: ${white.bold(musicFetchStatus.failed.toString())}`
           );
 
           this.logger.log(

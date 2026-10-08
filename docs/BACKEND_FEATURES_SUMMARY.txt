@@ -101,7 +101,6 @@ MAJOR FEATURE CATEGORIES (36 SECTIONS IN FULL DOCUMENT)
 11. QUEUE & JOB PROCESSING
     - Generator queue (PDF generation)
     - Excel processing queue
-    - MusicFetch queue
     - Job status monitoring
     - Failed job recovery
 

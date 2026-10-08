@@ -385,11 +385,6 @@
 - Progress tracking
 - Download link generation
 
-#### C. MusicFetch Queue (musicfetchQueue.ts)
-- Background music link fetching
-- Multi-platform link resolution
-- Rate-limited API calls
-
 ### 11.3 Queue Management Endpoints
 - `GET /queue/job/:jobId` - Individual job details (polled by the qrsong toolkit)
 

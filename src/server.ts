@@ -34,7 +34,6 @@ import NativeWebSocketServer from './websocket-native';
 import ChatWebSocketServer from './chat-websocket';
 import ProgressWebSocketServer from './progress-websocket';
 import GeneratorQueue from './generatorQueue';
-import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import businessRoutes from './routes/businessRoutes';
@@ -252,9 +251,6 @@ class Server {
           const generatorQueue = GeneratorQueue.getInstance();
           await generatorQueue.initializeWorkers(workerCount);
 
-          const musicFetchQueue = MusicFetchQueue.getInstance();
-          musicFetchQueue.startWorkers(1);
-
           const excelQueue = ExcelQueue.getInstance();
           excelQueue.startWorkers(2);
 
@@ -262,7 +258,7 @@ class Server {
             color.blue.bold(
               `Queue workers initialized successfully: ${color.white.bold(
                 workerCount.toString()
-              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers`
+              )} Generator workers, ${color.white.bold('2')} Excel workers`
             )
           );
         } catch (error) {
