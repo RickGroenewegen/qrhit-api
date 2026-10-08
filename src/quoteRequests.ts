@@ -35,7 +35,6 @@ export const QUOTE_REQUEST_STATUSES = [
   'sent',
   'closed',
 ] as const;
-export type QuoteRequestStatus = (typeof QUOTE_REQUEST_STATUSES)[number];
 
 export const BRAND_KIT_MAX_FILES = 5;
 export const BRAND_KIT_MAX_BYTES = 20 * 1024 * 1024;

@@ -55,10 +55,6 @@ export function boxTierPrice(boxCount: number): number {
   return BOX_TIER_PRICES[idx];
 }
 
-export function boxDiscount(boxCount: number): number {
-  return 1 - boxTierPrice(boxCount) / BOX_PRICE;
-}
-
 // App Designer: the one-off upgrade on an account that themes the scan app
 // for all of the customer's playlists. EUR, VAT-inclusive like
 // QRGAMES_UPGRADE_PRICE. The only place the amount is written: the upgrade
@@ -73,7 +69,6 @@ export const EXTRA_TRACK_MARKUP_MULT = 1.25;
 
 // Tiers offered to users for the "add more tracks" upgrade.
 export const EXTRA_TRACK_TIERS = [10, 25, 50, 75, 100, 200] as const;
-export type ExtraTrackTier = (typeof EXTRA_TRACK_TIERS)[number];
 
 // Printer types. Single source of truth for the PaymentHasPlaylist.printerType
 // values used across the API (generator, pdf, resellers, admin validation).

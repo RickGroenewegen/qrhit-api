@@ -405,11 +405,3 @@ export async function updateTrackCheck(
     };
   }
 }
-
-export async function areAllTracksManuallyChecked(
-  deps: DataDeps,
-  paymentId: string
-): Promise<boolean> {
-  const { areAllTracksManuallyChecked: checkAll } = await import('./users');
-  return checkAll(deps, paymentId);
-}

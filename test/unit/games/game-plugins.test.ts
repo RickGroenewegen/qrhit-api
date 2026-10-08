@@ -26,13 +26,10 @@ vi.mock('../../../src/pdf', () => ({
   default: class {},
 }));
 
-import {
-  registerGamePlugins,
-  GamePluginRegistry,
-  BingoPlugin,
-  QuizPlugin,
-  TimelinePlugin,
-} from '../../../src/game-plugins';
+import { registerGamePlugins, GamePluginRegistry } from '../../../src/game-plugins';
+import BingoPlugin from '../../../src/game-plugins/bingo';
+import QuizPlugin from '../../../src/game-plugins/quiz';
+import TimelinePlugin from '../../../src/game-plugins/timeline';
 import { BaseRoomState, MessageContext } from '../../../src/game-plugins/types';
 
 registerGamePlugins();

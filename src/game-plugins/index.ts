@@ -17,7 +17,4 @@ export function registerGamePlugins(): void {
 }
 
 // Export types and registry
-export { GamePluginRegistry, type GamePlugin, type BaseRoomState, type MessageResponse, type MessageContext } from './types';
-export { BingoPlugin } from './bingo';
-export { QuizPlugin } from './quiz';
-export { TimelinePlugin } from './timeline';
+export { GamePluginRegistry, type BaseRoomState, type MessageContext } from './types';

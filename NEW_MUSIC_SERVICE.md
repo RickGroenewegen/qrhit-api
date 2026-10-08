@@ -58,11 +58,6 @@ export enum ServiceType {
   // existing...
   NEW_SERVICE = 'new_service',
 }
-
-export const ServiceTypeDisplayNames: Record<ServiceType, string> = {
-  // existing...
-  [ServiceType.NEW_SERVICE]: 'New Service',
-};
 ```
 
 #### Step 2: Create Provider
@@ -276,11 +271,6 @@ export enum MusicServiceType {
   // existing...
   NEW_SERVICE = 'new_service',
 }
-
-export const ServiceTypeDisplayNames = {
-  // existing...
-  [MusicServiceType.NEW_SERVICE]: 'New Service',
-};
 ```
 
 #### Step 12: Service Config

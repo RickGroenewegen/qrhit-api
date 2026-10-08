@@ -106,7 +106,7 @@ process.env['PUBLIC_DIR'] = '/tmp/test-public';
 // finalCheck holds from HITSTER_HOLD_THRESHOLD: its default here
 delete process.env['HITSTER_HOLD_THRESHOLD'];
 
-import FinalCheck, { correctionTabForFlaggedKeys, orderPictures } from '../../src/finalCheck';
+import FinalCheck, { orderPictures } from '../../src/finalCheck';
 
 const finalCheck = FinalCheck.getInstance();
 const payment = { id: 42, paymentId: 'pay-abc123', qrSubDir: null };
@@ -568,20 +568,5 @@ describe('orderPictures', () => {
       ['QR logo', 'logo', 'qrlogo0001.png'],
       ['box back background', 'background', 'boxback001.png'],
     ]);
-  });
-});
-
-describe('correctionTabForFlaggedKeys', () => {
-  it('maps card-only hits to the card tab', () => {
-    expect(correctionTabForFlaggedKeys(['cardFront'])).toBe('card');
-    expect(correctionTabForFlaggedKeys(['cardBack'])).toBe('card');
-  });
-
-  it('maps box-only hits to the box tab', () => {
-    expect(correctionTabForFlaggedKeys(['boxFront', 'boxBack'])).toBe('box');
-  });
-
-  it('maps mixed card+box hits to the card tab', () => {
-    expect(correctionTabForFlaggedKeys(['boxFront', 'cardBack'])).toBe('card');
   });
 });

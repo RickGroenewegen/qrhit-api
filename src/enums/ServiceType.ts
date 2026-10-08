@@ -11,17 +11,6 @@ export enum ServiceType {
 }
 
 /**
- * Display names for each service type
- */
-export const ServiceTypeDisplayNames: Record<ServiceType, string> = {
-  [ServiceType.SPOTIFY]: 'Spotify',
-  [ServiceType.YOUTUBE_MUSIC]: 'YouTube Music',
-  [ServiceType.APPLE_MUSIC]: 'Apple Music',
-  [ServiceType.DEEZER]: 'Deezer',
-  [ServiceType.TIDAL]: 'Tidal',
-};
-
-/**
  * Check if a string is a valid ServiceType
  */
 export function isValidServiceType(value: string): value is ServiceType {

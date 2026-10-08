@@ -26,11 +26,6 @@ const PRODUCT_COVER_SIZE = 640;
 const PRODUCT_COVER_QUALITY = 82;
 const PRODUCT_COVER_DIR = 'product_covers';
 
-/** Public URL of a product cover, relative to the API origin. */
-export function productCoverPath(slug: string): string {
-  return `/product-cover/${encodeURIComponent(slug)}.jpg`;
-}
-
 /** True for loopback, private, link-local and other non-public addresses. */
 export function isPrivateAddress(address: string): boolean {
   if (net.isIPv4(address)) {

@@ -130,15 +130,6 @@ export type FinalCheckResult =
       problems: FinalCheckProblem[];
     };
 
-// Both flagged → 'card'. The card is the primary product, and the tab bar
-// keeps the box one click away.
-export function correctionTabForFlaggedKeys(
-  keys: FinalCheckFlaggedImage['key'][]
-): FinalCheckCorrectionTab {
-  const hasCard = keys.some((k) => k === 'cardFront' || k === 'cardBack');
-  return hasCard ? 'card' : 'box';
-}
-
 /** One picture of the order: where it is on the product and which file. */
 interface OrderPicture {
   key: FinalCheckFlaggedImage['key'];

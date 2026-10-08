@@ -18,7 +18,6 @@ import {
   CARD_DESIGN_SELECT,
   MAX_EXTRA_DESIGNS,
   deckDesigns,
-  designForCard,
   designIndexForCard,
   extraDesignRows,
   getExtraDesigns,
@@ -241,7 +240,6 @@ describe('deck order', () => {
       background: 'two.png',
       qrColor: '#ff0000',
     });
-    expect(designForCard(designs, 3)).toBe(designs[1]);
     expect(deckDesigns(php)).toEqual([php]);
   });
 });

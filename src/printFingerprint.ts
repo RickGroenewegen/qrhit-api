@@ -135,5 +135,3 @@ export function computePrintFingerprint(
     .update(`${design}\n${trackPart}`)
     .digest('hex');
 }
-
-export default computePrintFingerprint;

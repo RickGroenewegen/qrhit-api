@@ -24,11 +24,6 @@ interface QuizPluginData {
   totalQuestions: number;
 }
 
-// Type guard for quiz room data
-export function getQuizData(room: BaseRoomState): QuizPluginData {
-  return room.pluginData as QuizPluginData;
-}
-
 const logger = new Logger();
 
 export const QuizPlugin: GamePlugin = {

@@ -27,7 +27,6 @@ vi.mock('../../src/prisma', () => ({
 import {
   authenticateUser,
   deleteUserById,
-  getUserGroups,
   createOrUpdateAdminUser,
   generateSalt,
   hashPassword,
@@ -157,20 +156,6 @@ describe('authenticateUser', () => {
   it('returns null when the lookup throws', async () => {
     prismaMock.user.findUnique.mockRejectedValue(new Error('db down'));
     expect(await authenticateUser('rick@example.com', 'pw')).toBeNull();
-  });
-});
-
-describe('getUserGroups', () => {
-  it('returns group names for a user', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(dbUser());
-    expect(await getUserGroups('rick@example.com')).toEqual(['users']);
-  });
-
-  it('returns [] for unknown users and on errors', async () => {
-    prismaMock.user.findUnique.mockResolvedValue(null);
-    expect(await getUserGroups('x')).toEqual([]);
-    prismaMock.user.findUnique.mockRejectedValue(new Error('boom'));
-    expect(await getUserGroups('x')).toEqual([]);
   });
 });
 

@@ -42,12 +42,6 @@ export interface MessageContext {
   broadcastToRoom: (roomId: string, type: string, data: any) => Promise<void>;
 }
 
-// Message handler function signature
-export type MessageHandler = (
-  data: string,
-  context: MessageContext
-) => Promise<MessageResponse>;
-
 // Plugin interface
 export interface GamePlugin {
   // Plugin identifier (e.g., 'bingo')

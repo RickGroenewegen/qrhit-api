@@ -208,42 +208,6 @@ export async function authenticateUser(
 }
 
 /**
- * Creates a new admin user or updates an existing one
- * @param email The admin's email
- * @param password The admin's password
- * @param displayName The admin's display name
- * @returns The created or updated user
- */
-/**
- * Gets all user groups for a specific user
- * @param userId The user's ID
- * @returns Array of user group names
- */
-export async function getUserGroups(userId: string): Promise<string[]> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { userId },
-      include: {
-        UserGroupUser: {
-          include: {
-            UserGroup: true,
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      return [];
-    }
-
-    return user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
-  } catch (error) {
-    console.error('Error getting user groups:', error);
-    return [];
-  }
-}
-
-/**
  * Ensures a usergroup exists and connects a user to it
  * @param userId The user's database ID
  * @param groupName The name of the usergroup to connect the user to
@@ -287,6 +251,13 @@ async function ensureUserInGroup(
   }
 }
 
+/**
+ * Creates a new admin user or updates an existing one
+ * @param email The admin's email
+ * @param password The admin's password
+ * @param displayName The admin's display name
+ * @returns The created or updated user
+ */
 export async function createOrUpdateAdminUser(
   email: string,
   password: string,

@@ -247,10 +247,6 @@ export function designIndexForCard(designCount: number, index: number): number {
   return ((index % designCount) + designCount) % designCount;
 }
 
-export function designForCard<T>(designs: T[], index: number): T {
-  return designs[designIndexForCard(designs.length, index)];
-}
-
 /** Designs 2..N of one order line, in position order. */
 export async function getExtraDesigns(
   paymentHasPlaylistId: number,
