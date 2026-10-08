@@ -990,7 +990,12 @@ export async function updatePromotionalPlaylist(
     // Get old slug before update for cache clearing
     const oldPlaylist = await deps.prisma.playlist.findUnique({
       where: { playlistId },
-      select: { slug: true, promotionalDescription: true, preserveDescription: true },
+      select: {
+        slug: true,
+        featuredLocale: true,
+        promotionalDescription: true,
+        preserveDescription: true,
+      },
     });
 
     // The form's description is the customer's text, the input for
@@ -1016,6 +1021,15 @@ export async function updatePromotionalPlaylist(
       await deps.cache.del(`${CACHE_KEY_PRODUCT_PAGE_LOCALE}${oldPlaylist.slug}`);
     }
     await clearProductPageLocale(deps, playlistId);
+
+    // The locale decides which sitemaps list the product page and the slug
+    // is its URL, so a change to either rebuilds the sitemap now rather than
+    // at the next scheduled build.
+    const localeChanged = (oldPlaylist?.featuredLocale ?? null) !== (data.featuredLocale ?? null);
+    const slugChanged = updateData.slug !== undefined && updateData.slug !== oldPlaylist?.slug;
+    if (localeChanged || slugChanged) {
+      await createSiteMap(deps);
+    }
 
     return { success: true };
   } catch (error: any) {

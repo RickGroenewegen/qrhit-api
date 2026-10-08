@@ -699,6 +699,21 @@ describe('updatePromotionalPlaylist', () => {
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1', 'old-slug');
     // Both the old and the current slug drop out of the locale gate.
     expect(deps.cache.del).toHaveBeenCalledWith('productPageLocales_old-slug');
+    // A new slug is a new URL in the sitemap.
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('rebuilds the sitemap when the locale changes, and not for a name or text edit', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ slug: 'old', featuredLocale: null });
+
+    await updatePromotionalPlaylist(deps, 'pl1', payload);
+    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+
+    h.createSiteMap.mockClear();
+    prisma.playlist.findUnique.mockResolvedValue({ slug: 'old', featuredLocale: 'nl' });
+    await updatePromotionalPlaylist(deps, 'pl1', { ...payload, slug: 'old' });
+    expect(h.createSiteMap).not.toHaveBeenCalled();
   });
 
   it('leaves the English page copy alone when the description was not changed', async () => {
