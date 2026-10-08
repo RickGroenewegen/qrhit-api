@@ -9,8 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  *  - src/utils   → generateRandomString returns fixed value
  *  - src/logger  → no-op
  *
- * AudioClient is a singleton that throws in the constructor when
- * OPENAI_API_KEY is missing. We set it before import.
+ * AudioClient goes through the LLM layer, which reports a missing
+ * OPENAI_API_KEY when a call is made. We set it before import.
  */
 
 process.env['OPENAI_API_KEY'] = 'sk-test-key';
@@ -65,6 +65,7 @@ vi.mock('../../src/logger', () => ({
 }));
 
 import AudioClient from '../../src/audio';
+import { LlmUnavailableError } from '../../src/llm/errors';
 
 // Reset the singleton so each test starts fresh
 beforeEach(() => {
@@ -106,7 +107,7 @@ describe('AudioClient.generateAudio – happy path', () => {
   it('calls OpenAI with the correct model, voice, and input', async () => {
     const client = AudioClient.getInstance();
     await client.generateAudio('Test text', 'Speak slowly');
-    expect(speechCreate).toHaveBeenCalledWith({
+    expect(speechCreate.mock.calls[0][0]).toEqual({
       model: 'gpt-4o-mini-tts',
       voice: 'ash',
       input: 'Test text',
@@ -117,7 +118,7 @@ describe('AudioClient.generateAudio – happy path', () => {
   it('uses empty string for instructions when not provided', async () => {
     const client = AudioClient.getInstance();
     await client.generateAudio('Text only');
-    expect(speechCreate).toHaveBeenCalledWith(
+    expect(speechCreate.mock.calls[0][0]).toEqual(
       expect.objectContaining({ instructions: '' })
     );
   });
@@ -183,18 +184,23 @@ describe('AudioClient.generateAudio – OpenAI error', () => {
 });
 
 // ──────────────────────────────────────────────
-// Constructor – missing OPENAI_API_KEY
+// Missing OPENAI_API_KEY
 // ──────────────────────────────────────────────
 
-describe('AudioClient constructor – missing API key', () => {
-  it('throws when OPENAI_API_KEY is not set', () => {
+describe('AudioClient – missing API key', () => {
+  it('rejects with LlmUnavailableError when no OpenAI key is set', async () => {
     const saved = process.env['OPENAI_API_KEY'];
+    const savedToken = process.env['OPENAI_TOKEN'];
     delete process.env['OPENAI_API_KEY'];
-    (AudioClient as any).instance = undefined;
-    // NOTE: suspected bug: the constructor logs and throws, but getInstance()
-    // would leave the singleton unset. Subsequent calls would try again.
-    expect(() => AudioClient.getInstance()).toThrow('OPENAI_API_KEY');
-    process.env['OPENAI_API_KEY'] = saved;
-    (AudioClient as any).instance = undefined; // ensure clean state for subsequent tests
+    delete process.env['OPENAI_TOKEN'];
+    try {
+      await expect(AudioClient.getInstance().generateAudio('x')).rejects.toBeInstanceOf(
+        LlmUnavailableError
+      );
+      expect(speechCreate).not.toHaveBeenCalled();
+    } finally {
+      process.env['OPENAI_API_KEY'] = saved;
+      if (savedToken !== undefined) process.env['OPENAI_TOKEN'] = savedToken;
+    }
   });
 });

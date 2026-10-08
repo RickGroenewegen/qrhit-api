@@ -173,7 +173,7 @@ export async function verifyPayment(deps: DataDeps, paymentId: string) {
 
   // Loop through all the playlist IDs and verify them
   for (const playlist of playlists) {
-    await deps.openai.verifyList(playlist.userId, playlist.playlistId);
+    await deps.aiTasks.verifyList(playlist.userId, playlist.playlistId);
   }
 }
 

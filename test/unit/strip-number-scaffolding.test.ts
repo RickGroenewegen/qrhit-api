@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripNumberScaffolding } from '../../src/chatgpt';
+import { stripNumberScaffolding } from '../../src/aiTasks';
 
 /**
  * The four fragments below are the ones that actually reached the live

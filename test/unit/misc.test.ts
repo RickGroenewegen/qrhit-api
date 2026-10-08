@@ -145,9 +145,9 @@ function makeDeps(overrides: Partial<any> = {}): any {
       allLocales: ['en', 'nl', 'de'],
       ...overrides.translate,
     },
-    openai: {
+    aiTasks: {
       translateGenreNames: vi.fn(async () => ({})),
-      ...overrides.openai,
+      ...overrides.aiTasks,
     },
     music: {},
     analytics: {},
@@ -605,7 +605,7 @@ describe('translateGenres', () => {
     const translateFn = vi.fn(async () => ({}));
     const deps = makeDeps({
       prisma: { genre: { findMany: vi.fn(async () => [genre]), update: vi.fn() } },
-      openai: { translateGenreNames: translateFn },
+      aiTasks: { translateGenreNames: translateFn },
     });
 
     const p = translateGenres(deps);
@@ -625,7 +625,7 @@ describe('translateGenres', () => {
     const updateFn = vi.fn(async () => ({}));
     const deps = makeDeps({
       prisma: { genre: { findMany: vi.fn(async () => [genre]), update: updateFn } },
-      openai: { translateGenreNames: translateFn },
+      aiTasks: { translateGenreNames: translateFn },
     });
 
     const p = translateGenres(deps);
@@ -647,7 +647,7 @@ describe('translateGenres', () => {
     const updateFn = vi.fn(async () => ({}));
     const deps = makeDeps({
       prisma: { genre: { findMany: vi.fn(async () => [genre]), update: updateFn } },
-      openai: { translateGenreNames: vi.fn(async () => ({ nl: 'Jazz', de: 'Jazz', fr: 'Jazz' })) },
+      aiTasks: { translateGenreNames: vi.fn(async () => ({ nl: 'Jazz', de: 'Jazz', fr: 'Jazz' })) },
     });
 
     const p = translateGenres(deps);
@@ -659,11 +659,11 @@ describe('translateGenres', () => {
     expect(result.errors).toBe(0);
   });
 
-  it('increments errorCount when openai.translateGenreNames throws', async () => {
+  it('increments errorCount when aiTasks.translateGenreNames throws', async () => {
     const genre = { id: 4, slug: 'blues', name_en: 'Blues', name_nl: null, name_de: null, name_fr: null };
     const deps = makeDeps({
       prisma: { genre: { findMany: vi.fn(async () => [genre]), update: vi.fn() } },
-      openai: { translateGenreNames: vi.fn(async () => { throw new Error('OpenAI error'); }) },
+      aiTasks: { translateGenreNames: vi.fn(async () => { throw new Error('OpenAI error'); }) },
     });
 
     const p = translateGenres(deps);
@@ -682,7 +682,7 @@ describe('translateGenres', () => {
     ];
     const deps = makeDeps({
       prisma: { genre: { findMany: vi.fn(async () => genres), update: vi.fn(async () => ({})) } },
-      openai: { translateGenreNames: vi.fn(async () => ({ nl: 'Genre C', de: 'Genre C', fr: 'Genre C' })) },
+      aiTasks: { translateGenreNames: vi.fn(async () => ({ nl: 'Genre C', de: 'Genre C', fr: 'Genre C' })) },
     });
 
     const p = translateGenres(deps);

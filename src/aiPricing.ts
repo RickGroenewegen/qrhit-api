@@ -1,84 +1,76 @@
 /**
- * Per-model input/output token prices in USD per 1M tokens.
- *
- * Sources:
- *   gpt-5.6 family (Sep 2026): https://developers.openai.com/api/docs/models
- *   gpt-5.4-mini (May 2026, kept for historical aISearch rows):
- *                 https://pricepertoken.com/pricing-page/model/openai-gpt-5.4-mini
- *
- * To add a new model, append an entry below. Prices are expressed per
- * million tokens (matching OpenAI's pricing convention) — the conversion
- * to per-token happens in `estimateCostUsd()`.
+ * Cost helpers for flows that add up many LLM calls into one figure (the AI
+ * playlist generator's AISearch row). Prices live in src/llm/models.ts and
+ * nowhere else; these only sum what the LLM layer priced.
  */
-export interface ModelPricing {
-  /** USD per 1,000,000 input tokens */
-  inputPerMillion: number;
-  /** USD per 1,000,000 output tokens */
-  outputPerMillion: number;
-}
-
-export const MODEL_PRICING: Record<string, ModelPricing> = {
-  'gpt-5.6-sol': {
-    inputPerMillion: 4,
-    outputPerMillion: 20,
-  },
-  'gpt-5.6-terra': {
-    inputPerMillion: 2,
-    outputPerMillion: 12,
-  },
-  'gpt-5.6-luna': {
-    inputPerMillion: 0.2,
-    outputPerMillion: 1.2,
-  },
-  'gpt-5.4-mini': {
-    inputPerMillion: 0.75,
-    outputPerMillion: 4.5,
-  },
-};
+import { priceCall } from './llm/models';
+import type { LlmAttempt } from './llm/types';
 
 /**
- * Compute USD cost for a single LLM call.
- * Unknown models cost 0 (rather than throwing) so token accounting still
- * works for cheap-to-add models; logs will surface a 0-cost warning when
- * we don't have pricing.
+ * USD cost of one call from plain token counts. An unknown model costs 0
+ * rather than throwing.
  */
 export function estimateCostUsd(
   model: string,
   inputTokens: number,
   outputTokens: number
 ): number {
-  const pricing = MODEL_PRICING[model];
-  if (!pricing) return 0;
-  const inCost = (inputTokens / 1_000_000) * pricing.inputPerMillion;
-  const outCost = (outputTokens / 1_000_000) * pricing.outputPerMillion;
-  return inCost + outCost;
+  return priceCall(model, {
+    inputTokens,
+    outputTokens,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+  });
+}
+
+/** Anything that carries the attempts of an LLM call: a result or an LlmOutputError. */
+interface WithAttempts {
+  attempts: LlmAttempt[];
 }
 
 /**
- * Accumulator used by long multi-step LLM flows (e.g. AI playlist
- * generation) to track total token spend across many calls and surface
- * one final cost figure.
+ * Accumulator for long multi-step flows (AI playlist generation): total
+ * tokens and cost over many calls, which may run on different models.
  */
 export class CostTracker {
   inputTokens = 0;
   outputTokens = 0;
   costUsd = 0;
   callCount = 0;
+  private readonly models = new Set<string>();
 
-  constructor(public readonly model: string) {}
+  constructor(public readonly model?: string) {
+    if (model) this.models.add(model);
+  }
 
+  /** Plain token counts, priced at the tracker's own model. */
   record(inputTokens: number, outputTokens: number): void {
     if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) return;
     this.inputTokens += inputTokens;
     this.outputTokens += outputTokens;
-    this.costUsd += estimateCostUsd(this.model, inputTokens, outputTokens);
+    this.costUsd += this.model ? estimateCostUsd(this.model, inputTokens, outputTokens) : 0;
     this.callCount += 1;
   }
 
-  /** Pulls token usage directly from an OpenAI chat-completions response. */
-  recordFromResponse(response: any): void {
-    const usage = response?.usage;
-    if (!usage) return;
-    this.record(usage.prompt_tokens ?? 0, usage.completion_tokens ?? 0);
+  /**
+   * Every attempt of one LLM-layer call, failed and fallback ones included,
+   * each already priced at the model that ran it.
+   */
+  recordCall(call: WithAttempts | null | undefined): void {
+    if (!call?.attempts?.length) return;
+    for (const attempt of call.attempts) {
+      const usage = attempt.usage;
+      this.inputTokens +=
+        usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens + (usage.imageInputTokens ?? 0);
+      this.outputTokens += usage.outputTokens;
+      this.costUsd += attempt.costUsd;
+      if (attempt.status === 'ok') this.models.add(attempt.model);
+    }
+    this.callCount += 1;
+  }
+
+  /** The models that answered, for AISearch.model (at most 64 characters). */
+  label(): string {
+    return [...this.models].join('+').slice(0, 64);
   }
 }

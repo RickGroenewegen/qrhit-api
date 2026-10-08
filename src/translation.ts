@@ -2,7 +2,7 @@ import { I18n } from 'i18n';
 import { promises as fs } from 'fs';
 import path from 'path';
 import PrismaInstance from './prisma';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
 import Logger from './logger';
 import { sanitizeBrandName } from './brandName';
 import { SITE_LOCALES } from './data/shared/shared-data.generated';
@@ -255,7 +255,7 @@ class Translation {
    */
   public async translateEmptyFields(locales: string[]): Promise<void> {
     const prisma = PrismaInstance.getInstance();
-    const chatgpt = new ChatGPT();
+    const aiTasks = new AiTasks();
     const logger = new Logger();
     const tag = white.bold('[translate-fields]');
 
@@ -280,14 +280,14 @@ class Translation {
     const generic =
       (field: string) =>
       (record: any, missing: string[]): Promise<Record<string, string>> =>
-        chatgpt.translateText(record[`${field}_en`], missing);
+        aiTasks.translateText(record[`${field}_en`], missing);
 
     const configs: FieldConfig[] = [
       {
         model: 'genre',
         delegate: prisma.genre,
         field: 'name',
-        translate: (record, missing) => chatgpt.translateGenreNames(record.name_en, missing),
+        translate: (record, missing) => aiTasks.translateGenreNames(record.name_en, missing),
       },
       {
         model: 'Playlist',
@@ -301,7 +301,7 @@ class Translation {
           seoDescriptionGenerated: true,
         },
         translate: (record, missing) =>
-          this.translatePlaylistDescription(chatgpt, record, missing),
+          this.translatePlaylistDescription(aiTasks, record, missing),
         extraData: { markedForMerchantCenter: true },
         afterUpdate: async (record) => {
           const Data = (await import('./data')).default;
@@ -426,7 +426,7 @@ class Translation {
    * `locales` is stored as it stands.
    */
   private async translatePlaylistDescription(
-    chatgpt: ChatGPT,
+    aiTasks: AiTasks,
     playlist: {
       name: string;
       description_en: string;
@@ -440,7 +440,7 @@ class Translation {
       const original = sanitizeBrandName(
         (playlist.promotionalDescription || playlist.description_en).trim()
       );
-      const { sourceLocale, translations } = await chatgpt.translateLiterally(
+      const { sourceLocale, translations } = await aiTasks.translateLiterally(
         original,
         playlist.name,
         locales
@@ -453,10 +453,10 @@ class Translation {
     }
 
     if (playlist.seoDescriptionGenerated) {
-      return chatgpt.translateSeoDescription(playlist.description_en, playlist.name, locales);
+      return aiTasks.translateSeoDescription(playlist.description_en, playlist.name, locales);
     }
 
-    const translations = await chatgpt.translateText(
+    const translations = await aiTasks.translateText(
       sanitizeBrandName(playlist.description_en),
       locales
     );

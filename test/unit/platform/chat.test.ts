@@ -70,6 +70,11 @@ const {
   };
 });
 
+// Every task on its OpenAI route, so the SDK mock below answers it.
+vi.mock('../../../src/llm/tasks', async (importOriginal) =>
+  (await import('../../helpers/llm-openai-routes')).openAiRoutes(await importOriginal<any>())
+);
+
 vi.mock('openai', () => ({
   default: class OpenAIMock {
     chat = { completions: { create: createMock } };
@@ -219,20 +224,9 @@ function textResponse(content: string | null) {
   return { choices: [{ message: { content } }] };
 }
 
-/** Chat completion response carrying a legacy function_call. */
-function functionCallResponse(args: unknown, rawArgs?: string) {
-  return {
-    choices: [
-      {
-        message: {
-          function_call: {
-            name: 'selectTopics',
-            arguments: rawArgs ?? JSON.stringify(args),
-          },
-        },
-      },
-    ],
-  };
+/** Chat completion response carrying structured (json_schema) output. */
+function structuredResponse(args: unknown, rawArgs?: string) {
+  return textResponse(rawArgs ?? JSON.stringify(args));
 }
 
 /** Async-iterable stream of completion chunks (plus one empty delta). */
@@ -508,8 +502,9 @@ describe('saveUserMessage', () => {
       data: { translatedContent: 'Hallo daar' },
     });
 
-    // Exact translation request
-    expect(createMock).toHaveBeenCalledExactlyOnceWith({
+    // Exact translation request (the second argument is the layer's timeout/retry options)
+    expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock.mock.calls[0][0]).toEqual({
       model: 'gpt-5.6-luna',
       reasoning_effort: 'none',
       temperature: 0.3,
@@ -710,13 +705,13 @@ describe('clearChatForUser', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getTopics (legacy function_call)
+// getTopics (structured output)
 // ---------------------------------------------------------------------------
 
 describe('getTopics', () => {
   it('sends the knowledge summary + history and returns the selected slugs', async () => {
     createMock.mockResolvedValueOnce(
-      functionCallResponse({ slugs: ['pricing'], reasoning: 'price question' })
+      structuredResponse({ slugs: ['pricing'], reasoning: 'price question' })
     );
 
     const topics = await service.getTopics('How much does it cost?', [
@@ -729,10 +724,9 @@ describe('getTopics', () => {
     const payload = createMock.mock.calls[0][0];
     expect(payload.model).toBe('gpt-5.6-luna');
     expect(payload.temperature).toBe(0.3);
-    expect(payload.function_call).toEqual({ name: 'selectTopics' });
-    expect(payload.functions).toHaveLength(1);
-    expect(payload.functions[0].name).toBe('selectTopics');
-    expect(payload.functions[0].parameters.required).toEqual(['slugs']);
+    expect(payload.functions).toBeUndefined();
+    expect(payload.response_format.json_schema.name).toBe('selectTopics');
+    expect(payload.response_format.json_schema.schema.required).toEqual(['slugs']);
     expect(payload.messages[0].role).toBe('system');
     expect(payload.messages[0].content).toContain('Select 1-5 topics maximum');
 
@@ -749,25 +743,25 @@ describe('getTopics', () => {
   });
 
   it('omits the history block when there is no history', async () => {
-    createMock.mockResolvedValueOnce(functionCallResponse({ slugs: [] }));
+    createMock.mockResolvedValueOnce(structuredResponse({ slugs: [] }));
     await service.getTopics('Hi', []);
     const content = createMock.mock.calls[0][0].messages[1].content;
     expect(content).not.toContain('Previous conversation');
     expect(content).toContain('\n\nUser question: Hi');
   });
 
-  it('returns [] when the arguments JSON is unparseable', async () => {
-    createMock.mockResolvedValueOnce(functionCallResponse(null, 'not-json{'));
+  it('returns [] when the answer JSON is unparseable', async () => {
+    createMock.mockResolvedValueOnce(structuredResponse(null, 'not-json{'));
     expect(await service.getTopics('Q', [])).toEqual([]);
   });
 
-  it('returns [] when the arguments lack a slugs property', async () => {
-    createMock.mockResolvedValueOnce(functionCallResponse({ reasoning: 'x' }));
+  it('returns [] when the answer lacks a slugs property', async () => {
+    createMock.mockResolvedValueOnce(structuredResponse({ reasoning: 'x' }));
     expect(await service.getTopics('Q', [])).toEqual([]);
   });
 
-  it('returns [] when the model produces no function call', async () => {
-    createMock.mockResolvedValueOnce(textResponse('just chatting'));
+  it('returns [] when the model produces no answer', async () => {
+    createMock.mockResolvedValueOnce(textResponse(null));
     expect(await service.getTopics('Q', [])).toEqual([]);
   });
 });
@@ -797,7 +791,7 @@ describe('extractRequiredData', () => {
     { name: 'email', description: 'the email used' },
   ];
 
-  it('asks for a JSON object and returns the parsed extraction', async () => {
+  it('asks for one nullable field per data item and returns the parsed extraction', async () => {
     createMock.mockResolvedValueOnce(
       textResponse('{"orderNumber":"100123","email":null}')
     );
@@ -813,7 +807,15 @@ describe('extractRequiredData', () => {
     const payload = createMock.mock.calls[0][0];
     expect(payload.model).toBe('gpt-5.6-luna');
     expect(payload.temperature).toBe(0);
-    expect(payload.response_format).toEqual({ type: 'json_object' });
+    expect(payload.response_format.type).toBe('json_schema');
+    expect(payload.response_format.json_schema.schema).toEqual({
+      type: 'object',
+      properties: {
+        orderNumber: { type: ['string', 'null'], description: 'the order number' },
+        email: { type: ['string', 'null'], description: 'the email used' },
+      },
+      required: ['orderNumber', 'email'],
+    });
     expect(payload.messages[0].content).toContain(
       'Data to extract: orderNumber (the order number), email (the email used)'
     );
@@ -1274,8 +1276,8 @@ describe('processQuestion', () => {
       if (payload.stream) {
         return streamOf('Your package ', 'is on its way.');
       }
-      if (payload.function_call?.name === 'selectTopics') {
-        return functionCallResponse({ slugs: ['pricing'] });
+      if (payload.response_format?.json_schema?.name === 'selectTopics') {
+        return structuredResponse({ slugs: ['pricing'] });
       }
       // background Dutch translations
       return textResponse(`NL:${payload.messages[1].content}`);
@@ -1307,7 +1309,7 @@ describe('processQuestion', () => {
 
     // Topic selection received the history WITHOUT the just-saved question
     const topicsCall = createMock.mock.calls.find(
-      (c) => c[0].function_call?.name === 'selectTopics'
+      (c) => c[0].response_format?.json_schema?.name === 'selectTopics'
     )![0];
     expect(topicsCall.messages[1].content).toContain(
       'Previous conversation:\nuser: earlier q\nassistant: earlier a'

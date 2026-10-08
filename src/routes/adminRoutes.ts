@@ -9,7 +9,6 @@ import ExcelQueue from '../excelQueue';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
 import Charts from '../charts';
-import { OpenPerplex } from '../openperplex';
 import Push from '../push';
 import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
@@ -33,7 +32,7 @@ import PrismaInstance from '../prisma';
 import Designer from '../designer';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
-import { ChatGPT } from '../chatgpt';
+import { AiTasks } from '../aiTasks';
 import Mail from '../mail';
 import BusinessContacts from '../businessContacts';
 import Promotional from '../promotional';
@@ -69,7 +68,6 @@ export default async function adminRoutes(
   const data = Data.getInstance();
   const translation = new Translation();
   const designer = Designer.getInstance();
-  const openperplex = new OpenPerplex();
   const push = Push.getInstance();
   const calendar = CalendarService.getInstance();
   const printerInvoice = PrinterInvoiceService.getInstance();
@@ -82,7 +80,7 @@ export default async function adminRoutes(
   const review = Review.getInstance();
   const shipping = Shipping.getInstance();
   const spotify = Spotify.getInstance();
-  const chatgpt = new ChatGPT();
+  const aiTasks = new AiTasks();
   const mail = Mail.getInstance();
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
@@ -185,19 +183,6 @@ export default async function adminRoutes(
     async (request: any, reply: any) => {
       data.verifyPayment(request.params.paymentId);
       reply.send({ success: true });
-    }
-  );
-
-  // OpenPerplex AI query
-  fastify.post(
-    '/openperplex',
-    getAuthHandler(['admin']),
-    async (request: any, _reply) => {
-      const year = await openperplex.ask(
-        request.body.artist,
-        request.body.title
-      );
-      return { success: true, year };
     }
   );
 
@@ -5080,7 +5065,7 @@ export default async function adminRoutes(
         let translatedMessage = message;
 
         if (locale !== 'nl') {
-          const translated = await chatgpt.translateMessage(message, subject, locale);
+          const translated = await aiTasks.translateMessage(message, subject, locale);
           translatedSubject = translated.subject;
           translatedMessage = translated.message;
         }

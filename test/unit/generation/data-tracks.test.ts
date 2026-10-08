@@ -85,7 +85,7 @@ function makeDeps() {
     deps: {
       prisma,
       logger: { log: vi.fn() },
-      openai: { splitArtistOrString: vi.fn(async () => []) },
+      aiTasks: { splitArtistOrString: vi.fn(async () => []) },
       utils: { cleanTrackName: vi.fn((s: string) => s) },
       cache: { delPatternNonBlocking: vi.fn(async () => 2) },
     } as any,
@@ -109,7 +109,7 @@ describe('sanitizeTitleOrArtist', () => {
     expect(await sanitizeTitleOrArtist(deps, 'Normal Song Title', 'title')).toBe(
       'Normal Song Title'
     );
-    expect(deps.openai.splitArtistOrString).not.toHaveBeenCalled();
+    expect(deps.aiTasks.splitArtistOrString).not.toHaveBeenCalled();
   });
 
   it('returns falsy input as-is', async () => {
@@ -119,7 +119,7 @@ describe('sanitizeTitleOrArtist', () => {
 
   it('uses a valid LLM split for long words', async () => {
     const { deps } = makeDeps();
-    deps.openai.splitArtistOrString.mockResolvedValue([
+    deps.aiTasks.splitArtistOrString.mockResolvedValue([
       'ABCDEFGHIJKL',
       'MNOPQRSTUVWXY',
     ]);
@@ -127,12 +127,12 @@ describe('sanitizeTitleOrArtist', () => {
     const result = await sanitizeTitleOrArtist(deps, `Intro ${LONG}`, 'artist');
 
     expect(result).toBe('Intro ABCDEFGHIJKL MNOPQRSTUVWXY');
-    expect(deps.openai.splitArtistOrString).toHaveBeenCalledWith(LONG, 'artist');
+    expect(deps.aiTasks.splitArtistOrString).toHaveBeenCalledWith(LONG, 'artist');
   });
 
   it('falls back to hyphenation when the LLM split does not reassemble the word', async () => {
     const { deps } = makeDeps();
-    deps.openai.splitArtistOrString.mockResolvedValue(['garbage']);
+    deps.aiTasks.splitArtistOrString.mockResolvedValue(['garbage']);
 
     const expected = splitLongWord(LONG, 'en', 20).join(' ');
     const result = await sanitizeTitleOrArtist(deps, LONG, 'title', 'en');
@@ -143,7 +143,7 @@ describe('sanitizeTitleOrArtist', () => {
 
   it('falls back when an LLM segment is still longer than the limit', async () => {
     const { deps } = makeDeps();
-    deps.openai.splitArtistOrString.mockResolvedValue([LONG.slice(0, 24), 'Y']);
+    deps.aiTasks.splitArtistOrString.mockResolvedValue([LONG.slice(0, 24), 'Y']);
 
     const expected = splitLongWord(LONG, 'en', 20).join(' ');
     expect(await sanitizeTitleOrArtist(deps, LONG, 'title', 'en')).toBe(expected);
@@ -151,7 +151,7 @@ describe('sanitizeTitleOrArtist', () => {
 
   it('falls back to hyphenation when the LLM call fails, instead of failing the order', async () => {
     const { deps } = makeDeps();
-    deps.openai.splitArtistOrString.mockRejectedValue(
+    deps.aiTasks.splitArtistOrString.mockRejectedValue(
       new Error('429 Your organization has reached its configured enforced spend limit.')
     );
 

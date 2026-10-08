@@ -18,20 +18,20 @@ import { createTestUser, authHeader, TestUser } from '../helpers/auth';
 import { MAX_QUESTIONS } from '../../src/quiz';
 
 // The production entrypoints (src/app.ts / src/worker.ts) globally patch
-// The quiz routes instantiate ChatGPT for AI question generation. Anything
+// The quiz routes instantiate AiTasks for AI question generation. Anything
 // that would hit OpenAI is mocked at the module boundary; per-test return
 // values are programmed through the hoisted holder.
-const chatgptMock = vi.hoisted(() => ({
+const aiTasksMock = vi.hoisted(() => ({
   generateQuizQuestions: vi.fn(),
   regenerateQuizQuestion: vi.fn(),
   generateWrongOptions: vi.fn(),
 }));
 
-vi.mock('../../src/chatgpt', () => ({
-  ChatGPT: class ChatGPTMock {
-    generateQuizQuestions = chatgptMock.generateQuizQuestions;
-    regenerateQuizQuestion = chatgptMock.regenerateQuizQuestion;
-    generateWrongOptions = chatgptMock.generateWrongOptions;
+vi.mock('../../src/aiTasks', () => ({
+  AiTasks: class AiTasksMock {
+    generateQuizQuestions = aiTasksMock.generateQuizQuestions;
+    regenerateQuizQuestion = aiTasksMock.regenerateQuizQuestion;
+    generateWrongOptions = aiTasksMock.generateWrongOptions;
   },
 }));
 
@@ -301,7 +301,7 @@ describe('quiz routes', () => {
         expect(q.correctAnswer).toMatch(/^\d{4}$/);
       }
       // No AI question generation may have happened for a non-AI quiz.
-      expect(chatgptMock.generateQuizQuestions).not.toHaveBeenCalled();
+      expect(aiTasksMock.generateQuizQuestions).not.toHaveBeenCalled();
     });
 
     it('returns 429 once the weekly AI quiz limit (3) is used up', async () => {
@@ -572,7 +572,7 @@ describe('quiz routes', () => {
     it('regenerates a question via the (mocked) LLM', async () => {
       const quiz = await seedQuiz(fix, 1);
       const q = quiz.questions[0];
-      chatgptMock.regenerateQuizQuestion.mockResolvedValueOnce({
+      aiTasksMock.regenerateQuizQuestion.mockResolvedValueOnce({
         question: 'Regenerated question?',
         options: ['A', 'B', 'C', 'D'],
         correctAnswer: 'B',
@@ -585,7 +585,7 @@ describe('quiz routes', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().question.question).toBe('Regenerated question?');
-      expect(chatgptMock.regenerateQuizQuestion).toHaveBeenCalledTimes(1);
+      expect(aiTasksMock.regenerateQuizQuestion).toHaveBeenCalledTimes(1);
       const inDb = await prisma().quizQuestion.findUnique({
         where: { id: q.id },
       });
@@ -615,7 +615,7 @@ describe('quiz routes', () => {
       });
       expect(missing.statusCode).toBe(400);
 
-      chatgptMock.generateWrongOptions.mockResolvedValueOnce([
+      aiTasksMock.generateWrongOptions.mockResolvedValueOnce([
         'Wrong 1',
         'Wrong 2',
         'Wrong 3',
@@ -832,7 +832,7 @@ describe('quiz routes', () => {
       const aiFix = await seedPaidPlaylist({ user: aiUser, trackCount: 6 });
       const selected = aiFix.tracks.slice(0, 5).map((t) => t.trackId);
 
-      chatgptMock.generateQuizQuestions.mockImplementationOnce(
+      aiTasksMock.generateQuizQuestions.mockImplementationOnce(
         async (tracks: any[], _locale: string, onProgress: any) => {
           onProgress({
             step: 'questions',
@@ -868,8 +868,8 @@ describe('quiz routes', () => {
 
       const progress = await waitForGeneration(app, aiUser.token, generationId);
       expect(progress.status).toBe('complete');
-      expect(chatgptMock.generateQuizQuestions).toHaveBeenCalledTimes(1);
-      expect(chatgptMock.generateQuizQuestions.mock.calls[0][1]).toBe('nl');
+      expect(aiTasksMock.generateQuizQuestions).toHaveBeenCalledTimes(1);
+      expect(aiTasksMock.generateQuizQuestions.mock.calls[0][1]).toBe('nl');
 
       const quiz = await prisma().quiz.findUnique({
         where: { id: progress.quizId },
@@ -888,7 +888,7 @@ describe('quiz routes', () => {
       const errUser = await createTestUser();
       const errFix = await seedPaidPlaylist({ user: errUser, trackCount: 5 });
 
-      chatgptMock.generateQuizQuestions.mockRejectedValueOnce(
+      aiTasksMock.generateQuizQuestions.mockRejectedValueOnce(
         new Error('LLM exploded')
       );
 
@@ -932,7 +932,7 @@ describe('quiz routes', () => {
         where: { id: q.id },
         data: { type: 'decade' },
       });
-      const llmCallsBefore = chatgptMock.regenerateQuizQuestion.mock.calls.length;
+      const llmCallsBefore = aiTasksMock.regenerateQuizQuestion.mock.calls.length;
 
       const res = await app.inject({
         method: 'POST',
@@ -943,7 +943,7 @@ describe('quiz routes', () => {
       expect(res.statusCode).toBe(500);
       expect(res.json().error).toBe('Failed to regenerate question');
       // The LLM is never involved for non-AI types.
-      expect(chatgptMock.regenerateQuizQuestion.mock.calls.length).toBe(
+      expect(aiTasksMock.regenerateQuizQuestion.mock.calls.length).toBe(
         llmCallsBefore
       );
       // Question untouched.

@@ -7,7 +7,7 @@ import { outbound } from '../../helpers/recording-mock';
  * sale crediting (idempotency, discount-code bookkeeping, sale mail),
  * admin accept/translate/resend flows and the admin dashboard listing.
  *
- * prisma/chatgpt/data/sharp/fs are mocked; Mail goes through the global
+ * prisma/aiTasks/data/sharp/fs are mocked; Mail goes through the global
  * recording mock and is asserted with outbound.calls().
  */
 
@@ -67,8 +67,8 @@ vi.mock('../../../src/logger', () => ({
     log() {}
   },
 }));
-vi.mock('../../../src/chatgpt', () => ({
-  ChatGPT: class {
+vi.mock('../../../src/aiTasks', () => ({
+  AiTasks: class {
     translateText = h.translateText;
     translateLiterally = h.translateLiterally;
   },

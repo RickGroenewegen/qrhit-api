@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import PrismaInstance from '../prisma';
 import Mail from '../mail';
-import { ChatGPT } from '../chatgpt';
+import { AiTasks } from '../aiTasks';
 import Translation from '../translation';
 import {
   ADMIN_EXTENSIONS,
@@ -40,7 +40,7 @@ export default async function businessRoutes(
   const prisma = PrismaInstance.getInstance();
   const quoteRequests = QuoteRequests.getInstance();
   const translation = new Translation();
-  const chatgpt = new ChatGPT();
+  const aiTasks = new AiTasks();
   const staff = getAuthHandler(['admin']);
 
   const companyIdOf = (request: any): number => parseInt(request.params.companyId, 10);
@@ -462,7 +462,7 @@ export default async function businessRoutes(
     let finalSubject = subject;
     let finalMessage = message;
     if (locale !== 'nl') {
-      const translated = await chatgpt.translateMessage(message, subject, locale);
+      const translated = await aiTasks.translateMessage(message, subject, locale);
       finalSubject = translated.subject;
       finalMessage = translated.message;
     }

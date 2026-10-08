@@ -1446,7 +1446,8 @@ describe('generateAIProductImage', () => {
         pageRanges: '1-2',
       }
     );
-    expect(h.openaiImagesEdit).toHaveBeenCalledWith(
+    // The second argument is the LLM layer's timeout/retry options.
+    expect(h.openaiImagesEdit.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         model: 'gpt-image-2.5-sunburst',
         n: 1,
@@ -1454,6 +1455,9 @@ describe('generateAIProductImage', () => {
         quality: 'high',
       })
     );
+    expect(
+      h.openaiImagesEdit.mock.calls[0][0].image.map((f: File) => f.name)
+    ).toEqual(['product_base.png', 'card_front.png', 'card_back.png']);
     expect(h.prisma.playlist.updateMany).toHaveBeenCalledWith({
       where: { playlistId: 'PL7' },
       data: { markedForMerchantCenter: true },

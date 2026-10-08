@@ -83,8 +83,8 @@ vi.mock('../../../src/mail', () => ({
   default: { getInstance: () => ({ sendCustomMail: h.sendCustomMail }) },
 }));
 
-vi.mock('../../../src/chatgpt', () => ({
-  ChatGPT: class {
+vi.mock('../../../src/aiTasks', () => ({
+  AiTasks: class {
     translateMessage = h.translateMessage;
   },
 }));

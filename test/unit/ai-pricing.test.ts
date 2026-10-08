@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import {
-  estimateCostUsd,
-  CostTracker,
-  MODEL_PRICING,
-} from '../../src/aiPricing';
+import { estimateCostUsd, CostTracker } from '../../src/aiPricing';
+import { MODELS } from '../../src/llm/models';
 
 describe('estimateCostUsd', () => {
   it('prices known models per million tokens', () => {
-    const { inputPerMillion, outputPerMillion } = MODEL_PRICING['gpt-5.4-mini'];
+    const { input: inputPerMillion, output: outputPerMillion } =
+      MODELS['gpt-5.4-mini'].price;
     expect(estimateCostUsd('gpt-5.4-mini', 1_000_000, 1_000_000)).toBeCloseTo(
       inputPerMillion + outputPerMillion,
       10
@@ -44,12 +42,37 @@ describe('CostTracker', () => {
     expect(t.callCount).toBe(0);
   });
 
-  it('reads usage from an OpenAI-shaped response', () => {
-    const t = new CostTracker('gpt-5.4-mini');
-    t.recordFromResponse({ usage: { prompt_tokens: 10, completion_tokens: 5 } });
-    t.recordFromResponse({}); // no usage → ignored
-    expect(t.inputTokens).toBe(10);
-    expect(t.outputTokens).toBe(5);
-    expect(t.callCount).toBe(1);
+  it('adds up every attempt of an LLM-layer call, each at its own price', () => {
+    const t = new CostTracker();
+    const attempt = (over: object) => ({
+      provider: 'anthropic' as const,
+      model: 'claude-haiku-5-5',
+      role: 'primary' as const,
+      status: 'ok' as const,
+      usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 50, cacheWriteTokens: 0 },
+      costUsd: 0.001,
+      estimated: false,
+      durationMs: 1,
+      ...over,
+    });
+    t.recordCall({
+      attempts: [
+        attempt({ status: 'error', model: 'claude-sonnet-5-5', costUsd: 0, usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }),
+        attempt({ role: 'fallback', provider: 'openai', model: 'gpt-5.6-luna', costUsd: 0.002 }),
+      ],
+    });
+    t.recordCall({ attempts: [attempt({})] });
+    t.recordCall(null); // ignored
+    expect(t.callCount).toBe(2);
+    expect(t.inputTokens).toBe(300); // cache reads count as input
+    expect(t.outputTokens).toBe(20);
+    expect(t.costUsd).toBeCloseTo(0.003, 10);
+    // only the models that answered
+    expect(t.label()).toBe('gpt-5.6-luna+claude-haiku-5-5');
+  });
+
+  it('cuts the label to the 64 characters of AISearch.model', () => {
+    const t = new CostTracker('x'.repeat(80));
+    expect(t.label()).toHaveLength(64);
   });
 });

@@ -15,7 +15,7 @@
  */
 import 'dotenv/config';
 import PrismaInstance from '../src/prisma';
-import { stripNumberScaffolding } from '../src/chatgpt';
+import { stripNumberScaffolding } from '../src/aiTasks';
 
 const LOCALES = [
   'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no',

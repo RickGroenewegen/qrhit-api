@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * Redis) to pin down what gets written back to the row.
  */
 
-const { prisma, cache, chatgpt, data } = vi.hoisted(() => ({
+const { prisma, cache, aiTasks, data } = vi.hoisted(() => ({
   prisma: {
     playlist: {
       findUnique: vi.fn(),
@@ -23,7 +23,7 @@ const { prisma, cache, chatgpt, data } = vi.hoisted(() => ({
     releaseLock: vi.fn(),
     refreshLock: vi.fn(),
   },
-  chatgpt: {
+  aiTasks: {
     writeSeoPlaylistDescription: vi.fn(),
     translateSeoDescription: vi.fn(),
   },
@@ -42,10 +42,10 @@ vi.mock('../../src/cache', () => ({
 vi.mock('../../src/data', () => ({
   default: { getInstance: () => data },
 }));
-vi.mock('../../src/chatgpt', () => ({
-  ChatGPT: class {
-    writeSeoPlaylistDescription = chatgpt.writeSeoPlaylistDescription;
-    translateSeoDescription = chatgpt.translateSeoDescription;
+vi.mock('../../src/aiTasks', () => ({
+  AiTasks: class {
+    writeSeoPlaylistDescription = aiTasks.writeSeoPlaylistDescription;
+    translateSeoDescription = aiTasks.translateSeoDescription;
   },
 }));
 vi.mock('../../src/spotify', () => ({
@@ -160,10 +160,10 @@ describe('SeoDescriptions.generateForPlaylist', () => {
       { artist: 'Pavement', name: 'Harness Your Hopes', year: 1999 },
     ]);
     cache.get.mockResolvedValue(null);
-    chatgpt.writeSeoPlaylistDescription.mockResolvedValue(
+    aiTasks.writeSeoPlaylistDescription.mockResolvedValue(
       'Say oe ah on QR music cards: indie rock. Two tracks from 1999 to 2020.'
     );
-    chatgpt.translateSeoDescription.mockImplementation(
+    aiTasks.translateSeoDescription.mockImplementation(
       async (_text: string, _name: string, locales: string[]) =>
         Object.fromEntries(
           locales.filter((l) => l !== 'sv').map((l) => [l, `${l}: vertaald`])
@@ -175,7 +175,7 @@ describe('SeoDescriptions.generateForPlaylist', () => {
     const result = await SeoDescriptions.getInstance().generateForPlaylist('spotify123');
 
     expect(result.description).toMatch(/^Say oe ah on QR music cards/);
-    const brief = chatgpt.writeSeoPlaylistDescription.mock.calls[0][0];
+    const brief = aiTasks.writeSeoPlaylistDescription.mock.calls[0][0];
     expect(brief.customerDescription).toBe('Fuck off Corona playlist april 2020');
     expect(brief.sampleTracks).toEqual([
       'The Strokes - Bad Decisions (2020)',
@@ -210,7 +210,7 @@ describe('SeoDescriptions.generateForPlaylist', () => {
       seoDescriptionGenerated: true,
     });
     await SeoDescriptions.getInstance().generateForPlaylist('spotify123');
-    const brief = chatgpt.writeSeoPlaylistDescription.mock.calls[0][0];
+    const brief = aiTasks.writeSeoPlaylistDescription.mock.calls[0][0];
     expect(brief.customerDescription).toBeNull();
   });
 
@@ -225,7 +225,7 @@ describe('SeoDescriptions.generateForPlaylist', () => {
       seoDescriptionGenerated: false,
     });
     await SeoDescriptions.getInstance().generateForPlaylist('spotify123');
-    const brief = chatgpt.writeSeoPlaylistDescription.mock.calls[0][0];
+    const brief = aiTasks.writeSeoPlaylistDescription.mock.calls[0][0];
     expect(brief.customerDescription).toBe('Typed in by the admin');
   });
 
@@ -236,7 +236,7 @@ describe('SeoDescriptions.generateForPlaylist', () => {
         : null
     );
     await SeoDescriptions.getInstance().generateForPlaylist('spotify123');
-    const brief = chatgpt.writeSeoPlaylistDescription.mock.calls[0][0];
+    const brief = aiTasks.writeSeoPlaylistDescription.mock.calls[0][0];
     expect(brief.serviceDescription).toBe('Spotify says hi');
   });
 
@@ -249,7 +249,7 @@ describe('SeoDescriptions.generateForPlaylist', () => {
   });
 
   it('writes nothing when the model returns nothing', async () => {
-    chatgpt.writeSeoPlaylistDescription.mockResolvedValue(null);
+    aiTasks.writeSeoPlaylistDescription.mockResolvedValue(null);
     await expect(
       SeoDescriptions.getInstance().generateForPlaylist('spotify123')
     ).rejects.toThrow(/no description/);

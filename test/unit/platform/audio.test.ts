@@ -78,18 +78,18 @@ describe('AudioClient.getInstance', () => {
     expect(AudioClient.getInstance()).toBe(AudioClient.getInstance());
   });
 
-  it('throws at construction when OPENAI_API_KEY is missing', async () => {
+  it('reports a missing OPENAI_API_KEY when audio is generated, not at construction', async () => {
     const saved = process.env['OPENAI_API_KEY'];
+    const savedToken = process.env['OPENAI_TOKEN'];
     delete process.env['OPENAI_API_KEY'];
+    delete process.env['OPENAI_TOKEN'];
     try {
-      // Fresh module copy so the cached singleton does not mask the check.
-      vi.resetModules();
-      const FreshAudioClient = (await import('../../../src/audio')).default;
-      expect(() => FreshAudioClient.getInstance()).toThrow(
-        'OPENAI_API_KEY environment variable is not defined'
-      );
+      const client = AudioClient.getInstance();
+      await expect(client.generateAudio('Hello')).rejects.toThrow('not configured');
+      expect(speechCreateMock).not.toHaveBeenCalled();
     } finally {
       process.env['OPENAI_API_KEY'] = saved;
+      if (savedToken !== undefined) process.env['OPENAI_TOKEN'] = savedToken;
     }
   });
 });
@@ -108,7 +108,7 @@ describe('AudioClient.generateAudio', () => {
     // Exact request payload: model and voice are hardcoded in the source,
     // instructions defaults to the empty string.
     expect(speechCreateMock).toHaveBeenCalledTimes(1);
-    expect(speechCreateMock).toHaveBeenCalledWith({
+    expect(speechCreateMock.mock.calls[0][0]).toEqual({
       model: 'gpt-4o-mini-tts',
       voice: 'ash',
       input: 'Hello world',
@@ -126,7 +126,7 @@ describe('AudioClient.generateAudio', () => {
 
     await AudioClient.getInstance().generateAudio('Bonjour', 'Speak slowly');
 
-    expect(speechCreateMock).toHaveBeenCalledWith({
+    expect(speechCreateMock.mock.calls[0][0]).toEqual({
       model: 'gpt-4o-mini-tts',
       voice: 'ash',
       input: 'Bonjour',
@@ -181,14 +181,14 @@ describe('AudioClient.generateAudio', () => {
     ).rejects.toThrow('TTS exploded');
 
     expect(logLines).toContain('Error generating audio: TTS exploded');
-    // No OpenAI-specific detail lines for a plain Error
-    expect(logLines.some((l) => l.startsWith('OpenAI API Error'))).toBe(false);
+    // No API detail lines for a plain Error
+    expect(logLines.some((l) => l.startsWith('TTS API Error'))).toBe(false);
     await expect(
       fs.access(path.resolve(audioDir, 'failedcall.mp3'))
     ).rejects.toThrow();
   });
 
-  it('logs status/message/code/type details for OpenAI APIError instances', async () => {
+  it('logs status/message/code/type details for provider API errors', async () => {
     const apiError = new (OpenAI as any).APIError('rate limited');
     apiError.status = 429;
     apiError.code = 'rate_limit_exceeded';
@@ -200,9 +200,9 @@ describe('AudioClient.generateAudio', () => {
     ).rejects.toBe(apiError);
 
     expect(logLines).toContain('Error generating audio: rate limited');
-    expect(logLines).toContain('OpenAI API Error Status: 429');
-    expect(logLines).toContain('OpenAI API Error Message: rate limited');
-    expect(logLines).toContain('OpenAI API Error Code: rate_limit_exceeded');
-    expect(logLines).toContain('OpenAI API Error Type: requests');
+    expect(logLines).toContain('TTS API Error Status: 429');
+    expect(logLines).toContain('TTS API Error Message: rate limited');
+    expect(logLines).toContain('TTS API Error Code: rate_limit_exceeded');
+    expect(logLines).toContain('TTS API Error Type: requests');
   });
 });

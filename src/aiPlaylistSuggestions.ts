@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { color, white } from 'console-log-colors';
@@ -7,8 +6,7 @@ import PrismaInstance from './prisma';
 import Cache from './cache';
 import Data from './data';
 import Translation from './translation';
-import { estimateCostUsd } from './aiPricing';
-import { LLM_MODEL_FAST } from './llmModels';
+import { llm, LlmOutputError } from './llm';
 
 /**
  * Featured playlists that match what a customer asked the playlist generator
@@ -24,11 +22,10 @@ import { LLM_MODEL_FAST } from './llmModels';
  * matching cannot do it: the request is in any language, and half the
  * playlist names say nothing about what is in them ("Timeless Mix", "Wann
  * war das nochmal?"). The catalogue is the start of the prompt and the same
- * for every request that day, so OpenAI's prompt cache covers all of it but
- * the customer's own line.
+ * for every request that day; OpenAI caches such a prefix on its own. The
+ * model is the aiSuggestFeatured route in src/llm/tasks.ts.
  */
 
-const MODEL = LLM_MODEL_FAST;
 const MAX_SUGGESTIONS = 3;
 // The model is asked for more than is shown: some of its answers are for
 // another market, or smaller than the customer asked for, and are dropped.
@@ -75,7 +72,7 @@ export const oneLine = (value: string | null | undefined): string =>
 
 /**
  * Cut by characters, not UTF-16 units: half an emoji is a lone surrogate, and
- * OpenAI answers a request body that holds one with a 400.
+ * the LLM APIs answer a request body that holds one with a 400.
  */
 export const truncate = (value: string, length: number): string =>
   Array.from(value).slice(0, length).join('');
@@ -134,7 +131,6 @@ class AIPlaylistSuggestions {
   private prisma = PrismaInstance.getInstance();
   private cache = Cache.getInstance();
   private data = Data.getInstance();
-  private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
 
   private constructor() {}
 
@@ -243,8 +239,12 @@ class AIPlaylistSuggestions {
 
     const codes = Translation.ALL_LOCALES;
     const t0 = Date.now();
-    const result = await this.openai.chat.completions.create({
-      model: MODEL,
+    type MatchAnswer = {
+      promptLanguage?: unknown;
+      musicMarket?: unknown;
+      playlistIds?: unknown;
+    };
+    const answer = await llm.json<MatchAnswer>('aiSuggestFeatured', {
       messages: [
         {
           role: 'system',
@@ -269,37 +269,28 @@ class AIPlaylistSuggestions {
           content: `What the customer wants:\n${theme}`,
         },
       ],
-      reasoning_effort: 'none',
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'returnMatches',
-          schema: {
-            type: 'object',
-            properties: {
-              promptLanguage: { type: 'string', enum: [...codes, 'other'] },
-              musicMarket: {
-                type: ['string', 'null'],
-                enum: [...codes, 'other', null],
-              },
-              playlistIds: { type: 'array', items: { type: 'integer' } },
+      schema: {
+        name: 'returnMatches',
+        schema: {
+          type: 'object',
+          properties: {
+            promptLanguage: { type: 'string', enum: [...codes, 'other'] },
+            musicMarket: {
+              type: ['string', 'null'],
+              enum: [...codes, 'other', null],
             },
-            required: ['promptLanguage', 'musicMarket', 'playlistIds'],
+            playlistIds: { type: 'array', items: { type: 'integer' } },
           },
+          required: ['promptLanguage', 'musicMarket', 'playlistIds'],
         },
       },
+    }).catch((err) => {
+      // An unusable answer matches nothing; its cost still counts.
+      if (err instanceof LlmOutputError) return err;
+      throw err;
     });
-
-    let parsed: {
-      promptLanguage?: unknown;
-      musicMarket?: unknown;
-      playlistIds?: unknown;
-    } = {};
-    try {
-      parsed = JSON.parse(result?.choices[0]?.message?.content || '{}');
-    } catch {
-      parsed = {};
-    }
+    const parsed: MatchAnswer =
+      answer instanceof LlmOutputError ? {} : answer.data ?? {};
 
     const allowed = new Set<string>([locale]);
     for (const code of [parsed.promptLanguage, parsed.musicMarket]) {
@@ -318,20 +309,13 @@ class AIPlaylistSuggestions {
       if (ids.length >= MAX_MATCHES) break;
     }
 
-    const usage = result?.usage;
     this.logger.log(
       color.blue.bold(
         `[AI suggest] "${white.bold(theme)}" (${white.bold(locale)}) → ${white.bold(
           ids.length.toString()
         )} of ${white.bold(playlists.length.toString())} playlists in ${white.bold(
           ((Date.now() - t0) / 1000).toFixed(1) + 's'
-        )}, $${white.bold(
-          estimateCostUsd(
-            MODEL,
-            usage?.prompt_tokens ?? 0,
-            usage?.completion_tokens ?? 0
-          ).toFixed(4)
-        )}`
+        )}, $${white.bold(answer.costUsd.toFixed(4))}`
       )
     );
 

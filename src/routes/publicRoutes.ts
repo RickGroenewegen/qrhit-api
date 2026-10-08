@@ -10,7 +10,7 @@ import AudioClient from '../audio';
 import Generator from '../generator';
 import Qr from '../qr';
 import Order from '../order';
-import { ChatGPT } from '../chatgpt';
+import { AiTasks } from '../aiTasks';
 import { Music } from '../music';
 import Data from '../data';
 import Utils from '../utils';
@@ -62,7 +62,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const generator = Generator.getInstance();
   const qr = new Qr();
   const order = Order.getInstance();
-  const openai = new ChatGPT();
+  const aiTasks = new AiTasks();
   const music = new Music();
   const data = Data.getInstance();
   const utils = new Utils();
@@ -1108,7 +1108,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
     // OpenAI release query
     fastify.get('/release/:query', async (request: any, _reply) => {
-      const year = await openai.ask(request.params.query);
+      const year = await aiTasks.ask(request.params.query);
       return { success: true, year };
     });
 

@@ -142,7 +142,7 @@ class PrinterInvoice {
     }
   }
 
-  // Process invoice data using ChatGPT to extract orderIds, dates, and amounts
+  // Process invoice data with the LLM to extract orderIds, dates, and amounts
   async processInvoiceData(id: number, body: any) {
     // First, disconnect all payments from this printer invoice
     await this.prisma.payment.updateMany({
@@ -151,11 +151,11 @@ class PrinterInvoice {
     });
 
     const content = body.content || '';
-    // Dynamically import ChatGPT to avoid circular dependency
-    const { ChatGPT } = await import('./chatgpt');
-    const chatgpt = new ChatGPT();
+    // Dynamically import AiTasks to avoid circular dependency
+    const { AiTasks } = await import('./aiTasks');
+    const aiTasks = new AiTasks();
 
-    // Use logger to indicate start of ChatGPT extraction
+    // Use logger to indicate start of the extraction
     const color = require('console-log-colors').color;
     this.logger.log(
       color.blue.bold(
@@ -163,7 +163,7 @@ class PrinterInvoice {
       )
     );
 
-    const extraction = await chatgpt.extractOrders(content);
+    const extraction = await aiTasks.extractOrders(content);
 
     // Loop over the extracted orders and update payments
     const orderResults: Array<{

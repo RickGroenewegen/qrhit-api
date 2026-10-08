@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// translateEmptyFields uses Prisma, ChatGPT and the playlist cache: all
+// translateEmptyFields uses Prisma, AiTasks and the playlist cache: all
 // mocked (no DB / OpenAI / Redis).
 const {
   prismaMock,
@@ -33,8 +33,8 @@ const {
 vi.mock('../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
 }));
-vi.mock('../../src/chatgpt', () => ({
-  ChatGPT: class {
+vi.mock('../../src/aiTasks', () => ({
+  AiTasks: class {
     translateText = translateTextMock;
     translateGenreNames = translateGenreNamesMock;
     translateSeoDescription = translateSeoDescriptionMock;

@@ -2,14 +2,15 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
+import { formatCostUsd } from './llm';
 import Cache from './cache';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private axiosInstance: AxiosInstance;
-  private openai = new ChatGPT();
+  private aiTasks = new AiTasks();
   private readonly mbMaxRetries: number = 5;
   private readonly mbMaxRateLimit: number = 1200;
   private readonly discogsMaxRetries: number = 3;
@@ -88,7 +89,7 @@ export class Music {
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
 
-    const aiResult = await this.openai.ask(prompt);
+    const aiResult = await this.aiTasks.ask(prompt);
 
     const weights = {
       ai: 0.5,
@@ -263,7 +264,9 @@ export class Music {
           title
         )} [DV: ${color.white.bold(
           fullResult.standardDeviation
-        )}] Final year: ${color.white.bold(finalYear)}`
+        )}] Final year: ${color.white.bold(finalYear)} [AI cost: ${color.white.bold(
+          formatCostUsd(aiResult?.costUsd ?? 0)
+        )}]`
       )
     );
 

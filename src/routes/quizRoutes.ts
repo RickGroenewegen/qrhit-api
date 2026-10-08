@@ -9,7 +9,7 @@ import axios from 'axios';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
 import { color, white } from 'console-log-colors';
-import { ChatGPT } from '../chatgpt';
+import { AiTasks } from '../aiTasks';
 import Quiz, { TrackRow, MAX_QUESTIONS } from '../quiz';
 import CacheInstance from '../cache';
 import { Prisma } from '@prisma/client';
@@ -44,7 +44,7 @@ export default async function quizRoutes(
 ) {
   const prisma = PrismaInstance.getInstance();
   const logger = new Logger();
-  const chatgpt = new ChatGPT();
+  const aiTasks = new AiTasks();
   const quizHelper = Quiz.getInstance();
   const cache = CacheInstance.getInstance();
   const isDev = process.env['ENVIRONMENT'] === 'development';
@@ -355,7 +355,7 @@ export default async function quizRoutes(
               };
 
               const aiQuestions = aiTracks.length > 0
-                ? await chatgpt.generateQuizQuestions(aiTracks as any, locale || 'en', onProgress)
+                ? await aiTasks.generateQuizQuestions(aiTracks as any, locale || 'en', onProgress)
                 : [];
 
               questions = [...aiQuestions, ...nonAiQuestions];
@@ -673,7 +673,7 @@ export default async function quizRoutes(
 
         const { currentQuestion } = (request.body as any) || {};
 
-        const regenerated = await chatgpt.regenerateQuizQuestion(
+        const regenerated = await aiTasks.regenerateQuizQuestion(
           track[0],
           questionType as 'year' | 'trivia' | 'artist' | 'missing_word' | 'title',
           existing.quiz.locale || 'en',
@@ -739,7 +739,7 @@ export default async function quizRoutes(
           return reply.status(404).send({ success: false, error: 'Track not found' });
         }
 
-        const wrongOptions = await chatgpt.generateWrongOptions(
+        const wrongOptions = await aiTasks.generateWrongOptions(
           question,
           correctAnswer,
           track[0],

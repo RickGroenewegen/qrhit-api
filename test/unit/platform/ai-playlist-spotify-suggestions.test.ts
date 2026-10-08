@@ -17,6 +17,11 @@ const h = vi.hoisted(() => {
   };
 });
 
+// Every task on its OpenAI route, so the SDK mock below answers it.
+vi.mock('../../../src/llm/tasks', async (importOriginal) =>
+  (await import('../../helpers/llm-openai-routes')).openAiRoutes(await importOriginal<any>())
+);
+
 vi.mock('openai', () => ({
   default: class OpenAIMock {
     chat = { completions: { create: h.createMock } };

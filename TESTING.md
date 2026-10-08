@@ -60,6 +60,15 @@ misconfiguration can never truncate dev data).
   Auth: `const { user, token } = await createTestUser({ groups: ['admin'] })`
   then `headers: authHeader(token)`. Captcha:
   `vi.spyOn(Utils.prototype, 'verifyRecaptcha').mockResolvedValue({ isHuman: true, score: 0.9 })`.
+- **LLM calls** go through `src/llm`. Code that calls `AiTasks` is usually
+  tested with `vi.mock('../../src/aiTasks')`. A suite that tests a call
+  site's prompt, schema and parsing mocks the `openai` SDK and puts every task
+  on its OpenAI route with
+  `vi.mock('../../src/llm/tasks', async (importOriginal) => (await import('../helpers/llm-openai-routes')).openAiRoutes(await importOriginal()))`;
+  without it the suite would try the Anthropic route first. The adapters,
+  the fallback logic, prices and the ledger have their own suites in
+  `test/unit/llm`. `.env.test` sets dummy `OPENAI_API_KEY` and
+  `ANTHROPIC_API_KEY`, and the `llm_calls` ledger is off under test.
 - **Websocket** (`test/ws/`): `startTestWsServer()` + `WsTestClient` from
   `test/helpers/wsServer.ts`.
 - **Live** (`test/live/`): real network calls against the music services, run

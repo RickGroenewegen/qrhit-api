@@ -3,8 +3,7 @@
  *
  * The blog slider shows these in a 316x178 card but was given the full
  * 1280x720 JPEG, so four cards cost roughly 340KB on every landing page and on
- * the homepage. New images get a thumbnail from generateBlogImage(); this
- * covers the ones already on disk.
+ * the homepage. This writes the thumbnail for every image already on disk.
  *
  *   npx tsx _scripts/build-blog-thumbnails.ts          # report only
  *   npx tsx _scripts/build-blog-thumbnails.ts --apply  # write them
@@ -16,7 +15,7 @@ import { readdir, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { thumbnailNameFor } from '../src/chatgpt';
+import { thumbnailNameFor } from '../src/aiTasks';
 
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');

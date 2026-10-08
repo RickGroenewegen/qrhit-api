@@ -485,7 +485,7 @@ export async function translateGenres(deps: DataDeps): Promise<{
         )
       );
       try {
-        const translations = await deps.openai.translateGenreNames(
+        const translations = await deps.aiTasks.translateGenreNames(
           genre.name_en,
           localesToTranslate
         );

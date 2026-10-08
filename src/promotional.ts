@@ -1,7 +1,7 @@
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import Mail from './mail';
-import { ChatGPT } from './chatgpt';
+import { AiTasks } from './aiTasks';
 import Translation from './translation';
 import { color } from 'console-log-colors';
 import Data from './data';
@@ -20,7 +20,7 @@ class Promotional {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private mail = Mail.getInstance();
-  private chatgpt = new ChatGPT();
+  private aiTasks = new AiTasks();
   private translation = new Translation();
   private utils = new Utils();
   private discount = new Discount();
@@ -688,8 +688,8 @@ class Promotional {
     // Get all locales to translate to (including source for grammar/style fix)
     const allLocales = this.translation.allLocales;
 
-    // Translate to all locales using ChatGPT
-    const translations = await this.chatgpt.translateText(
+    // Translate to all locales
+    const translations = await this.aiTasks.translateText(
       sanitizedDescription,
       allLocales
     );
@@ -734,7 +734,7 @@ class Promotional {
     );
 
     const allLocales = this.translation.allLocales;
-    const { sourceLocale, translations } = await this.chatgpt.translateLiterally(
+    const { sourceLocale, translations } = await this.aiTasks.translateLiterally(
       original,
       playlistName,
       allLocales
@@ -910,7 +910,7 @@ class Promotional {
 
   /**
    * Accept a promotional playlist:
-   * 1. Translate the promotional description to all locales using ChatGPT
+   * 1. Translate the promotional description to all locales
    * 2. Update all description_[locale] fields
    * 3. Set promotionalAccepted = 1
    * 4. Clear featured playlists cache
