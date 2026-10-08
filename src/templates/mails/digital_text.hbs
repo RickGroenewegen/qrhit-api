@@ -1,15 +1,15 @@
 {{payment.fullname}},
 
-{{ translation.greatNewsDigital }}
+{{ translations.greatNewsDigital }}
 
-{{ translation.weHopeYouHaveFunDigital }}
+{{ translations.weHopeYouHaveFunDigital }}
 
-{{ translation.downloadLink }}: {{ digitalDownloadLink }}
-{{ translation.correctionLink }}: {{ digitalDownloadCorrectionLink }}
+{{ translations.downloadLink }}: {{ digitalDownloadLink }}
+{{ translations.correctionLink }}: {{ digitalDownloadCorrectionLink }}
 
 
 {{#if sendPhysicalLink}}
-{{ translation.physicalDownloadLink }}: {{ downloadLink }}
+{{ translations.physicalDownloadLink }}: {{ downloadLink }}
 {{/if}}
 
 {{!--
@@ -31,13 +31,13 @@
 {{/if}}
 --}}
 
-{{ translation.orderInformation }}
+{{ translations.orderInformation }}
 -------------------
-{{ translation.orderNumber }}: {{ orderId }}
-{{ translation.playlist }}: {{ playlist.name }}
-{{ translation.items }}: {{ numberOfTracks }} cards
-{{ translation.fullname }}: {{ fullname }}
-{{ translation.email }}: {{ email }}
+{{ translations.orderNumber }}: {{ orderId }}
+{{ translations.playlist }}: {{ playlist.name }}
+{{ translations.items }}: {{ numberOfTracks }} cards
+{{ translations.fullname }}: {{ fullname }}
+{{ translations.email }}: {{ email }}
 {{#if showAppDesign}}
 
 -------------------
@@ -56,5 +56,5 @@
 {{/if}}
 {{/if}}
 
-{{ translation.greetings }},
+{{ translations.greetings }},
 {{ productName }}
