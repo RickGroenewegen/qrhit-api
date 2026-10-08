@@ -1,14 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 
-// The reload budget is a Redis counter; only `increment` is used.
+// The reload budget is a Redis counter (`increment`); the reCAPTCHA pass is a
+// key with a TTL (`get`/`set`).
 const cacheMock = vi.hoisted(() => ({
   increment: vi.fn(),
+  get: vi.fn(),
+  set: vi.fn(),
 }));
 vi.mock('../../src/cache', () => ({
   default: { getInstance: () => cacheMock },
 }));
 
+const settingsMock = vi.hoisted(() => ({ isCaptchaRequired: vi.fn() }));
+vi.mock('../../src/settings', () => ({
+  default: { getInstance: () => settingsMock },
+}));
+
+const prismaMock = vi.hoisted(() => ({ playlist: { findFirst: vi.fn() } }));
+vi.mock('../../src/prisma', () => ({
+  default: { getInstance: () => prismaMock },
+}));
+
+import Utils from '../../src/utils';
 import playlistGuardPlugin, {
   forbiddenPlaylistAgent,
   isPlaylistPath,
@@ -91,6 +105,13 @@ describe('playlistGuardPlugin', () => {
   beforeEach(() => {
     cacheMock.increment.mockReset();
     cacheMock.increment.mockResolvedValue(1);
+    cacheMock.get.mockReset();
+    cacheMock.get.mockResolvedValue(null);
+    cacheMock.set.mockReset();
+    settingsMock.isCaptchaRequired.mockReset();
+    settingsMock.isCaptchaRequired.mockResolvedValue(false);
+    prismaMock.playlist.findFirst.mockReset();
+    prismaMock.playlist.findFirst.mockResolvedValue(null);
   });
 
   it('refuses a forbidden agent on a playlist route', async () => {
@@ -165,5 +186,86 @@ describe('playlistGuardPlugin', () => {
     const app = await build();
     const res = await post(app, '/qrlink_unknown', {});
     expect(res.json().cache).toBeNull();
+  });
+
+  describe('with "Require reCAPTCHA" switched on', () => {
+    beforeEach(() => {
+      settingsMock.isCaptchaRequired.mockResolvedValue(true);
+      delete process.env['TRUSTED_IPS'];
+    });
+
+    it('asks for a reCAPTCHA when there is no token', async () => {
+      const app = await build();
+      const res = await post(app, '/spotify/playlists/tracks', { playlistId: 'x', cache: 1 });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toEqual({ success: false, error: 'captchaRequired' });
+    });
+
+    it('lets a solved reCAPTCHA through and remembers it for half an hour', async () => {
+      const verify = vi
+        .spyOn(Utils.prototype, 'verifyRecaptcha')
+        .mockResolvedValue({ isHuman: true, score: 0.9 });
+      const app = await build();
+      const res = await post(app, '/spotify/playlists/tracks', {
+        playlistId: 'x',
+        cache: 1,
+        captchaToken: 'tok',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(verify).toHaveBeenCalledWith('tok');
+      expect(cacheMock.set).toHaveBeenCalledWith('playlist_captcha_ok:203.0.113.7', '1', 1800);
+      verify.mockRestore();
+    });
+
+    it('refuses a token Google does not accept', async () => {
+      const verify = vi
+        .spyOn(Utils.prototype, 'verifyRecaptcha')
+        .mockResolvedValue({ isHuman: false, score: 0.1 });
+      const app = await build();
+      const res = await post(app, '/spotify/playlists/tracks', {
+        playlistId: 'x',
+        captchaToken: 'bot',
+      });
+      expect(res.statusCode).toBe(403);
+      expect(cacheMock.set).not.toHaveBeenCalled();
+      verify.mockRestore();
+    });
+
+    it('needs no token while the address has a pass', async () => {
+      cacheMock.get.mockResolvedValue('1');
+      const app = await build();
+      const res = await post(app, '/spotify/playlists/tracks', { playlistId: 'x' });
+      expect(res.statusCode).toBe(200);
+      expect(cacheMock.get).toHaveBeenCalledWith('playlist_captcha_ok:203.0.113.7');
+    });
+
+    it('lets featured playlists and trusted addresses through', async () => {
+      prismaMock.playlist.findFirst.mockResolvedValue({ id: 5 });
+      const app = await build();
+      const featured = await post(app, '/spotify/playlists/tracks', { playlistId: 'our-hits' });
+      expect(featured.statusCode).toBe(200);
+      expect(prismaMock.playlist.findFirst).toHaveBeenCalledWith({
+        where: { featured: true, OR: [{ playlistId: 'our-hits' }, { slug: 'our-hits' }] },
+        select: { id: true },
+      });
+
+      prismaMock.playlist.findFirst.mockResolvedValue(null);
+      process.env['TRUSTED_IPS'] = '203.0.113.7';
+      const trusted = await post(app, '/spotify/playlists/tracks', { playlistId: 'x' });
+      expect(trusted.statusCode).toBe(200);
+    });
+
+    it('skips the check when the setting cannot be read', async () => {
+      settingsMock.isCaptchaRequired.mockRejectedValue(new Error('db down'));
+      const app = await build();
+      const res = await post(app, '/spotify/playlists/tracks', { playlistId: 'x' });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('leaves other routes alone', async () => {
+      const app = await build();
+      const res = await post(app, '/qrlink_unknown', {});
+      expect(res.statusCode).toBe(200);
+    });
   });
 });

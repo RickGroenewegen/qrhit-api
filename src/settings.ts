@@ -15,6 +15,7 @@ export type SettingKey =
   | 'tidal_refresh_token_obtained_at' // When the current refresh token was issued (ms)
   | 'tidal_code_verifier' // PKCE code verifier for OAuth flow
   | 'auto_mode' // Admin toggle: resolve undecidable years and approve customer corrections automatically
+  | 'captcha_required' // Admin toggle: playlist loads need a reCAPTCHA (plugins/playlistGuardPlugin.ts)
   | 'printenbind_api_version'; // Admin toggle: 'v1' (legacy JSON API) or 'v2' (REST API); see printers/printenbind.ts
 
 class Settings {
@@ -44,6 +45,16 @@ class Settings {
    */
   public async isAutoMode(): Promise<boolean> {
     return (await this.getSetting('auto_mode')) === 'true';
+  }
+
+  /**
+   * Abuse protection. When on, loading a playlist from a music service needs
+   * a reCAPTCHA (see plugins/playlistGuardPlugin.ts). Off unless explicitly
+   * set to 'true': it is switched on from the dashboard when abuse is
+   * suspected.
+   */
+  public async isCaptchaRequired(): Promise<boolean> {
+    return (await this.getSetting('captcha_required')) === 'true';
   }
 
   private getCacheKey(key: SettingKey): string {

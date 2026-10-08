@@ -3318,6 +3318,52 @@ export default async function adminRoutes(
     }
   );
 
+  // Abuse protection: playlist loads need a reCAPTCHA while this is on
+  // (plugins/playlistGuardPlugin.ts). Off by default.
+  fastify.get(
+    '/admin/captcha-required',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const enabled = await Settings.getInstance().isCaptchaRequired();
+        reply.send({ success: true, enabled });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to read the reCAPTCHA setting',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/captcha-required',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { enabled } = request.body ?? {};
+
+      if (typeof enabled !== 'boolean') {
+        return reply.status(400).send({
+          success: false,
+          error: 'enabled must be a boolean',
+        });
+      }
+
+      try {
+        await Settings.getInstance().setSetting(
+          'captcha_required',
+          enabled ? 'true' : 'false'
+        );
+        reply.send({ success: true, enabled });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to update the reCAPTCHA setting',
+        });
+      }
+    }
+  );
+
   // MusicFetch bulk action endpoints
   fastify.post(
     '/admin/tracks/fetch-music-links',
