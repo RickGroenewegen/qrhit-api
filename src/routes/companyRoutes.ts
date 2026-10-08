@@ -17,6 +17,7 @@ import {
   resolveVatRegion,
 } from '../services/vat';
 import Cache from '../cache';
+import { isSignedRenderRequest, signRenderUrl } from '../renderSignature';
 import {
   ListVariant,
   listPricingFromCalculation,
@@ -1284,10 +1285,14 @@ export default async function companyRoutes(
     }
   );
 
-  // Quotation HTML View (for PDF generation)
+  // Quotation HTML View (for PDF generation, signed: see renderSignature.ts)
   fastify.get(
     '/business/quotation/:type/:companyId/:quotationNumber',
     async (request: any, reply: any) => {
+      if (!isSignedRenderRequest(request.url)) {
+        reply.status(404).send({ error: 'Not found' });
+        return;
+      }
       try {
         const type = request.params.type; // 'qrsong' (Tromp) or 'schneider'
         const companyId = parseInt(request.params.companyId);
@@ -1711,10 +1716,14 @@ export default async function companyRoutes(
     }
   );
 
-  // Technical Instructions HTML View (for PDF generation)
+  // Technical Instructions HTML View (for PDF generation, signed: see renderSignature.ts)
   fastify.get(
     '/business/technical-instructions/:companyId',
     async (request: any, reply: any) => {
+      if (!isSignedRenderRequest(request.url)) {
+        reply.status(404).send({ error: 'Not found' });
+        return;
+      }
       try {
         const companyId = parseInt(request.params.companyId);
         const printer = request.query.printer || 'tromp';
@@ -1803,7 +1812,9 @@ export default async function companyRoutes(
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
         const printer = request.body?.printer || 'tromp';
         const locale = translation.resolveBusinessLocale(company.locale);
-        const htmlUrl = `${baseUrl}/business/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`;
+        const htmlUrl = signRenderUrl(
+          `${baseUrl}/business/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`
+        );
 
         // Generate PDF
         await pdfManager.generateFromUrl(htmlUrl, filePath, {

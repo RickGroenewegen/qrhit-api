@@ -12,6 +12,14 @@ import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
 import { PriceListEdition, priceListQuery } from '../../src/priceList';
 import { PROFIT_TIERS } from '../../src/services/boxPricing';
+import { signRenderUrl } from '../../src/renderSignature';
+
+// The HTML views behind the PDFs only answer signed URLs, like the ones the
+// PDF Lambda is given (renderSignature.ts).
+const signed = (path: string) => {
+  const url = new URL(signRenderUrl(`http://localhost${path}`));
+  return url.pathname + url.search;
+};
 
 /**
  * Business pricing persistence (company/list calculations), quotation HTML
@@ -198,7 +206,7 @@ describe('business pricing and quotation views', () => {
     it('renders the QRSong (Tromp) quotation using stored list calculation', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/qrsong/${companyId}/Q-2026-101?listId=${listId}`,
+        url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-101?listId=${listId}`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('Q-2026-101');
@@ -207,7 +215,7 @@ describe('business pricing and quotation views', () => {
     it('renders the Schneider quotation', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/schneider/${companyId}/Q-2026-102?isReseller=true`,
+        url: signed(`/business/quotation/schneider/${companyId}/Q-2026-102?isReseller=true`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
@@ -217,15 +225,24 @@ describe('business pricing and quotation views', () => {
     it('404s an unknown company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/business/quotation/schneider/999999/Q-1',
+        url: signed('/business/quotation/schneider/999999/Q-1'),
       });
       expect(res.statusCode).toBe(404);
+    });
+
+    it('404s an unsigned request, even for a real company', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/business/quotation/schneider/${companyId}/Q-2026-102`,
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.body).not.toContain('Pricing Company BV');
     });
 
     it('applies 21% Dutch VAT when the company has no usable country', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/schneider/${companyId}/Q-2026-110`,
+        url: signed(`/business/quotation/schneider/${companyId}/Q-2026-110`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('BTW 21%');
@@ -240,7 +257,7 @@ describe('business pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-111`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-111`),
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
@@ -265,7 +282,7 @@ describe('business pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/business/quotation/qrsong/${companyId}/Q-2026-112?listId=${listId}`,
+          url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-112?listId=${listId}`),
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW verlegd (0%)');
@@ -285,7 +302,7 @@ describe('business pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-114?locale=de`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-114?locale=de`),
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('Deutschland');
@@ -305,7 +322,7 @@ describe('business pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-113`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-113`),
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('BTW 0%');
@@ -324,7 +341,7 @@ describe('business pricing and quotation views', () => {
       // what decides the language of the customer's quotation.
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/qrsong/${companyId}/Q-2026-103?locale=de`,
+        url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-103?locale=de`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="de"');
@@ -344,7 +361,7 @@ describe('business pricing and quotation views', () => {
       try {
         const res = await app.inject({
           method: 'GET',
-          url: `/business/quotation/qrsong/${companyId}/Q-2026-104`,
+          url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-104`),
         });
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain('lang="de"');
@@ -362,7 +379,7 @@ describe('business pricing and quotation views', () => {
       // the route, and was still emitting Dutch on a German quotation.
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/schneider/${companyId}/Q-2026-107?locale=de`,
+        url: signed(`/business/quotation/schneider/${companyId}/Q-2026-107?locale=de`),
       });
       expect(res.statusCode).toBe(200);
       // The card count depends on whatever calculation an earlier test stored,
@@ -377,7 +394,7 @@ describe('business pricing and quotation views', () => {
     it('falls back to English for a language we do not write quotations in', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/qrsong/${companyId}/Q-2026-105?locale=fr`,
+        url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-105?locale=fr`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="en"');
@@ -387,7 +404,7 @@ describe('business pricing and quotation views', () => {
     it('still renders Dutch, unchanged, for a Dutch company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/quotation/qrsong/${companyId}/Q-2026-106?locale=nl`,
+        url: signed(`/business/quotation/qrsong/${companyId}/Q-2026-106?locale=nl`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="nl"');
@@ -417,7 +434,7 @@ describe('business pricing and quotation views', () => {
         await store({});
         const de = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-120?listId=${listId}&locale=de`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-120?listId=${listId}&locale=de`),
         });
         expect(de.statusCode).toBe(200);
         expect(de.body).toContain('Versand nach Deutschland');
@@ -425,7 +442,7 @@ describe('business pricing and quotation views', () => {
 
         const nl = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-121?listId=${listId}&locale=nl`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-121?listId=${listId}&locale=nl`),
         });
         expect(nl.body).toContain('Verzending naar Duitsland');
         expect(nl.body).toContain('34 omdozen op 1 pallet');
@@ -434,7 +451,7 @@ describe('business pricing and quotation views', () => {
         await store({ forceShippingPrice: 0 });
         const free = await app.inject({
           method: 'GET',
-          url: `/business/quotation/schneider/${companyId}/Q-2026-122?listId=${listId}&locale=nl`,
+          url: signed(`/business/quotation/schneider/${companyId}/Q-2026-122?listId=${listId}&locale=nl`),
         });
         expect(free.statusCode).toBe(200);
         expect(free.body).not.toContain('Verzending naar');
@@ -451,7 +468,7 @@ describe('business pricing and quotation views', () => {
     it('renders in the language from the query string', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/technical-instructions/${companyId}?printer=tromp&locale=de`,
+        url: signed(`/business/technical-instructions/${companyId}?printer=tromp&locale=de`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="de"');
@@ -465,7 +482,7 @@ describe('business pricing and quotation views', () => {
     it('keeps the schneider card size when translated', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/technical-instructions/${companyId}?printer=schneider&locale=de`,
+        url: signed(`/business/technical-instructions/${companyId}?printer=schneider&locale=de`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('56x56mm');
@@ -474,7 +491,7 @@ describe('business pricing and quotation views', () => {
     it('falls back to English for an unsupported language', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/technical-instructions/${companyId}?locale=jp`,
+        url: signed(`/business/technical-instructions/${companyId}?locale=jp`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toContain('lang="en"');
@@ -486,7 +503,7 @@ describe('business pricing and quotation views', () => {
     it('renders the technical instructions page', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: `/business/technical-instructions/${companyId}?printer=tromp`,
+        url: signed(`/business/technical-instructions/${companyId}?printer=tromp`),
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
@@ -495,7 +512,7 @@ describe('business pricing and quotation views', () => {
     it('404s technical instructions for an unknown company', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/business/technical-instructions/999999',
+        url: signed('/business/technical-instructions/999999'),
       });
       expect(res.statusCode).toBe(404);
     });

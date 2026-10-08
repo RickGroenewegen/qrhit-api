@@ -12,6 +12,7 @@ import Spotify from './spotify';
 import Cache from './cache';
 import Translation from './translation';
 import PrismaInstance from './prisma';
+import { signRenderUrl } from './renderSignature';
 import {
   ListVariant,
   PaymentOption,
@@ -2763,7 +2764,9 @@ class Business {
       queryParams.set('locale', locale);
 
       const queryString = queryParams.toString();
-      const htmlUrl = `${baseUrl}/business/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;
+      const htmlUrl = signRenderUrl(
+        `${baseUrl}/business/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`
+      );
 
       this.logger.log(
         color.blue.bold(`Generating PDF quotation from URL: `) +
