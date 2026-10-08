@@ -75,7 +75,6 @@ export default class Copy {
       const {
         id,
         userId,
-        printerInvoiceId,
         orderTypeId,
         createdAt,
         updatedAt,
@@ -84,7 +83,6 @@ export default class Copy {
         sendToPrinter,
         user,
         OrderType,
-        printerInvoice,
         DiscountCodedUses,
         Review,
         CompanyList,

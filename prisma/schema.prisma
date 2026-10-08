@@ -126,7 +126,6 @@ model Payment {
   // next to printApiPrice, also when it is recomputed.
   extraPrintCost           Float                @default(0)
   printApiInvoicePrice     Float                @default(0)
-  printerInvoiceId         Int?
   clientIp                 String?
   totalPrice               Float
   totalPriceWithoutTax     Float                @default(0)
@@ -223,7 +222,6 @@ model Payment {
   suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
-  printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
   refundAmount             Float?
   refundedAt               DateTime?
   refundReason             String?
@@ -653,21 +651,6 @@ model ExternalCard {
   @@index([playlistId, cardNumber])
   @@index([spotifyId])
   @@map("external_cards")
-}
-
-model PrinterInvoice {
-  id                Int     @id @default(autoincrement())
-  invoiceNumber     String
-  description       String? @db.Text
-  totalPriceExclVat Float
-  totalPriceInclVat Float
-  lastUsedContentId String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  Payment   Payment[]
-
-  @@map("printer_invoices")
 }
 
 // Join table for Playlist and Track
@@ -1305,7 +1288,6 @@ model CompanyList {
   calculationTromp        String?   @db.Text
   calculationSchneider    String?   @db.Text
   printer                 String    @default("schneider")
-  intakeToken             String?   @unique
   meetingDate             DateTime?
   desiredDeliveryDate     DateTime?
   // Deliver as soon as possible ("z.s.m.") instead of on desiredDeliveryDate.
