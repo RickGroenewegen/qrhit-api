@@ -652,16 +652,6 @@ class Discount {
     });
   }
 
-  public async calculateTotalDiscountForPayment(
-    paymentId: number
-  ): Promise<number> {
-    const totalDiscount = await this.prisma.discountCodedUses.aggregate({
-      where: { paymentId, status: { not: 'released' } },
-      _sum: { amount: true },
-    });
-    return totalDiscount?._sum?.amount || 0;
-  }
-
   // ---------------------------------------------------------------------
   // Reservation lifecycle
   // ---------------------------------------------------------------------
@@ -744,18 +734,6 @@ class Discount {
       };
     } catch (error) {
       return { success: false, count: 0, message: 'errorReleasingDiscountUses' };
-    }
-  }
-
-  /**
-   * Kept for callers that still hard-delete (none in the payment flow).
-   */
-  public async removeDiscountUsesByPaymentId(paymentId: number): Promise<any> {
-    try {
-      await this.prisma.discountCodedUses.deleteMany({ where: { paymentId } });
-      return { success: true, message: 'discountUsesRemovedSuccessfully' };
-    } catch (error) {
-      return { success: false, message: 'errorRemovingDiscountUses', error };
     }
   }
 

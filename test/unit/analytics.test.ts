@@ -126,18 +126,6 @@ describe('counters', () => {
     expect(await analytics.increaseCounter('page', 'views', 5)).toBe(6);
     expect(redisStore.get('analytics:page:views')).toBe('6');
   });
-
-  it('decrements counters', async () => {
-    await analytics.setCounter('page', 'views', 10);
-    expect(await analytics.decreaseCounter('page', 'views')).toBe(9);
-    expect(await analytics.decreaseCounter('page', 'views', 4)).toBe(5);
-  });
-
-  it('reads back counters, defaulting to 0 for unknown keys', async () => {
-    await analytics.setCounter('mail', 'sent', 42);
-    expect(await analytics.getCounter('mail', 'sent')).toBe(42);
-    expect(await analytics.getCounter('mail', 'bounced')).toBe(0);
-  });
 });
 
 describe('getTotalPlaylistsSoldByType', () => {

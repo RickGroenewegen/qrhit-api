@@ -74,13 +74,6 @@ class MusicProviderFactory {
         return SpotifyProvider.getInstance();
     }
   }
-
-  /**
-   * Check if a service type is supported
-   */
-  isSupported(serviceType: string): boolean {
-    return [ServiceType.SPOTIFY, ServiceType.YOUTUBE_MUSIC, ServiceType.TIDAL, ServiceType.DEEZER, ServiceType.APPLE_MUSIC].includes(serviceType as ServiceType);
-  }
 }
 
 export default MusicProviderFactory;

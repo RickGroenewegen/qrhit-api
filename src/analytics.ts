@@ -139,30 +139,6 @@ class AnalyticsClient {
     return await this.client.incrby(key, increment);
   }
 
-  public async decreaseCounter(
-    category: string,
-    action: string,
-    decrement: number = 1
-  ): Promise<number> {
-    const key = this.getKey(category, action);
-    return await this.client.decrby(key, decrement);
-  }
-
-  public async getCounter(category: string, action: string): Promise<number> {
-    const key = this.getKey(category, action);
-    const value = await this.client.get(key);
-    return value ? parseInt(value, 10) : 0;
-  }
-
-  public async setCounter(
-    category: string,
-    action: string,
-    value: number
-  ): Promise<void> {
-    const key = this.getKey(category, action);
-    await this.client.set(key, value.toString());
-  }
-
   public async getAllCounters(): Promise<
     Record<string, Record<string, number>>
   > {

@@ -116,10 +116,6 @@ class Printer {
     return Printer.instance;
   }
 
-  getDefaults() {
-    return { ...this.defaults };
-  }
-
   async calculate(input: PrinterCostInput) {
     const d = this.defaults;
     const avgCards = input.avgCards ?? d.avgCards;

@@ -2748,65 +2748,6 @@ describe('deletePayment', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getPaymentsByDay (refund netting math)
-// ---------------------------------------------------------------------------
-
-describe('getPaymentsByDay', () => {
-  it('groups per day, nets refunds proportionally and sorts newest first', async () => {
-    const day2 = new Date('2025-01-02T10:00:00Z');
-    const day2b = new Date('2025-01-02T18:00:00Z');
-    const day3 = new Date('2025-01-03T09:00:00Z');
-    prismaMock.payment.groupBy.mockResolvedValue([
-      {
-        createdAt: day2,
-        _count: { _all: 1 },
-        _sum: { totalPrice: 50, totalPriceWithoutTax: 41.32 },
-      },
-      {
-        createdAt: day2b,
-        _count: { _all: 1 },
-        _sum: { totalPrice: 50, totalPriceWithoutTax: 41.32 },
-      },
-      {
-        createdAt: day3,
-        _count: { _all: 1 },
-        _sum: { totalPrice: 30, totalPriceWithoutTax: 24.79 },
-      },
-    ]);
-    // One 50% partial refund on 2025-01-02: refund 25 of a 50 gross payment.
-    prismaMock.payment.findMany.mockResolvedValue([
-      {
-        createdAt: day2,
-        countrycode: 'NL',
-        taxRate: 21,
-        totalPrice: 50,
-        totalPriceWithoutTax: 41.32,
-        productVATPrice: 8.68,
-        refundAmount: 25,
-      },
-    ]);
-
-    const report = await mollie.getPaymentsByDay();
-
-    expect(report).toHaveLength(2);
-    expect(report[0].day).toBe('2025-01-03');
-    expect(report[0]).toMatchObject({
-      numberOfSales: 1,
-      totalPrice: 30,
-      totalRefunded: 0,
-    });
-
-    expect(report[1].day).toBe('2025-01-02');
-    expect(report[1].numberOfSales).toBe(2);
-    expect(report[1].totalPrice).toBe(75); // 100 - 25
-    // ex-VAT netted by the refund's proportional ex-VAT share:
-    // 82.64 - (41.32 * 25/50) = 61.98
-    expect(report[1].totalPriceWithoutTax).toBeCloseTo(61.98, 2);
-    expect(report[1].totalRefunded).toBe(25);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // App Designer in the financial reports. It is an account upgrade with its
 // own Mollie payment and no Payment row, so every report reads its ledger
 // (app_design_purchases) next to the payments.

@@ -122,10 +122,6 @@ getProvider(serviceType?: string): IMusicProvider {
       return SpotifyProvider.getInstance();
   }
 }
-
-isSupported(serviceType: string): boolean {
-  return [...existing, ServiceType.NEW_SERVICE].includes(serviceType as ServiceType);
-}
 ```
 
 **Also update the centralized provider maps** in the same file:

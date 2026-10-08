@@ -826,58 +826,6 @@ describe('SpotifyApi.createOrUpdatePlaylist', () => {
   });
 });
 
-describe('SpotifyApi.getUserPlaylists', () => {
-  it('fetches /v1/me/playlists with a clamped limit and given offset', async () => {
-    const data = { items: [{ id: 'p1' }], total: 1 };
-    h.axiosGet.mockResolvedValueOnce({ data });
-
-    const res = await makeApi().getUserPlaylists('tok-1', 100, 5);
-
-    expect(res).toEqual({ success: true, data });
-    expect(h.axiosGet).toHaveBeenCalledWith('https://api.spotify.com/v1/me/playlists', {
-      params: { limit: 50, offset: 5 },
-      headers: { Authorization: 'Bearer tok-1' },
-    });
-  });
-
-  it('retries after a 429 (honoring Retry-After + 500ms) and succeeds', async () => {
-    vi.useFakeTimers();
-    h.axiosGet
-      .mockRejectedValueOnce(axiosError(429, { headers: { 'retry-after': '1' } }))
-      .mockResolvedValueOnce({ data: { items: [] } });
-
-    const promise = makeApi().getUserPlaylists('tok-1');
-    await vi.advanceTimersByTimeAsync(1500); // 1s Retry-After + 500ms buffer
-    const res = await promise;
-
-    expect(res).toEqual({ success: true, data: { items: [] } });
-    expect(h.axiosGet).toHaveBeenCalledTimes(2);
-  });
-
-  it('gives up after 3 rate-limited attempts and surfaces the 429 ApiResult', async () => {
-    vi.useFakeTimers();
-    h.axiosGet.mockRejectedValue(axiosError(429, { headers: { 'retry-after': '1' } }));
-
-    const promise = makeApi().getUserPlaylists('tok-1');
-    await vi.advanceTimersByTimeAsync(5000); // two 1.5s waits, third attempt throws
-    const res = await promise;
-
-    expect(h.axiosGet).toHaveBeenCalledTimes(3);
-    expect(res).toMatchObject({
-      success: false,
-      error: 'Spotify API error: 429 Too Many Requests. Retry after: 1 seconds.',
-      retryAfter: 1,
-    });
-  });
-
-  it('does not retry non-429 errors', async () => {
-    h.axiosGet.mockRejectedValueOnce(axiosError(500));
-    const res = await makeApi().getUserPlaylists('tok-1');
-    expect(res).toEqual({ success: false, error: 'Spotify API error: 500', needsReAuth: false });
-    expect(h.axiosGet).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe('SpotifyApi.deletePlaylist', () => {
   beforeEach(() => seedValidToken());
 
@@ -893,13 +841,44 @@ describe('SpotifyApi.deletePlaylist', () => {
     );
   });
 
-  it('maps a 404 to "Spotify resource not found"', async () => {
+  it('maps a 404 to "Spotify resource not found" without retrying', async () => {
     h.axiosDelete.mockRejectedValueOnce(axiosError(404));
     const res = await makeApi().deletePlaylist('pl1');
     expect(res).toEqual({
       success: false,
       error: 'Spotify resource not found',
       needsReAuth: false,
+    });
+    expect(h.axiosDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries after a 429 (honoring Retry-After + 500ms) and succeeds', async () => {
+    vi.useFakeTimers();
+    h.axiosDelete
+      .mockRejectedValueOnce(axiosError(429, { headers: { 'retry-after': '1' } }))
+      .mockResolvedValueOnce({});
+
+    const promise = makeApi().deletePlaylist('pl1');
+    await vi.advanceTimersByTimeAsync(1500); // 1s Retry-After + 500ms buffer
+    const res = await promise;
+
+    expect(res).toEqual({ success: true });
+    expect(h.axiosDelete).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up after 3 rate-limited attempts and surfaces the 429 ApiResult', async () => {
+    vi.useFakeTimers();
+    h.axiosDelete.mockRejectedValue(axiosError(429, { headers: { 'retry-after': '1' } }));
+
+    const promise = makeApi().deletePlaylist('pl1');
+    await vi.advanceTimersByTimeAsync(5000); // two 1.5s waits, third attempt throws
+    const res = await promise;
+
+    expect(h.axiosDelete).toHaveBeenCalledTimes(3);
+    expect(res).toMatchObject({
+      success: false,
+      error: 'Spotify API error: 429 Too Many Requests. Retry after: 1 seconds.',
+      retryAfter: 1,
     });
   });
 });

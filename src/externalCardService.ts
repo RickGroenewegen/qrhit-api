@@ -125,18 +125,6 @@ class ExternalCardService {
   }
 
   /**
-   * Drop the cached scan result for a card by database id.
-   */
-  public async clearCacheForCardId(cardId: number): Promise<boolean> {
-    const card = await this.prisma.externalCard.findUnique({
-      where: { id: cardId },
-      select: CARD_IDENTITY_SELECT,
-    });
-    if (!card) return false;
-    return this.clearCacheForCard(card);
-  }
-
-  /**
    * Drop the cached scan result of every card sharing a spotifyId. MusicFetch
    * writes links per spotifyId, so all of those cards change at once.
    * Returns the number of cache entries cleared.

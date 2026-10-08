@@ -305,15 +305,6 @@ class RateLimitManager {
   }
 
   /**
-   * Manually clear all rate limits (useful for testing or admin functions)
-   */
-  public async clearAllRateLimits(): Promise<void> {
-    await this.clearRateLimit('spotifyApi');
-    await this.clearRateLimit('spotifyScraper');
-    this.logger.log(color.green.bold('Cleared all rate limits'));
-  }
-
-  /**
    * Get current rate limit status for monitoring
    */
   public async getRateLimitStatus(): Promise<{

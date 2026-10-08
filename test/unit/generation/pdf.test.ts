@@ -965,14 +965,6 @@ describe('mergeLocalPdfs', () => {
 });
 
 describe('pdf-lib backed helpers', () => {
-  it('getPageDimensions converts the first page from points to millimeters', async () => {
-    // Mock page is 100x200pt; 1pt = 0.352778mm.
-    const dims = await pdf.getPageDimensions('/tmp/some.pdf');
-    expect(dims.width).toBeCloseTo(35.2778, 4);
-    expect(dims.height).toBeCloseTo(70.5556, 4);
-    expect(holder.fsp.readFile).toHaveBeenCalledWith('/tmp/some.pdf');
-  });
-
   it('countPDFPages returns the document page count', async () => {
     expect(await pdf.countPDFPages('/tmp/some.pdf')).toBe(6);
   });

@@ -1,4 +1,3 @@
-import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
@@ -12,30 +11,6 @@ class Utils {
   private translation: Translation = new Translation();
   private static maxmindReader: Reader<CityResponse> | null = null;
   private static mainServerLookup: Promise<boolean> | null = null;
-
-  /**
-   * Get a random sample of elements from an array
-   * @param array The array to sample from
-   * @param sampleSize The number of elements to sample
-   * @returns A random sample of the specified size
-   */
-  public getRandomSample<T>(array: T[], sampleSize: number): T[] {
-    if (sampleSize >= array.length) return [...array];
-
-    const result = new Array<T>(sampleSize);
-    const len = array.length;
-    const taken = new Set<number>();
-
-    while (result.filter(Boolean).length < sampleSize) {
-      const randomIndex = Math.floor(Math.random() * len);
-      if (!taken.has(randomIndex)) {
-        result[result.filter(Boolean).length] = array[randomIndex];
-        taken.add(randomIndex);
-      }
-    }
-
-    return result;
-  }
 
   public async isMainServer(): Promise<boolean> {
     const isAWS =
@@ -325,27 +300,6 @@ class Utils {
     return undefined;
   }
 
-  public stripLocale(obj: any, locale: string): any {
-    const result: any = {};
-    const localeSuffix = `_${locale}`;
-
-    // Iterate over the object keys
-    for (const key of Object.keys(obj)) {
-      // Check if the key ends with the locale suffix
-      if (key.endsWith(localeSuffix)) {
-        // Remove the locale part from the key and add it to the result object
-        const newKey = key.replace(localeSuffix, '');
-        result[newKey] = obj[key];
-      } else if (!key.includes('_')) {
-        // If the key doesn't contain '_', it's not locale-specific and should be copied as is
-        result[key] = obj[key];
-      }
-      // Locale-specific keys that do not match the specified locale are ignored
-    }
-
-    return result;
-  }
-
   public parseBoolean(value: any): boolean {
     if (value === null || value === undefined) {
       return false;
@@ -378,14 +332,6 @@ class Utils {
     throw new Error(`Cannot parse type ${typeof value} to boolean`);
   }
 
-  public stripHtml(dirtyHtml: string): string {
-    const clean = sanitizeHtml(dirtyHtml, {
-      allowedTags: [], // No tags allowed, stripping all
-      allowedAttributes: {}, // No attributes allowed
-    });
-    return clean;
-  }
-
   public async createDir(dirPath: string): Promise<void> {
     try {
       await fs.mkdir(dirPath, { recursive: true });
@@ -394,41 +340,6 @@ class Utils {
     }
   }
 
-  public reviveDates(_key: any, value: any): any {
-    const isISODate =
-      typeof value === 'string' &&
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value);
-    if (isISODate) {
-      return new Date(value);
-    }
-    return value;
-  }
-
-  public async shuffleArray<T>(array: T[]): Promise<T[]> {
-    const shuffledArray = [...array]; // Create a copy of the original array
-
-    for (let i = shuffledArray.length - 1; i > 0; i--) {
-      // Generate a random index between 0 and i (inclusive)
-      const randomIndex = Math.floor(Math.random() * (i + 1));
-
-      // Swap elements at randomIndex and i
-      const temp = shuffledArray[i];
-      shuffledArray[i] = shuffledArray[randomIndex];
-      shuffledArray[randomIndex] = temp;
-    }
-
-    return shuffledArray;
-  }
-
-  public async sleep(duration: number) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, duration);
-    });
-  }
-
-  public async generateRandomNumber(min: number, max: number): Promise<number> {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
   public generateFilename(name: string): string {
     return name
       .replace(/[^a-zA-Z0-9]/g, '_')
@@ -447,11 +358,6 @@ class Utils {
     }
 
     return result;
-  }
-
-  public isValidEmail(email: string): boolean {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
   }
 
   /**
@@ -529,35 +435,6 @@ class Utils {
       console.error(`Error looking up IP ${ip}:`, error);
       return null;
     }
-  }
-
-  /**
-   * Lighten a hex color by blending it with white
-   * @param hexColor Hex color code (e.g., '#000000' or '000000')
-   * @param amount Amount to lighten (0-1, where 1 is pure white)
-   * @returns Lightened hex color
-   */
-  public lightenColor(hexColor: string | undefined, amount: number): string {
-    if (!hexColor) return '#d8d8d8';
-
-    // Remove # if present
-    const color = hexColor.replace('#', '');
-
-    // Convert to RGB
-    let r = parseInt(color.substring(0, 2), 16);
-    let g = parseInt(color.substring(2, 4), 16);
-    let b = parseInt(color.substring(4, 6), 16);
-
-    // Lighten by blending with white (amount = 0 to 1, where 1 is white)
-    r = Math.round(r + (255 - r) * amount);
-    g = Math.round(g + (255 - g) * amount);
-    b = Math.round(b + (255 - b) * amount);
-
-    // Convert back to hex
-    return '#' + [r, g, b].map(x => {
-      const hex = x.toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    }).join('');
   }
 
   /**

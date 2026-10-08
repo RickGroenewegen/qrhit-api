@@ -275,18 +275,6 @@ describe('lookups and cache invalidation', () => {
     expect(cacheMock.del).toHaveBeenCalledTimes(3);
   });
 
-  it('clearCacheForCardId resolves the card first and reports unknown ids', async () => {
-    prismaMock.externalCard.findUnique.mockResolvedValueOnce(dbCards[1] as any);
-    expect(await service.clearCacheForCardId(2)).toBe(true);
-    expect(prismaMock.externalCard.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 2 } })
-    );
-    expect(cacheMock.del).toHaveBeenCalledWith('qrlink2_extcard_country_nl_7');
-
-    expect(await service.clearCacheForCardId(999)).toBe(false);
-    expect(cacheMock.del).toHaveBeenCalledTimes(1);
-  });
-
   it('clearCacheForSpotifyId clears every card sharing the track and counts them', async () => {
     prismaMock.externalCard.findMany.mockResolvedValueOnce(
       dbCards.filter((c) => c.spotifyId === 'sp1') as any

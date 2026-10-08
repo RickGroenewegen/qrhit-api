@@ -1889,39 +1889,6 @@ export class MerchantCenterService {
     if (index === -1) return null;
     return name.substring(index + marker.length) || null;
   }
-
-  /**
-   * Sync all featured playlists with Google Merchant Center
-   */
-  public async syncAllFeaturedPlaylists(): Promise<void> {
-    await this.ensureInitialized();
-
-    try {
-      this.logger.log('Starting full sync with Google Merchant Center');
-
-      // Get all featured playlists
-      const playlists = await this.prisma.playlist.findMany({
-        where: {
-          featured: true,
-          slug: { not: '' },
-        },
-        include: {
-          genre: true,
-        },
-      });
-
-      this.logger.log(`Syncing ${playlists.length} featured playlists`);
-
-      for (const playlist of playlists) {
-        await this.uploadPlaylist(playlist);
-      }
-
-      this.logger.log('Full sync completed');
-    } catch (error) {
-      this.logger.log(`Error during full sync: ${error}`);
-      throw error;
-    }
-  }
 }
 
 // Export singleton instance

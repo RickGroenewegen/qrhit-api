@@ -1651,28 +1651,6 @@ class Spotify {
     return id;
   }
 
-  public async getPlaylistTrackCount(
-    playlistId: string,
-    cache: boolean = true,
-    isSlug: boolean = false
-  ): Promise<number> {
-    let cacheKeyCount = `trackcount_${playlistId}`;
-
-    const cacheResult = await this.cache.get(cacheKeyCount);
-
-    if (cacheResult) {
-      return parseInt(cacheResult);
-    }
-
-    const tracks = await this.getTracks(playlistId, cache, '', false, isSlug);
-
-    if (!tracks.success) {
-      throw new Error('Error getting playlist track count');
-    }
-
-    return tracks.data.totalTracks;
-  }
-
   /**
    * Public method to create or update a Spotify playlist.
    * Delegates to the appropriate API implementation (SpotifyApi or SpotifyRapidApi).

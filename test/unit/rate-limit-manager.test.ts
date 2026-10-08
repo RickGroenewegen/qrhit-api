@@ -280,21 +280,6 @@ describe('RateLimitManager.executeWithFallback – exception', () => {
 });
 
 // ──────────────────────────────────────────────
-// clearAllRateLimits
-// ──────────────────────────────────────────────
-
-describe('RateLimitManager.clearAllRateLimits', () => {
-  it('removes rate limit entries for both providers', async () => {
-    setRateLimited('spotifyApi');
-    setRateLimited('spotifyScraper');
-    const svc = makeSvc();
-    await svc.clearAllRateLimits();
-    expect(cacheStore.has('rate_limit_info_spotifyApi')).toBe(false);
-    expect(cacheStore.has('rate_limit_info_spotifyScraper')).toBe(false);
-  });
-});
-
-// ──────────────────────────────────────────────
 // getRateLimitStatus
 // ──────────────────────────────────────────────
 

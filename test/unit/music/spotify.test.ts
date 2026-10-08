@@ -963,25 +963,8 @@ describe('Spotify.searchTracks', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getPlaylistTrackCount + delegation methods
+// Delegation methods
 // ---------------------------------------------------------------------------
-
-describe('Spotify.getPlaylistTrackCount', () => {
-  it('returns the cached count as an integer', async () => {
-    holder.cacheStore.set('trackcount_PLC', '42');
-    expect(await spotify.getPlaylistTrackCount('PLC')).toBe(42);
-  });
-
-  it('throws when tracks cannot be fetched', async () => {
-    holder.spotifyApi.getPlaylist.mockResolvedValue({
-      success: false,
-      error: 'down',
-    });
-    await expect(spotify.getPlaylistTrackCount('PLX')).rejects.toThrow(
-      'Error getting playlist track count'
-    );
-  });
-});
 
 describe('Spotify delegation methods', () => {
   it('delegates createOrUpdatePlaylist/deletePlaylist/auth to the v1 api', async () => {

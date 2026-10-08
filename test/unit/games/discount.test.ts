@@ -865,32 +865,7 @@ describe('reservation lifecycle', () => {
   });
 });
 
-describe('aggregate helpers', () => {
-  it('calculateTotalDiscountForPayment sums uses, defaulting to 0', async () => {
-    setAmountUsed(17.5);
-    expect(await discount.calculateTotalDiscountForPayment(4)).toBe(17.5);
-    expect(h.prisma.discountCodedUses.aggregate).toHaveBeenCalledWith({
-      where: { paymentId: 4, status: { not: 'released' } },
-      _sum: { amount: true },
-    });
-
-    setAmountUsed(null);
-    expect(await discount.calculateTotalDiscountForPayment(4)).toBe(0);
-  });
-
-  it('removeDiscountUsesByPaymentId deletes by payment and reports status', async () => {
-    h.prisma.discountCodedUses.deleteMany.mockResolvedValueOnce({ count: 2 });
-    expect(await discount.removeDiscountUsesByPaymentId(4)).toEqual({
-      success: true,
-      message: 'discountUsesRemovedSuccessfully',
-    });
-
-    h.prisma.discountCodedUses.deleteMany.mockRejectedValueOnce(new Error('x'));
-    const failed = await discount.removeDiscountUsesByPaymentId(4);
-    expect(failed.success).toBe(false);
-    expect(failed.message).toBe('errorRemovingDiscountUses');
-  });
-
+describe('getDiscountDetails', () => {
   it('getDiscountDetails returns selected fields or not-found', async () => {
     h.prisma.discountCode.findUnique.mockResolvedValueOnce({
       id: 1,

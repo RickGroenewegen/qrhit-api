@@ -282,26 +282,6 @@ describe('Discount.updateDiscountCode', () => {
 });
 
 // ──────────────────────────────────────────────
-// removeDiscountUsesByPaymentId
-// ──────────────────────────────────────────────
-
-describe('Discount.removeDiscountUsesByPaymentId', () => {
-  it('deletes uses for a paymentId', async () => {
-    const svc = makeSvc();
-    const res = await svc.removeDiscountUsesByPaymentId(42);
-    expect(res.success).toBe(true);
-    expect(prismaMock.discountCodedUses.deleteMany).toHaveBeenCalledWith({ where: { paymentId: 42 } });
-  });
-
-  it('returns error on exception', async () => {
-    prismaMock.discountCodedUses.deleteMany.mockRejectedValueOnce(new Error('fail'));
-    const svc = makeSvc();
-    const res = await svc.removeDiscountUsesByPaymentId(99);
-    expect(res.success).toBe(false);
-  });
-});
-
-// ──────────────────────────────────────────────
 // associatePaymentWithDiscountUse
 // ──────────────────────────────────────────────
 
@@ -337,26 +317,6 @@ describe('Discount.releaseDiscountUsesByPaymentId', () => {
     const svc = makeSvc();
     const res = await svc.releaseDiscountUsesByPaymentId(99);
     expect(res.success).toBe(false);
-  });
-});
-
-// ──────────────────────────────────────────────
-// calculateTotalDiscountForPayment
-// ──────────────────────────────────────────────
-
-describe('Discount.calculateTotalDiscountForPayment', () => {
-  it('returns the aggregate sum', async () => {
-    prismaMock.discountCodedUses.aggregate.mockResolvedValueOnce({ _sum: { amount: 15 } });
-    const svc = makeSvc();
-    const result = await svc.calculateTotalDiscountForPayment(5);
-    expect(result).toBe(15);
-  });
-
-  it('returns 0 when no uses exist', async () => {
-    prismaMock.discountCodedUses.aggregate.mockResolvedValueOnce({ _sum: { amount: null } });
-    const svc = makeSvc();
-    const result = await svc.calculateTotalDiscountForPayment(5);
-    expect(result).toBe(0);
   });
 });
 

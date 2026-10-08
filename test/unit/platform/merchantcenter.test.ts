@@ -1522,36 +1522,3 @@ describe('markPlaylistForMerchantCenter', () => {
     ).resolves.toBeUndefined();
   });
 });
-
-// ---------------------------------------------------------------------------
-// syncAllFeaturedPlaylists
-// ---------------------------------------------------------------------------
-describe('syncAllFeaturedPlaylists', () => {
-  it('uploads every featured playlist (no markedForMerchantCenter filter)', async () => {
-    const p1 = makePlaylist({ id: 1 });
-    const p2 = makePlaylist({ id: 2 });
-    h.prisma.playlist.findMany.mockResolvedValue([p1, p2]);
-    const spy = vi
-      .spyOn(svc, 'uploadPlaylist')
-      .mockResolvedValue([] as any);
-    try {
-      await merchantCenter.syncAllFeaturedPlaylists();
-      expect(h.prisma.playlist.findMany).toHaveBeenCalledWith({
-        where: { featured: true, slug: { not: '' } },
-        include: { genre: true },
-      });
-      expect(spy).toHaveBeenCalledTimes(2);
-      expect(spy).toHaveBeenCalledWith(p1);
-      expect(spy).toHaveBeenCalledWith(p2);
-    } finally {
-      spy.mockRestore();
-    }
-  });
-
-  it('rethrows query failures', async () => {
-    h.prisma.playlist.findMany.mockRejectedValue(new Error('db down'));
-    await expect(merchantCenter.syncAllFeaturedPlaylists()).rejects.toThrow(
-      'db down'
-    );
-  });
-});

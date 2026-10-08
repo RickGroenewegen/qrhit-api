@@ -37,17 +37,6 @@ const printer = Printer.getInstance();
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
-describe('Printer.getDefaults()', () => {
-  it('returns sensible default values', () => {
-    const d = printer.getDefaults();
-    expect(d.avgCards).toBe(200);
-    expect(d.acquisitionMode).toBe('buy');
-    expect(d.equipmentCost).toBe(45000);
-    expect(d.ordersPerMonth).toBe(350);
-    expect(d.cardsPerSheet).toBe(18);
-  });
-});
-
 describe('Printer.calculate() – buy mode', () => {
   beforeEach(() => {
     calculateSingleItemMock.mockClear();

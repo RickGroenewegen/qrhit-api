@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
  * Unit tests for MusicProviderFactory: provider selection per ServiceType,
- * default/unknown handling, singleton behavior, isSupported and the
- * exported service mapping tables.
+ * default/unknown handling, singleton behavior and the exported service
+ * mapping tables.
  *
  * All five provider modules are mocked so no real provider (and none of
  * their I/O collaborators) is ever constructed.
@@ -100,28 +100,6 @@ describe('MusicProviderFactory.getProvider', () => {
     factory.getProvider(ServiceType.TIDAL);
     expect(h.tidalGetInstance).toHaveBeenCalledTimes(2);
     expect(h.spotifyGetInstance).not.toHaveBeenCalled();
-  });
-});
-
-describe('MusicProviderFactory.isSupported', () => {
-  const factory = MusicProviderFactory.getInstance();
-
-  it('supports all five ServiceType values', () => {
-    for (const st of [
-      ServiceType.SPOTIFY,
-      ServiceType.YOUTUBE_MUSIC,
-      ServiceType.TIDAL,
-      ServiceType.DEEZER,
-      ServiceType.APPLE_MUSIC,
-    ]) {
-      expect(factory.isSupported(st)).toBe(true);
-    }
-  });
-
-  it('rejects unknown services and short names', () => {
-    expect(factory.isSupported('amazon')).toBe(false);
-    expect(factory.isSupported('youtube')).toBe(false); // short name, not enum value
-    expect(factory.isSupported('')).toBe(false);
   });
 });
 

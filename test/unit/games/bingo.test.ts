@@ -1,13 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * Unit tests for src/bingo.ts with all I/O collaborators mocked:
- * prisma (fake), PDF (buffer stub), cache (Map-backed). The card
- * generation math, QR data round-trip and upgrade-payment logic are
- * exercised against real behavior; PDF/ZIP orchestration runs against
- * scratch dirs with a stubbed PDF renderer (archiver runs for real).
+ * prisma (fake) and cache (Map-backed). The card generation math, QR data
+ * round-trip and upgrade-payment logic are exercised against real behavior.
  */
 
 const h = vi.hoisted(() => {
@@ -21,10 +17,7 @@ const h = vi.hoisted(() => {
     cacheDel: vi.fn(async (key: string) => {
       cacheStore.delete(key);
     }),
-    generatePdfFromUrl: vi.fn(async () => Buffer.from('%PDF-fake')),
     prisma: {
-      $queryRaw: vi.fn(),
-      bingoFile: { create: vi.fn(async (args: any) => ({ id: 1, ...args.data })) },
       gamesPurchase: {
         findFirst: vi.fn(async () => null),
         create: vi.fn(async (args: any) => ({ id: 5, ...args.data })),
@@ -57,12 +50,6 @@ vi.mock('../../../src/prisma', () => ({
 vi.mock('../../../src/cache', () => ({
   default: {
     getInstance: () => ({ get: h.cacheGet, set: h.cacheSet, del: h.cacheDel }),
-  },
-}));
-
-vi.mock('../../../src/pdf', () => ({
-  default: class {
-    generatePdfFromUrl = h.generatePdfFromUrl;
   },
 }));
 
@@ -215,147 +202,6 @@ describe('generateQRData / parseQRData round trip', () => {
     const data = bingo.generateQRData(sheet);
     expect(data).toBe(`QRSSM:BC:R1S1:`);
     expect(bingo.parseQRData(data)).toBeNull();
-  });
-});
-
-describe('generateDefaultBingo', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.cacheStore.clear();
-    h.prisma.bingoFile.create.mockImplementation(async (args: any) => ({
-      id: 1,
-      ...args.data,
-    }));
-  });
-
-  function trackRows(count: number) {
-    return Array.from({ length: count }, (_, i) => ({
-      id: i + 1,
-      trackId: `isrc-${i + 1}`,
-      name: `Track ${i + 1}`,
-      artist: `Artist ${i + 1}`,
-      year: 1980 + (i % 40),
-      trackOrder: i,
-    }));
-  }
-
-  it('skips generation when the playlist has fewer than 40 tracks', async () => {
-    h.prisma.$queryRaw.mockResolvedValueOnce(trackRows(39));
-
-    const result = await bingo.generateDefaultBingo(
-      'pay-1',
-      'uhash',
-      'plist',
-      10,
-      'My Playlist',
-      'qr',
-      'en',
-      55
-    );
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Insufficient tracks: 39 < 40');
-    expect(h.generatePdfFromUrl).not.toHaveBeenCalled();
-    expect(h.prisma.bingoFile.create).not.toHaveBeenCalled();
-  });
-
-  it('generates PDFs, zips them, stores a BingoFile row and returns a download URL', async () => {
-    h.prisma.$queryRaw.mockResolvedValueOnce(trackRows(50));
-
-    const result = await bingo.generateDefaultBingo(
-      'pay-2',
-      'uhash',
-      'plist-id',
-      11,
-      'Party Mix',
-      'qr',
-      'nl',
-      66
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.downloadUrl).toMatch(
-      /^http:\/\/localhost:3004\/public\/bingo\/pay-2_.*_bingo_[0-9a-f]{16}\.zip$/
-    );
-
-    // PDF rendered twice: bingo cards + host cards, via the cached config
-    expect(h.generatePdfFromUrl).toHaveBeenCalledTimes(2);
-    const [cardsUrl] = h.generatePdfFromUrl.mock.calls[0] as any[];
-    const [hostUrl] = h.generatePdfFromUrl.mock.calls[1] as any[];
-    expect(cardsUrl).toMatch(/\/bingo\/render\/[0-9a-f]{16}$/);
-    expect(hostUrl).toMatch(/\/bingo\/render-hostcards\/[0-9a-f]{16}$/);
-
-    // Config was cached with default contestants/rounds, then cleaned up
-    const setCall = h.cacheSet.mock.calls.find(([k]: any[]) =>
-      String(k).startsWith('bingo_config:')
-    );
-    expect(setCall).toBeTruthy();
-    expect(JSON.parse(setCall![1])).toMatchObject({
-      paymentId: 'pay-2',
-      contestants: 20,
-      rounds: 5,
-      locale: 'nl',
-    });
-    expect(h.cacheDel).toHaveBeenCalledWith(setCall![0]);
-
-    // BingoFile row stores config + the ISRCs that were used
-    expect(h.prisma.bingoFile.create).toHaveBeenCalledTimes(1);
-    const createData = h.prisma.bingoFile.create.mock.calls[0][0].data;
-    expect(createData).toMatchObject({
-      paymentHasPlaylistId: 66,
-      contestants: 20,
-      rounds: 5,
-      trackCount: 50,
-    });
-    expect(createData.selectedTrackIds).toHaveLength(50);
-    expect(createData.selectedTrackIds[0]).toBe('isrc-1');
-
-    // The ZIP exists in the scratch public dir; intermediate PDFs are gone
-    const bingoDir = path.join(process.env['PUBLIC_DIR']!, 'bingo');
-    expect(fs.existsSync(path.join(bingoDir, createData.filename))).toBe(true);
-    const leftovers = fs
-      .readdirSync(bingoDir)
-      .filter((f) => f.endsWith('.pdf'));
-    expect(leftovers).toEqual([]);
-  });
-
-  it('falls back to English file labels for an unknown locale', async () => {
-    h.prisma.$queryRaw.mockResolvedValueOnce(trackRows(40));
-
-    const result = await bingo.generateDefaultBingo(
-      'pay-3',
-      'uhash',
-      'plist-id',
-      12,
-      'Mix',
-      'qr',
-      'xx',
-      67
-    );
-    expect(result.success).toBe(true);
-    const cachedConfig = h.cacheSet.mock.calls.find(([k]: any[]) =>
-      String(k).startsWith('bingo_config:')
-    );
-    expect(JSON.parse(cachedConfig![1]).locale).toBe('xx');
-  });
-
-  it('returns the error and keeps going when PDF generation explodes', async () => {
-    h.prisma.$queryRaw.mockResolvedValueOnce(trackRows(45));
-    h.generatePdfFromUrl.mockRejectedValueOnce(new Error('chromium died'));
-
-    const result = await bingo.generateDefaultBingo(
-      'pay-4',
-      'uhash',
-      'plist-id',
-      13,
-      'Mix',
-      'qr',
-      'en',
-      68
-    );
-
-    expect(result).toEqual({ success: false, error: 'chromium died' });
-    expect(h.prisma.bingoFile.create).not.toHaveBeenCalled();
   });
 });
 

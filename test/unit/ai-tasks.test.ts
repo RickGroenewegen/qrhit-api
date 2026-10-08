@@ -61,12 +61,7 @@ vi.mock('../../src/logger', () => ({
 }));
 
 vi.mock('../../src/utils', () => ({
-  default: class {
-    // Deterministic "random" sample so prompts are stable
-    getRandomSample<T>(arr: T[], n: number): T[] {
-      return arr.slice(0, n);
-    }
-  },
+  default: class {},
 }));
 
 vi.mock('../../src/translation', () => ({

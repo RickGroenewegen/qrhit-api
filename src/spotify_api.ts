@@ -1278,47 +1278,6 @@ class SpotifyApi {
   }
 
   /**
-   * Fetches the current user's playlists.
-   * @param accessToken A valid Spotify access token.
-   * @param limit Max number of playlists per request (default 20, max 50).
-   * @param offset Offset for pagination (default 0).
-   * @returns {Promise<ApiResult>} Contains playlist data or error info.
-   */
-  public async getUserPlaylists(
-    accessToken: string,
-    limit: number = 50, // Defaulting to max limit for checking existing
-    offset: number = 0
-  ): Promise<ApiResult> {
-    limit = Math.min(limit, 50); // Enforce API limit
-
-    try {
-      // Note: This only gets the first page. A full implementation would paginate.
-      const result = await this.executeWithRetry(async () => {
-        const response = await axios.get(
-          `https://api.spotify.com/v1/me/playlists`,
-          {
-            params: {
-              limit: limit,
-              offset: offset,
-            },
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        return response.data;
-      }, `fetching user playlists (limit: ${limit}, offset: ${offset})`);
-
-      // Check if executeWithRetry returned an ApiResult (error case)
-      if (result && typeof result === 'object' && 'success' in result) {
-        return result as ApiResult;
-      }
-
-      return { success: true, data: result };
-    } catch (error) {
-      return this.handleApiError(error, `fetching user playlists`);
-    }
-  }
-
-  /**
    * Deletes (unfollows) a playlist from the user's library.
    * @param playlistId The Spotify playlist ID to delete/unfollow.
    * @returns {Promise<ApiResult>} Result of the deletion operation.

@@ -52,7 +52,6 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
   },
   payment: { findFirst: vi.fn(), update: vi.fn() },
-  paymentHasPlaylist: { findUnique: vi.fn() },
   appDesignPurchase: { findUnique: vi.fn() },
 }));
 vi.mock('../../src/prisma', () => ({
@@ -684,31 +683,6 @@ describe('order lifecycle mails', () => {
     });
   });
 
-  it('sendBoxUpgradeConfirmationEmail renders prices from the paymentHasPlaylist row', async () => {
-    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValue({
-      id: 5,
-      payment: makePayment(),
-      playlist: makePlaylist(),
-    });
-    await mail.sendBoxUpgradeConfirmationEmail(5, 6.99, 3.5, 2);
-    expect(prismaMock.paymentHasPlaylist.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 5 } })
-    );
-    const raw = lastRaw();
-    expect(raw).toContain(
-      "Subject: Your Gift Box for 'Road Trip Hits' is on its way!"
-    );
-    expect(raw).toContain('6.99');
-    expect(raw).toContain('3.50');
-    expect(raw).toContain('10.49');
-  });
-
-  it('sendBoxUpgradeConfirmationEmail does nothing when the row is missing', async () => {
-    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValue(null);
-    await mail.sendBoxUpgradeConfirmationEmail(999);
-    expect(sesSend).not.toHaveBeenCalled();
-  });
-
   it('sendAppDesignEnabledEmail explains the upgrade and points to the separate invoice', async () => {
     prismaMock.appDesignPurchase.findUnique.mockResolvedValue({
       id: 11,
@@ -1276,7 +1250,6 @@ describe('sender guard and error paths', () => {
       await mail.sendBoxInstructionsEmail(makePayment());
       await mail.sendFinalizedMail(makePayment(), 'r', makePlaylist());
       await mail.sendToPrinterMail(makePayment(), makePlaylist());
-      await mail.sendBoxUpgradeConfirmationEmail(1);
       await mail.sendReviewEmail(makePayment());
       await mail.sendVerificationEmail('a@x.io', 'A', 'C', 'h', 'en');
       await mail.sendCustomMail('a@x.io', 'A', 's', 'm');
@@ -1286,16 +1259,10 @@ describe('sender guard and error paths', () => {
       (mail as any).ses = realSes;
     }
     expect(sesSend).not.toHaveBeenCalled();
-    expect(prismaMock.paymentHasPlaylist.findUnique).not.toHaveBeenCalled();
   });
 
   it('every sender swallows render/IO errors (missing assets) without sending', async () => {
     process.env['ASSETS_DIR'] = BOGUS_ASSETS;
-    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValue({
-      id: 5,
-      payment: makePayment(),
-      playlist: makePlaylist(),
-    });
     prismaMock.user.findUnique.mockResolvedValue({ hash: 'h' });
 
     await mail.sendDesignAlterMail('a@x.io', 'A', 'en', 'p', 'h', 'pl', 'hitster');
@@ -1304,7 +1271,6 @@ describe('sender guard and error paths', () => {
     await mail.sendTrackingEmail(makePayment(), 't', '');
     await mail.sendBoxInstructionsEmail(makePayment());
     await mail.sendToPrinterMail(makePayment(), makePlaylist());
-    await mail.sendBoxUpgradeConfirmationEmail(5);
     await mail.sendReviewEmail(makePayment());
     await mail.sendVerificationEmail('a@x.io', 'A', 'C', 'h', 'en');
     await mail.sendCustomMail('a@x.io', 'A', 's', 'm');
