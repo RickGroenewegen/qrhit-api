@@ -12,7 +12,7 @@ import Spotify from './spotify';
 import Cache from './cache';
 import Translation from './translation';
 import PrismaInstance from './prisma';
-import { signRenderUrl } from './renderSignature';
+import { signedRenderQuery } from './renderSignature';
 import {
   ListVariant,
   PaymentOption,
@@ -2741,36 +2741,40 @@ class Business {
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
 
       // Build query string with pricing options if provided
-      const queryParams = new URLSearchParams();
+      const query: Record<string, string> = {};
       if (pricingOptions?.isReseller !== undefined) {
-        queryParams.set('isReseller', String(pricingOptions.isReseller));
+        query['isReseller'] = String(pricingOptions.isReseller);
       }
       if (pricingOptions?.profitMargins) {
-        queryParams.set('profitMargins', JSON.stringify(pricingOptions.profitMargins));
+        query['profitMargins'] = JSON.stringify(pricingOptions.profitMargins);
       }
       if (pricingOptions?.calculatedPrices) {
-        queryParams.set('calculatedPrices', JSON.stringify(pricingOptions.calculatedPrices));
+        query['calculatedPrices'] = JSON.stringify(pricingOptions.calculatedPrices);
       }
       if (listId) {
-        queryParams.set('listId', String(listId));
+        query['listId'] = String(listId);
       }
       if (contactUserId) {
-        queryParams.set('contactUserId', String(contactUserId));
+        query['contactUserId'] = String(contactUserId);
       }
 
       // The Lambda that renders this URL has no session, so the company's
       // business language has to travel in the query string.
       const locale = this.translation.resolveBusinessLocale(company.locale);
-      queryParams.set('locale', locale);
+      query['locale'] = locale;
 
-      const queryString = queryParams.toString();
-      const htmlUrl = signRenderUrl(
-        `${baseUrl}/business/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`
-      );
+      // Signed, because the view itself has no login (renderSignature.ts).
+      const viewPath = `/business/quotation/${type}/${companyId}/${encodeURIComponent(quotationNumber)}`;
+      const htmlUrl = `${baseUrl}${viewPath}?${signedRenderQuery(
+        'quotation',
+        { type, companyId: String(companyId), quotationNumber: String(quotationNumber) },
+        query
+      )}`;
 
+      // The path only: the query carries a working signature.
       this.logger.log(
         color.blue.bold(`Generating PDF quotation from URL: `) +
-          color.white.bold(htmlUrl)
+          color.white.bold(`${baseUrl}${viewPath}`)
       );
 
       // Generate PDF using Lambda

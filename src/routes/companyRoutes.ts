@@ -17,7 +17,7 @@ import {
   resolveVatRegion,
 } from '../services/vat';
 import Cache from '../cache';
-import { isSignedRenderRequest, signRenderUrl } from '../renderSignature';
+import { isSignedRenderRequest, signedRenderQuery } from '../renderSignature';
 import {
   ListVariant,
   listPricingFromCalculation,
@@ -1289,7 +1289,7 @@ export default async function companyRoutes(
   fastify.get(
     '/business/quotation/:type/:companyId/:quotationNumber',
     async (request: any, reply: any) => {
-      if (!isSignedRenderRequest(request.url)) {
+      if (!isSignedRenderRequest('quotation', request)) {
         reply.status(404).send({ error: 'Not found' });
         return;
       }
@@ -1720,7 +1720,7 @@ export default async function companyRoutes(
   fastify.get(
     '/business/technical-instructions/:companyId',
     async (request: any, reply: any) => {
-      if (!isSignedRenderRequest(request.url)) {
+      if (!isSignedRenderRequest('technical-instructions', request)) {
         reply.status(404).send({ error: 'Not found' });
         return;
       }
@@ -1812,9 +1812,12 @@ export default async function companyRoutes(
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
         const printer = request.body?.printer || 'tromp';
         const locale = translation.resolveBusinessLocale(company.locale);
-        const htmlUrl = signRenderUrl(
-          `${baseUrl}/business/technical-instructions/${companyId}?printer=${printer}&locale=${locale}`
-        );
+        // Signed, because the view itself has no login (renderSignature.ts).
+        const htmlUrl = `${baseUrl}/business/technical-instructions/${companyId}?${signedRenderQuery(
+          'technical-instructions',
+          { companyId: String(companyId) },
+          { printer: String(printer), locale }
+        )}`;
 
         // Generate PDF
         await pdfManager.generateFromUrl(htmlUrl, filePath, {

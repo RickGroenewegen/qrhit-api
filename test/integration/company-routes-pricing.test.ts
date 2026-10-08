@@ -12,13 +12,20 @@ import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
 import { PriceListEdition, priceListQuery } from '../../src/priceList';
 import { PROFIT_TIERS } from '../../src/services/boxPricing';
-import { signRenderUrl } from '../../src/renderSignature';
+import { signedRenderQuery } from '../../src/renderSignature';
 
 // The HTML views behind the PDFs only answer signed URLs, like the ones the
-// PDF Lambda is given (renderSignature.ts).
+// PDF Lambda is given (renderSignature.ts). Signs a plain view path the way
+// the server does.
 const signed = (path: string) => {
-  const url = new URL(signRenderUrl(`http://localhost${path}`));
-  return url.pathname + url.search;
+  const url = new URL(`http://localhost${path}`);
+  const query = Object.fromEntries(url.searchParams);
+  const [, , view, ...segments] = url.pathname.split('/');
+  const params =
+    view === 'quotation'
+      ? { type: segments[0], companyId: segments[1], quotationNumber: segments[2] }
+      : { companyId: segments[0] };
+  return `${url.pathname}?${signedRenderQuery(view, params, query)}`;
 };
 
 /**

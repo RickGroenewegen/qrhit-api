@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { isSignedRenderRequest, signRenderUrl } from '../../src/renderSignature';
+import { isSignedRenderRequest, signedRenderQuery } from '../../src/renderSignature';
 
 /**
  * The quotation and technical-instructions pages are opened by the PDF
@@ -8,10 +8,18 @@ import { isSignedRenderRequest, signRenderUrl } from '../../src/renderSignature'
  * someone counting company ids.
  */
 
-const pathOf = (url: string) => {
-  const parsed = new URL(url);
-  return parsed.pathname + parsed.search;
-};
+// What Fastify hands the handler for a query string: one string per key,
+// an array when a key repeats.
+function request(params: Record<string, string>, queryString: string) {
+  const query: Record<string, string | string[]> = {};
+  for (const [key, value] of new URLSearchParams(queryString)) {
+    const existing = query[key];
+    query[key] = existing === undefined ? value : ([] as string[]).concat(existing, value);
+  }
+  return { params, query };
+}
+
+const quotationParams = { type: 'schneider', companyId: '12', quotationNumber: 'Q-2026-001' };
 
 describe('render URL signatures', () => {
   const env = { ...process.env };
@@ -26,42 +34,46 @@ describe('render URL signatures', () => {
     vi.useRealTimers();
   });
 
-  it('accepts the signed URL as the server receives it', () => {
-    const signed = signRenderUrl(
-      'https://api.example.com/business/quotation/schneider/12/Q-2026-001?listId=4&profitMargins=%7B%22a%22%3A1%7D&locale=nl'
-    );
-    expect(isSignedRenderRequest(pathOf(signed))).toBe(true);
+  it('accepts the values it signed', () => {
+    const query = signedRenderQuery('quotation', quotationParams, {
+      listId: '4',
+      profitMargins: '{"a":1}',
+      locale: 'nl',
+    });
+    expect(isSignedRenderRequest('quotation', request(quotationParams, query))).toBe(true);
   });
 
-  it('rejects a missing, altered or foreign signature', () => {
-    const signed = pathOf(
-      signRenderUrl('https://api.example.com/business/quotation/qrsong/12/Q-1?locale=en')
-    );
-    expect(isSignedRenderRequest('/business/quotation/qrsong/12/Q-1?locale=en')).toBe(false);
-    expect(isSignedRenderRequest(signed.replace('/12/', '/13/'))).toBe(false);
-    expect(isSignedRenderRequest(signed + '&contactUserId=7')).toBe(false);
-    expect(isSignedRenderRequest(signed.replace(/sig=[0-9a-f]{4}/, 'sig=0000'))).toBe(false);
+  it('rejects missing, altered, added or repeated values, another view and another secret', () => {
+    const query = signedRenderQuery('quotation', quotationParams, { locale: 'en' });
+
+    expect(isSignedRenderRequest('quotation', request(quotationParams, 'locale=en'))).toBe(false);
+    expect(
+      isSignedRenderRequest('quotation', request({ ...quotationParams, companyId: '13' }, query))
+    ).toBe(false);
+    expect(isSignedRenderRequest('quotation', request(quotationParams, `${query}&contactUserId=7`))).toBe(false);
+    expect(isSignedRenderRequest('quotation', request(quotationParams, `${query}&locale=de`))).toBe(false);
+    expect(isSignedRenderRequest('technical-instructions', request(quotationParams, query))).toBe(false);
 
     process.env['JWT_SECRET'] = 'another-secret';
-    expect(isSignedRenderRequest(signed)).toBe(false);
+    expect(isSignedRenderRequest('quotation', request(quotationParams, query))).toBe(false);
   });
 
   it('rejects an expired link', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-08T12:00:00Z'));
-    const signed = pathOf(
-      signRenderUrl('https://api.example.com/business/technical-instructions/12?printer=tromp', 60)
-    );
-    expect(isSignedRenderRequest(signed)).toBe(true);
+    const params = { companyId: '12' };
+    const query = signedRenderQuery('technical-instructions', params, { printer: 'tromp' }, 60);
+    expect(isSignedRenderRequest('technical-instructions', request(params, query))).toBe(true);
 
     vi.setSystemTime(new Date('2026-10-08T12:01:01Z'));
-    expect(isSignedRenderRequest(signed)).toBe(false);
+    expect(isSignedRenderRequest('technical-instructions', request(params, query))).toBe(false);
   });
 
   it('lets unsigned requests through in development only', () => {
+    const unsigned = request({ companyId: '12' }, '');
     process.env['ENVIRONMENT'] = 'development';
-    expect(isSignedRenderRequest('/business/technical-instructions/12')).toBe(true);
+    expect(isSignedRenderRequest('technical-instructions', unsigned)).toBe(true);
     process.env['ENVIRONMENT'] = 'test';
-    expect(isSignedRenderRequest('/business/technical-instructions/12')).toBe(false);
+    expect(isSignedRenderRequest('technical-instructions', unsigned)).toBe(false);
   });
 });
