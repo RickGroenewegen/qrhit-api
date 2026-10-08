@@ -32,7 +32,6 @@ import {
   getPendingPromotionalPlaylists,
   updatePlaylistFeatured,
   updateFeaturedHidden,
-  updateFeaturedLocale,
   updateDesignHidden,
   unfeaturePlaylist,
   refeaturePlaylist,
@@ -595,7 +594,7 @@ describe('unfeaturePlaylist / refeaturePlaylist', () => {
   });
 });
 
-describe('updateFeaturedHidden / updateFeaturedLocale', () => {
+describe('updateFeaturedHidden / updateDesignHidden', () => {
   it('updateFeaturedHidden updates and busts the featured cache', async () => {
     const { deps, prisma, cache } = makeDeps();
 
@@ -609,24 +608,6 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     expect(cache.delPattern).toHaveBeenCalledWith(
       `${CACHE_KEY_FEATURED_PLAYLISTS}*`
     );
-  });
-
-  it('updateFeaturedLocale updates (null allowed), busts the page and locale-gate caches and rebuilds the sitemap', async () => {
-    const { deps, prisma, cache } = makeDeps();
-    prisma.playlist.findUnique.mockResolvedValue({ slug: 'my-list' });
-
-    const res = await updateFeaturedLocale(deps, 'pl1', null);
-
-    expect(res).toEqual({ success: true });
-    expect(prisma.playlist.update).toHaveBeenCalledWith({
-      where: { playlistId: 'pl1' },
-      data: { featuredLocale: null, markedForMerchantCenter: true },
-    });
-    // The locale decides which locales serve the product page and which
-    // sitemaps list it, so all three follow the change.
-    expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
-    expect(cache.del).toHaveBeenCalledWith('productPageLocales_my-list');
-    expect(h.createSiteMap).toHaveBeenCalledWith(deps);
   });
 
   it('updateDesignHidden stores the admin veto and drops the cached product page', async () => {
@@ -652,15 +633,11 @@ describe('updateFeaturedHidden / updateFeaturedLocale', () => {
     expect(h.clearPlaylistCache).not.toHaveBeenCalled();
   });
 
-  it('both report errors instead of throwing', async () => {
+  it('updateFeaturedHidden reports errors instead of throwing', async () => {
     const { deps, prisma } = makeDeps();
     prisma.playlist.update.mockRejectedValue(new Error('nope'));
 
     expect(await updateFeaturedHidden(deps, 'pl1', true)).toEqual({
-      success: false,
-      error: 'nope',
-    });
-    expect(await updateFeaturedLocale(deps, 'pl1', 'nl')).toEqual({
       success: false,
       error: 'nope',
     });

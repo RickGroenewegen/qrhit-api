@@ -931,39 +931,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Update featured locale for a playlist
-  fastify.post(
-    '/admin/promotional/:playlistId/locale',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const { playlistId } = request.params;
-      const { featuredLocale } = request.body;
-
-      if (!playlistId) {
-        reply.status(400).send({
-          success: false,
-          error: 'Playlist ID is required',
-        });
-        return;
-      }
-
-      // featuredLocale can be null (for "All") or a valid locale string
-      const result = await data.updateFeaturedLocale(
-        playlistId,
-        featuredLocale || null
-      );
-
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(500).send({
-          success: false,
-          error: result.error,
-        });
-      }
-    }
-  );
-
   // Edit promotional playlist (name, description, locale, slug, keep description)
   fastify.post(
     '/admin/promotional/:playlistId/edit',

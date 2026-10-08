@@ -483,20 +483,6 @@ describe('admin corrections and promotional moderation', () => {
       ).toBe(before + 1);
     });
 
-    it('updates the featured locale', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/admin/promotional/${PROMO_ID}/locale`,
-        headers,
-        payload: { featuredLocale: 'nl' },
-      });
-      expect(res.statusCode).toBe(200);
-      const playlist = await prisma().playlist.findUnique({
-        where: { playlistId: PROMO_ID },
-      });
-      expect(playlist!.featuredLocale).toBe('nl');
-    });
-
     it('edits the promotional playlist', async () => {
       const res = await app.inject({
         method: 'POST',

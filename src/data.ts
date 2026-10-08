@@ -543,10 +543,6 @@ class Data {
     return featuredPlaylistsModule.updateFeaturedHidden(this.deps, playlistId, featuredHidden);
   }
 
-  public async updateFeaturedLocale(playlistId: string, featuredLocale: string | null) {
-    return featuredPlaylistsModule.updateFeaturedLocale(this.deps, playlistId, featuredLocale);
-  }
-
   public async updateDesignHidden(playlistId: string, hidden: boolean) {
     return featuredPlaylistsModule.updateDesignHidden(this.deps, playlistId, hidden);
   }

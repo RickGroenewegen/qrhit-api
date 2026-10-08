@@ -939,34 +939,6 @@ export function refeaturePlaylist(deps: DataDeps, playlistId: string) {
   return setPlaylistFeatured(deps, playlistId, true);
 }
 
-export async function updateFeaturedLocale(
-  deps: DataDeps,
-  playlistId: string,
-  featuredLocale: string | null
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await deps.prisma.playlist.update({
-      where: { playlistId },
-      data: { featuredLocale, markedForMerchantCenter: true },
-    });
-
-    // The locale decides which sitemaps list the product page and which
-    // locales are indexable (the others go out noindex), so the page cache,
-    // the locale gate and the sitemap all have to follow. clearPlaylistCache
-    // also drops the featured list cache.
-    await clearPlaylistCache(deps, playlistId);
-    await clearProductPageLocale(deps, playlistId);
-    await createSiteMap(deps);
-
-    return { success: true };
-  } catch (error: any) {
-    deps.logger.log(
-      color.red.bold(`Error updating featured locale: ${error.message}`)
-    );
-    return { success: false, error: error.message };
-  }
-}
-
 export async function updatePromotionalPlaylist(
   deps: DataDeps,
   playlistId: string,

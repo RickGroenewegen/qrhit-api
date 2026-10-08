@@ -508,16 +508,6 @@ describe('admin routes — wave 2 coverage', () => {
       expect([200, 500]).toContain(res.statusCode);
     });
 
-    it('POST /admin/promotional/:id/locale — updates featured locale', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/admin/promotional/${playlistId}/locale`,
-        headers,
-        payload: { featuredLocale: 'nl' },
-      });
-      expect([200, 500]).toContain(res.statusCode);
-    });
-
     it('POST /admin/promotional/:id/edit — edits playlist metadata', async () => {
       const res = await app.inject({
         method: 'POST',

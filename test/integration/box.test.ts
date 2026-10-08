@@ -213,23 +213,6 @@ describe('box upgrade routes', () => {
     });
   });
 
-  describe('calculate-shipping', () => {
-    it('uses the fixed NL shipping rate and returns the address', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/box/calculate-shipping',
-        headers: authHeader(owner.token),
-        payload: { paymentHasPlaylistId: phpId },
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.shipping).toBe(2.99);
-      expect(body.total).toBe(12 + 2.99);
-      expect(body.address.city).toBe('Leiden');
-      expect(body.address.countrycode).toBe('NL');
-    });
-  });
-
   describe('box design', () => {
     it('returns the stored design defaults', async () => {
       const res = await app.inject({

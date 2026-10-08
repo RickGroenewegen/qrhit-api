@@ -117,7 +117,6 @@ const h = vi.hoisted(() => {
       'getPendingPromotionalPlaylists',
       'updatePlaylistFeatured',
       'updateFeaturedHidden',
-      'updateFeaturedLocale',
       'updatePromotionalPlaylist',
       'acceptPromotionalPlaylist',
       'declinePromotionalPlaylist',
