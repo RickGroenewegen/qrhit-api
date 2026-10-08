@@ -269,22 +269,6 @@ class Cache {
     };
   }
 
-  async valueExistsInArray(key: string, value: string): Promise<boolean> {
-    let cacheKey = this.prefixed(key);
-    const exists = await this.executeCommand('sismember', cacheKey, value);
-    return exists === 1;
-  }
-
-  async addValueToArray(key: string, value: string): Promise<void> {
-    let cacheKey = this.prefixed(key);
-    await this.executeCommand('sadd', cacheKey, value);
-  }
-
-  async addValuesToArray(key: string, values: string[]): Promise<void> {
-    let cacheKey = this.prefixed(key);
-    await this.executeCommand('sadd', cacheKey, ...values);
-  }
-
   async close(): Promise<void> {
     await this.client.quit();
   }
