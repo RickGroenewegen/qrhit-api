@@ -120,16 +120,6 @@ class GeneratorQueue {
         )
       );
     });
-
-    this.queueEvents.on('progress', ({ jobId, data }) => {
-      // this.logger.log(
-      //   blue.bold(
-      //     `Job ${white.bold(jobId)} progress: ${white.bold(
-      //       JSON.stringify(data)
-      //     )}`
-      //   )
-      // );
-    });
   }
 
   private async executeCallback(

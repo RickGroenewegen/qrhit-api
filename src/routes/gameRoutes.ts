@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import Redis from 'ioredis';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
@@ -526,7 +526,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           }
 
           // Create room in database
-          const uuid = uuidv4();
+          const uuid = randomUUID();
 
           const dbRoom = await prisma.gameRoom.create({
             data: {

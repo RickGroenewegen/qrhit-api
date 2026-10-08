@@ -77,27 +77,25 @@ vi.mock('exceljs', () => {
   };
 });
 
-vi.mock('../../../src/translation', () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      allLocales: ['en', 'nl', 'de', 'fr'],
-    })),
-  };
-});
+vi.mock('../../src/translation', () => ({
+  default: class {
+    allLocales = ['en', 'nl', 'de', 'fr'];
+  },
+}));
 
 vi.mock('@prisma/client', () => ({
   Prisma: {},
   genre: {},
 }));
 
-vi.mock('../../../src/spotify', () => ({
+vi.mock('../../src/spotify', () => ({
   CACHE_KEY_PLAYLIST: h.CACHE_KEY_PLAYLIST,
   CACHE_KEY_PLAYLIST_DB: h.CACHE_KEY_PLAYLIST_DB,
   CACHE_KEY_TRACKS: h.CACHE_KEY_TRACKS,
   CACHE_KEY_TRACK_COUNT: h.CACHE_KEY_TRACK_COUNT,
 }));
 
-vi.mock('../../../src/data/featuredPlaylists', () => ({
+vi.mock('../../src/data/featuredPlaylists', () => ({
   CACHE_KEY_FEATURED_PLAYLISTS: h.CACHE_KEY_FEATURED_PLAYLISTS,
 }));
 
@@ -111,7 +109,7 @@ import {
   translateGenres,
   clearPlaylistCache,
   clearNonFeaturedPlaylistCaches,
-} from '../../../src/data/misc';
+} from '../../src/data/misc';
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal DataDeps object

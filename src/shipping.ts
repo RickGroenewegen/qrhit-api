@@ -356,13 +356,6 @@ class Shipping {
         const { data: result } = await axios.request(options);
         return { result, updatedPayment: payment };
       } catch (error) {
-        // this.logger.log(
-        //   color.red.bold(
-        //     `Error retrieving tracking info: ${
-        //       error instanceof Error ? error.message : 'Unknown error'
-        //     }`
-        //   )
-        // );
         throw error;
       }
     }
@@ -466,13 +459,6 @@ class Shipping {
         return { result, updatedPayment: payment };
       }
     } catch (error) {
-      // this.logger.log(
-      //   color.red.bold(
-      //     `Error retrieving tracking info: ${
-      //       error instanceof Error ? error.message : 'Unknown error'
-      //     }`
-      //   )
-      // );
       throw error;
     }
   }

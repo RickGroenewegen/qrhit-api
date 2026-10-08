@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
@@ -309,7 +308,7 @@ export default async function quizRoutes(
         const tracksWithTypes = quizHelper.assignQuestionTypes(filteredTracks, questionTypes);
 
         // Generate a unique ID for this generation
-        const generationId = uuidv4();
+        const generationId = crypto.randomUUID();
         const progressKey = `quiz:gen:${generationId}`;
 
         const setProgress = (data: any) => {
@@ -1090,7 +1089,7 @@ export default async function quizRoutes(
         };
 
         // Store quiz data in Redis cache
-        const roomUuid = uuidv4();
+        const roomUuid = crypto.randomUUID();
         const quizCacheKey = `quiz:room:${roomUuid}`;
         await cache.set(quizCacheKey, JSON.stringify(quizCacheData), QUIZ_CACHE_TTL);
 

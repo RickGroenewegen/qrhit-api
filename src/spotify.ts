@@ -207,15 +207,6 @@ class Spotify {
       locale = 'en';
     }
 
-    // if (checkCaptcha) {
-    //   // Verify reCAPTCHA token
-    //   const isHuman = await this.utils.verifyRecaptcha(captchaToken);
-    //
-    //   if (!isHuman) {
-    //     throw new Error('reCAPTCHA verification failed');
-    //   }
-    // }
-
     try {
       // Remove locale from cache key - cache all descriptions together
       const cacheKey = `${CACHE_KEY_PLAYLIST}${playlistId}`;
