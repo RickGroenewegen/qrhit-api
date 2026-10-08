@@ -1536,6 +1536,15 @@ or downgrades requests and bans nobody.
   is honoured 20 times per IP per hour (`playlist_reload:<ip>` in Redis) and
   then quietly served from the cache, logged once per IP per window. It fails
   open when Redis is down. A playlist that is not cached yet is always fetched.
+- **"Require reCAPTCHA for playlists"** (dashboard, Bulk actions → Abuse
+  protection; setting `captcha_required`, off by default, added 2026-10-08)
+  is for when someone loads playlists in bulk. While it is on, a request
+  without a solved reCAPTCHA gets 403 `captchaRequired`; the site's
+  `captcha-retry.interceptor.ts` then solves an invisible reCAPTCHA v3 and
+  sends `captchaToken` along, once. A solved one covers the address for 30
+  minutes (`playlist_captcha_ok:<ip>`). Featured playlists (which our SSR
+  also loads) and `TRUSTED_IPS` are exempt, and the check is skipped when
+  the setting cannot be read. The site loads Google's script only when asked.
 
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
