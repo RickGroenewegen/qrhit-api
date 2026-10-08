@@ -1024,7 +1024,6 @@ class Business {
         where: { id: listId },
         include: {
           Company: { select: { id: true, name: true, ...Object.fromEntries(DELIVERY_FIELDS.map((f) => [f, true])) } },
-          CompanyListDeliveryAddress: { orderBy: { id: 'asc' } },
           CompanyFile: { where: { category: 'design' }, orderBy: { createdAt: 'asc' } },
         },
       });
@@ -1096,41 +1095,26 @@ class Business {
         warnings.push('Geen gewenste leverdatum ingesteld op deze lijst.');
       }
 
-      // Delivery addresses: first one gets all boxes, the rest 0, and the
-      // QRSong! (Rick Groenewegen) address is always added last with 3 boxes.
+      // Delivery addresses: the client's gets all boxes, and the QRSong!
+      // (Rick Groenewegen) address is always added last with 3 boxes. The
+      // client's is the one from the list settings (the company's default,
+      // or the list's own when switched off).
       type OrderAddress = { name: string; lines: string[]; boxes: number };
-      const addresses: OrderAddress[] = list.CompanyListDeliveryAddress.map(
-        (a: any, index: number) => ({
-          name: a.name,
+      const addresses: OrderAddress[] = [];
+      const delivery = effectiveDeliveryAddress(list.Company, list);
+      if (delivery) {
+        addresses.push({
+          name: list.Company?.name ?? '',
           lines: [
-            ...String(a.address || '')
-              .split('\n')
-              .map((line: string) => line.trim())
-              .filter(Boolean),
-            a.country,
-          ].filter(Boolean),
-          boxes: index === 0 ? totalBoxes : 0,
-        })
-      );
-      // No separate addresses on the list: the delivery address from the list
-      // settings (the company's default, or the list's own when switched off).
-      if (addresses.length === 0) {
-        const delivery = effectiveDeliveryAddress(list.Company, list);
-        if (delivery) {
-          addresses.push({
-            name: list.Company?.name ?? '',
-            lines: [
-              ...(delivery.name ? [`t.a.v. ${delivery.name}`] : []),
-              ...delivery.lines,
-              ...(delivery.phone ? [`Tel. ${delivery.phone}`] : []),
-            ],
-            boxes: totalBoxes,
-          });
-        }
-      }
-      if (addresses.length === 0) {
+            ...(delivery.name ? [`t.a.v. ${delivery.name}`] : []),
+            ...delivery.lines,
+            ...(delivery.phone ? [`Tel. ${delivery.phone}`] : []),
+          ],
+          boxes: totalBoxes,
+        });
+      } else {
         warnings.push(
-          'Geen leveradressen bij deze lijst en geen leveradres bij het bedrijf. Alleen het QRSong! adres staat in de mail: vul het adres van de klant zelf aan.'
+          'Geen leveradres bij deze lijst en geen leveradres bij het bedrijf. Alleen het QRSong! adres staat in de mail: vul het adres van de klant zelf aan.'
         );
       }
       addresses.push({

@@ -330,16 +330,16 @@ describe('getOrderEmail', () => {
       numberOfCards: 96,
       desiredDeliveryDate: new Date('2026-03-05T12:00:00Z'),
       calculationSchneider: JSON.stringify({ quantity: 5, cardCount: 144 }),
-      Company: { id: 1, name: 'Acme & Zn' },
-      CompanyListDeliveryAddress: [
-        {
-          id: 1,
-          name: 'Magazijn & Co',
-          address: 'Straatweg 1\n1234AB Stad\n',
-          country: 'Nederland',
-        },
-        { id: 2, name: 'Tweede', address: 'Laan 2', country: 'België' },
-      ],
+      Company: {
+        id: 1,
+        name: 'Acme & Zn',
+        deliveryName: 'Magazijn & Co',
+        deliveryAddress: 'Straatweg',
+        deliveryHousenumber: '1',
+        deliveryZipcode: '1234AB',
+        deliveryCity: 'Stad',
+        deliveryCountrycode: 'NL',
+      },
       CompanyFile: [
         { id: 31, originalName: 'cards.pdf' },
         { id: 32, originalName: 'box.pdf' },
@@ -361,10 +361,9 @@ describe('getOrderEmail', () => {
     });
   });
 
-  it('falls back on the company delivery address when the list has no addresses', async () => {
+  it('delivers to the company delivery address by default', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(
       baseList({
-        CompanyListDeliveryAddress: [],
         Company: {
           id: 1,
           name: 'By Acte',
@@ -388,7 +387,6 @@ describe('getOrderEmail', () => {
   it('uses the list\'s own delivery address when the default is switched off', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(
       baseList({
-        CompanyListDeliveryAddress: [],
         useCompanyDeliveryAddress: false,
         deliveryName: 'Receptie',
         deliveryAddress: 'Hoofdstraat',
@@ -432,16 +430,13 @@ describe('getOrderEmail', () => {
     // Dutch date
     expect(d.text).toContain('uiterlijk 5 maart 2026 geleverd');
 
-    // Addresses: first gets all boxes, second 0, QRSong! appended with 3
-    expect(d.addressCount).toBe(3);
-    expect(d.text).toContain('op drie verschillende adressen');
+    // Addresses: the client's gets all boxes, QRSong! appended with 3
+    expect(d.addressCount).toBe(2);
+    expect(d.text).toContain('op twee verschillende adressen');
     expect(d.text).toContain('Adres 1: 5 stuks');
-    expect(d.text).toContain('Adres 2: 0 stuks');
-    expect(d.text).toContain('Adres 3: 3 stuks');
+    expect(d.text).toContain('Adres 2: 3 stuks');
     expect(d.text).toContain('Rick Groenewegen\nPrinsenhof 1');
-
-    // Multi-line address split + country appended
-    expect(d.text).toContain('Magazijn & Co\nStraatweg 1\n1234AB Stad\nNederland');
+    expect(d.text).toContain('Acme & Zn\nt.a.v. Magazijn & Co\nStraatweg 1\n1234AB Stad');
 
     // HTML escapes ampersands
     expect(d.html).toContain('Magazijn &amp; Co');
@@ -481,7 +476,7 @@ describe('getOrderEmail', () => {
         printer: null,
         calculationSchneider: null,
         desiredDeliveryDate: null,
-        CompanyListDeliveryAddress: [],
+        Company: { id: 1, name: 'Acme & Zn' },
         CompanyFile: [],
         numberOfCards: 200,
       })
@@ -502,7 +497,7 @@ describe('getOrderEmail', () => {
     expect(d.warnings).toEqual([
       expect.stringContaining('Geen aantal dozen gevonden'),
       expect.stringContaining('Geen gewenste leverdatum'),
-      expect.stringContaining('Geen leveradressen'),
+      expect.stringContaining('Geen leveradres bij deze lijst'),
       expect.stringContaining('nog geen ontwerpen bij deze lijst'),
     ]);
   });

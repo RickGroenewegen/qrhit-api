@@ -5,8 +5,7 @@
  * a reseller like By Acte is invoiced in Mierlo but delivers to its client).
  * A list uses that default unless `useCompanyDeliveryAddress` is switched off
  * in the list settings; then the list's own delivery fields apply. The printer
- * order e-mail falls back on this when a list has no rows in
- * CompanyListDeliveryAddress (several addresses, still the more specific).
+ * order e-mail ships the client's boxes to this address.
  */
 
 export const DELIVERY_FIELDS = [

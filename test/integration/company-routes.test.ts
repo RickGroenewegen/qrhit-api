@@ -544,99 +544,6 @@ describe('business company routes', () => {
     });
   });
 
-  describe('delivery addresses', () => {
-    let addressId: number;
-
-    it('starts with no addresses', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().addresses).toEqual([]);
-    });
-
-    it('requires name, address and country', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers,
-        payload: { name: 'Depot', address: '' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('creates an address', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers,
-        payload: {
-          name: 'Hoofdkantoor',
-          address: 'Stationsplein 1\n1012AB Amsterdam',
-          country: 'Nederland',
-        },
-      });
-      expect(res.statusCode).toBe(201);
-      const { address } = res.json();
-      expect(address.name).toBe('Hoofdkantoor');
-      addressId = address.id;
-    });
-
-    it('updates an address', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers,
-        payload: {
-          name: 'Magazijn',
-          address: 'Industrieweg 5',
-          country: 'Nederland',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().address.name).toBe('Magazijn');
-    });
-
-    it('404s updating an address of a different list', async () => {
-      const otherList = await prisma().companyList.findFirst({
-        where: { slug: 'kerstborrel-2026' },
-      });
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/lists/${otherList!.id}/delivery-addresses/${addressId}`,
-        headers,
-        payload: { name: 'X', address: 'Y', country: 'Z' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('404s for a list that does not belong to the company', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/companies/999999/lists/${listId}/delivery-addresses`,
-        headers,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('deletes an address', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const del = await app.inject({
-        method: 'DELETE',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers,
-      });
-      expect(del.statusCode).toBe(404);
-    });
-  });
-
   describe('order email', () => {
     it('builds the Dutch printer order email with warnings', async () => {
       await prisma().companyList.update({
@@ -645,14 +552,13 @@ describe('business company routes', () => {
           printer: 'schneider',
           calculationSchneider: JSON.stringify({ quantity: 25, cardCount: 96 }),
           desiredDeliveryDate: new Date('2026-08-15T00:00:00.000Z'),
-        },
-      });
-      await prisma().companyListDeliveryAddress.create({
-        data: {
-          companyListId: listId,
-          name: 'Hoofdkantoor',
-          address: 'Stationsplein 1\n1012AB Amsterdam',
-          country: 'Nederland',
+          useCompanyDeliveryAddress: false,
+          deliveryName: 'Hoofdkantoor',
+          deliveryAddress: 'Stationsplein',
+          deliveryHousenumber: '1',
+          deliveryZipcode: '1012AB',
+          deliveryCity: 'Amsterdam',
+          deliveryCountrycode: 'NL',
         },
       });
 

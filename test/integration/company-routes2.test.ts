@@ -627,15 +627,6 @@ describe('company routes — wave 2 coverage', () => {
       expect(res.statusCode).toBe(403);
       await prisma().company.delete({ where: { id: orphan2.id } });
     });
-
-    it('GET /business/companies/:cId/lists/:lId/delivery-addresses → 200 for admin', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-    });
   });
 
   // ====================================================================

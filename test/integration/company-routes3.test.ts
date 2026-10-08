@@ -25,7 +25,6 @@ import PDF from '../../src/pdf';
  *  - GET /business/users/:companyId (200/400/404)
  *  - PUT /business/companies/:companyId (400/404/200)
  *  - PUT /business/companies/:companyId/lists/:listId/info (400/404/409/200)
- *  - GET/POST/PUT/DELETE /business/companies/:companyId/lists/:listId/delivery-addresses
  *  - GET /business/companies/:companyId/lists/:listId/order-email
  *  - PUT /business/companies/:companyId/favorite
  *  - Auth matrix: 401 without token, 403 for plain users
@@ -454,115 +453,6 @@ describe('company routes — wave 3 coverage', () => {
         payload: { sold: true },
       });
       expect(res.statusCode).toBe(403);
-    });
-  });
-
-  // ====================================================================
-  // DELIVERY ADDRESSES CRUD
-  // ====================================================================
-
-  describe('delivery addresses CRUD', () => {
-    let addressId: number;
-
-    it('GET delivery-addresses — 404 for unknown list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/companies/${companyId}/lists/999999/delivery-addresses`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('GET delivery-addresses — returns empty array for new list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().addresses)).toBe(true);
-    });
-
-    it('POST delivery-addresses — 400 for missing fields', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers: adminHeaders,
-        payload: { name: 'Office' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('POST delivery-addresses — creates address', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses`,
-        headers: adminHeaders,
-        payload: {
-          name: 'HQ',
-          address: 'Koninginneweg 10, Amsterdam',
-          country: 'NL',
-        },
-      });
-      expect(res.statusCode).toBe(201);
-      expect(res.json().success).toBe(true);
-      addressId = res.json().address.id;
-    });
-
-    it('PUT delivery-address/:id — 400 for missing fields', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers: adminHeaders,
-        payload: { name: 'HQ Updated' }, // missing address + country
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('PUT delivery-address/:id — 404 for unknown address', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/999999`,
-        headers: adminHeaders,
-        payload: { name: 'X', address: 'Y', country: 'NL' },
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('PUT delivery-address/:id — updates address', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers: adminHeaders,
-        payload: {
-          name: 'HQ Updated',
-          address: 'Koninginneweg 10, 1012AM Amsterdam',
-          country: 'NL',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(res.json().address.name).toBe('HQ Updated');
-    });
-
-    it('DELETE delivery-address/:id — 404 for unknown address', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/999999`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(404);
-    });
-
-    it('DELETE delivery-address/:id — deletes address', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/business/companies/${companyId}/lists/${listId}/delivery-addresses/${addressId}`,
-        headers: adminHeaders,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
     });
   });
 
