@@ -83,60 +83,6 @@ class Excel {
   }
 
   /**
-   * Process multipart upload and supplement Excel file (synchronous version)
-   * @param parts Fastify multipart parts iterator
-   * @param clientIp Client IP address
-   * @returns Modified Excel file buffer
-   */
-  public async processMultipartUpload(
-    parts: any,
-    clientIp: string
-  ): Promise<Buffer> {
-    let fileBuffer: Buffer | null = null;
-    let hasHeader = true;
-    let spotifyColumn = 1;
-    let outputColumn = 2;
-    let playlistName: string | undefined;
-    let yearColumn: number | undefined;
-
-    // Parse multipart form data
-    for await (const part of parts) {
-      if (part.type === 'file') {
-        fileBuffer = await part.toBuffer();
-      } else {
-        const fieldValue = (part as any).value;
-        if (part.fieldname === 'hasHeader') {
-          hasHeader = fieldValue === 'true';
-        } else if (part.fieldname === 'spotifyColumn') {
-          spotifyColumn = parseInt(fieldValue);
-        } else if (part.fieldname === 'outputColumn') {
-          outputColumn = parseInt(fieldValue);
-        } else if (part.fieldname === 'playlistName') {
-          playlistName = fieldValue?.trim() || undefined;
-        } else if (part.fieldname === 'yearColumn') {
-          const parsedYear = parseInt(fieldValue);
-          yearColumn = !isNaN(parsedYear) && parsedYear > 0 ? parsedYear : undefined;
-        }
-      }
-    }
-
-    if (!fileBuffer) {
-      throw new Error('No file uploaded');
-    }
-
-    // Process the Excel file
-    return await this.supplementExcelWithQRLinks(
-      fileBuffer,
-      hasHeader,
-      spotifyColumn,
-      outputColumn,
-      clientIp,
-      playlistName,
-      yearColumn
-    );
-  }
-
-  /**
    * Supplement Excel file with QRSong links
    * @param buffer Excel file buffer
    * @param hasHeader Whether the Excel file has a header row

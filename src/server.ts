@@ -248,10 +248,6 @@ class Server {
     }
   }
 
-  public getWorkerId() {
-    return this.workerId;
-  }
-
   private async startCluster() {
     if (cluster.isPrimary) {
       // app.ts forks the workers before this file is even loaded, so they
@@ -365,10 +361,6 @@ class Server {
         reject(err);
       }
     });
-  }
-
-  public getPort(): number {
-    return this.port;
   }
 
   public async registerPlugins() {

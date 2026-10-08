@@ -1075,20 +1075,6 @@ class AppDesign {
     return result;
   }
 
-  /** A published customer theme file, or null when there is none. */
-  public async readThemeFile(slug: string): Promise<ThemeConfig | null> {
-    try {
-      const raw = await fs.readFile(
-        path.join(this.customerThemeDir(slug), `${slug}.json`),
-        'utf-8'
-      );
-      return JSON.parse(raw);
-    } catch (error: any) {
-      if (error?.code === 'ENOENT') return null;
-      throw error;
-    }
-  }
-
   /**
    * Ask OpenAI for a palette that fits an uploaded background, so the whole
    * app can be themed from one image. Falls back to a deterministic palette

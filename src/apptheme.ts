@@ -234,13 +234,6 @@ class AppTheme {
   }
 
   /**
-   * Check if themes are initialized
-   */
-  public isInitialized(): boolean {
-    return this.appThemesInitialized;
-  }
-
-  /**
    * Reload themes (useful for adding new themes without restarting API).
    * Reloads this worker immediately and broadcasts to all other workers.
    */

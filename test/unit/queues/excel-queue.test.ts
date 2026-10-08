@@ -47,9 +47,6 @@ vi.mock('bullmq', () => ({
     getCompletedCount = holder.counts.getCompletedCount;
     getFailedCount = holder.counts.getFailedCount;
     getDelayedCount = holder.counts.getDelayedCount;
-    pause = async () => undefined;
-    resume = async () => undefined;
-    drain = async () => undefined;
     close = async () => undefined;
   },
   QueueEvents: class {
@@ -222,10 +219,7 @@ describe('queue lifecycle and events', () => {
     }
   });
 
-  it('pause/resume/clear/close delegate to the underlying queue without throwing', async () => {
-    await expect(queue.pauseQueue()).resolves.toBeUndefined();
-    await expect(queue.resumeQueue()).resolves.toBeUndefined();
-    await expect(queue.clearQueue()).resolves.toBeUndefined();
+  it('close delegates to the underlying queue without throwing', async () => {
     await expect(queue.close()).resolves.toBeUndefined();
   });
 });

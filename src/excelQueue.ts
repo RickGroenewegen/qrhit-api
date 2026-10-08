@@ -328,30 +328,6 @@ class ExcelQueue {
   }
 
   /**
-   * Pause the queue
-   */
-  public async pauseQueue(): Promise<void> {
-    await this.queue.pause();
-    this.logger.log(color.yellow.bold('Excel queue paused'));
-  }
-
-  /**
-   * Resume the queue
-   */
-  public async resumeQueue(): Promise<void> {
-    await this.queue.resume();
-    this.logger.log(color.green.bold('Excel queue resumed'));
-  }
-
-  /**
-   * Clear the queue
-   */
-  public async clearQueue(): Promise<void> {
-    await this.queue.drain();
-    this.logger.log(color.yellow.bold('Excel queue cleared'));
-  }
-
-  /**
    * Close the queue and workers
    */
   public async close(): Promise<void> {

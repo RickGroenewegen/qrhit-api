@@ -842,10 +842,6 @@ class Discount {
     return out;
   }
 
-  public buildBase(calc: any): DiscountBase {
-    return buildDiscountBase(calc);
-  }
-
   private labelFor(d: any): string {
     return d.type === 'percent' ? `${d.code} (${d.percent}%)` : d.code;
   }

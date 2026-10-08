@@ -64,13 +64,6 @@ class MusicServiceRegistry {
   }
 
   /**
-   * Get all registered providers
-   */
-  getAllProviders(): IMusicProvider[] {
-    return Array.from(this.providers.values());
-  }
-
-  /**
    * Recognize a URL and determine which service it belongs to
    */
   recognizeUrl(url: string): UrlRecognitionResult {

@@ -9,8 +9,6 @@ const TIDAL_LOGIN_URL = 'https://login.tidal.com';
 // Token exchange URL (backend)
 const TIDAL_AUTH_BASE_URL = 'https://auth.tidal.com/v1/oauth2';
 const TIDAL_API_BASE_URL = 'https://openapi.tidal.com/v2';
-// V1 API for endpoints that return full track details
-const TIDAL_API_V1_URL = 'https://api.tidal.com/v1';
 
 /**
  * Tidal API wrapper with OAuth 2.0 + PKCE support
@@ -375,75 +373,6 @@ class TidalApi {
   }
 
   /**
-   * Make an authenticated API request to Tidal V1 API
-   * V1 returns full track/album/artist objects directly (not JSON:API format)
-   */
-  async apiRequestV1<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<{ success: boolean; data?: T; error?: string; needsReAuth?: boolean }> {
-    const accessToken = await this.getAccessToken();
-
-    if (!accessToken) {
-      this.logger.log('ERROR: Tidal V1 API request - No access token available');
-      return { success: false, error: 'Not authenticated with Tidal', needsReAuth: true };
-    }
-
-    try {
-      const url = endpoint.startsWith('http') ? endpoint : `${TIDAL_API_V1_URL}${endpoint}`;
-
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...options.headers,
-        },
-      });
-
-      if (response.status === 401) {
-        // Token might be invalid, try to refresh and retry once
-        const newToken = await this.refreshAccessToken();
-        if (newToken) {
-          const retryResponse = await fetch(url, {
-            ...options,
-            headers: {
-              Authorization: `Bearer ${newToken}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              ...options.headers,
-            },
-          });
-
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            return { success: true, data };
-          }
-        }
-        return { success: false, error: 'Authentication failed', needsReAuth: true };
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        this.logger.log(
-          `ERROR: Tidal V1 API request failed: ${response.status} - ${JSON.stringify(errorData)}`
-        );
-        return {
-          success: false,
-          error: errorData.userMessage || errorData.error || `API request failed: ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error: any) {
-      this.logger.log(`ERROR: Tidal V1 API request error: ${error.message}`);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
    * Get playlist metadata
    */
   async getPlaylist(playlistId: string, countryCode: string = 'US'): Promise<{
@@ -478,26 +407,6 @@ class TidalApi {
   }
 
   /**
-   * Get playlist tracks using V1 API (returns full track details with artist/album)
-   * Uses offset-based pagination (limit/offset)
-   */
-  async getPlaylistTracksV1(
-    playlistId: string,
-    countryCode: string = 'US',
-    limit: number = 100,
-    offset: number = 0
-  ): Promise<{
-    success: boolean;
-    data?: any;
-    error?: string;
-    needsReAuth?: boolean;
-  }> {
-    return this.apiRequestV1(
-      `/playlists/${playlistId}/tracks?countryCode=${countryCode}&limit=${limit}&offset=${offset}`
-    );
-  }
-
-  /**
    * Search for tracks using the V2 API
    * Endpoint: GET /searchResults/{query}?countryCode=US&include=tracks
    */
@@ -511,18 +420,6 @@ class TidalApi {
     return this.apiRequest(
       `/searchResults/${encodedQuery}?countryCode=${countryCode}&include=tracks`
     );
-  }
-
-  /**
-   * Get track details by ID
-   */
-  async getTrack(trackId: string, countryCode: string = 'US'): Promise<{
-    success: boolean;
-    data?: any;
-    error?: string;
-    needsReAuth?: boolean;
-  }> {
-    return this.apiRequest(`/tracks/${trackId}?countryCode=${countryCode}&include=albums,artists`);
   }
 
   /**

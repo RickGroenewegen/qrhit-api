@@ -425,13 +425,6 @@ class Blog {
     }
     return entries;
   }
-
-  /** Drop the rendered-post caches. Call after a deploy that changes content. */
-  public async clearCaches(): Promise<void> {
-    this.indexPromise = null;
-    this.versionPromise = null;
-    await this.cache.del(`${CACHE_PREFIX}*`);
-  }
 }
 
 export default Blog;

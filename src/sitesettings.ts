@@ -67,44 +67,6 @@ class SiteSettings {
   }
 
   /**
-   * Get production days setting
-   */
-  public async getProductionDays(): Promise<number | null> {
-    try {
-      const settings = await this.getSettings();
-      return settings ? settings.productionDays : null;
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error getting production days: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Get production message setting
-   */
-  public async getProductionMessage(): Promise<string | null> {
-    try {
-      const settings = await this.getSettings();
-      return settings ? settings.productionMessage : null;
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error getting production message: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
-      return null;
-    }
-  }
-
-  /**
    * Update production settings
    * Clears production settings cache and shipping info cache after update
    */
@@ -157,35 +119,6 @@ class SiteSettings {
         )
       );
       return null;
-    }
-  }
-
-  /**
-   * Initialize production settings if they don't exist
-   * Creates a default settings row
-   */
-  public async initializeSettings(): Promise<void> {
-    try {
-      const settings = await this.prisma.settings.findFirst();
-
-      if (!settings) {
-        await this.prisma.settings.create({
-          data: {
-            productionDays: 3,
-            productionMessage: 'Your order will be produced and shipped within {days} business days.',
-          },
-        });
-
-        this.logger.log(color.green.bold('Production settings initialized with defaults'));
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error initializing production settings: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
     }
   }
 }
