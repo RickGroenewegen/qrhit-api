@@ -22,7 +22,6 @@ import Utils from '../../src/utils';
  *  - GET /reviews_details (trustpilot company details)
  *  - GET /test (diagnostics)
  *  - POST /push/register (valid + invalid)
- *  - POST /broken-links failure path (result.success === false branch)
  *  - POST /chunk-error with a real non-bot user agent (hits Redis counter)
  *  - POST /chunk-error with a bot user agent (short-circuit)
  */
@@ -111,42 +110,6 @@ describe('public routes — wave 2 coverage', () => {
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().success).toBe(false);
-    });
-  });
-
-  // ====================================================================
-  // POST /broken-links — additional branches
-  // ====================================================================
-
-  describe('POST /broken-links', () => {
-    it('400 when type is neither "invalid" nor "non-retrievable"', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/broken-links',
-        payload: {
-          url: 'https://open.spotify.com/track/pr2-test',
-          type: 'badtype',
-          errorType: 'not_found',
-        },
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain('Invalid type');
-    });
-
-    it('200 with id when a valid broken link is logged', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/broken-links',
-        payload: {
-          url: 'https://open.spotify.com/track/pr2-logged-link',
-          type: 'invalid',
-          errorType: 'not_found',
-          serviceType: 'spotify',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(typeof res.json().id).toBe('number');
     });
   });
 

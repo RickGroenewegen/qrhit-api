@@ -15,7 +15,7 @@ import { verifyToken } from '../../src/auth';
 /**
  * Integration coverage for the admin panel routes in adminRoutes.ts and the
  * data-layer modules they call (discounts, tracks, featured/promotional
- * playlists, broken/unknown links, settings, shipping config, charts...).
+ * playlists, unknown links, settings, shipping config, charts...).
  */
 describe('admin routes', () => {
   let app: FastifyInstance;
@@ -292,83 +292,6 @@ describe('admin routes', () => {
       const { templates } = res.json();
       expect(Array.isArray(templates)).toBe(true);
       expect(templates.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('broken links', () => {
-    let linkId: number;
-
-    beforeAll(async () => {
-      const link = await prisma().brokenLink.create({
-        data: {
-          url: 'https://open.spotify.com/track/broken1',
-          type: 'invalid',
-          serviceType: 'spotify',
-          errorType: 'not_found',
-        } as any,
-      });
-      linkId = link.id;
-    });
-
-    it('lists broken links', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/broken-links',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.total).toBeGreaterThanOrEqual(1);
-      expect(body.data.some((l: any) => l.id === linkId)).toBe(true);
-    });
-
-    it('counts broken links', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/broken-links/count',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().count).toBeGreaterThanOrEqual(1);
-    });
-
-    it('toggles the ignored flag', async () => {
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/admin/broken-links/${linkId}/ignore`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().ignored).toBe(true);
-    });
-
-    it('deletes a broken link', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/admin/broken-links/${linkId}`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().brokenLink.findUnique({ where: { id: linkId } });
-      expect(row).toBeNull();
-    });
-
-    it('deletes all broken links', async () => {
-      await prisma().brokenLink.create({
-        data: {
-          url: 'https://open.spotify.com/track/broken2',
-          type: 'invalid',
-          serviceType: 'spotify',
-          errorType: 'not_found',
-        } as any,
-      });
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/admin/broken-links',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().deleted).toBeGreaterThanOrEqual(1);
     });
   });
 

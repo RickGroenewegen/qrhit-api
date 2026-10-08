@@ -14,7 +14,7 @@ import Generator from '../../src/generator';
 
 /**
  * Public order-servicing routes: user suggestions (corrections) flow,
- * shipping info, reviews, promotional playlist setup and broken-link logging.
+ * shipping info, reviews and promotional playlist setup.
  */
 describe('public order-servicing routes', () => {
   let app: FastifyInstance;
@@ -503,43 +503,6 @@ describe('public order-servicing routes', () => {
         url: '/unsubscribe/not-a-real-hash',
       });
       expect(res.statusCode).toBe(400);
-    });
-
-    it('validates the broken-link payload', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/broken-links',
-        payload: { url: 'https://x.test' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('rejects an invalid broken-link type', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/broken-links',
-        payload: { url: 'https://x.test', type: 'weird', errorType: 'nope' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('logs a broken link', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/broken-links',
-        payload: {
-          url: 'https://open.spotify.com/playlist/gone',
-          type: 'invalid',
-          errorType: 'not_found',
-          serviceType: 'spotify',
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const row = await prisma().brokenLink.findFirst({
-        where: { url: 'https://open.spotify.com/playlist/gone' },
-      });
-      expect(row).toBeTruthy();
-      expect(row!.errorType).toBe('not_found');
     });
   });
 });

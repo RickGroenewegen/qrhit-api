@@ -17,7 +17,6 @@ import Shipping from '../shipping';
 import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
 import Promotional from '../promotional';
-import BrokenLink from '../brokenLink';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
 import GoogleFonts, { familyToCss } from '../googleFonts';
@@ -63,7 +62,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const shipping = Shipping.getInstance();
   const chatService = new ChatService();
   const promotional = Promotional.getInstance();
-  const brokenLink = BrokenLink.getInstance();
   const calendar = CalendarService.getInstance();
 
   // Occasion landing pages (per language). Public, SSR-consumed, Redis-cached.
@@ -1203,53 +1201,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       return result;
     }
   );
-
-  // =============================================
-  // Broken links logging (public endpoint for tracking)
-  // =============================================
-
-  // Log a broken link (public endpoint - no auth required)
-  fastify.post('/broken-links', async (request: any, reply: any) => {
-    try {
-      const { url, type, errorType, serviceType } = request.body;
-      const userAgent = request.headers['user-agent'] || '';
-
-      if (!url || !type || !errorType) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Missing required fields: url, type, errorType',
-        });
-      }
-
-      // Validate type
-      if (type !== 'invalid' && type !== 'non-retrievable') {
-        return reply.status(400).send({
-          success: false,
-          error: 'Invalid type. Must be "invalid" or "non-retrievable"',
-        });
-      }
-
-      const result = await brokenLink.logBrokenLink({
-        url,
-        type,
-        errorType,
-        serviceType,
-        userAgent,
-      });
-
-      if (result.success) {
-        return reply.send({ success: true, id: result.id });
-      } else {
-        return reply.status(500).send({ success: false, error: result.error });
-      }
-    } catch (error: any) {
-      console.error('Error logging broken link:', error);
-      return reply.status(500).send({
-        success: false,
-        error: 'Failed to log broken link',
-      });
-    }
-  });
 
   // Client-side broken-chunk reporting. The browser posts here the moment a
   // lazy/dynamic import fails (almost always a stale index.html still pointing

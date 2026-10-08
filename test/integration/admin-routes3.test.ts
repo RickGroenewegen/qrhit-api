@@ -42,7 +42,6 @@ import Generator from '../../src/generator';
  *  - admin/translate-fields
  *  - admin/tracks/toggle-spotify-ignored, missing-spotify-count
  *  - admin/tracks/service-search, spotify-search
- *  - admin/broken-links CRUD
  *  - admin/unknown-links CRUD
  *  - admin/spotify/provider-status + toggle-provider
  *  - admin/db/flush-hosts
@@ -1019,98 +1018,6 @@ describe('admin routes — wave 3 coverage', () => {
   });
 
   // ====================================================================
-  // BROKEN LINKS CRUD
-  // ====================================================================
-
-  describe('broken links endpoints', () => {
-    let brokenLinkId: number;
-
-    beforeAll(async () => {
-      // Seed a broken link
-      const bl = await prisma().brokenLink.create({
-        data: {
-          url: 'https://broken-wave3.test/link',
-          type: 'invalid',
-          serviceType: 'spotify',
-          errorType: 'not_found',
-        },
-      });
-      brokenLinkId = bl.id;
-    });
-
-    it('GET /admin/broken-links — returns list', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/broken-links',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(Array.isArray(res.json().data)).toBe(true);
-    });
-
-    it('GET /admin/broken-links/count — returns count', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/broken-links/count',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(typeof res.json().count).toBe('number');
-    });
-
-    it('PATCH /admin/broken-links/:id/ignore — 400 for NaN id', async () => {
-      const res = await app.inject({
-        method: 'PATCH',
-        url: '/admin/broken-links/abc/ignore',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('PATCH /admin/broken-links/:id/ignore — toggles ignored flag', async () => {
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/admin/broken-links/${brokenLinkId}/ignore`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(typeof res.json().ignored).toBe('boolean');
-    });
-
-    it('DELETE /admin/broken-links/:id — 400 for NaN id', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/admin/broken-links/abc',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('DELETE /admin/broken-links/:id — deletes broken link', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/admin/broken-links/${brokenLinkId}`,
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-    });
-
-    it('DELETE /admin/broken-links — deletes all broken links', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/admin/broken-links',
-        headers,
-      });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
-      expect(typeof res.json().deleted).toBe('number');
-    });
-  });
-
-  // ====================================================================
   // UNKNOWN LINKS CRUD
   // ====================================================================
 
@@ -1844,7 +1751,6 @@ describe('admin routes — wave 3 coverage', () => {
       { method: 'GET',    url: '/lastplays' },
       { method: 'POST',   url: '/push/broadcast' },
       { method: 'POST',   url: '/admin/featured/search' },
-      { method: 'GET',    url: '/admin/broken-links' },
       { method: 'GET',    url: '/admin/unknown-links' },
       { method: 'GET',    url: '/admin/spotify/provider-status' },
       { method: 'GET',    url: '/admin/settings' },
@@ -1862,10 +1768,10 @@ describe('admin routes — wave 3 coverage', () => {
   });
 
   describe('auth: customer (users group) gets 403 on admin endpoints', () => {
-    it('GET /admin/broken-links → 403 for users-only JWT', async () => {
+    it('GET /admin/unknown-links → 403 for users-only JWT', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/admin/broken-links',
+        url: '/admin/unknown-links',
         headers: customerHeaders,
       });
       expect(res.statusCode).toBe(403);

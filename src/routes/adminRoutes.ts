@@ -38,7 +38,6 @@ import Promotional from '../promotional';
 import AbuseGuard from '../abuse_guard';
 import IpAllowlist from '../ipAllowlist';
 import BlockedIp from '../blockedIp';
-import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
@@ -81,7 +80,6 @@ export default async function adminRoutes(
   const mail = Mail.getInstance();
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
-  const brokenLink = BrokenLink.getInstance();
   const blockedIp = BlockedIp.getInstance();
   const postnl = PostNL.getInstance();
   const logger = new Logger();
@@ -5036,67 +5034,6 @@ export default async function adminRoutes(
     }
   );
 
-  // ============================================
-  // BROKEN LINKS ROUTES (Admin only - public logging is in publicRoutes.ts)
-  // ============================================
-
-  // Get all broken links (admin only)
-  fastify.get(
-    '/admin/broken-links',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const { type, serviceType, limit, offset } = request.query;
-
-        const result = await brokenLink.getBrokenLinks({
-          type,
-          serviceType,
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
-        });
-
-        if (result.success) {
-          return reply.send({
-            success: true,
-            data: result.data,
-            total: result.total,
-          });
-        } else {
-          return reply.status(500).send({ success: false, error: result.error });
-        }
-      } catch (error: any) {
-        console.error('Error fetching broken links:', error);
-        return reply.status(500).send({
-          success: false,
-          error: 'Failed to fetch broken links',
-        });
-      }
-    }
-  );
-
-  // Get broken links count (admin only)
-  fastify.get(
-    '/admin/broken-links/count',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      try {
-        const result = await brokenLink.getBrokenLinksCount();
-
-        if (result.success) {
-          return reply.send({ success: true, count: result.count });
-        } else {
-          return reply.status(500).send({ success: false, error: result.error });
-        }
-      } catch (error: any) {
-        console.error('Error counting broken links:', error);
-        return reply.status(500).send({
-          success: false,
-          error: 'Failed to count broken links',
-        });
-      }
-    }
-  );
-
   // Blocked IPs, newest first (admin only)
   fastify.get(
     '/admin/blocked-ips',
@@ -5221,58 +5158,6 @@ export default async function adminRoutes(
       const result = await blockedIp.deleteBlockedIp(id);
       if (result.success) {
         return reply.send({ success: true });
-      } else {
-        return reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  // Delete a broken link (admin only)
-  fastify.delete(
-    '/admin/broken-links/:id',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        return reply.status(400).send({ success: false, error: 'Invalid id' });
-      }
-
-      const result = await brokenLink.deleteBrokenLink(id);
-      if (result.success) {
-        return reply.send({ success: true });
-      } else {
-        return reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  // Toggle ignored status of a broken link (admin only)
-  fastify.patch(
-    '/admin/broken-links/:id/ignore',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const id = parseInt(request.params.id);
-      if (isNaN(id)) {
-        return reply.status(400).send({ success: false, error: 'Invalid id' });
-      }
-
-      const result = await brokenLink.toggleIgnored(id);
-      if (result.success) {
-        return reply.send({ success: true, ignored: result.ignored });
-      } else {
-        return reply.status(500).send({ success: false, error: result.error });
-      }
-    }
-  );
-
-  // Delete all broken links (admin only)
-  fastify.delete(
-    '/admin/broken-links',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const result = await brokenLink.deleteAllBrokenLinks();
-      if (result.success) {
-        return reply.send({ success: true, deleted: result.deleted });
       } else {
         return reply.status(500).send({ success: false, error: result.error });
       }
