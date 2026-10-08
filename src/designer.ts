@@ -48,7 +48,7 @@ class Designer {
   /**
    * Uploads a background image from a base64 string
    * @param base64Image The base64 encoded image string
-   * @param filename Optional filename, if not provided a nanoid will be used
+   * @param filename Optional filename, if not provided a random one is generated
    * @param qrBackgroundType Type of QR background: 'none', 'circle', 'square' (default: 'square')
    * @returns Object with success status, filename and file path
    */
@@ -166,7 +166,7 @@ class Designer {
   /**
    * Uploads a background image for the back side from a base64 string
    * @param base64Image The base64 encoded image string
-   * @param filename Optional filename, if not provided a nanoid will be used
+   * @param filename Optional filename, if not provided a random one is generated
    * @param qrBackgroundType Type of QR background: 'none', 'circle', 'square' (default: 'square')
    * @returns Object with success status, filename and file path
    */

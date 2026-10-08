@@ -29,8 +29,8 @@ function createPrismaAdapter(): PrismaMariaDb {
     leakDetectionTimeout: 20000,
     // A caching_sha2_password user (the MySQL 8.4 default) over a non-TLS
     // connection needs the server's RSA key for its first login after a
-    // server restart. mysql2 (knex) fetches it by itself; the mariadb driver
-    // refuses unless this is set. No effect for mysql_native_password users.
+    // server restart. The mariadb driver refuses to fetch it unless this is
+    // set. No effect for mysql_native_password users.
     allowPublicKeyRetrieval: true,
   });
 }

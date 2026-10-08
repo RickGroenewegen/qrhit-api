@@ -4,7 +4,6 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import Logger from './logger';
 import PrismaInstance from './prisma';
-import TrackingMore from 'trackingmore-sdk-nodejs';
 import Utils from './utils';
 import Cache from './cache';
 import ExcelJS from 'exceljs';
@@ -16,14 +15,10 @@ class Shipping {
   private static instance: Shipping;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
-  private trackingMore: TrackingMore;
   private utils = new Utils();
   private cache = Cache.getInstance();
 
   private constructor() {
-    const apiKey = process.env['TRACKINGMORE_API_KEY'] || '';
-    this.trackingMore = new TrackingMore(apiKey);
-
     // Schedule shipping status updates to run hourly
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {

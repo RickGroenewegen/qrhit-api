@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run start:dev2` - Alternative development server using tsx watch
 - `npm run build` - Build TypeScript to JavaScript (outputs to ./build)
 - `npm run start` - Start the production server; builds first only when `./build` is stale (see "Startup and deploys")
-- `npm run test` - Run tests (builds first, then runs test.js)
+- `npm run test` - Run the vitest suites (see TESTING.md)
 
 ### Production Commands
 - `npm run start_pm2` - Production deployment with git pull, npm install, prisma db push, build, and start
@@ -329,7 +329,7 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 Every language, image and speech model call goes through `src/llm` (built
 2026-10-08). Nothing else in `src/` imports an AI SDK; a test fails if
 something does (`test/unit/llm/single-source.test.ts`). The root `translate.js`
-and `hits.js` are standalone dev scripts and stay outside it.
+is a standalone dev script and stays outside it.
 
 | what | where |
 |---|---|
@@ -526,9 +526,8 @@ picking is what makes it usable. About 3 to 5 seconds in all.
   is `tracks.total`, or `items.total` in the 2026 format; both are read.
 
 ## Testing
-- Basic test setup in `test.js`
-- Run tests with `npm test`
-- Tests require build step before execution
+- Vitest suites in `test/`, see TESTING.md
+- Run tests with `npm test` (`npm run test:unit` for the unit suites only)
 
 ## Deployment
 - **PM2** process manager for production

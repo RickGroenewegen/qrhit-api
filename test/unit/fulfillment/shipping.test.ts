@@ -4,8 +4,7 @@
  * Module-boundary mocks:
  *  - axios                      → TrackingMore HTTP calls
  *  - cron                       → CronJob constructor recorded (no timers)
- *  - trackingmore-sdk-nodejs    → constructed in the Shipping constructor
- *  - ../../src/prisma           → in-memory prisma stub
+ *  - ../../src/prisma          → in-memory prisma stub
  *  - ../../src/cache            → Map-less get/set spies
  *  - ../../src/utils            → isMainServer stub (no EC2 probe)
  *  - ../../src/sitesettings     → getSettings stub
@@ -58,15 +57,6 @@ vi.mock('cron', () => ({
   CronJob: class {
     constructor(...args: any[]) {
       cronCalls.push(args);
-    }
-  },
-}));
-
-const trackingMoreCtor = vi.hoisted(() => vi.fn());
-vi.mock('trackingmore-sdk-nodejs', () => ({
-  default: class {
-    constructor(apiKey: string) {
-      trackingMoreCtor(apiKey);
     }
   },
 }));
