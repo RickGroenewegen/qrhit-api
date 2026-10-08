@@ -12,7 +12,6 @@ import AnalyticsClient from './analytics';
 import cluster from 'cluster';
 import { backfillLegacyDefaultBackground } from './legacyBackground';
 import { Music } from './music';
-import PushoverClient from './pushover';
 import { AiTasks } from './aiTasks';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
@@ -40,7 +39,6 @@ class Data {
   private music = new Music();
   private aiTasks = new AiTasks();
   private analytics = AnalyticsClient.getInstance();
-  private pushover = new PushoverClient();
   private appTheme = AppTheme.getInstance();
   private axiosInstance: AxiosInstance;
   private blockedPlaylists: Set<number> = new Set();

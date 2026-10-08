@@ -63,7 +63,6 @@ export default async function adminRoutes(
   getAuthHandler: any
 ) {
   const generator = Generator.getInstance();
-  const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
   const translation = new Translation();
   const designer = Designer.getInstance();

@@ -1,12 +1,11 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 
 import PushoverClient from './pushover';
 import Mollie from './mollie';
 import Generator from './generator';
-import Spotify from './spotify';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import Data from './data';
@@ -35,7 +34,6 @@ class Suggestion {
   private pushover = new PushoverClient();
   private mollie = new Mollie();
   private generator = Generator.getInstance();
-  private spotify = new Spotify();
   private musicRegistry = MusicServiceRegistry.getInstance();
   private data = Data.getInstance();
   private cache = Cache.getInstance();
@@ -192,7 +190,7 @@ class Suggestion {
     }
   ): Promise<boolean> {
     try {
-      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+      const { verified } = await this.verifyPaymentOwnership(
         paymentId,
         userHash
       );
@@ -269,7 +267,7 @@ class Suggestion {
     clientIp: string
   ): Promise<boolean> {
     try {
-      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+      const { verified } = await this.verifyPaymentOwnership(
         paymentId,
         userHash
       );
@@ -1062,7 +1060,7 @@ class Suggestion {
     playlistId: string
   ): Promise<boolean> {
     try {
-      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+      const { verified } = await this.verifyPaymentOwnership(
         paymentId,
         userHash
       );

@@ -1,11 +1,11 @@
-import { format, set } from 'date-fns';
+import { format } from 'date-fns';
 import {
   MAX_CARDS,
   MAX_CARDS_PHYSICAL,
   OWN_CARD_PATH,
 } from './config/constants';
 import { color, white } from 'console-log-colors';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
@@ -15,7 +15,6 @@ import Data from './data';
 import Utils from './utils';
 import AnalyticsClient from './analytics';
 import Logger from './logger';
-import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Translation from './translation';
 import SpotifyApi from './spotify_api';
@@ -26,9 +25,7 @@ import SpotifyGraphqlScraper from './spotify_graphql_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 import RateLimitManager from './rate_limit_manager';
 import TrackEnrichment, { EnrichmentData } from './trackEnrichment';
-import cluster from 'cluster';
 import crypto from 'crypto';
-import { CronJob } from 'cron';
 import {
   EXTERNAL_CARD_CACHE_TTL_FAILURE,
   EXTERNAL_CARD_CACHE_TTL_SUCCESS,
@@ -135,15 +132,8 @@ class Spotify {
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyApi; // Default to SpotifyApi
   private apiFallback = this.spotifyGraphqlScraper; // Fallback to GraphQL scraper
 
-  // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
-  private jumboCardMap: { [key: string]: string } = {};
-  // Country card mapping: key = country code (e.g., 'de'), value = { cardNumber -> spotifyId }
-  private countryCardMaps: { [countryCode: string]: { [cardNumber: string]: string } } = {};
-  // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
-  private musicMatchMap: { [key: string]: string } = {};
   // Hosts with "qr" in their name (q.me-qr.com, qrto.org, qr.codes, ...) are
   // QR generators and shorteners and are not resolved, except our own domain.
   private ownDomain = 'qrsong.io';
@@ -198,203 +188,6 @@ class Spotify {
    */
   private getApiForProvider(provider: string): SpotifyApi | SpotifyApi2 {
     return provider === 'v2' ? this.spotifyApi2 : this.spotifyApi;
-  }
-
-  /**
-   * Fetches Jumbo gameset data and populates the jumboCardMap.
-   */
-  private async getJumboData(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
-
-    try {
-      const url =
-        'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
-      const response = await axios.get(url, { timeout: 10000 });
-      const data = response.data;
-      if (data && Array.isArray(data.gamesets)) {
-        for (const gameset of data.gamesets) {
-          const sku = gameset.sku;
-          const cards = gameset.gameset_data?.cards;
-          if (sku && Array.isArray(cards)) {
-            for (const card of cards) {
-              const cardNumber = card.CardNumber;
-              const spotifyId = card.Spotify;
-              if (cardNumber && spotifyId) {
-                const key = `${sku}_${cardNumber}`;
-                this.jumboCardMap[key] = spotifyId;
-              }
-            }
-          }
-        }
-        if (isPrimary) {
-          this.utils.isMainServer().then(async (isMainServer) => {
-            if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-              this.logger.log(
-                color.green.bold(
-                  `Jumbo gameset data loaded: ${color.white.bold(
-                    Object.keys(this.jumboCardMap).length
-                  )} cards mapped`
-                )
-              );
-            }
-          });
-        }
-      } else {
-        this.logger.log(
-          color.yellow.bold('Jumbo gameset data: No gamesets found in response')
-        );
-      }
-    } catch (e: any) {
-      this.logger.log(
-        color.red.bold(`Failed to fetch Jumbo gameset data: ${e.message || e}`)
-      );
-    }
-  }
-
-  /**
-   * Loads MusicMatch data from the JSON file and populates the musicMatchMap.
-   */
-  private async loadMusicMatchData(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
-
-    try {
-      // Import the musicmatch.json file
-      const fs = require('fs').promises;
-      const path = require('path');
-      const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
-      const filePath = path.join(appRoot, '_data', 'musicmatch.json');
-
-      const fileContent = await fs.readFile(filePath, 'utf8');
-      const data = JSON.parse(fileContent);
-
-      if (data && data.p && Array.isArray(data.p)) {
-        for (const playlist of data.p) {
-          const playlistId = playlist.i;
-          if (playlistId && Array.isArray(playlist.t)) {
-            for (const track of playlist.t) {
-              const trackId = track.i;
-              const spotifyId = track.l;
-              if (trackId && spotifyId) {
-                const key = `${playlistId}_${trackId}`;
-                this.musicMatchMap[key] = spotifyId;
-              }
-            }
-          }
-        }
-
-        if (isPrimary) {
-          this.utils.isMainServer().then(async (isMainServer) => {
-            if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-              this.logger.log(
-                color.green.bold(
-                  `MusicMatch data loaded: ${color.white.bold(
-                    Object.keys(this.musicMatchMap).length
-                  )} tracks mapped`
-                )
-              );
-            }
-          });
-        }
-      } else {
-        this.logger.log(
-          color.yellow.bold('MusicMatch data: No playlists found in file')
-        );
-      }
-    } catch (e: any) {
-      this.logger.log(
-        color.yellow.bold(`Failed to load MusicMatch data: ${e.message || e}`)
-      );
-    }
-  }
-
-  /**
-   * Loads country card data from JSON files in the _data/jumbo/ directory.
-   * Each file should have structure: { name: "de", cards: { "00001": "spotifyId", ... } }
-   */
-  private async loadCountryData(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
-
-    try {
-      const fs = require('fs').promises;
-      const path = require('path');
-      const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
-      const dirPath = path.join(appRoot, '_data', 'jumbo');
-
-      // Check if directory exists
-      try {
-        await fs.access(dirPath);
-      } catch {
-        this.logger.log(
-          color.yellow.bold('Country card data directory not found: ' + dirPath)
-        );
-        return;
-      }
-
-      // Read all files in the directory
-      const files = await fs.readdir(dirPath);
-      const jsonFiles = files.filter((file: string) => file.endsWith('.json'));
-
-      let totalCards = 0;
-      for (const file of jsonFiles) {
-        try {
-          const filePath = path.join(dirPath, file);
-          const fileContent = await fs.readFile(filePath, 'utf8');
-          const data = JSON.parse(fileContent);
-
-          if (data && data.name && data.cards && typeof data.cards === 'object') {
-            const countryCode = data.name.toLowerCase();
-            this.countryCardMaps[countryCode] = data.cards;
-
-            const cardCount = Object.keys(data.cards).length;
-            totalCards += cardCount;
-
-            if (isPrimary) {
-              this.utils.isMainServer().then(async (isMainServer) => {
-                if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-                  this.logger.log(
-                    color.green.bold(
-                      `Country card data loaded for ${color.white.bold(
-                        countryCode
-                      )}: ${color.white.bold(cardCount)} cards`
-                    )
-                  );
-                }
-              });
-            }
-          } else {
-            this.logger.log(
-              color.yellow.bold(
-                `Invalid country card data format in ${file}: missing name or cards`
-              )
-            );
-          }
-        } catch (e: any) {
-          this.logger.log(
-            color.yellow.bold(
-              `Failed to load country card data from ${file}: ${e.message || e}`
-            )
-          );
-        }
-      }
-
-      if (isPrimary && jsonFiles.length > 0) {
-        this.utils.isMainServer().then(async (isMainServer) => {
-          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-            this.logger.log(
-              color.green.bold(
-                `Country card data loaded: ${color.white.bold(
-                  jsonFiles.length
-                )} countries, ${color.white.bold(totalCards)} total cards`
-              )
-            );
-          }
-        });
-      }
-    } catch (e: any) {
-      this.logger.log(
-        color.yellow.bold(`Failed to load country card data: ${e.message || e}`)
-      );
-    }
   }
 
   public async getPlaylist(
@@ -861,7 +654,6 @@ class Spotify {
     };
   }
 
-  // New function using this.api.getTracks
   public async getTracks(
     playlistId: string,
     cache: boolean = true,
@@ -1374,9 +1166,6 @@ class Spotify {
       };
     }
   }
-
-  // Track which API was used last for round-robin fallback
-  private lastSearchApi: 'scraper' | 'rapidapi' = 'scraper';
 
   public async searchTracks(
     searchTerm: string,

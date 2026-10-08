@@ -275,9 +275,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Cache for robots.txt content
-  let robotsTxtCache: string | null = null;
-
   // Apple App Site Association
   fastify.get(
     '/.well-known/apple-app-site-association',

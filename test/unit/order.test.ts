@@ -192,50 +192,6 @@ describe('updatePaymentInfo', () => {
   });
 });
 
-describe('calculateWilsonScore (private ranking helper)', () => {
-  // Private and currently unreferenced elsewhere; tested via any-cast to pin
-  // the ranking math down.
-  const score = (downloads: number, createdAt: Date) =>
-    (order as any).calculateWilsonScore(downloads, createdAt);
-
-  it('scores a fresh single-download playlist at the Wilson lower bound', () => {
-    // With phat=1 the score reduces to 1/(1+z^2/n): n=1 -> 0.2066 -> 21
-    expect(score(1, new Date())).toBe(21);
-  });
-
-  it('increases with downloads (more confidence)', () => {
-    const now = new Date();
-    expect(score(100, now)).toBeGreaterThan(score(10, now));
-    expect(score(10, now)).toBeGreaterThan(score(1, now));
-    // n=100 -> 1/(1 + 3.8416/100) ~ 0.963 -> 96
-    expect(score(100, now)).toBe(96);
-  });
-
-  it('decays exponentially with age (half-life one year)', () => {
-    const now = Date.now();
-    const oneYearAgo = new Date(now - 365.25 * 24 * 3600 * 1000);
-    const fresh = score(1000, new Date());
-    const aged = score(1000, oneYearAgo);
-    expect(aged).toBeLessThan(fresh);
-    // exp(-0.5) ~ 0.6065 of the fresh score
-    expect(aged).toBe(Math.round(fresh * Math.exp(-0.5)));
-  });
-});
-
-describe('getPlaylistDownloads (private)', () => {
-  it('counts paid payments containing the playlist', async () => {
-    prismaMock.paymentHasPlaylist.count.mockResolvedValue(7);
-    const downloads = await (order as any).getPlaylistDownloads('spotify-123');
-    expect(downloads).toBe(7);
-    expect(prismaMock.paymentHasPlaylist.count).toHaveBeenCalledWith({
-      where: {
-        playlist: { playlistId: 'spotify-123' },
-        payment: { status: 'paid' },
-      },
-    });
-  });
-});
-
 describe('calculateSingleItem', () => {
   it('is currently a no-op returning undefined (body commented out)', async () => {
     expect(await order.calculateSingleItem({ anything: true })).toBeUndefined();

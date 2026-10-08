@@ -10,13 +10,12 @@ import {
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
-import { color, blue, white } from 'console-log-colors';
+import { color } from 'console-log-colors';
 import Mail from '../mail';
 import fs from 'fs/promises';
 import Data from '../data';
 import PDF from '../pdf';
 import PushoverClient from '../pushover';
-import Spotify from '../spotify';
 import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import { OrderTypePrice } from '../interfaces/OrderTypePrice';
 import Discount from '../discount';
@@ -87,7 +86,6 @@ class PrintEnBindV2 {
   private logger = new Log();
   private mail = Mail.getInstance();
   private data = Data.getInstance();
-  private spotify = Spotify.getInstance();
   private discount = new Discount();
   private shipping = Shipping.getInstance();
   private pushover = new PushoverClient();
@@ -1841,48 +1839,6 @@ class PrintEnBindV2 {
       console.log(123, e);
       // Nothing
     }
-  }
-
-  private async createInvoice(payment: any): Promise<string> {
-    const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
-    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
-
-    this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoiceUrl)}`));
-
-    try {
-      // Check if the file exists
-      await fs.access(pdfPath);
-      this.logger.log(
-        blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
-      );
-    } catch (error) {
-      // If the file doesn't exist, create it using Lambda
-      const pdfManager = new PDF();
-
-      // Create the directory if it doesn't exist
-      const dir = `${process.env['PRIVATE_DIR']}/invoice`;
-      try {
-        await fs.access(dir);
-      } catch (error) {
-        await fs.mkdir(dir, { recursive: true });
-      }
-
-      // Generate PDF using Lambda
-      await pdfManager.generateFromUrl(invoiceUrl, pdfPath, {
-        format: 'a4',
-        marginTop: 0,
-        marginRight: 0,
-        marginBottom: 0,
-        marginLeft: 0,
-      });
-
-      // Ensure the PDF is properly sized
-      await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
-
-      this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
-    }
-
-    return pdfPath;
   }
 
   /**

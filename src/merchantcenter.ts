@@ -969,43 +969,6 @@ export class MerchantCenterService {
   }
 
   /**
-   * Get product type label in the specified locale using translation system
-   */
-  private async getProductTypeLabel(
-    type: string,
-    locale: string
-  ): Promise<string> {
-    // Get all product type translations for this locale
-    const productTranslations = await this.translate.getTranslationsByPrefix(
-      locale,
-      'product_type'
-    );
-
-    if (productTranslations && productTranslations[type]) {
-      return productTranslations[type];
-    }
-
-    // Fall back to English if locale not found
-    if (locale !== 'en') {
-      const enTranslations = await this.translate.getTranslationsByPrefix(
-        'en',
-        'product_type'
-      );
-      if (enTranslations && enTranslations[type]) {
-        return enTranslations[type];
-      }
-    }
-
-    // Final fallback
-    const defaultLabels: { [key: string]: string } = {
-      digital: 'Digital PDF',
-      sheets: 'Print Sheets',
-      physical: 'Physical Cards',
-    };
-    return defaultLabels[type] || type;
-  }
-
-  /**
    * Generate an AI-composed product image for a single playlist:
    *  - Picks the first payment that includes this playlist (the "sample")
    *  - Renders pages 1+2 of the printer view (front + back of one card) via Lambda
@@ -1384,8 +1347,6 @@ export class MerchantCenterService {
       const publicDir =
         process.env.PUBLIC_DIR || path.join(__dirname, '..', 'public');
       const outputDir = path.join(publicDir, 'products');
-      const outputFileName = `merchant_${imageKey}.jpg`;
-      const outputPath = path.join(outputDir, outputFileName);
 
       // In development, always regenerate images to ensure latest styling
       const isDevelopment = process.env['ENVIRONMENT'] === 'development';

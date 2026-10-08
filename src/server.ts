@@ -28,10 +28,8 @@ import Utils from './utils';
 import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
-import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
 import playlistGuardPlugin from './plugins/playlistGuardPlugin';
-import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
 import ChatWebSocketServer from './chat-websocket';
 import ProgressWebSocketServer from './progress-websocket';
@@ -48,10 +46,6 @@ import CalendarService from './calendarService';
 import AppTheme from './apptheme';
 import TrackEnrichment from './trackEnrichment';
 
-interface QueryParameters {
-  [key: string]: string | string[];
-}
-
 declare module 'fastify' {
   export interface FastifyInstance {
     authenticate: any;
@@ -64,10 +58,7 @@ class Server {
   private logger = new Logger();
   private port = 3004;
   private workerId: number = 0;
-  private isMainServer: boolean = false;
   private utils = new Utils();
-  private version: string = '1.0.0';
-  private httpServer: any;
   private wsServer: NativeWebSocketServer | null = null;
   private chatWsServer: ChatWebSocketServer | null = null;
   private progressWsServer: ProgressWebSocketServer | null = null;
@@ -203,8 +194,6 @@ class Server {
   }
 
   private configure = async () => {
-    this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
-    await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
     await this.addAuthRoutes();
@@ -215,12 +204,6 @@ class Server {
     await this.configure();
     await this.startCluster();
   };
-
-  private async setVersion() {
-    this.version = JSON.parse(
-      await fs.readFile('package.json', 'utf-8')
-    ).version;
-  }
 
   private async createDirs() {
     const publicDir = process.env['PUBLIC_DIR']!;

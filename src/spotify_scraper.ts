@@ -75,7 +75,7 @@ class RapidAPIQueue {
         while (attempt < maxAttempts) {
           try {
             // Execute the request using the stored config
-            const response = await axios(requestConfig);
+            await axios(requestConfig);
             await this.setLastRequestTimestamp(Date.now());
             // Here, we ideally need a way to return the result to the original caller.
             // This simple queue doesn't handle that directly.

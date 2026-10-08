@@ -548,9 +548,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   });
 
   fastify.post('/hitlist/search', async (request: any, _reply) => {
-    const { searchString, limit = 10, offset = 0 } = request.body;
+    const { searchString } = request.body;
     return await hitlist.searchTracks(searchString);
-    //return await spotify.searchTracks(searchString);
   });
 
   // Get the #1 song for a given date (for birthday #1 feature)

@@ -1,5 +1,5 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
-import { color, blue, white } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import ErrorTracking from './errorTracking';
 import Redis from 'ioredis';

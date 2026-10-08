@@ -1,19 +1,16 @@
 import { DELIVERY_FIELDS, effectiveDeliveryAddress } from './deliveryAddress';
-import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
+import { CompanyList } from '@prisma/client';
 import { resolveVatRegion } from './services/vat';
 import * as auth from './auth';
 import crypto from 'crypto';
 import Logger from './logger';
-import { color, white } from 'console-log-colors';
+import { color } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
 import path from 'path'; // Added path
 import Utils from './utils'; // Added Utils
-import Data from './data';
 import Spotify from './spotify';
 import Cache from './cache';
 import Translation from './translation';
-import Mail from './mail';
-import PushoverClient from './pushover';
 import PrismaInstance from './prisma';
 import {
   ListVariant,
@@ -41,8 +38,6 @@ class Business {
   private static instance: Business;
   private translation = new Translation();
   public prisma = PrismaInstance.getInstance();
-  private mail = Mail.getInstance();
-  private pushover = new PushoverClient();
 
   /**
    * Get all users that belong to a specific company.
@@ -427,7 +422,6 @@ class Business {
   }
   private logger = new Logger();
   private utils = new Utils();
-  private data = Data.getInstance();
   private spotify = Spotify.getInstance();
   private cache = Cache.getInstance();
 
@@ -729,43 +723,6 @@ class Business {
       );
       return null; // Indicate error
     }
-  }
-
-  /**
-   * Get the list status progression order
-   * @returns Array of status values in correct progression order
-   */
-  private getStatusProgression(): string[] {
-    return [
-      'new',
-      'company',
-      'questions',
-      'box',
-      'card',
-      'playlist',
-      'personalize',
-    ];
-  }
-
-  /**
-   * Update the list status based on progression
-   * @param currentStatus Current status of the list
-   * @param newStatus Desired new status
-   * @returns The appropriate status to set
-   */
-  private getUpdatedStatus(currentStatus: string, newStatus: string): string {
-    const progression = this.getStatusProgression();
-    const currentIndex = progression.indexOf(currentStatus);
-    const newIndex = progression.indexOf(newStatus);
-
-    // If current status is not in progression, default to new status
-    if (currentIndex === -1) return newStatus;
-
-    // If new status is not in progression, keep current status
-    if (newIndex === -1) return currentStatus;
-
-    // Only move forward in progression, never backward
-    return newIndex > currentIndex ? newStatus : currentStatus;
   }
 
   /**
@@ -2144,34 +2101,12 @@ class Business {
         // For now, proceed to potentially create empty playlists or return success with empty data
       }
 
-      // Use numberOfCards from companyList
-      const maxTracks = companyList.numberOfCards;
-
       // Filter the ranked tracks to get the top ones based on numberOfCards
-      // The 'withinLimit' flag from getRanking already tells us this.
+      // The 'withinLimit' flag from getRanking already tells us this. If
+      // none is within the limit, the playlist is empty.
       const topTracks = allRankedTracks.filter(
         (track: any) => track.withinLimit
       );
-
-      // If maxTracks was 0 or invalid in the DB, getRanking might not set withinLimit correctly.
-      // As a fallback, slice if needed, though relying on withinLimit is preferred.
-      if (
-        topTracks.length === 0 &&
-        maxTracks > 0 &&
-        allRankedTracks.length > 0
-      ) {
-        this.logger.log(
-          color.yellow.bold(
-            `Fallback: Slicing top ${maxTracks} tracks as 'withinLimit' was not set.`
-          )
-        );
-        // Ensure we don't try to slice more than available tracks
-        const actualSlice = Math.min(maxTracks, allRankedTracks.length);
-        // Reassign topTracks based on slice
-        // Note: This fallback might indicate an issue in getRanking's withinLimit logic if maxTracks is valid.
-        // topTracks = allRankedTracks.slice(0, actualSlice);
-        // Let's stick to the withinLimit flag for consistency for now. If it's empty, it's empty.
-      }
 
       this.logger.log(
         color.blue.bold(

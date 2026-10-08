@@ -151,7 +151,6 @@ function makeDeps(overrides: Partial<any> = {}): any {
     },
     music: {},
     analytics: {},
-    pushover: {},
     appTheme: {},
     axiosInstance: {},
     blockedPlaylists: [],

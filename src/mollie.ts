@@ -47,7 +47,6 @@ import { extractPrintErrorMessage } from './printers/printErrorMessage';
 import Mail from './mail';
 import Fx from './services/fx';
 import UpgradeInvoices, { customerFromOrder } from './upgradeInvoice';
-import SpotifyProvider from './providers/SpotifyProvider';
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
   CARD_DESIGN_SELECT,

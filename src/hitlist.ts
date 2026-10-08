@@ -4,25 +4,19 @@ import { color } from 'console-log-colors';
 import Cache from './cache';
 import Utils from './utils';
 import Spotify from './spotify';
-import { Music } from './music';
-import Settings from './settings'; // Import the new Settings class
 import Data from './data';
 import Mail from './mail';
 import Business from './business';
 import Translation from './translation'; // Import Translation
-import { Prisma } from '@prisma/client'; // Import Prisma for raw query join
-import { format } from 'date-fns'; // Add date-fns format import
 class Hitlist {
   private static instance: Hitlist;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private cache = Cache.getInstance();
   private utils = new Utils();
-  private music: Music = new Music();
   private data = Data.getInstance();
   private spotify = Spotify.getInstance();
   private mail = Mail.getInstance();
-  private settings = Settings.getInstance(); // Instantiate Settings
   private business = Business.getInstance();
   private translation = new Translation(); // Instantiate Translation
 
@@ -394,7 +388,6 @@ class Hitlist {
       const trackIds = filteredHitlist.map((track: any) => track.trackId);
 
       // Use the new getTracksByIds method to get detailed track information
-      const data = Data.getInstance();
       const tracksResult = await this.spotify.getTracksByIds(trackIds);
 
       if (tracksResult.success && tracksResult.data) {
@@ -802,17 +795,6 @@ class Hitlist {
       }
       // If both are null, votingOpen remains true
 
-      // Determine locale for description
-      let usedLocale = 'nl';
-      // Use process.env or fallback to 'nl'
-      if (
-        typeof process !== 'undefined' &&
-        process.env.HITLIST_LOCALE &&
-        typeof process.env.HITLIST_LOCALE === 'string'
-      ) {
-        usedLocale = process.env.HITLIST_LOCALE;
-      }
-
       // Collect all description_[code] fields dynamically
       const allDescriptions: Record<string, string> = {};
       const translation = this.translation;
@@ -866,7 +848,6 @@ class Hitlist {
       }
 
       // Use Spotify search instead of database search
-      const spotify = Spotify.getInstance();
       const spotifyResult = await this.spotify.searchTracks(searchString);
 
       if (!spotifyResult.success) {

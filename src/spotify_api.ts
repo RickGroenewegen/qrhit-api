@@ -873,12 +873,6 @@ class SpotifyApi {
     let needsReAuth = false; // Flag to track if any chunk requires re-auth
 
     try {
-      // Define the fields needed by spotify.ts getTracksByIds
-      const fields =
-        'items(id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url)'; // Note: API returns 'tracks' not 'items' for this endpoint
-      const trackFields =
-        'id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url'; // Fields for each track object
-
       for (let i = 0; i < trackIds.length; i += chunkSize) {
         const chunk = trackIds.slice(i, i + chunkSize);
 

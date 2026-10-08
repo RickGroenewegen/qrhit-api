@@ -69,24 +69,20 @@ class Designer {
         return { success: false, error: 'No image provided' };
       }
 
-      let imageType: string;
       let base64Data: string;
 
       // Handle both full data URI and raw base64 string
       if (base64Image.includes('base64,')) {
-        // Extract the actual base64 data and determine the file type
+        // Extract the actual base64 data
         const matches = base64Image.match(
           /^data:image\/([a-zA-Z]+);base64,(.+)$/
         );
         if (!matches || matches.length !== 3) {
           return { success: false, error: 'Invalid image data format' };
         }
-        imageType = matches[1];
         base64Data = matches[2];
       } else {
-        // Assume it's a raw base64 string and try to determine format from content
-        // Default to png if we can't determine
-        imageType = 'png';
+        // Assume it's a raw base64 string
         base64Data = base64Image;
       }
 
@@ -143,8 +139,6 @@ class Designer {
           )
         );
 
-        // Return the relative path that would be accessible from the web
-        const relativePath = `/public/background/${actualFilename}`;
         return {
           success: true,
           filename: actualFilename,
@@ -187,24 +181,20 @@ class Designer {
         return { success: false, error: 'No image provided' };
       }
 
-      let imageType: string;
       let base64Data: string;
 
       // Handle both full data URI and raw base64 string
       if (base64Image.includes('base64,')) {
-        // Extract the actual base64 data and determine the file type
+        // Extract the actual base64 data
         const matches = base64Image.match(
           /^data:image\/([a-zA-Z]+);base64,(.+)$/
         );
         if (!matches || matches.length !== 3) {
           return { success: false, error: 'Invalid image data format' };
         }
-        imageType = matches[1];
         base64Data = matches[2];
       } else {
-        // Assume it's a raw base64 string and try to determine format from content
-        // Default to png if we can't determine
-        imageType = 'png';
+        // Assume it's a raw base64 string
         base64Data = base64Image;
       }
 
@@ -257,8 +247,6 @@ class Designer {
           )
         );
 
-        // Return the relative path that would be accessible from the web
-        const relativePath = `/public/background/${actualFilename}`;
         return {
           success: true,
           filename: actualFilename,

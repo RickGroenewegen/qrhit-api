@@ -1,4 +1,4 @@
-import { color, white } from 'console-log-colors';
+import { color } from 'console-log-colors';
 import Redis from 'ioredis';
 import Log from './logger';
 import fs from 'fs/promises';

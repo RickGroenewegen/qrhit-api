@@ -370,11 +370,6 @@ class Review {
     // 24 hours ago for reviewAllowedAt check
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    let checker = false;
-    if (process.env['ENVIRONMENT'] == 'development') {
-      checker = true;
-    }
-
     let whereClause: any = {
       status: 'paid',
       Review: {

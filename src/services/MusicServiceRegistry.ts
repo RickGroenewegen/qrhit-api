@@ -1,7 +1,6 @@
 import { ServiceType, isValidServiceType } from '../enums/ServiceType';
 import { IMusicProvider, UrlValidationResult } from '../interfaces/IMusicProvider';
 import { SpotifyProvider, YouTubeMusicProvider, TidalProvider, DeezerProvider, AppleMusicProvider } from '../providers';
-import Logger from '../logger';
 
 /**
  * Result of URL recognition
@@ -21,7 +20,6 @@ export interface UrlRecognitionResult {
 class MusicServiceRegistry {
   private static instance: MusicServiceRegistry;
   private providers: Map<ServiceType, IMusicProvider> = new Map();
-  private logger = new Logger();
 
   constructor() {
     // Register all providers

@@ -597,28 +597,6 @@ describe('computeExpectedProductIdsForPlaylist', () => {
   });
 });
 
-describe('getProductTypeLabel', () => {
-  it('uses the locale translation when available', async () => {
-    expect(await svc.getProductTypeLabel('digital', 'nl')).toBe(
-      'Digitale PDF'
-    );
-  });
-
-  it('falls back to English when the locale lacks the key', async () => {
-    expect(await svc.getProductTypeLabel('physical', 'nl')).toBe(
-      'Physical Cards (en)'
-    );
-    expect(await svc.getProductTypeLabel('physical', 'de')).toBe(
-      'Physical Cards (en)'
-    );
-  });
-
-  it('falls back to the hardcoded defaults, then to the raw type', async () => {
-    expect(await svc.getProductTypeLabel('sheets', 'de')).toBe('Print Sheets');
-    expect(await svc.getProductTypeLabel('mystery', 'de')).toBe('mystery');
-  });
-});
-
 // ---------------------------------------------------------------------------
 // Shipping cost resolution
 // ---------------------------------------------------------------------------

@@ -15,7 +15,6 @@ import { createWriteStream } from 'fs';
 import * as path from 'path';
 import Data from './data';
 import PushoverClient from './pushover';
-import Spotify from './spotify';
 import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
@@ -25,16 +24,13 @@ import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
-import { Track } from '@prisma/client';
 import Discount from './discount';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 import { ZipArchive } from 'archiver';
 import GeneratorQueue from './generatorQueue';
-import Bingo from './bingo';
 import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
-import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
 import { finalCheckHoldDetails, finalCheckHoldReason } from './finalCheckHoldReason';
 import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
@@ -49,7 +45,6 @@ class Generator {
   private prisma = PrismaInstance.getInstance();
   private data = Data.getInstance();
   private pushover = new PushoverClient();
-  private spotify = Spotify.getInstance();
   private musicProviderFactory = MusicProviderFactory.getInstance();
   private mail = Mail.getInstance();
   private qr = new QR();
@@ -59,7 +54,6 @@ class Generator {
   private discount = new Discount();
   private cache = Cache.getInstance();
   private generatorQueue: GeneratorQueue | null = null;
-  private bingo = Bingo.getInstance();
   private finalCheck = FinalCheck.getInstance();
 
   private constructor() {
@@ -791,7 +785,6 @@ class Generator {
     clientIp: string = '',
     userAgent: string = ''
   ): Promise<void> {
-    let exists = true;
     const serviceType = playlist.serviceType || 'spotify';
 
     this.logger.log(
@@ -801,7 +794,6 @@ class Generator {
     );
 
     if (refreshCache) {
-      exists = false;
       this.logger.log(
         color.yellow.bold(
           `User has refreshed the playlist cache for playlist: ${white.bold(
@@ -2070,65 +2062,6 @@ class Generator {
       generatedFilenameDigital,
       invoicePath
     );
-  }
-
-  private async generateGiftcardPDF(
-    payment: any,
-    playlist: any,
-    ip: string,
-    subdir: string
-  ): Promise<{ filename: string; filenameDigital: string }> {
-    let filename = '';
-    let filenameDigital = '';
-
-    this.logger.log(
-      blue.bold(`Generating PDF for giftcard: ${white.bold(playlist.name)}`)
-    );
-
-    const hash = crypto
-      .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
-      .update(playlist.playlistId)
-      .digest('hex');
-
-    filename = sanitizeFilename(
-      `${hash}_printer.pdf`.replace(/ /g, '_')
-    ).toLowerCase();
-    filenameDigital = sanitizeFilename(
-      `${hash}_digital.pdf`.replace(/ /g, '_')
-    ).toLowerCase();
-
-    // Now we generate the discount code
-    const discount = await this.discount.createDiscountCode(
-      playlist.giftcardAmount,
-      playlist.giftcardFrom,
-      playlist.giftcardMessage
-    );
-
-    const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-      this.pdf.generateGiftcardPDF(
-        filenameDigital,
-        playlist,
-        discount,
-        payment,
-        'digital',
-        subdir
-      ),
-      playlist.orderType != 'digital'
-        ? this.pdf.generateGiftcardPDF(
-            filename,
-            playlist,
-            discount,
-            payment,
-            'printer',
-            subdir
-          )
-        : Promise.resolve(''),
-    ]);
-
-    filename = generatedFilename;
-    filenameDigital = generatedFilenameDigital;
-
-    return { filename, filenameDigital };
   }
 
   public async createGameset(

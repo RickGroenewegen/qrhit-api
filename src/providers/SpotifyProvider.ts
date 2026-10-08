@@ -3,7 +3,6 @@ import {
   IMusicProvider,
   MusicProviderConfig,
   GetTracksOptions,
-  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,

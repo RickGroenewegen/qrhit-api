@@ -7,7 +7,6 @@ import {
   IMusicProvider,
   MusicProviderConfig,
   GetTracksOptions,
-  ProgressCallback,
   ProviderPlaylistData,
   ProviderSearchResult,
   ProviderTrackData,

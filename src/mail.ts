@@ -1,6 +1,5 @@
 import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import fs from 'fs/promises';
-import path from 'path';
 import Templates from './templates';
 import { Payment } from '@prisma/client';
 import { Playlist } from './interfaces/Playlist';
@@ -10,7 +9,6 @@ import Utils from './utils';
 import axios from 'axios';
 import { decode } from 'he';
 import { CronJob } from 'cron';
-import { PrismaClient } from '@prisma/client';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import cluster from 'cluster';

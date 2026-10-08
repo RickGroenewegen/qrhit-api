@@ -421,30 +421,3 @@ describe('createPlaylist', () => {
     });
   });
 });
-
-describe('status progression (private helpers)', () => {
-  const anyBusiness = business as any;
-
-  it('only ever moves forward through the progression', () => {
-    expect(anyBusiness.getUpdatedStatus('new', 'card')).toBe('card');
-    expect(anyBusiness.getUpdatedStatus('card', 'new')).toBe('card');
-    expect(anyBusiness.getUpdatedStatus('questions', 'questions')).toBe('questions');
-  });
-
-  it('falls back sensibly for statuses outside the progression', () => {
-    expect(anyBusiness.getUpdatedStatus('weird', 'box')).toBe('box');
-    expect(anyBusiness.getUpdatedStatus('box', 'weird')).toBe('box');
-  });
-
-  it('exposes the canonical progression order', () => {
-    expect(anyBusiness.getStatusProgression()).toEqual([
-      'new',
-      'company',
-      'questions',
-      'box',
-      'card',
-      'playlist',
-      'personalize',
-    ]);
-  });
-});

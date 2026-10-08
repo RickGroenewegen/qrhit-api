@@ -182,21 +182,6 @@ class Bingo {
   }
 
   /**
-   * Get a flat list of all grid positions (excluding center)
-   */
-  private getGridPositions(): { row: number; col: number }[] {
-    const positions: { row: number; col: number }[] = [];
-    for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < 5; col++) {
-        if (!(row === 2 && col === 2)) {
-          positions.push({ row, col });
-        }
-      }
-    }
-    return positions;
-  }
-
-  /**
    * Generate QR code data string for a bingo sheet.
    * New format: QRSSM:BC:R{round}S{sheet}:{num1,num2,...,num24}
    * - QRSSM prefix allows mobile app to recognize it as a system message

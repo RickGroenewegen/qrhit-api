@@ -7,7 +7,6 @@ import Redis from 'ioredis';
 import cluster from 'cluster';
 import PrismaInstance from './prisma';
 import Translation from './translation';
-import { promises as fs } from 'fs';
 
 interface GenerateJobData {
   paymentId: string;
