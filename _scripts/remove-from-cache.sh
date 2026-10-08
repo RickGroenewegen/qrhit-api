@@ -76,31 +76,6 @@ fi
 
 echo ""
 
-# Remove from assets/i18n cache
-if [ -f "assets/i18n/translated.cache" ]; then
-    python3 -c "
-import json
-keys_to_remove = [$KEYS]
-with open('assets/i18n/translated.cache', 'r') as f:
-    cache = json.load(f)
-removed = []
-for key in keys_to_remove:
-    if key in cache:
-        del cache[key]
-        removed.append(key)
-if removed:
-    with open('assets/i18n/translated.cache', 'w') as f:
-        json.dump(cache, f, indent=2)
-    print(f'✓ Removed {len(removed)} keys from assets/i18n cache: {\", \".join(removed)}')
-else:
-    print('ℹ No keys found in assets/i18n cache')
-"
-else
-    echo "ℹ assets/i18n/translated.cache does not exist"
-fi
-
-echo ""
-
 # Remove from the business bundle cache (formal B2B copy: quotations,
 # instructions, price lists), which translate.js keeps separately
 if [ -f "src/locales/business/translated.cache" ]; then

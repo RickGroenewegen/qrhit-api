@@ -84,13 +84,13 @@ describe('locale metadata', () => {
 
 describe('translate', () => {
   it('returns the translation for an existing key and locale', () => {
-    expect(translation.translate('product_type.digital', 'en')).toBe(
-      'Digital PDF'
+    expect(translation.translate('merchant.qr_music_game', 'en')).toBe(
+      'QR Music Game'
     );
   });
 
   it('uses the default locale when none is given', () => {
-    expect(translation.translate('product_type.digital')).toBe('Digital PDF');
+    expect(translation.translate('merchant.qr_music_game')).toBe('QR Music Game');
   });
 
   it('interpolates mustache placeholders', () => {
@@ -104,23 +104,24 @@ describe('getTranslationsByPrefix', () => {
   it('returns keys under the prefix with the prefix stripped', async () => {
     const result = await translation.getTranslationsByPrefix(
       'en',
-      'product_type'
+      'merchant'
     );
     expect(result).toMatchObject({
-      digital: 'Digital PDF',
-      sheets: 'Print Sheets',
-      physical: 'Physical Cards',
+      qr_music_game: 'QR Music Game',
+      pdf: 'PDF',
+      sheets: 'sheets',
+      cards: 'cards',
     });
   });
 
   it('serves repeated lookups from the in-memory cache (same object)', async () => {
     const first = await translation.getTranslationsByPrefix(
       'en',
-      'product_type'
+      'merchant'
     );
     const second = await translation.getTranslationsByPrefix(
       'en',
-      'product_type'
+      'merchant'
     );
     expect(second).toBe(first);
   });
@@ -136,7 +137,7 @@ describe('getTranslationsByPrefix', () => {
 
   it('throws when the locale file does not exist', async () => {
     await expect(
-      translation.getTranslationsByPrefix('zz', 'product_type')
+      translation.getTranslationsByPrefix('zz', 'merchant')
     ).rejects.toThrow('Locale file for zz not found.');
   });
 });

@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Locale/Translation Management
 
 1. **remove-from-cache.sh**
-   - Removes translation keys from translated.cache files (src/locales, build/locales, assets/i18n)
+   - Removes translation keys from translated.cache files (src/locales, build/locales, src/locales/business)
    - Usage: `./_scripts/remove-from-cache.sh key1 key2 key3 ...`
    - Example: `./_scripts/remove-from-cache.sh mail.promotionalCtaSubtitle mail.promotionalSaleSubject`
    - Use this after modifying translation keys in en.json to ensure translations are regenerated
@@ -61,8 +61,9 @@ dangling reference. Adding a language or currency: `NEW_LANGUAGE.md`.
 
 ### Translation Files
 - Translations are stored in `src/locales/*.json` (en.json, nl.json, de.json, etc.)
-- Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`
+- Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`
 - After modifying translation keys, run `remove-from-cache.sh` with the changed keys to ensure they get regenerated
+- **Removing a key** means removing it from every `src/locales/*.json` and from the cache: `translate.js` never prunes. Before removing, check every way a key is read: `translate('ns.key')`, and `getTranslationsByPrefix(locale, 'ns')`, which hands a whole namespace to a mail template, a view or code (`invoice.ejs` even reads `translations[payment.paymentMethod]`). Cleaned up on 2026-10-09: 99 unused keys plus 29 that existed only in other languages. The old web app's `assets/i18n/` went too.
 - `translate.js` runs both bundles; `node translate.js business` limits it to one
 
 ### Business document copy (`src/locales/business/`)
