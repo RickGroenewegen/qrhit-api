@@ -748,7 +748,8 @@ font URL itself from `src/fonts.ts`. The one `url()` it accepts is
 `--app-background` naming the photo bundled in the app, in exactly the form
 the app's built-in theme uses (`APP_BUNDLED_BACKGROUND_URL`): the app paints
 its own copy, so the default "QRSong! photo" design needs no asset file.
-`helpText` is HTML from the site's Quill editor; `sanitizeHelpText` keeps
+`helpText` is HTML from the site's help-text editor (Markdown, converted to
+the same HTML the former Quill editor sent); `sanitizeHelpText` keeps
 only the tags the app's help screen styles, forces links to open outside the
 webview, and still escapes plain text into `<p>` blocks (the app renders it
 with `[innerHTML]`).

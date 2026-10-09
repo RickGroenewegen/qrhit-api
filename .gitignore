@@ -34,3 +34,6 @@ coverage/
 .env.*
 !.env.example
 .claude/settings.local.json
+
+# Built from technology-overview.md (qrhit/_scripts/build-tech-overview-pdf.mjs)
+docs/due-diligence/*.pdf

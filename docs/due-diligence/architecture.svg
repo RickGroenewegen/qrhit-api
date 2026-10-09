@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 60 760 640" font-family="Inter, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#4f8a92"/>
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="#4f8a92" stroke-width="1.5">
+    <path d="M194 128V160" marker-end="url(#arrow)"/>
+    <path d="M566 128V160" marker-end="url(#arrow)"/>
+    <path d="M380 216V248" marker-end="url(#arrow)"/>
+    <path d="M380 288V300H190V344" marker-end="url(#arrow)"/>
+    <path d="M380 300H570V344" marker-end="url(#arrow)"/>
+    <path d="M340 380H420" marker-end="url(#arrow)"/>
+    <path d="M570 416V448"/>
+    <path d="M134 448H626"/>
+    <path d="M134 448V464" marker-end="url(#arrow)"/>
+    <path d="M380 448V464" marker-end="url(#arrow)"/>
+    <path d="M626 448V464" marker-end="url(#arrow)"/>
+    <path d="M503 448V552" marker-end="url(#arrow)"/>
+  </g>
+
+  <g>
+    <rect x="24" y="72" width="340" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="194" y="96" text-anchor="middle" font-weight="700" fill="#0b2c31">Browser</text>
+    <text x="194" y="113" text-anchor="middle" font-size="11.5" fill="#3d6d74">Web shop, checkout and admin dashboard</text>
+  </g>
+  <g>
+    <rect x="396" y="72" width="340" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="566" y="96" text-anchor="middle" font-weight="700" fill="#0b2c31">Scan app (iOS, Android)</text>
+    <text x="566" y="113" text-anchor="middle" font-size="11.5" fill="#3d6d74">Scans a card and plays the song</text>
+  </g>
+  <g>
+    <rect x="24" y="160" width="712" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="380" y="184" text-anchor="middle" font-weight="700" fill="#0b2c31">CloudFront CDN with web application firewall</text>
+    <text x="380" y="201" text-anchor="middle" font-size="11.5" fill="#3d6d74">Caches rendered pages and passes API calls through</text>
+  </g>
+  <g>
+    <rect x="230" y="248" width="300" height="40" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="380" y="272" text-anchor="middle" fill="#0b2c31">Application load balancer</text>
+  </g>
+
+  <g>
+    <rect x="24" y="312" width="712" height="120" rx="8" fill="#dce9ea" stroke="#a9c9cd" stroke-width="1.5"/>
+    <text x="380" y="332" text-anchor="middle" font-weight="700" fill="#18565e">EC2 auto scaling group, run by pm2</text>
+  </g>
+  <g>
+    <rect x="40" y="344" width="300" height="72" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="190" y="368" text-anchor="middle" font-weight="700" fill="#0b2c31">Web server</text>
+    <text x="190" y="385" text-anchor="middle" font-size="11.5" fill="#3d6d74">Angular 22, rendered on the server</text>
+    <text x="190" y="401" text-anchor="middle" font-size="11.5" fill="#3d6d74">12 languages, local currencies</text>
+  </g>
+  <g>
+    <rect x="420" y="344" width="300" height="72" rx="8" fill="#fde3d9" stroke="#ee7f5b" stroke-width="2"/>
+    <text x="570" y="368" text-anchor="middle" font-weight="700" fill="#0b2c31">API</text>
+    <text x="570" y="385" text-anchor="middle" font-size="11.5" fill="#0b2c31">Fastify 5, one worker per CPU core</text>
+    <text x="570" y="401" text-anchor="middle" font-size="11.5" fill="#0b2c31">Orders, designers, admin, scheduled jobs</text>
+  </g>
+  <text x="380" y="372" text-anchor="middle" font-size="11.5" fill="#3d6d74">API calls</text>
+
+  <g>
+    <rect x="24" y="464" width="220" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="134" y="488" text-anchor="middle" font-weight="700" fill="#0b2c31">MySQL on Amazon RDS</text>
+    <text x="134" y="505" text-anchor="middle" font-size="11.5" fill="#3d6d74">65 data models</text>
+  </g>
+  <g>
+    <rect x="270" y="464" width="220" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="380" y="488" text-anchor="middle" font-weight="700" fill="#0b2c31">Redis</text>
+    <text x="380" y="505" text-anchor="middle" font-size="11.5" fill="#3d6d74">Cache and job queues</text>
+  </g>
+  <g>
+    <rect x="516" y="464" width="220" height="56" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="626" y="488" text-anchor="middle" font-weight="700" fill="#0b2c31">AWS Lambda</text>
+    <text x="626" y="505" text-anchor="middle" font-size="11.5" fill="#3d6d74">Print PDFs and QR codes</text>
+  </g>
+  <text x="511" y="540" font-size="11.5" fill="#3d6d74">calls out to</text>
+
+  <g>
+    <rect x="24" y="552" width="712" height="136" rx="8" fill="#dce9ea" stroke="#a9c9cd" stroke-width="1.5"/>
+    <text x="40" y="574" font-weight="700" fill="#18565e">External services</text>
+  </g>
+  <g>
+    <rect x="40" y="584" width="158" height="88" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="119" y="608" text-anchor="middle" font-weight="700" fill="#0b2c31">Payments</text>
+    <text x="119" y="625" text-anchor="middle" font-size="11.5" fill="#3d6d74">Mollie</text>
+    <text x="119" y="641" text-anchor="middle" font-size="11.5" fill="#3d6d74">Hosted checkout</text>
+  </g>
+  <g>
+    <rect x="214" y="584" width="158" height="88" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="293" y="608" text-anchor="middle" font-weight="700" fill="#0b2c31">Printing</text>
+    <text x="293" y="625" text-anchor="middle" font-size="11.5" fill="#3d6d74">Print&amp;Bind, consumer</text>
+    <text x="293" y="641" text-anchor="middle" font-size="11.5" fill="#3d6d74">Schneider, business</text>
+  </g>
+  <g>
+    <rect x="388" y="584" width="158" height="88" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="467" y="608" text-anchor="middle" font-weight="700" fill="#0b2c31">Music services</text>
+    <text x="467" y="625" text-anchor="middle" font-size="11.5" fill="#3d6d74">Spotify, Apple Music,</text>
+    <text x="467" y="641" text-anchor="middle" font-size="11.5" fill="#3d6d74">Deezer, YouTube Music,</text>
+    <text x="467" y="657" text-anchor="middle" font-size="11.5" fill="#3d6d74">Tidal</text>
+  </g>
+  <g>
+    <rect x="562" y="584" width="158" height="88" rx="8" fill="#fff8f3" stroke="#18565e" stroke-width="1.5"/>
+    <text x="641" y="608" text-anchor="middle" font-weight="700" fill="#0b2c31">Mail and AI</text>
+    <text x="641" y="625" text-anchor="middle" font-size="11.5" fill="#3d6d74">Amazon SES mail,</text>
+    <text x="641" y="641" text-anchor="middle" font-size="11.5" fill="#3d6d74">OpenAI, Anthropic</text>
+  </g>
+</svg>
