@@ -743,13 +743,18 @@
         {
             "slug": "reload-playlist",
             "title": "Can I reload my playlist from Spotify?",
-            "description": "Yes! After purchase, you can reload your playlist from Spotify to update tracks. However, you cannot exceed the number of tracks you paid for. There's also a rate limit on how often you can reload.",
+            "description": "Yes! After purchase, you can reload your playlist from Spotify to update tracks. However, you cannot exceed the number of tracks you paid for. There's also a rate limit on how often you can reload. Corrections and extra information you already entered in the correction form stay saved when you press Reload playlist, so you do not have to enter them again. Only songs you removed from the playlist drop out, together with whatever you entered for them.",
             "tags": [
                 "reload",
                 "refresh",
                 "update",
                 "spotify",
-                "playlist"
+                "playlist",
+                "correction form",
+                "corrections",
+                "extra info",
+                "lost",
+                "saved"
             ]
         },
         {
