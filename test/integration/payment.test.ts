@@ -13,6 +13,7 @@ import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { outbound } from '../helpers/recording-mock';
 import Cache from '../../src/cache';
+import { SUPPORTED_CURRENCIES } from '../../src/data/currency-map';
 
 // Mollie talks to the real Mollie API, so the class is fully mocked. The
 // hoisted holder lets each test program per-case return values while the
@@ -68,13 +69,15 @@ describe('payment routes', () => {
 
     // Pre-seed the FX cache through the exact code path Fx reads (same
     // Cache instance, same version-prefixed key) so /currency/rates and
-    // presentment conversion never hit the ECB feed.
+    // presentment conversion never hit the ECB feed. Every supported
+    // currency needs a rate: Fx refetches a day that lacks one.
+    const rates: Record<string, number> = Object.fromEntries(
+      SUPPORTED_CURRENCIES.map((code) => [code, 2])
+    );
+    Object.assign(rates, { EUR: 1, USD: 1.1, NOK: 11.5 });
     await Cache.getInstance().set(
       'fx:rates:latest',
-      JSON.stringify({
-        asOf: '2026-06-10',
-        rates: { EUR: 1, USD: 1.1, NOK: 11.5 },
-      })
+      JSON.stringify({ asOf: '2026-06-10', rates })
     );
   });
 

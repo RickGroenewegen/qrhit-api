@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { resetDb, prisma } from '../helpers/db';
 import CalendarService from '../../src/calendarService';
 import { AiTasks } from '../../src/aiTasks';
+import { TARGET_COUNTRIES } from '../../src/data/giftOccasions';
 
 /**
  * Event-calendar prefill + CRUD against the test database. Verifies
@@ -21,7 +22,9 @@ describe('CalendarService', () => {
 
   it('prefills country-specific, gift-relevant occasions', { timeout: 30000 }, async () => {
     const summary = await calendar.prefillEvents();
-    expect(summary.countries).toBe(15);
+    // Every market with occasions in src/data/shared/markets.json.
+    expect(summary.countries).toBe(TARGET_COUNTRIES.length);
+    expect(summary.countries).toBeGreaterThanOrEqual(15);
     expect(summary.created).toBeGreaterThan(0);
     expect(summary.updated).toBe(0);
 

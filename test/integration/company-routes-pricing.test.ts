@@ -582,7 +582,9 @@ describe('business pricing and quotation views', () => {
       expect(res.body).toContain('powered by');
       expect(res.body).toContain('Brochure');
       expect(res.body).not.toContain('€');
-      expect(res.body).not.toContain('pricing-table');
+      // The shared stylesheet names .pricing-table; no element may use it.
+      expect(res.body).not.toMatch(/class="[^"]*pricing-table/);
+      expect(res.body).not.toContain('class="b-buy"');
       expect(res.body).not.toContain('zakelijk@qrsong.io');
       expect(res.body).not.toContain('business@qrsong.io');
       expect(res.body).not.toContain('www.qrsong.io');

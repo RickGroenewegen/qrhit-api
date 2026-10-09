@@ -297,11 +297,13 @@ describe('app design (account upgrade)', () => {
         fs.existsSync(path.join(process.env['PUBLIC_DIR']!, 'app-theme', background))
       ).toBe(true);
 
+      // A background is only published for a photo design: a gradient keeps
+      // an earlier upload in the editor state without showing it.
       const save = await app.inject({
         method: 'PUT',
         url: '/api/app-design/default',
         headers: authHeader(owner.token),
-        payload: { design: { ...DESIGN, background }, theme: THEME },
+        payload: { design: { ...DESIGN, backgroundType: 'image', background }, theme: THEME },
       });
       expect(save.json().version).toBe(2);
 

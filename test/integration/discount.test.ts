@@ -99,6 +99,9 @@ describe('discount routes', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({
         success: true,
+        kind: 'fixed',
+        percent: null,
+        label: 'VALID-25',
         fullAmount: 25,
         amountLeft: 25,
       });
@@ -156,6 +159,9 @@ describe('discount routes', () => {
       const digital = await check('DIGITAL-15', true);
       expect(digital.json()).toEqual({
         success: true,
+        kind: 'fixed',
+        percent: null,
+        label: 'DIGITAL-15',
         fullAmount: 15,
         amountLeft: 15,
       });

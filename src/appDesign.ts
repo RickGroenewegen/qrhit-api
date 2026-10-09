@@ -264,8 +264,8 @@ function escapeHtml(text: string): string {
 }
 
 // What the help text may contain: the formats the App Designer's editor
-// offers (Quill: headings, bold, italic, underline, lists, links), which are
-// also the tags the app's help screen styles (help-modal.component.scss).
+// offers (Markdown: headings, bold, italic, underline, lists, links), which
+// are also the tags the app's help screen styles (help-modal.component.scss).
 const HELP_TEXT_HTML: sanitizeHtml.IOptions = {
   allowedTags: ['p', 'br', 'h2', 'h3', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'a'],
   allowedAttributes: { a: ['href', 'target', 'rel'] },
@@ -285,6 +285,14 @@ const HELP_TEXT_HTML: sanitizeHtml.IOptions = {
 };
 
 /**
+ * A help text is HTML when it holds a tag the editor writes (or one the
+ * sanitizer maps onto those). Plain text that merely contains something in
+ * angle brackets ("Have <fun>") stays text, escaped, not a stripped tag.
+ * The site's editor and preview use the same test (app-design.utils.ts).
+ */
+const HELP_TEXT_TAG = /<\/?(?:p|br|h[1-6]|strong|b|em|i|u|ul|ol|li|a|div)(?:\s[^>]*)?\/?>/i;
+
+/**
  * The help text the app shows, as HTML: the app renders it with
  * [innerHTML]. The editor sends HTML, which is cut down to HELP_TEXT_HTML.
  * Plain text (designs saved before the editor had formatting) is escaped
@@ -294,7 +302,7 @@ export function sanitizeHelpText(text: unknown): string | null {
   if (typeof text !== 'string') return null;
   const trimmed = text.replace(/\r\n/g, '\n').trim();
   if (!trimmed) return null;
-  if (!/<[a-z][^>]*>/i.test(trimmed)) {
+  if (!HELP_TEXT_TAG.test(trimmed)) {
     return trimmed
       .slice(0, 4000)
       .split(/\n{2,}/)

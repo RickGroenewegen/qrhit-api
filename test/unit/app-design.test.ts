@@ -155,6 +155,13 @@ describe('sanitizeHelpText', () => {
     expect(sanitizeHelpText(html)).toBe(html);
   });
 
+  it('keeps plain text with something in angle brackets as text', () => {
+    expect(sanitizeHelpText('Scan a card\n\nHave <fun>')).toBe(
+      '<p>Scan a card</p><p>Have &lt;fun&gt;</p>'
+    );
+    expect(sanitizeHelpText('<p>Have <fun></p>')).toBe('<p>Have </p>');
+  });
+
   it('opens links outside the app and drops unsafe ones', () => {
     expect(sanitizeHelpText('<p><a href="https://qrsong.io">site</a></p>')).toBe(
       '<p><a href="https://qrsong.io" target="_blank" rel="noopener noreferrer">site</a></p>'

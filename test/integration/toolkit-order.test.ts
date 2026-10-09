@@ -82,7 +82,7 @@ describe('toolkit order routes', () => {
         design: { background: 'front.png', backgroundBack: 'back.png', qrColor: '#ffffff', fontColor: '#ffffff' },
       },
     });
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode, res.body).toBe(200);
     const body = res.json();
     expect(body.success).toBe(true);
     expect(body.paymentId).toMatch(/^toolkit_/);
@@ -133,6 +133,7 @@ describe('toolkit order routes', () => {
       headers: admin,
       payload: { email: 'owner@test.qrsong.io', playlistId: PLAYLIST, expectedTracks: 48 },
     });
+    expect(res.statusCode, res.body).toBe(200);
     const { paymentId, paymentDbId } = res.json();
     await prisma().paymentHasPlaylist.updateMany({ where: { paymentId: paymentDbId }, data: { printerType: 'printnbind' } });
 

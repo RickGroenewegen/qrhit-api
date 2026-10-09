@@ -295,6 +295,7 @@ describe('company routes — wave 2 coverage', () => {
         subtotal: 2057.5,
         discountPercent: 10,
         discountAmount: 205.75,
+        shippingTotal: 0,
         total: 1851.75,
         amounts: { full: 1851.75, down: 555.53, remaining: 1296.22 },
       });

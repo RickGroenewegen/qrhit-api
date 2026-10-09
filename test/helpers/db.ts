@@ -61,6 +61,9 @@ export async function seedBaseline(): Promise<void> {
       { id: 2, name: 'users' },
       { id: 3, name: 'companies' },
       { id: 4, name: 'resellers' },
+      // The groups a company's contact users get (business.ts, auth.ts).
+      { id: 6, name: 'companyadmin' },
+      { id: 7, name: 'qrvoteadmin' },
     ],
     skipDuplicates: true,
   });

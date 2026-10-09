@@ -1729,14 +1729,75 @@ describe('admin routes — wave 3 coverage', () => {
   // ====================================================================
 
   describe('DELETE /admin/playlist/:paymentHasPlaylistId', () => {
+    // An order of its own: the shared one gains lines in the tests above.
+    async function orderWithLines(count: number, suffix: string): Promise<number[]> {
+      const order = await prisma().payment.create({
+        data: {
+          userId: (await prisma().payment.findUnique({ where: { paymentId: PAYMENT_ID } }))!.userId,
+          paymentId: `tr_wave3_delete_${suffix}`,
+          orderId: `QR99${suffix}`,
+          status: 'paid',
+          fullname: 'Wave3 Customer',
+          email: 'wave3@test.qrsong.io',
+          totalPrice: 60,
+          productPriceWithoutTax: 50,
+          shippingPriceWithoutTax: 5,
+          productVATPrice: 4,
+          shippingVATPrice: 1,
+          totalVATPrice: 5,
+          countrycode: 'NL',
+        },
+      });
+      const ids: number[] = [];
+      for (let i = 0; i < count; i++) {
+        // One line per playlist and type (payment_has_playlist unique key).
+        const line = await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: order.id,
+            playlistId: playlistDbId,
+            amount: 1,
+            numberOfTracks: 30,
+            type: ['digital', 'physical'][i],
+            price: 30,
+            priceWithoutVAT: 25,
+            priceVAT: 5,
+          },
+        });
+        ids.push(line.id);
+      }
+      return ids;
+    }
+
     it('400 for trying to delete the only playlist from an order', async () => {
+      const [only] = await orderWithLines(1, '7001');
       const res = await app.inject({
         method: 'DELETE',
-        url: `/admin/playlist/${phpId}`,
+        url: `/admin/playlist/${only}`,
         headers,
       });
-      // Only one playlist in order → cannot delete
-      expect([400, 404, 500]).toContain(res.statusCode);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('Cannot delete the last playlist from an order');
+    });
+
+    it('deletes one playlist from an order that has more', async () => {
+      const [first, second] = await orderWithLines(2, '7002');
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/admin/playlist/${first}`,
+        headers,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(await prisma().paymentHasPlaylist.findUnique({ where: { id: first } })).toBeNull();
+      expect(await prisma().paymentHasPlaylist.findUnique({ where: { id: second } })).not.toBeNull();
+    });
+
+    it('404 for an unknown order line', async () => {
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/admin/playlist/99999999',
+        headers,
+      });
+      expect(res.statusCode).toBe(404);
     });
   });
 

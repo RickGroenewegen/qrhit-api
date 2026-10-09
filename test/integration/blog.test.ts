@@ -10,15 +10,29 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+interface IndexedPost {
+  id: number;
+  slugs: Record<string, string>;
+  titles: Record<string, string>;
+}
+
+// The posts are markdown files committed to the repo (src/_data/blog); the
+// admin CRUD these tests used to cover was removed on 2026-09-12.
+const blogIndex: IndexedPost[] = JSON.parse(
+  readFileSync(join(__dirname, '../../src/_data/blog/index.json'), 'utf8')
+).posts;
+const post = blogIndex.find((p) => p.slugs?.en && p.slugs?.nl && p.slugs.en !== p.slugs.nl)!;
 
 /**
- * Blog CRUD + public blog endpoints, and the admin tracking endpoints
- * backed by shipping.ts.
+ * The public blog endpoints (markdown posts in src/_data/blog), and the admin
+ * tracking endpoints backed by shipping.ts.
  */
 describe('blog and tracking routes', () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
-  let blogId: number;
 
   beforeAll(async () => {
     app = await buildTestApp();
@@ -33,157 +47,40 @@ describe('blog and tracking routes', () => {
     await closeTestApp(app);
   });
 
-  describe('blog admin CRUD', () => {
-    // FIXED: server.ts now decorates fastify.authenticate, so the admin blog
-    // routes get a real auth preHandler. Unauthenticated access is rejected.
-    it('rejects unauthenticated access to admin blog routes', async () => {
-      const res = await app.inject({ method: 'GET', url: '/admin/blogs' });
-      expect(res.statusCode).toBe(401);
-    });
-
-    it('rejects a non-admin user from admin blog routes', async () => {
-      const plain = await createTestUser({ groups: ['users'] });
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/blogs',
-        headers: authHeader(plain.token),
-      });
-      expect(res.statusCode).toBe(403);
-    });
-
-    it('requires an english title', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/blogs',
-        headers,
-        payload: { title_nl: 'Alleen Nederlands' },
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('creates a blog with slugs per locale', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/blogs',
-        headers,
-        payload: {
-          title_en: 'My First Post',
-          title_nl: 'Mijn Eerste Post',
-          content_en: '<p>Hello world</p>',
-          content_nl: '<p>Hallo wereld</p>',
-          summary_en: 'Hello',
-          active: true,
-        },
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blog.slug_en).toBe('my-first-post');
-      expect(body.blog.slug_nl).toBe('mijn-eerste-post');
-      expect(body.blog.active).toBe(true);
-      blogId = body.blog.id;
-    });
-
-    it('deduplicates slugs on a second blog with the same title', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/admin/blogs',
-        headers,
-        payload: { title_en: 'My First Post', content_en: 'Other content' },
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blog.slug_en).toBe('my-first-post-1');
-      expect(body.blog.active).toBe(false);
-    });
-
-    it('lists all blogs for the admin including inactive', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/blogs',
-        headers,
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blogs).toHaveLength(2);
-    });
-
-    it('gets a blog by id', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/admin/blogs/${blogId}`,
-        headers,
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blog.id).toBe(blogId);
-    });
-
-    it('400s a non-numeric blog id', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/admin/blogs/abc',
-        headers,
-      });
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('gets a localized admin blog', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/admin/blogs/nl/${blogId}`,
-        headers,
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blog.title ?? body.blog.title_nl).toContain('Mijn');
-    });
-
-    it('updates a blog and regenerates the slug', async () => {
-      const res = await app.inject({
-        method: 'PUT',
-        url: `/admin/blogs/${blogId}`,
-        headers,
-        payload: { title_en: 'My Renamed Post' },
-      });
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.blog.slug_en).toBe('my-renamed-post');
-    });
-  });
-
   describe('public blog endpoints', () => {
+    it('has no admin blog routes any more', async () => {
+      const res = await app.inject({ method: 'GET', url: '/admin/blogs', headers });
+      expect(res.statusCode).toBe(404);
+    });
+
     it('rejects an unsupported locale', async () => {
       const res = await app.inject({ method: 'GET', url: '/blogs/xx' });
       expect(res.json().success).toBe(false);
     });
 
-    it('lists only active blogs', async () => {
+    it('lists the posts that exist in the locale', async () => {
       const res = await app.inject({ method: 'GET', url: '/blogs/en' });
       const body = res.json();
       expect(body.success).toBe(true);
-      expect(body.blogs).toHaveLength(1);
-      expect(body.blogs[0].title).toBe('My Renamed Post');
+      expect(body.blogs.length).toBeGreaterThan(0);
+      const listed = body.blogs.find((b: any) => b.id === post.id);
+      expect(listed?.title).toBe(post.titles.en);
     });
 
-    it('serves a blog by its locale slug with hreflang slugs', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/blogs/en/my-renamed-post',
-      });
+    it('serves a post by its locale slug with the slugs of every locale', async () => {
+      const res = await app.inject({ method: 'GET', url: `/blogs/en/${post.slugs.en}` });
       const body = res.json();
       expect(body.success).toBe(true);
-      expect(body.blog.allSlugs.nl).toBe('mijn-eerste-post');
+      expect(body.blog.title).toBe(post.titles.en);
+      expect(body.blog.content.length).toBeGreaterThan(0);
+      expect(body.blog.allSlugs.nl).toBe(post.slugs.nl);
     });
 
-    it('falls back to other-locale slugs', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/blogs/en/mijn-eerste-post',
-      });
+    it('falls back to another locale slug for old links', async () => {
+      const res = await app.inject({ method: 'GET', url: `/blogs/en/${post.slugs.nl}` });
       const body = res.json();
       expect(body.success).toBe(true);
-      expect(body.blog.title).toBe('My Renamed Post');
+      expect(body.blog.title).toBe(post.titles.en);
     });
 
     it('reports an unknown slug', async () => {
@@ -192,19 +89,6 @@ describe('blog and tracking routes', () => {
         url: '/blogs/en/does-not-exist',
       });
       expect(res.json().success).toBe(false);
-    });
-  });
-
-  describe('blog deletion', () => {
-    it('deletes a blog', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/admin/blogs/${blogId}`,
-        headers,
-      });
-      expect(res.json().success).toBe(true);
-      const row = await prisma().blog.findUnique({ where: { id: blogId } });
-      expect(row).toBeNull();
     });
   });
 
