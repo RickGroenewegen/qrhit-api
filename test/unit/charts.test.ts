@@ -81,6 +81,17 @@ describe('Charts.buildDateFilter via getMovingAverage', () => {
     expect(sql).not.toContain('INTERVAL 30 DAY');
     expect(sql).toContain('BETWEEN');
   });
+
+  it('refuses a date that is not YYYY-MM-DD (SQL injection)', async () => {
+    const svc = makeSvc();
+    await expect(
+      svc.getMovingAverage(undefined, "2024-01-01' OR '1'='1", '2024-03-31')
+    ).rejects.toThrow('Invalid date range');
+    await expect(
+      svc.getHourlySales(undefined, '2024-01-01', '2024-03-31; DROP TABLE users')
+    ).rejects.toThrow('Invalid date range');
+    expect(queryRawUnsafe).not.toHaveBeenCalled();
+  });
 });
 
 // ──────────────────────────────────────────────

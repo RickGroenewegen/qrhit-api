@@ -488,6 +488,13 @@ describe('AppleMusicProvider.resolveShortlink', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe('Shortlink did not resolve to a valid Apple Music playlist URL');
   });
+
+  it('never fetches a URL outside the Apple Music shortlink hosts', async () => {
+    const p = newProvider();
+    const result = await p.resolveShortlink('http://169.254.169.254/latest/meta-data/');
+    expect(result).toEqual({ success: false, error: 'Not an Apple Music shortlink' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('AppleMusicProvider.resolveSongToStorefront', () => {

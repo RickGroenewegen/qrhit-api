@@ -106,3 +106,7 @@ export const TIDAL_REFRESH_TOKEN_TTL_DAYS = 180;
 // /qr_url2?link=<direct service link>. Shared so the scan-side consumers
 // (DeckPrompt, the unknown-link resolver) all recognise the same path.
 export const OWN_CARD_PATH = '/qr_url2';
+
+// Body limit for the routes that take an image as a base64 JSON string (the
+// designers' uploads, quiz pictures). Everything else gets the server's 20 MB.
+export const BASE64_IMAGE_BODY_LIMIT = 30 * 1024 * 1024;

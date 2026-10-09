@@ -11,6 +11,7 @@ import { color, white } from 'console-log-colors';
 import { AiTasks } from '../aiTasks';
 import Quiz, { TrackRow, MAX_QUESTIONS } from '../quiz';
 import CacheInstance from '../cache';
+import { BASE64_IMAGE_BODY_LIMIT } from '../config/constants';
 import { Prisma } from '@prisma/client';
 
 interface PlaylistInfoRow {
@@ -108,7 +109,7 @@ export default async function quizRoutes(
    * POST /api/quiz/avatar
    * Upload a player avatar (no auth required — players aren't logged in)
    */
-  fastify.post('/api/quiz/avatar', async (request: any, reply: any) => {
+  fastify.post('/api/quiz/avatar', { bodyLimit: BASE64_IMAGE_BODY_LIMIT }, async (request: any, reply: any) => {
     try {
       let imageBuffer: Buffer;
 
@@ -760,7 +761,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question/:questionId/upload-image',
-    ownQuizAuth,
+    { ...ownQuizAuth, bodyLimit: BASE64_IMAGE_BODY_LIMIT },
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;

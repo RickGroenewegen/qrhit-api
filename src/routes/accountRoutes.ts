@@ -9,13 +9,49 @@ import {
 import Mail from '../mail';
 import PrismaInstance from '../prisma';
 import crypto from 'crypto';
-import LoginRateLimiter from '../loginRateLimiter';
+import LoginRateLimiter, { RateLimitFlow } from '../loginRateLimiter';
+import Cache from '../cache';
 import { setAuthCookie, clearAuthCookie } from '../cookieAuth';
 import { APP_DESIGN_PRICE } from '../config/constants';
 import { CARD_DESIGN_SELECT, pickCardDesign } from '../cardDesigns';
 
 const prisma = PrismaInstance.getInstance();
 const rateLimiter = LoginRateLimiter.getInstance();
+const cache = Cache.getInstance();
+
+/** Wrong pincodes per e-mail address before the pincode is voided. */
+const MAX_PINCODE_FAILURES = 5;
+
+function pincodeFailuresKey(email: string): string {
+  return `pincode-failures:${email}`;
+}
+
+/** A six-digit pincode from a cryptographic source. */
+function newPincode(): string {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+/** Replies 429 and returns true when the limiter refuses this attempt. */
+async function refuseWhenLimited(
+  reply: any,
+  clientIp: string,
+  email: string,
+  flow: RateLimitFlow
+): Promise<boolean> {
+  const check = await rateLimiter.checkRateLimit(clientIp, email, flow);
+  if (check.allowed) {
+    return false;
+  }
+  reply
+    .status(429)
+    .header('Retry-After', check.retryAfter?.toString() || '900')
+    .send({
+      success: false,
+      error: 'tooManyAttempts',
+      retryAfter: check.retryAfter,
+    });
+  return true;
+}
 
 /** The card type the customer chose: sheets are stored as physical with subType 'sheets'. */
 function orderLineType(php: { type: string; subType: string | null }): 'digital' | 'physical' | 'sheets' {
@@ -90,7 +126,7 @@ export default async function accountRoutes(
       const { email, locale } = request.body;
 
       // Validate email
-      if (!email || !email.includes('@')) {
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
         reply.status(400).send({
           success: false,
           error: 'invalidEmail',
@@ -98,9 +134,17 @@ export default async function accountRoutes(
         return;
       }
 
-      try {
-        const normalizedEmail = email.toLowerCase().trim();
+      const clientIp = request.clientIp || request.ip || '0.0.0.0';
+      const normalizedEmail = email.toLowerCase().trim();
 
+      // Every request sends a mail and tells whether the address has ordered,
+      // so each one counts towards the limit.
+      if (await refuseWhenLimited(reply, clientIp, normalizedEmail, 'pincode-request')) {
+        return;
+      }
+      await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'pincode-request');
+
+      try {
         // Check if this email has any paid orders
         const payment = await prisma.payment.findFirst({
           where: {
@@ -135,7 +179,7 @@ export default async function accountRoutes(
         }
 
         // Generate a 6-digit pincode
-        const pincode = Math.floor(100000 + Math.random() * 900000).toString();
+        const pincode = newPincode();
 
         // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -147,6 +191,7 @@ export default async function accountRoutes(
             gamesActivationCodeExpiry: expiresAt,
           },
         });
+        await cache.del(pincodeFailuresKey(normalizedEmail));
 
         // Send pincode email
         const userLocale = locale || payment.locale || 'en';
@@ -189,23 +234,12 @@ export default async function accountRoutes(
       const clientIp = request.clientIp || request.ip || '0.0.0.0';
       const normalizedEmail = email.toLowerCase().trim();
 
-      // Check rate limit
-      const rateLimitCheck = await rateLimiter.checkRateLimit(
-        clientIp,
-        normalizedEmail,
-        'password-reset'
-      );
-      if (!rateLimitCheck.allowed) {
-        reply
-          .status(429)
-          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '900')
-          .send({
-            success: false,
-            error: 'tooManyAttempts',
-            retryAfter: rateLimitCheck.retryAfter,
-          });
+      // Check rate limit. Every request sends a mail, so each one counts
+      // (the limit was checked here but never counted, so it never applied).
+      if (await refuseWhenLimited(reply, clientIp, normalizedEmail, 'password-reset')) {
         return;
       }
+      await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'password-reset');
 
       try {
 
@@ -227,7 +261,7 @@ export default async function accountRoutes(
         }
 
         // Generate a 6-digit pincode
-        const pincode = Math.floor(100000 + Math.random() * 900000).toString();
+        const pincode = newPincode();
 
         // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
@@ -239,6 +273,7 @@ export default async function accountRoutes(
             gamesActivationCodeExpiry: expiresAt,
           },
         });
+        await cache.del(pincodeFailuresKey(normalizedEmail));
 
         // Send pincode email
         const userLocale = locale || user.locale || 'en';
@@ -269,7 +304,12 @@ export default async function accountRoutes(
     async (request: any, reply: any) => {
       const { email, pincode } = request.body;
 
-      if (!email || !pincode || pincode.length !== 6) {
+      if (
+        !email ||
+        typeof email !== 'string' ||
+        typeof pincode !== 'string' ||
+        !/^\d{6}$/.test(pincode)
+      ) {
         reply.status(400).send({
           success: false,
           error: 'invalidPincode',
@@ -277,9 +317,14 @@ export default async function accountRoutes(
         return;
       }
 
-      try {
-        const normalizedEmail = email.toLowerCase().trim();
+      const clientIp = request.clientIp || request.ip || '0.0.0.0';
+      const normalizedEmail = email.toLowerCase().trim();
 
+      if (await refuseWhenLimited(reply, clientIp, normalizedEmail, 'pincode')) {
+        return;
+      }
+
+      try {
         // Find user with this email and pincode
         const user = await prisma.user.findFirst({
           where: {
@@ -289,6 +334,24 @@ export default async function accountRoutes(
         });
 
         if (!user) {
+          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'pincode');
+
+          // A pincode is a million guesses wide: after a few wrong ones it is
+          // voided, so guessing from many addresses gains nothing either.
+          const failures = await cache.increment(pincodeFailuresKey(normalizedEmail), 15 * 60);
+          if (failures >= MAX_PINCODE_FAILURES) {
+            await prisma.user.updateMany({
+              where: { email: normalizedEmail, gamesActivationCode: { not: null } },
+              data: { gamesActivationCode: null, gamesActivationCodeExpiry: null },
+            });
+            await cache.del(pincodeFailuresKey(normalizedEmail));
+            reply.status(400).send({
+              success: false,
+              error: 'pincodeExpired',
+            });
+            return;
+          }
+
           reply.status(400).send({
             success: false,
             error: 'invalidPincode',
@@ -313,6 +376,9 @@ export default async function accountRoutes(
           });
           return;
         }
+
+        await cache.del(pincodeFailuresKey(normalizedEmail));
+        await rateLimiter.recordSuccessfulLogin(clientIp, normalizedEmail, 'pincode');
 
         // Generate a verification token for setting password
         const verificationToken = crypto.randomBytes(32).toString('hex');

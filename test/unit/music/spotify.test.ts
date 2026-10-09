@@ -1543,4 +1543,21 @@ describe('Spotify.resolveShortlink', () => {
     const res = await spotify.resolveShortlink('https://spotify.link/err');
     expect(res).toEqual({ success: false, error: 'ECONNRESET' });
   });
+
+  it('never fetches a URL outside the Spotify shortlink hosts', async () => {
+    const res = await spotify.resolveShortlink('http://169.254.169.254/latest/meta-data/');
+    expect(res).toEqual({ success: false, error: 'Not a Spotify shortlink' });
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it('does not follow a redirect off Spotify hosts', async () => {
+    axiosGet.mockResolvedValueOnce({
+      status: 302,
+      headers: { location: 'http://10.0.0.5/internal' },
+      data: '',
+    });
+    const res = await spotify.resolveShortlink('https://spotify.link/redirect-out');
+    expect(res.success).toBe(false);
+    expect(axiosGet).toHaveBeenCalledTimes(1);
+  });
 });

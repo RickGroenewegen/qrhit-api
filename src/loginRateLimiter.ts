@@ -1,6 +1,6 @@
 import Cache from './cache';
 
-export type RateLimitFlow = 'login' | 'pincode' | 'password-reset';
+export type RateLimitFlow = 'login' | 'pincode' | 'pincode-request' | 'password-reset';
 
 interface FlowConfig {
   maxAttemptsPerIpEmail: number;
@@ -21,6 +21,13 @@ const FLOW_CONFIGS: Record<RateLimitFlow, FlowConfig> = {
     maxAttemptsPerIp: 30,
     windowSeconds: 900,
     lockoutSeconds: 600,
+  },
+  // Asking for a registration pincode: every request sends a mail.
+  'pincode-request': {
+    maxAttemptsPerIpEmail: 5,
+    maxAttemptsPerIp: 15,
+    windowSeconds: 900,
+    lockoutSeconds: 900,
   },
   'password-reset': {
     maxAttemptsPerIpEmail: 5,

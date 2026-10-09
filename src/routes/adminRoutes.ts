@@ -5445,6 +5445,18 @@ export default async function adminRoutes(
     }
   );
 
+  // Disconnect the shop's Tidal account (clears its tokens). It used to sit
+  // among the public Tidal routes, where anyone could call it.
+  fastify.post(
+    '/tidal/disconnect',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply: any) => {
+      await TidalProvider.getInstance().disconnect();
+      logger.log(color.yellow.bold('Tidal account disconnected'));
+      return { success: true, message: 'Tidal account disconnected' };
+    }
+  );
+
   // Set a Spotify provider (playlist or tracks)
   fastify.post(
     '/admin/spotify/toggle-provider',

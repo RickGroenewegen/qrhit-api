@@ -16,6 +16,7 @@ import bingoRoutes from './routes/bingoRoutes';
 import quizRoutes from './routes/quizRoutes';
 import { verifyToken } from './auth';
 import { getTokenFromRequest } from './cookieAuth';
+import { isCredentialedOrigin } from './corsOrigins';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
 import Logger from './logger';
@@ -65,7 +66,10 @@ class Server {
   private constructor() {
     this.fastify = Fastify({
       logger: false,
-      bodyLimit: 1024 * 1024 * 100, // 100 MB, adjust as needed
+      // 20 MB for a JSON body; the routes that take a base64 image raise it
+      // (BASE64_IMAGE_BODY_LIMIT). Multipart uploads have their own limit.
+      // It was 100 MB everywhere: a cheap way to tie up a worker's memory.
+      bodyLimit: 1024 * 1024 * 20,
     });
   }
 
@@ -353,47 +357,31 @@ class Server {
     // After ipPlugin: it reads the request.clientIp that ipPlugin resolves.
     await this.fastify.register(playlistGuardPlugin);
     await this.fastify.register(replyFrom);
-    // Allowed origins for CORS (with credentials)
-    const isProduction = process.env['ENVIRONMENT'] === 'production';
-    const productionOrigins = [
-      'https://www.qrsong.io',
-      'https://qrsong.io',
-    ];
-    const developmentOrigins = [
-      'http://localhost:4200',
-      'http://localhost:5000',
-    ];
-    const allowedOrigins = isProduction
-      ? productionOrigins
-      : [...productionOrigins, ...developmentOrigins];
-
+    // Every origin may call the API (the scan app, partner pages), but only
+    // the site's own origins get credentials (src/corsOrigins.ts). Before,
+    // any origin got them, so a page on another site could read and change
+    // everything behind an admin's session cookie.
     await this.fastify.register(require('@fastify/cors'), {
-      origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
-        // Check if origin is in allowed list
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          // Allow all origins (mobile app, dev servers, etc.)
-          callback(null, true);
-        }
+      delegator: (
+        request: any,
+        callback: (err: Error | null, options: Record<string, unknown>) => void
+      ) => {
+        callback(null, {
+          origin: true,
+          credentials: isCredentialedOrigin(request.headers.origin),
+          methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+          allowedHeaders: [
+            'x-user-agent',
+            'Origin',
+            'X-Requested-With',
+            'Content-Type',
+            'Accept',
+            'sentry-trace',
+            'baggage',
+            'Authorization',
+          ],
+        });
       },
-      methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
-      allowedHeaders: [
-        'x-user-agent',
-        'Origin',
-        'X-Requested-With',
-        'Content-Type',
-        'Accept',
-        'sentry-trace',
-        'baggage',
-        'Authorization',
-      ],
-      credentials: true,
     });
 
     // Register cookie plugin for HttpOnly cookie authentication

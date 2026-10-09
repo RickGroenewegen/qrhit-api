@@ -25,14 +25,14 @@ describe('setAuthCookie', () => {
     });
   });
 
-  it('sets a secure, sameSite=none cookie in production', () => {
+  it('sets a secure, sameSite=lax cookie in production', () => {
     process.env['ENVIRONMENT'] = 'production';
     const reply = { setCookie: vi.fn() };
     setAuthCookie(reply, 'tok-456');
     expect(reply.setCookie).toHaveBeenCalledWith(
       'qrhit_auth',
       'tok-456',
-      expect.objectContaining({ secure: true, sameSite: 'none' })
+      expect.objectContaining({ secure: true, sameSite: 'lax' })
     );
   });
 });
@@ -50,13 +50,13 @@ describe('clearAuthCookie', () => {
     });
   });
 
-  it('clears with secure/none in production', () => {
+  it('clears with secure/lax in production', () => {
     process.env['ENVIRONMENT'] = 'production';
     const reply = { clearCookie: vi.fn() };
     clearAuthCookie(reply);
     expect(reply.clearCookie).toHaveBeenCalledWith(
       'qrhit_auth',
-      expect.objectContaining({ secure: true, sameSite: 'none' })
+      expect.objectContaining({ secure: true, sameSite: 'lax' })
     );
   });
 });
@@ -87,5 +87,49 @@ describe('getTokenFromRequest', () => {
   it('returns null when neither header nor cookie is present', () => {
     expect(getTokenFromRequest({ headers: {} })).toBeNull();
     expect(getTokenFromRequest({ headers: {}, cookies: {} })).toBeNull();
+  });
+
+  it('reads the cookie for requests from the site itself', () => {
+    process.env['ENVIRONMENT'] = 'production';
+    expect(
+      getTokenFromRequest({
+        headers: { origin: 'https://www.qrsong.io', 'sec-fetch-site': 'same-site' },
+        cookies: { qrhit_auth: 'c-tok' },
+      })
+    ).toBe('c-tok');
+  });
+
+  it('ignores the cookie when another site started the request', () => {
+    process.env['ENVIRONMENT'] = 'production';
+    expect(
+      getTokenFromRequest({
+        headers: { 'sec-fetch-site': 'cross-site' },
+        cookies: { qrhit_auth: 'c-tok' },
+      })
+    ).toBeNull();
+  });
+
+  it('ignores the cookie for a foreign Origin (browsers without Sec-Fetch-Site)', () => {
+    process.env['ENVIRONMENT'] = 'production';
+    expect(
+      getTokenFromRequest({
+        headers: { origin: 'https://evil.example' },
+        cookies: { qrhit_auth: 'c-tok' },
+      })
+    ).toBeNull();
+  });
+
+  it('still accepts a Bearer header from another origin', () => {
+    process.env['ENVIRONMENT'] = 'production';
+    expect(
+      getTokenFromRequest({
+        headers: {
+          origin: 'capacitor://localhost',
+          'sec-fetch-site': 'cross-site',
+          authorization: 'Bearer app-token',
+        },
+        cookies: { qrhit_auth: 'c-tok' },
+      })
+    ).toBe('app-token');
   });
 });

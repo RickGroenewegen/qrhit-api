@@ -581,4 +581,79 @@ describe('customer account routes', () => {
       expect(cookies.some((c) => c.includes('='))).toBe(true);
     });
   });
+
+  describe('pincode guessing', () => {
+    const guessEmail = 'guesser-target@test.qrsong.io';
+
+    const verify = (pincode: string) =>
+      app.inject({
+        method: 'POST',
+        url: '/api/account/customer-verify-pincode',
+        payload: { email: guessEmail, pincode },
+      });
+
+    beforeAll(async () => {
+      await createTestUser({ email: guessEmail });
+    });
+
+    it('voids the pincode after five wrong guesses', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/account/forgot-password-request',
+        payload: { email: guessEmail },
+      });
+      const issued = await prisma().user.findFirst({ where: { email: guessEmail } });
+      const pincode = issued!.gamesActivationCode!;
+      const wrong = pincode === '000000' ? '111111' : '000000';
+
+      for (let i = 0; i < 4; i++) {
+        const res = await verify(wrong);
+        expect(res.statusCode).toBe(400);
+        expect(res.json().error).toBe('invalidPincode');
+      }
+      const fifth = await verify(wrong);
+      expect(fifth.statusCode).toBe(400);
+      expect(fifth.json().error).toBe('pincodeExpired');
+
+      const after = await prisma().user.findFirst({ where: { email: guessEmail } });
+      expect(after!.gamesActivationCode).toBeNull();
+      expect((await verify(pincode)).json().error).toBe('invalidPincode');
+    });
+
+    it('locks the address out after ten wrong guesses', async () => {
+      // Six wrong guesses so far (five above, one with the voided pincode).
+      for (let i = 0; i < 4; i++) {
+        expect((await verify('123456')).statusCode).toBe(400);
+      }
+      const blocked = await verify('123456');
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json().error).toBe('tooManyAttempts');
+      expect(blocked.headers['retry-after']).toBeTruthy();
+    });
+
+    it('rejects a pincode that is not six digits', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/account/customer-verify-pincode',
+        payload: { email: 'other@test.qrsong.io', pincode: ['1', '2', '3', '4', '5', '6'] },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('invalidPincode');
+    });
+
+    it('limits pincode requests per address', async () => {
+      const ask = () =>
+        app.inject({
+          method: 'POST',
+          url: '/api/account/customer-register-request',
+          payload: { email: 'no-order-flood@test.qrsong.io' },
+        });
+      for (let i = 0; i < 5; i++) {
+        expect((await ask()).statusCode).toBe(404);
+      }
+      const blocked = await ask();
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json().error).toBe('tooManyAttempts');
+    });
+  });
 });

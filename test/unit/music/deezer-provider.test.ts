@@ -484,6 +484,13 @@ describe('DeezerProvider.resolveShortlink', () => {
     const result = await p.resolveShortlink('https://link.deezer.com/s/abc');
     expect(result).toEqual({ success: false, error: 'timeout' });
   });
+
+  it('never fetches a URL outside the Deezer shortlink hosts', async () => {
+    const p = newProvider();
+    const result = await p.resolveShortlink('http://localhost:3004/admin');
+    expect(result).toEqual({ success: false, error: 'Not a Deezer shortlink' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('DeezerProvider.getInstance', () => {

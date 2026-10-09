@@ -20,6 +20,7 @@ import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
 import { MAX_CARDS } from '../config/constants';
+import { isUrlOnHosts, SHORTLINK_HOSTS } from '../shortlinks';
 
 // Apple Music API base URL
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
@@ -670,6 +671,10 @@ class AppleMusicProvider implements IMusicProvider {
    * Resolve an Apple Music shortlink to its full URL
    */
   async resolveShortlink(url: string): Promise<ApiResult & { data?: { resolvedUrl: string } }> {
+    if (!isUrlOnHosts(url, SHORTLINK_HOSTS.appleMusic)) {
+      return { success: false, error: 'Not an Apple Music shortlink' };
+    }
+
     try {
       this.logger.log(
         color.blue.bold(

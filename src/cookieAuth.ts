@@ -1,3 +1,5 @@
+import { isCredentialedOrigin } from './corsOrigins';
+
 const COOKIE_NAME = 'qrhit_auth';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 
@@ -11,6 +13,10 @@ function isProduction(): boolean {
 /**
  * Set HttpOnly authentication cookie on the response
  * Uses `any` type since @fastify/cookie adds methods dynamically
+ *
+ * SameSite=Lax: www.qrsong.io and api.qrsong.io are the same site, so the
+ * site's own calls still carry the cookie, while requests started by other
+ * sites do not. (It was SameSite=None, which sent it from anywhere.)
  */
 export function setAuthCookie(reply: any, token: string): void {
   const isProd = isProduction();
@@ -18,7 +24,7 @@ export function setAuthCookie(reply: any, token: string): void {
   reply.setCookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProd, // Only require HTTPS in production
-    sameSite: isProd ? 'none' : 'lax', // 'none' for cross-origin in production, 'lax' for development
+    sameSite: 'lax',
     path: '/',
     maxAge: COOKIE_MAX_AGE,
   });
@@ -34,9 +40,25 @@ export function clearAuthCookie(reply: any): void {
   reply.clearCookie(COOKIE_NAME, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    sameSite: 'lax',
     path: '/',
   });
+}
+
+/**
+ * Whether the request may be authenticated by its cookie. Cookies set before
+ * the switch to SameSite=Lax still travel with requests from other sites for
+ * up to a year, so the cookie is ignored when the browser says another site
+ * started the request (Sec-Fetch-Site) or names a foreign Origin. The site's
+ * own calls, navigations and server-side calls carry neither.
+ */
+function cookieAllowed(request: any): boolean {
+  const headers = request.headers || {};
+  if (headers['sec-fetch-site'] === 'cross-site') {
+    return false;
+  }
+  const origin = headers['origin'];
+  return !origin || isCredentialedOrigin(origin);
 }
 
 /**
@@ -54,7 +76,7 @@ export function getTokenFromRequest(request: any): string | null {
 
   // Fall back to cookie
   const cookies = request.cookies;
-  if (cookies && cookies[COOKIE_NAME]) {
+  if (cookies && cookies[COOKIE_NAME] && cookieAllowed(request)) {
     return cookies[COOKIE_NAME];
   }
 

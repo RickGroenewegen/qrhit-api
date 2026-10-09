@@ -21,8 +21,13 @@ class Charts {
    */
   private buildDateFilter(days?: number, startDate?: string, endDate?: string, tableAlias?: string): string {
     const col = tableAlias ? `${tableAlias}.createdAt` : 'createdAt';
-    // Custom date range
+    // Custom date range. The dates come from the query string and end up in
+    // the SQL text, so nothing but a plain YYYY-MM-DD gets through.
     if (startDate && endDate) {
+      const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+      if (!isoDate.test(startDate) || !isoDate.test(endDate)) {
+        throw new Error('Invalid date range. Dates must be YYYY-MM-DD');
+      }
       return `AND DATE(${col}) BETWEEN '${startDate}' AND '${endDate}'`;
     }
     // Predefined date ranges

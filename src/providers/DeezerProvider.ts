@@ -16,6 +16,7 @@ import Cache from '../cache';
 import Logger from '../logger';
 import Utils from '../utils';
 import { MAX_CARDS } from '../config/constants';
+import { isUrlOnHosts, SHORTLINK_HOSTS } from '../shortlinks';
 
 // Deezer API base URL (no auth required for public data)
 const DEEZER_API_BASE = 'https://api.deezer.com';
@@ -173,6 +174,10 @@ class DeezerProvider implements IMusicProvider {
    * Resolve a Deezer shortlink to its full URL
    */
   async resolveShortlink(url: string): Promise<ApiResult & { data?: { resolvedUrl: string } }> {
+    if (!isUrlOnHosts(url, SHORTLINK_HOSTS.deezer)) {
+      return { success: false, error: 'Not a Deezer shortlink' };
+    }
+
     try {
       this.logger.log(
         color.blue.bold(

@@ -186,13 +186,6 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Disconnect Tidal (clear tokens)
-  fastify.post('/tidal/disconnect', async (_request, reply) => {
-    await tidalProvider.disconnect();
-    logger.log(color.yellow.bold('Tidal account disconnected'));
-    return { success: true, message: 'Tidal account disconnected' };
-  });
-
   // Get Tidal playlist info
   fastify.post('/tidal/playlists', async (request: any, reply) => {
     const { playlistId, url, cache } = request.body;

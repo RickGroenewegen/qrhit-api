@@ -35,6 +35,7 @@ import {
   musicMatchCardCacheKey,
 } from './externalCardCacheKey';
 import { productPageDesign } from './data/productPageDesign';
+import { isUrlOnHosts, SHORTLINK_HOSTS, SPOTIFY_REDIRECT_HOSTS } from './shortlinks';
 
 // Spotify Cache Key Prefixes
 export const CACHE_KEY_PLAYLIST = 'playlist2_';
@@ -2083,6 +2084,10 @@ class Spotify {
     url?: string;
     error?: string;
   }> {
+    if (!isUrlOnHosts(url, SHORTLINK_HOSTS.spotify)) {
+      return { success: false, error: 'Not a Spotify shortlink' };
+    }
+
     try {
       let currentUrl = url;
       let redirectCount = 0;
@@ -2108,12 +2113,14 @@ class Spotify {
 
           if (location) {
             // Handle relative URLs
-            if (location.startsWith('http')) {
-              currentUrl = location;
-            } else {
-              const baseUrl = new URL(currentUrl);
-              currentUrl = new URL(location, baseUrl.origin).toString();
+            const nextUrl = location.startsWith('http')
+              ? location
+              : new URL(location, new URL(currentUrl).origin).toString();
+            // Only Spotify's own hosts are followed
+            if (!isUrlOnHosts(nextUrl, SPOTIFY_REDIRECT_HOSTS)) {
+              break;
             }
+            currentUrl = nextUrl;
             redirectCount++;
             continue;
           } else {

@@ -32,6 +32,7 @@ import {
   APP_DESIGN_PRICE,
   PRICE_TABLE_QUANTITIES,
   productTakesQuantity,
+  BASE64_IMAGE_BODY_LIMIT,
 } from '../config/constants';
 import {
   CardProduct,
@@ -351,8 +352,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return await mail.sendContactForm(request.body, request.clientIp);
   });
 
-  // Test endpoint
+  // Test endpoint. The server's private IP is left out in production, where
+  // it would tell anyone on the internet about the internal network.
   fastify.get('/test', async (request: any, _reply) => {
+    if (process.env['ENVIRONMENT'] === 'production') {
+      return { success: true, version: '1.0.0' };
+    }
     const interfaces = os.networkInterfaces();
     let localIp = 'Not found';
     for (const name of Object.keys(interfaces)) {
@@ -535,7 +540,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   );
 
   // Designer upload
-  fastify.post('/designer/upload/:type', async (request: any, reply) => {
+  fastify.post('/designer/upload/:type', { bodyLimit: BASE64_IMAGE_BODY_LIMIT }, async (request: any, reply) => {
     const { image, filename, hideCircle, qrBackgroundType, kind } = request.body;
     const { type } = request.params;
 
