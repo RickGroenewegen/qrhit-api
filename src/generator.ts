@@ -370,7 +370,38 @@ class Generator {
     userId: number;
     user: { hash: string } | null;
   }): Promise<void> {
-    if (!payment.user || !payment.email) return;
+    if (!payment.email) return;
+
+    const locale = payment.locale || 'en';
+    const playlists = await this.openCorrectionLinks(payment, locale);
+    if (playlists.length === 0) return;
+
+    await this.mail.sendOpenCorrectionsMail(
+      {
+        email: payment.email,
+        fullname: payment.fullname,
+        locale,
+        orderId: payment.orderId,
+      },
+      playlists
+    );
+  }
+
+  /**
+   * The correction form links of an order's playlists that hold corrections
+   * the customer typed but never approved, in `locale`. Also used by the
+   * admin's "open corrections" mail preset.
+   */
+  public async openCorrectionLinks(
+    payment: {
+      id: number;
+      paymentId: string;
+      userId: number;
+      user: { hash: string } | null;
+    },
+    locale: string
+  ): Promise<Array<{ name: string; link: string }>> {
+    if (!payment.user) return [];
 
     const lines = await this.prisma.paymentHasPlaylist.findMany({
       where: { paymentId: payment.id, suggestionsPending: false },
@@ -379,7 +410,7 @@ class Generator {
         playlist: { select: { id: true, playlistId: true, name: true } },
       },
     });
-    if (lines.length === 0) return;
+    if (lines.length === 0) return [];
 
     const counts = await this.prisma.userSuggestion.groupBy({
       by: ['playlistId'],
@@ -393,7 +424,6 @@ class Generator {
       counts.map((row) => [row.playlistId, row._count._all])
     );
 
-    const locale = payment.locale || 'en';
     const seen = new Set<number>();
     const playlists: Array<{ name: string; link: string }> = [];
     for (const line of lines) {
@@ -410,18 +440,7 @@ class Generator {
         }`,
       });
     }
-
-    if (playlists.length === 0) return;
-
-    await this.mail.sendOpenCorrectionsMail(
-      {
-        email: payment.email,
-        fullname: payment.fullname,
-        locale,
-        orderId: payment.orderId,
-      },
-      playlists
-    );
+    return playlists;
   }
 
   /**

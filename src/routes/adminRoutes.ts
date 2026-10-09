@@ -4643,9 +4643,12 @@ export default async function adminRoutes(
           where: { paymentId },
           select: {
             id: true,
+            paymentId: true,
             email: true,
             fullname: true,
-            locale: true
+            locale: true,
+            userId: true,
+            user: { select: { hash: true } }
           }
         });
 
@@ -4658,6 +4661,26 @@ export default async function adminRoutes(
 
         // Determine target locale (use provided or fallback to payment locale)
         const locale = targetLocale || payment.locale || 'en';
+
+        const template = templateId
+          ? loadEmailTemplates().find((t: any) => t.id === templateId)
+          : undefined;
+
+        // A preset flagged `correctionLinks` in mail.json gets a button to
+        // the correction form of every playlist holding corrections the
+        // customer has not approved, the ones the printer pass waits for.
+        // With no such playlist the buttons would be missing, so it sends
+        // nothing.
+        let correctionLinks: Array<{ name: string; link: string }> = [];
+        if (template?.correctionLinks === true) {
+          correctionLinks = await generator.openCorrectionLinks(payment, locale);
+          if (correctionLinks.length === 0) {
+            return reply.status(400).send({
+              success: false,
+              error: 'This order has no corrections waiting for the customer to approve'
+            });
+          }
+        }
 
         // Translate message if not Dutch
         let translatedSubject = subject;
@@ -4674,12 +4697,7 @@ export default async function adminRoutes(
         // playlist is not judged. Judged lives per playlist, so the admin
         // picks which ones to re-open. Reset ahead of the send, so the mail
         // never points at a locked page; a failed reset sends nothing.
-        const resetsJudged =
-          !!templateId &&
-          loadEmailTemplates().some(
-            (template: any) =>
-              template.id === templateId && template.resetsJudged === true
-          );
+        const resetsJudged = template?.resetsJudged === true;
 
         const judgedResetPlaylistIds: number[] =
           resetsJudged && Array.isArray(resetJudgedPlaylistIds)
@@ -4724,7 +4742,8 @@ export default async function adminRoutes(
           payment.fullname,
           translatedSubject,
           translatedMessage,
-          locale
+          locale,
+          { correctionLinks }
         );
 
         return reply.send({

@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { formatCostUsd, llm, LlmOutputError } from './llm';
+import { CORRECTION_FORM_MARKER } from './config/constants';
 
 /**
  * The description prompt used to ask for "a list of numbers from that
@@ -1083,7 +1084,7 @@ ${htmlString}
         messages: [
           {
             role: 'system',
-            content: `You are a professional email translator. Translate both the subject and message from Dutch to ${targetLang}. Maintain a professional tone and preserve line breaks.`,
+            content: `You are a professional email translator. Translate both the subject and message from Dutch to ${targetLang}. Maintain a professional tone and preserve line breaks. If the message contains ${CORRECTION_FORM_MARKER}, keep it exactly as written: it is replaced by buttons after translation.`,
           },
           {
             role: 'user',

@@ -855,6 +855,47 @@ describe('sendCustomMail', () => {
     expect(raw).toContain('line one\nline two');
     expect(raw).toContain('Hello'); // en greeting
   });
+
+  const correctionLinks = [
+    { name: 'Party Hits', link: 'https://www.qrsong.io/en/usersuggestions/tr_1/h4sh/pl1/0' },
+  ];
+
+  it('puts the correction form buttons where the message has the marker', async () => {
+    await mail.sendCustomMail(
+      'cust@example.com',
+      'Cust',
+      'On hold',
+      'Your order waits.\n\n[CORRECTION_FORM]\n\nQuestions? Reply.',
+      'en',
+      { correctionLinks }
+    );
+    const raw = lastRaw();
+    expect(raw).not.toContain('[CORRECTION_FORM]');
+    expect(raw).toContain('Open the correction form');
+    expect(raw).toContain('Party Hits');
+    const html = raw.slice(raw.indexOf('<html'));
+    const waits = html.indexOf('Your order waits.');
+    const link = html.indexOf(correctionLinks[0].link);
+    const reply = html.indexOf('Questions? Reply.');
+    expect(waits).toBeGreaterThan(-1);
+    expect(link).toBeGreaterThan(waits);
+    expect(reply).toBeGreaterThan(link);
+  });
+
+  it('puts the buttons under the message when a translation lost the marker', async () => {
+    await mail.sendCustomMail(
+      'cust@example.com',
+      'Cust',
+      'On hold',
+      'Your order waits.',
+      'en',
+      { correctionLinks }
+    );
+    const html = lastRaw().slice(lastRaw().indexOf('<html'));
+    expect(html.indexOf(correctionLinks[0].link)).toBeGreaterThan(
+      html.indexOf('Your order waits.')
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

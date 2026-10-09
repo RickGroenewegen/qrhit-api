@@ -12,6 +12,13 @@
       "name": "Card Readability Issue",
       "subject": "Je QRSong! bestelling bevat kaarten met leesbaarheidsproblemen",
       "body": "Allereerst bedankt voor je QRSong! bestelling. Tijdens de controle hebben we geconstateerd dat sommige van je kaarten mogelijk leesbaarheidsproblemen hebben. Dit kan de scanbaarheid van de QR-codes beïnvloeden. Het gaat om het volgende:\n\n[REASON]\n\nJe kunt je bestelling aanpassen via de link die je eerder van ons ontvangen hebt. Mocht je vragen hebben of hulp nodig hebben, dan staan we klaar om je te ondersteunen.\n\nMet vriendelijke groet,\nHet QRSong! Team "
+    },
+    {
+      "id": "open-corrections",
+      "name": "Order on hold: open corrections",
+      "subject": "Je QRSong! bestelling wacht op je goedkeuring",
+      "correctionLinks": true,
+      "body": "Bedankt voor je QRSong! bestelling. De controleperiode voor je bestelling is afgelopen en normaal zouden we je kaarten nu laten drukken. Je hebt in het correctieformulier wijzigingen gemaakt die je nog niet hebt goedgekeurd, dus hebben we je bestelling gepauzeerd. We drukken nooit wijzigingen die je niet hebt bevestigd.\n\nOpen het correctieformulier met de knop hieronder. Daar kun je je wijzigingen afronden of je bestelling goedkeuren. Daarna gaat je bestelling direct naar de drukker.\n\n[CORRECTION_FORM]\n\nHeb je vragen? Beantwoord dan gewoon deze e-mail en we helpen je verder.\n\nMet vriendelijke groet,\nHet QRSong! Team"
     }
   ]
 }

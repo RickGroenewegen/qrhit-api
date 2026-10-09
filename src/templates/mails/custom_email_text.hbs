@@ -1,6 +1,19 @@
 {{ greeting }} {{ fullname }},
 
 {{ messageText }}
+{{#if correctionLinks.length}}
+
+{{#each correctionLinks}}
+-------------------------------
+{{{ this.name }}}
+{{{ ../correctionTranslations.buttonText }}}: {{{ this.link }}}
+-------------------------------
+{{/each}}
+{{/if}}
+{{#if messageTextAfter}}
+
+{{ messageTextAfter }}
+{{/if}}
 
 ---
 {{ productName }}

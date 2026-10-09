@@ -16,6 +16,7 @@ import { formatCostUsd, llm } from './llm';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
 import BusinessContacts from './businessContacts';
+import { CORRECTION_FORM_MARKER } from './config/constants';
 import type {
   FinalCheckCorrectionTab,
   FinalCheckFlaggedImage,
@@ -2314,7 +2315,10 @@ ${params.html}
    * @param locale The target locale
    * @param options Files to attach, a different sender/Reply-To (the business
    *   inbox for company mail), escaping of the message and rethrowing, for a
-   *   caller that has to tell the admin a send failed
+   *   caller that has to tell the admin a send failed. `correctionLinks` adds
+   *   a correction form button per playlist where the message says
+   *   CORRECTION_FORM_MARKER, or under the message when it does not (a
+   *   translation that lost the marker).
    */
   public async sendCustomMail(
     email: string,
@@ -2328,6 +2332,7 @@ ${params.html}
       replyTo?: string;
       escapeMessage?: boolean;
       throwOnError?: boolean;
+      correctionLinks?: Array<{ name: string; link: string }>;
     } = {}
   ): Promise<void> {
     if (!this.ses) {
@@ -2337,15 +2342,31 @@ ${params.html}
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
+    const correctionLinks = options.correctionLinks ?? [];
+    const markerAt =
+      correctionLinks.length > 0 ? message.indexOf(CORRECTION_FORM_MARKER) : -1;
+    const messageBefore =
+      markerAt === -1 ? message : message.slice(0, markerAt).trimEnd();
+    const messageAfter =
+      markerAt === -1 ? '' : message.slice(markerAt + CORRECTION_FORM_MARKER.length).trimStart();
+
     // Convert line breaks to HTML <br> tags for HTML version
-    const messageHtml = (options.escapeMessage ? this.escapeHtml(message) : message).replace(/\n/g, '<br>');
+    const toHtml = (text: string) =>
+      (options.escapeMessage ? this.escapeHtml(text) : text).replace(/\n/g, '<br>');
 
     // Determine greeting based on locale
     const mailParams = {
       fullname: fullname || email.split('@')[0],
       greeting: this.translation.getGreeting(locale),
-      message: messageHtml,
-      messageText: message, // Plain text version with \n preserved
+      message: toHtml(messageBefore),
+      messageText: messageBefore, // Plain text version with \n preserved
+      messageAfter: toHtml(messageAfter),
+      messageTextAfter: messageAfter,
+      correctionLinks,
+      correctionTranslations:
+        correctionLinks.length > 0
+          ? await this.translation.getTranslationsByPrefix(locale, 'open_corrections')
+          : {},
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
     };

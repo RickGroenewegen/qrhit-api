@@ -110,3 +110,8 @@ export const OWN_CARD_PATH = '/qr_url2';
 // Body limit for the routes that take an image as a base64 JSON string (the
 // designers' uploads, quiz pictures). Everything else gets the server's 20 MB.
 export const BASE64_IMAGE_BODY_LIMIT = 30 * 1024 * 1024;
+
+// Where an admin custom mail with correction links (mail.json's
+// `correctionLinks`) shows the correction form buttons. The mail translator
+// keeps it, and sendCustomMail puts the buttons under the text without it.
+export const CORRECTION_FORM_MARKER = '[CORRECTION_FORM]';
