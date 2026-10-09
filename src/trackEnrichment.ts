@@ -6,6 +6,8 @@ import Logger from './logger';
 import Utils from './utils';
 import PrismaInstance from './prisma';
 
+const CHANGED_TRACKS_OVERLAP_MS = 10 * 60 * 1000;
+
 /**
  * Enrichment data structure for tracks
  */
@@ -41,6 +43,8 @@ class TrackEnrichment {
   private loadPromise: Promise<void> | null = null;
   private retryAttempt: number = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  // Tracks written from this moment on may not be in the maps yet
+  private changesSince: Date | null = null;
 
   private constructor() {
     this.prisma = PrismaInstance.getInstance();
@@ -52,14 +56,30 @@ class TrackEnrichment {
     // the full-table scan out of the boot window where the cold pool
     // creates connections one at a time.
     if (cluster.isPrimary) {
-      this.loadTrackEnrichmentMaps();
+      this.reload();
     }
 
-    // Set up hourly refresh cron job
-    const enrichmentRefreshJob = new CronJob('0 * * * *', async () => {
-      await this.refreshTrackEnrichmentMaps();
+    // Every process keeps its own maps. They used to reload all checked
+    // tracks (423k) at :00 in every process at once, each holding a
+    // connection for 40 s. Now each process has its own minute (primary
+    // first, then one worker after the other), the hourly pass only reads
+    // the tracks changed since the last one, and a nightly full reload
+    // catches what that cannot see: deleted tracks and changed ISRCs.
+    const slot = cluster.isPrimary
+      ? 0
+      : (parseInt(process.env['WORKER_ID'] ?? '', 10) || 0) + 1;
+    const changedTracksJob = new CronJob(`${(7 + slot) % 60} * * * *`, async () => {
+      await this.refreshChangedTracks();
     });
-    enrichmentRefreshJob.start();
+    changedTracksJob.start();
+    const nightlyMinute = 10 + slot * 5;
+    const fullReloadJob = new CronJob(
+      `${nightlyMinute % 60} ${2 + Math.floor(nightlyMinute / 60)} * * *`,
+      async () => {
+        await this.refreshTrackEnrichmentMaps();
+      }
+    );
+    fullReloadJob.start();
   }
 
   public static getInstance(): TrackEnrichment {
@@ -82,11 +102,85 @@ class TrackEnrichment {
     return Math.abs(hash).toString(36);
   }
 
+  private artistTitleHash(artist: string, title: string): string {
+    return this.createSimpleHash(`${artist.toLowerCase().trim()}|||${title.toLowerCase().trim()}`);
+  }
+
+  /**
+   * Put a checked track in all three maps. Rows without year, name or
+   * artist are left out.
+   */
+  private addTrack(track: {
+    trackId: string | null;
+    isrc: string | null;
+    year: number | null;
+    name: string | null;
+    artist: string | null;
+  }): void {
+    if (!track.year || !track.name || !track.artist) {
+      return;
+    }
+
+    const enrichmentData: EnrichmentData = {
+      year: track.year,
+      name: track.name,
+      artist: track.artist,
+    };
+
+    // Map 1: By trackId
+    if (track.trackId) {
+      this.trackEnrichmentByTrackId.set(track.trackId, enrichmentData);
+    }
+
+    // Map 2: By ISRC
+    if (track.isrc) {
+      this.trackEnrichmentByIsrc.set(track.isrc, enrichmentData);
+    }
+
+    // Map 3: By artist+title hash (normalized, case-insensitive)
+    this.trackEnrichmentByArtistTitleHash.set(
+      this.artistTitleHash(track.artist, track.name),
+      enrichmentData
+    );
+  }
+
+  /**
+   * Take a track out of the maps, by the entry its trackId holds. The ISRC
+   * and artist+title entries go only where they still hold that same entry:
+   * another track with the same ISRC or title may have taken the key. An
+   * ISRC the track no longer has stays until the nightly full reload.
+   */
+  private removeTrack(trackId: string, isrc: string | null): void {
+    const previous = this.trackEnrichmentByTrackId.get(trackId);
+    if (!previous) {
+      return;
+    }
+    this.trackEnrichmentByTrackId.delete(trackId);
+    if (isrc && this.trackEnrichmentByIsrc.get(isrc) === previous) {
+      this.trackEnrichmentByIsrc.delete(isrc);
+    }
+    const hash = this.artistTitleHash(previous.artist!, previous.name!);
+    if (this.trackEnrichmentByArtistTitleHash.get(hash) === previous) {
+      this.trackEnrichmentByArtistTitleHash.delete(hash);
+    }
+  }
+
+  private logOnMainServer(message: string): void {
+    if (!cluster.isPrimary) {
+      return;
+    }
+    this.utils.isMainServer().then((isMainServer) => {
+      if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+        this.logger.log(message);
+      }
+    });
+  }
+
   /**
    * Load track enrichment maps from database
    */
   private async loadTrackEnrichmentMaps(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
+    const startedAt = new Date();
 
     try {
       // Query all manually-checked tracks from database
@@ -108,52 +202,24 @@ class TrackEnrichment {
 
       // Populate all three maps
       for (const track of tracks) {
-        if (!track.year || !track.name || !track.artist) {
-          continue; // Skip tracks without required data
-        }
-
-        const enrichmentData: EnrichmentData = {
-          year: track.year,
-          name: track.name,
-          artist: track.artist,
-        };
-
-        // Map 1: By trackId
-        if (track.trackId) {
-          this.trackEnrichmentByTrackId.set(track.trackId, enrichmentData);
-        }
-
-        // Map 2: By ISRC
-        if (track.isrc) {
-          this.trackEnrichmentByIsrc.set(track.isrc, enrichmentData);
-        }
-
-        // Map 3: By artist+title hash (normalized, case-insensitive)
-        const artistTitleKey = `${track.artist.toLowerCase().trim()}|||${track.name.toLowerCase().trim()}`;
-        const hash = this.createSimpleHash(artistTitleKey);
-        this.trackEnrichmentByArtistTitleHash.set(hash, enrichmentData);
+        this.addTrack(track);
       }
 
       this.mapsInitialized = true;
       this.retryAttempt = 0;
+      this.changesSince = startedAt;
 
-      if (isPrimary) {
-        this.utils.isMainServer().then(async (isMainServer) => {
-          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-            this.logger.log(
-              color.blue.bold(
-                `[${color.white.bold('TrackEnrichment')}] Maps loaded: ${color.white.bold(
-                  this.trackEnrichmentByTrackId.size
-                )} by trackId, ${color.white.bold(
-                  this.trackEnrichmentByIsrc.size
-                )} by ISRC, ${color.white.bold(
-                  this.trackEnrichmentByArtistTitleHash.size
-                )} by artist+title`
-              )
-            );
-          }
-        });
-      }
+      this.logOnMainServer(
+        color.blue.bold(
+          `[${color.white.bold('TrackEnrichment')}] Maps loaded: ${color.white.bold(
+            this.trackEnrichmentByTrackId.size
+          )} by trackId, ${color.white.bold(
+            this.trackEnrichmentByIsrc.size
+          )} by ISRC, ${color.white.bold(
+            this.trackEnrichmentByArtistTitleHash.size
+          )} by artist+title`
+        )
+      );
     } catch (e: any) {
       this.logger.log(
         color.red.bold(`[TrackEnrichment] Failed to load maps: ${e.message || e}`)
@@ -177,9 +243,18 @@ class TrackEnrichment {
       // otherwise every request would relaunch the failed query instantly.
       return Promise.resolve();
     }
-    this.loadPromise = this.loadTrackEnrichmentMaps().finally(() => {
-      this.loadPromise = null;
-    });
+    return this.reload();
+  }
+
+  /**
+   * Run a full load, or join the one already running.
+   */
+  private reload(): Promise<void> {
+    if (!this.loadPromise) {
+      this.loadPromise = this.loadTrackEnrichmentMaps().finally(() => {
+        this.loadPromise = null;
+      });
+    }
     return this.loadPromise;
   }
 
@@ -208,10 +283,77 @@ class TrackEnrichment {
   }
 
   /**
-   * Refresh track enrichment maps
+   * Reload the maps from scratch
    */
   public async refreshTrackEnrichmentMaps(): Promise<void> {
-    await this.loadTrackEnrichmentMaps();
+    await this.reload();
+  }
+
+  /**
+   * Bring the maps up to date with the tracks written since the last load
+   * or refresh: a track that is checked (again) goes in with its current
+   * data, one that is no longer checked comes out. The window reaches back
+   * CHANGED_TRACKS_OVERLAP_MS before that moment, for clock differences
+   * between servers and writes that committed late; reading a track twice
+   * is harmless. Before the first load there is nothing to update, so that
+   * load runs instead.
+   */
+  public async refreshChangedTracks(): Promise<void> {
+    if (this.loadPromise) {
+      return;
+    }
+    if (!this.mapsInitialized || !this.changesSince) {
+      return this.ensureLoaded();
+    }
+
+    const startedAt = new Date();
+    try {
+      const tracks = await this.prisma.track.findMany({
+        where: {
+          updatedAt: {
+            gte: new Date(this.changesSince.getTime() - CHANGED_TRACKS_OVERLAP_MS),
+          },
+        },
+        select: {
+          trackId: true,
+          isrc: true,
+          year: true,
+          name: true,
+          artist: true,
+          manuallyChecked: true,
+        },
+      });
+
+      // A full load that started meanwhile has newer data than this read
+      if (this.loadPromise) {
+        return;
+      }
+
+      for (const track of tracks) {
+        this.removeTrack(track.trackId, track.isrc);
+        if (track.manuallyChecked) {
+          this.addTrack(track);
+        }
+      }
+      if (startedAt > this.changesSince) {
+        this.changesSince = startedAt;
+      }
+
+      if (tracks.length > 0) {
+        this.logOnMainServer(
+          color.blue.bold(
+            `[${color.white.bold('TrackEnrichment')}] Refreshed ${color.white.bold(
+              tracks.length
+            )} recently changed tracks`
+          )
+        );
+      }
+    } catch (e: any) {
+      // changesSince stays put, so the next refresh reads this window too
+      this.logger.log(
+        color.red.bold(`[TrackEnrichment] Failed to refresh changed tracks: ${e.message || e}`)
+      );
+    }
   }
 
   /**
@@ -241,9 +383,7 @@ class TrackEnrichment {
     if (!this.mapsInitialized) {
       this.ensureLoaded();
     }
-    const artistTitleKey = `${artist.toLowerCase().trim()}|||${title.toLowerCase().trim()}`;
-    const hash = this.createSimpleHash(artistTitleKey);
-    return this.trackEnrichmentByArtistTitleHash.get(hash);
+    return this.trackEnrichmentByArtistTitleHash.get(this.artistTitleHash(artist, title));
   }
 
   /**

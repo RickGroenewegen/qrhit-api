@@ -132,8 +132,8 @@ Twenty jobs run on a schedule, most of them hourly; the printer hand-off is the 
 | Hourly at :00 | Parcel tracking | Reads the PostNL status of shipped parcels through TrackingMore and marks them delivered. |
 | Hourly at :00 | Review eligibility | Marks an order eligible for a review request once 25 or more of its songs have been scanned. |
 | Hourly at :00 | Scan link cache | Rebuilds the cache of streaming links that every QR scan is redirected through. |
-| Hourly at :00 | Track corrections | Reloads corrected release years, titles and artists for all music services. |
 | Hourly at :05 | Review requests | Mails a review request 10 days after the order, only to customers who opted in, never twice to one address. |
+| Hourly from :07 | Track corrections | Each server process picks up the release years, titles and artists corrected since its previous run, one process per minute, for all music services. A full reload runs nightly from 02:10. |
 | Hourly at :15 | Shipping updates | Polls Print&Bind for shipped orders, stores the tracking link, mails the customer and registers the parcel for tracking. Closes orders older than 30 days. |
 | Hourly at :35 | Box instructions | Mails the gift box folding instructions 24 hours after shipping. |
 | Every 6 hours | Chat cleanup | Deletes empty support chats older than 24 hours. |
@@ -154,6 +154,7 @@ Each hardening step is added here when it ships, newest first.
 
 | Date | Change | What it does |
 | --- | --- | --- |
+| 2026-10-09 | Lighter track refresh | The hourly refresh of corrected track data reads only the tracks that changed since the previous run, one server process at a time, instead of every process reloading all 423,000 tracks at once. |
 | 2026-10-09 | Help-text editor replaced | The App Designer's rich-text editor (Quill, an open vulnerability with no fixed release) became a Markdown editor that stores exactly the same HTML, so nothing downstream changed. |
 | 2026-10-09 | Session hardening | Only the site's own addresses may call the API with a login session, and the session cookie no longer travels with requests that other sites start. |
 | 2026-10-09 | Sign-in codes | Registration and reset codes come from a cryptographic source, are voided after five wrong tries, and requests for them are rate-limited. |

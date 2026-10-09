@@ -122,6 +122,8 @@ export async function updateTrackYear(
       spotifyYear
     );
 
+    // Raw SQL skips Prisma's @updatedAt, so these set it themselves: the
+    // track enrichment maps pick up newly checked tracks by updatedAt.
     await deps.prisma.$executeRaw`
         UPDATE  tracks
         SET     year = ${result.year},
@@ -131,14 +133,16 @@ export async function updateTrackYear(
                 musicBrainzYear = ${result.sources.mb},
                 openPerplexYear = ${result.sources.openPerplex},
                 googleResults = ${result.googleResults},
-                standardDeviation = ${result.standardDeviation}
+                standardDeviation = ${result.standardDeviation},
+                updatedAt = ${new Date()}
         WHERE   id = ${track.id}`;
 
     if (result.standardDeviation <= 1) {
       // Update the year with perplexYear and set manuallyChecked to true
       await deps.prisma.$executeRaw`
           UPDATE  tracks
-          SET     manuallyChecked = true
+          SET     manuallyChecked = true,
+                  updatedAt = ${new Date()}
           WHERE   id = ${track.id}
         `;
 
@@ -160,7 +164,8 @@ export async function updateTrackYear(
         await deps.prisma.$executeRaw`
             UPDATE  tracks
             SET     year = ${autoPick.year},
-                    manuallyChecked = true
+                    manuallyChecked = true,
+                    updatedAt = ${new Date()}
             WHERE   id = ${track.id}
           `;
 

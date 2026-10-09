@@ -84,8 +84,8 @@ beforeEach(async () => {
 });
 
 describe('construction side effects', () => {
-  it('schedules (only) an hourly refresh cron', () => {
-    expect(h.cronStarts).toEqual(['0 * * * *']);
+  it('schedules the hourly changed-tracks pass and the nightly reload at the primary minutes', () => {
+    expect(h.cronStarts).toEqual(['7 * * * *', '10 2 * * *']);
   });
 
   it('queries only manually checked tracks', () => {
@@ -118,6 +118,70 @@ describe('map loading and stats', () => {
     h.prisma.track.findMany.mockRejectedValueOnce(new Error('db gone'));
     await enrichment.refreshTrackEnrichmentMaps();
     // load failed before clear => previous data intact
+    expect(enrichment.getStats().byTrackId).toBe(2);
+  });
+});
+
+describe('hourly refresh of changed tracks', () => {
+  const lastWhere = () => (h.prisma.track.findMany.mock.lastCall as any)[0].where;
+
+  it('reads only the tracks written since the last load, ten minutes back', async () => {
+    h.prisma.track.findMany.mockResolvedValueOnce([]);
+    await enrichment.refreshChangedTracks();
+
+    const since = lastWhere().updatedAt.gte.getTime();
+    const lag = Date.now() - 10 * 60 * 1000 - since;
+    expect(lag).toBeGreaterThanOrEqual(0);
+    expect(lag).toBeLessThan(5000);
+  });
+
+  it('adds newly checked tracks, updates changed ones and drops unchecked ones', async () => {
+    h.prisma.track.findMany.mockResolvedValueOnce([
+      { trackId: 'sp-5', isrc: 'ISRC5', year: 1979, name: 'Heart of Glass', artist: 'Blondie', manuallyChecked: true },
+      { trackId: 'sp-1', isrc: 'ISRC1', year: 1999, name: 'Blue Monday', artist: 'New Order', manuallyChecked: false },
+      { trackId: 'sp-2', isrc: null, year: 1984, name: 'Take On Me (1984)', artist: 'a-ha', manuallyChecked: true },
+    ]);
+    await enrichment.refreshChangedTracks();
+
+    expect(enrichment.getByTrackId('sp-5')?.year).toBe(1979);
+    expect(enrichment.getByIsrc('ISRC5')?.name).toBe('Heart of Glass');
+
+    expect(enrichment.getByTrackId('sp-1')).toBeUndefined();
+    expect(enrichment.getByIsrc('ISRC1')).toBeUndefined();
+    expect(enrichment.getByArtistTitle('New Order', 'Blue Monday')).toBeUndefined();
+
+    expect(enrichment.getByTrackId('sp-2')).toEqual({ year: 1984, name: 'Take On Me (1984)', artist: 'a-ha' });
+    expect(enrichment.getByArtistTitle('a-ha', 'Take On Me')).toBeUndefined();
+    expect(enrichment.getByArtistTitle('a-ha', 'Take On Me (1984)')?.year).toBe(1984);
+
+    // Untouched tracks stay
+    expect(enrichment.getByIsrc('ISRC4')?.name).toBe('Orphan');
+  });
+
+  it('leaves an ISRC to the other track that holds it', async () => {
+    h.prisma.track.findMany.mockResolvedValueOnce([
+      { trackId: 'a', isrc: 'DUP', year: 1990, name: 'Song', artist: 'Artist' },
+      { trackId: 'b', isrc: 'DUP', year: 1991, name: 'Song (Live)', artist: 'Artist' },
+    ]);
+    await enrichment.refreshTrackEnrichmentMaps();
+
+    h.prisma.track.findMany.mockResolvedValueOnce([
+      { trackId: 'a', isrc: 'DUP', year: 1990, name: 'Song', artist: 'Artist', manuallyChecked: false },
+    ]);
+    await enrichment.refreshChangedTracks();
+
+    expect(enrichment.getByTrackId('a')).toBeUndefined();
+    expect(enrichment.getByIsrc('DUP')?.year).toBe(1991);
+  });
+
+  it('reads the same window again after a failed refresh', async () => {
+    h.prisma.track.findMany.mockRejectedValueOnce(new Error('db gone'));
+    await enrichment.refreshChangedTracks();
+    const failedSince = lastWhere().updatedAt.gte.getTime();
+
+    h.prisma.track.findMany.mockResolvedValueOnce([]);
+    await enrichment.refreshChangedTracks();
+    expect(lastWhere().updatedAt.gte.getTime()).toBe(failedSince);
     expect(enrichment.getStats().byTrackId).toBe(2);
   });
 });

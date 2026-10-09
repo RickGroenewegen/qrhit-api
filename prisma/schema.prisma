@@ -602,6 +602,7 @@ model Track {
   @@index([youtubeLink])
   @@index([spotifyLink, spotifyLinkIgnored])
   @@index([artist, name, manuallyChecked, year, id])
+  @@index([updatedAt]) // the enrichment maps' hourly refresh reads the tracks changed since the last one
   @@fulltext([artist, name])
   @@map("tracks")
 }
