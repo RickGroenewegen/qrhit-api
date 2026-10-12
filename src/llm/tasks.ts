@@ -18,8 +18,8 @@
  *   Sonnet 5.5  where it was clearly better: the playlist search terms (Haiku
  *               picked artists that do not fit the theme), the long-word split
  *               (Haiku broke mid-syllable), outgoing mail (Haiku mixed "du"
- *               and a formal closing), the contact draft and chat answer (copy
- *               a customer or Rick reads), trivia facts, SEO translations.
+ *               and a formal closing), the chat answer (copy a customer or
+ *               Rick reads), trivia facts, SEO translations.
  *   Opus 5.5    the year audit (knowledge, no sources), SEO copy, reading a
  *               photo; all low volume.
  * Haiku 5.5 bills a prompt over 100K tokens at 5x; no task here comes near
@@ -107,7 +107,7 @@ export const LLM_TASKS = {
   chatTopics: {
     kind: 'text',
     label: 'Chat topic pick',
-    description: 'Picks the knowledge-base topics for a chat question or contact mail.',
+    description: 'Picks the knowledge-base topics for a chat question.',
     primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'none' },
     fallback: { provider: 'openai', model: 'gpt-5.6-luna', effort: 'none' },
     timeoutMs: 30_000,
@@ -134,13 +134,6 @@ export const LLM_TASKS = {
     description: 'Detects the language of a contact-form message and makes a Dutch copy.',
     primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'none' },
     fallback: { provider: 'openai', model: 'gpt-5.6-luna', effort: 'none' },
-  },
-  contactDraft: {
-    kind: 'text',
-    label: 'Contact reply draft',
-    description: 'A Dutch draft reply to a contact-form message.',
-    primary: { provider: 'anthropic', model: 'claude-sonnet-5-5', effort: 'low' },
-    fallback: { provider: 'openai', model: 'gpt-5.6-terra', effort: 'none' },
   },
 
   // Quiz ----------------------------------------------------------------------

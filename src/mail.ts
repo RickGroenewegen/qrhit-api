@@ -13,7 +13,6 @@ import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import cluster from 'cluster';
 import { formatCostUsd, llm } from './llm';
-import { ChatService } from './chat';
 import PrismaInstance from './prisma';
 import BusinessContacts from './businessContacts';
 import { CORRECTION_FORM_MARKER } from './config/constants';
@@ -797,7 +796,7 @@ class Mail {
   }
 
   /**
-   * Process contact form background tasks (translation, draft reply, email notification, pushover)
+   * Process contact form background tasks (translation, email notification, pushover)
    * This runs asynchronously after the API response is sent
    */
   private async processContactFormBackground(
@@ -809,9 +808,6 @@ class Mail {
   ): Promise<void> {
     // Translate message to Dutch
     this.translateContactEmailToDutch(emailId, otherData.message);
-
-    // Generate draft reply using AI knowledge base (with tool calling support)
-    this.generateDraftReply(emailId, otherData.message, otherData.name, otherData.email);
 
     // Send notification email to admin
     const message = `
@@ -913,61 +909,6 @@ class Mail {
       }
     } catch (error) {
       this.logger.log(color.red(`[ContactEmail] Translation error: ${error}`));
-    }
-  }
-
-  /**
-   * Generate a draft reply for a contact email using AI knowledge base (async, doesn't block)
-   * Uses ChatService's processToolsForContext for tool calling (e.g., shipping status lookup)
-   */
-  private async generateDraftReply(emailId: number, message: string, customerName: string, customerEmail: string): Promise<void> {
-    try {
-      // Use ChatService to get relevant topics and process tools
-      const chatService = new ChatService();
-      const topics = await chatService.getTopics(message, []);
-
-      // Process tools with customer email as additional data for tool execution
-      // This allows tools like getShippingStatus to use the customer's email
-      const { toolContext, knowledgeContext } = await chatService.processToolsForContext(
-        message,
-        topics,
-        [], // No chat history for contact form emails
-        { email: customerEmail } // Pass customer email for tool execution
-      );
-
-      // Generate draft reply with knowledge and tool results
-      const { data: draftReply, costUsd } = await llm.text('contactDraft', {
-        temperature: 0.5,
-        messages: [
-          {
-            role: 'system',
-            content: `You are writing a professional, friendly email reply on behalf of Rick from QRSong!.
-Write the reply in Dutch. Be warm and helpful.
-
-IMPORTANT FORMATTING:
-- Start with a friendly greeting using the customer's first name
-- Be thorough and detailed in your response (this is an email, not a chat - be comprehensive)
-- Use proper email formatting with paragraphs
-- End with a friendly closing and sign off with just "Rick," (the email template already adds "QRSong!" below)
-- If you cannot fully answer based on the knowledge provided, include a helpful response anyway and mention that Rick will follow up with more details if needed
-${knowledgeContext}${toolContext}`,
-          },
-          {
-            role: 'user',
-            content: `Customer "${customerName}" (${customerEmail}) sent the following message:\n\n${message}\n\nWrite a helpful email reply in Dutch.`,
-          },
-        ],
-      });
-
-      if (draftReply) {
-        await prisma.contactEmail.update({
-          where: { id: emailId },
-          data: { draftReply },
-        });
-        this.logger.log(color.green(`[ContactEmail] Generated draft reply for email ${emailId} (${formatCostUsd(costUsd)})`));
-      }
-    } catch (error) {
-      this.logger.log(color.red(`[ContactEmail] Draft reply generation error: ${error}`));
     }
   }
 

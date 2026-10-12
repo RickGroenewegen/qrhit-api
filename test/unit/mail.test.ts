@@ -86,20 +86,6 @@ vi.mock('openai', () => ({
   },
 }));
 
-const chatMock = vi.hoisted(() => ({
-  getTopics: vi.fn(async () => ['shipping']),
-  processToolsForContext: vi.fn(async () => ({
-    toolContext: '',
-    knowledgeContext: '',
-  })),
-}));
-vi.mock('../../src/chat', () => ({
-  ChatService: class {
-    getTopics = chatMock.getTopics;
-    processToolsForContext = chatMock.processToolsForContext;
-  },
-}));
-
 const cronCtor = vi.hoisted(() => vi.fn());
 vi.mock('cron', () => ({ CronJob: cronCtor }));
 
@@ -953,7 +939,7 @@ describe('sendContactForm', () => {
     expect(prismaMock.contactEmail.create).not.toHaveBeenCalled();
   });
 
-  it('stores the message, notifies info@, translates and drafts a reply', async () => {
+  it('stores the message, notifies info@ and translates it', async () => {
     stubOpenAiContactCalls();
     prismaMock.contactEmail.create.mockResolvedValue({ id: 55 });
     prismaMock.contactEmail.update.mockResolvedValue({});
@@ -972,7 +958,7 @@ describe('sendContactForm', () => {
       },
     });
 
-    // Background processing: SES notification + pushover + 2 DB updates
+    // Background processing: SES notification + pushover + the translation update
     await vi.waitFor(() => expect(sesSend).toHaveBeenCalledTimes(1));
     const raw = lastRaw();
     expect(raw).toContain('To: info@qrsong.io');
@@ -982,7 +968,7 @@ describe('sendContactForm', () => {
     expect(raw).toContain('Hi, where is my order QR123?');
 
     await vi.waitFor(() =>
-      expect(prismaMock.contactEmail.update).toHaveBeenCalledTimes(2)
+      expect(prismaMock.contactEmail.update).toHaveBeenCalledTimes(1)
     );
     expect(prismaMock.contactEmail.update).toHaveBeenCalledWith({
       where: { id: 55 },
@@ -991,16 +977,6 @@ describe('sendContactForm', () => {
         translatedMessage: 'Hoi, waar is mijn bestelling QR123?',
       },
     });
-    expect(prismaMock.contactEmail.update).toHaveBeenCalledWith({
-      where: { id: 55 },
-      data: { draftReply: 'Beste John, ...' },
-    });
-    expect(chatMock.processToolsForContext).toHaveBeenCalledWith(
-      formData.message,
-      ['shipping'],
-      [],
-      { email: 'john@example.com' }
-    );
 
     await vi.waitFor(() =>
       expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(1)

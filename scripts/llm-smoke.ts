@@ -178,8 +178,6 @@ const CHECKS: Partial<Record<TextTask, Check>> = {
       'Bonjour, mes cartes ne sont pas encore arrivées.',
       'Detect the language of the text and translate it to Dutch.'
     ),
-  contactDraft: () =>
-    direct('contactDraft', null, 'Customer "Anna" asks: can I still change the design after paying?', 'Write a short, friendly Dutch email reply signed "Rick,".'),
   quizTrivia: async () => ({
     sample: await gpt.regenerateQuizQuestion({ name: 'Bohemian Rhapsody', artist: 'Queen', year: 1975 }, 'trivia', 'nl'),
   }),
