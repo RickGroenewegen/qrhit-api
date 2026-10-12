@@ -257,9 +257,12 @@ The area most likely to delay a deal.
 
 - [ ] **[Rick] Record of processing** (GDPR art. 30) and a sub-processor list
   with signed DPAs: Mollie, AWS, EmailOctopus, Print&Bind, PostNL,
-  TrackingMore, Moneybird, OpenAI, Anthropic, ConvertAPI, PostHog, Firebase,
+  Moneybird, OpenAI, Anthropic, ConvertAPI, PostHog, Firebase,
   Google, Crisp, Trustpilot. The privacy policy names the AI processors
-  (contact-form mail and chat go there).
+  (contact-form mail and chat go there). TrackingMore received barcodes and
+  postcodes until 2026-10-12 (parcel tracking moved to PostNL's public track &
+  trace); ask it to delete that data when the shared account with 21pix is
+  closed.
 - [ ] **[code] Retention policy plus a nightly purge.** Paid orders, IP
   addresses, voting submissions, contact mails and uploaded photos are kept
   forever today. Proposal: orders 7 years (Dutch tax rules), IPs 90 days,

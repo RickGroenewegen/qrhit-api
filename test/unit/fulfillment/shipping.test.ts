@@ -2,7 +2,8 @@
  * Unit tests for src/shipping.ts.
  *
  * Module-boundary mocks:
- *  - axios                      → TrackingMore HTTP calls
+ *  - ../../src/postnlTracking   → fetchStatus spy (its own tests cover the mapping)
+ *  - ../../src/pushover         → sendMessage spy
  *  - cron                       → CronJob constructor recorded (no timers)
  *  - ../../src/prisma          → in-memory prisma stub
  *  - ../../src/cache            → Map-less get/set spies
@@ -61,23 +62,25 @@ vi.mock('cron', () => ({
   },
 }));
 
-vi.mock('axios');
-import axios from 'axios';
+const fetchStatus = vi.hoisted(() => vi.fn());
+vi.mock('../../../src/postnlTracking', () => ({
+  default: { getInstance: () => ({ fetchStatus }) },
+}));
+
+const sendMessage = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../../../src/pushover', () => ({
+  default: class {
+    sendMessage = sendMessage;
+  },
+}));
+
 import Shipping from '../../../src/shipping';
 
-const axiosRequest = vi.mocked(axios.request);
-
-process.env['TRACKINGMORE_API_KEY'] = 'tm-test-key';
 const shipping = Shipping.getInstance();
 
-const TM_HEADERS = {
-  'Content-Type': 'application/json',
-  Accept: 'application/json',
-  'Tracking-Api-Key': 'tm-test-key',
-};
-
 beforeEach(() => {
-  axiosRequest.mockReset();
+  fetchStatus.mockReset();
+  sendMessage.mockClear();
   prismaMock.payment.findUnique.mockReset();
   prismaMock.payment.findMany.mockReset();
   prismaMock.payment.update.mockReset();
@@ -106,17 +109,26 @@ describe('cron gating', () => {
     expect(start).toBe(true);
   });
 
-  it('the cron tick runs updateAllShippingStatuses over Shipped payments with a tracking code', async () => {
+  it('the cron tick runs updateAllShippingStatuses over Shipped payments with a tracking code, shipped in the last 60 days', async () => {
     prismaMock.payment.findMany.mockResolvedValue([]);
     const onTick = cronCalls[0][1];
     await onTick();
-    expect(prismaMock.payment.findMany).toHaveBeenCalledWith({
+    const query = prismaMock.payment.findMany.mock.calls[0][0];
+    expect(query).toEqual({
       where: {
         printApiStatus: 'Shipped',
         shippingCode: { not: null },
+        OR: [
+          { printApiShippedAt: { gte: expect.any(Date) } },
+          { printApiShippedAt: null, createdAt: { gte: expect.any(Date) } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });
+    const days =
+      (Date.now() - query.where.OR[0].printApiShippedAt.gte.getTime()) /
+      86400000;
+    expect(Math.round(days)).toBe(60);
   });
 });
 
@@ -128,20 +140,22 @@ describe('createShipment', () => {
     );
   });
 
-  it('returns null without touching TrackingMore when shippingId already exists', async () => {
+  it('returns null without a lookup when the link names the barcode already tracked', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({
       paymentId: 'p1',
-      shippingId: 'tm-existing',
+      shippingCode: '3SQRS123',
+      printApiTrackingLink:
+        'https://jouw.postnl.nl/track-and-trace/3SQRS123/NL/1111AA',
     });
     expect(await shipping.createShipment('p1')).toBeNull();
-    expect(axiosRequest).not.toHaveBeenCalled();
+    expect(fetchStatus).not.toHaveBeenCalled();
     expect(prismaMock.payment.update).not.toHaveBeenCalled();
   });
 
   it('throws when there is no tracking link and on malformed tracking URLs', async () => {
     prismaMock.payment.findUnique.mockResolvedValueOnce({
       paymentId: 'p1',
-      shippingId: null,
+      shippingCode: null,
       printApiTrackingLink: null,
     });
     await expect(shipping.createShipment('p1')).rejects.toThrow(
@@ -150,7 +164,7 @@ describe('createShipment', () => {
 
     prismaMock.payment.findUnique.mockResolvedValueOnce({
       paymentId: 'p1',
-      shippingId: null,
+      shippingCode: null,
       printApiTrackingLink: 'https://short',
     });
     await expect(shipping.createShipment('p1')).rejects.toThrow(
@@ -158,19 +172,32 @@ describe('createShipment', () => {
     );
   });
 
-  it('parses code/country/postal from the PostNL link, registers with TrackingMore and stores the tracking id', async () => {
-    prismaMock.payment.findUnique.mockResolvedValue({
-      paymentId: 'p1',
-      shippingId: null,
-      printApiTrackingLink:
-        'https://jouw.postnl.nl/track-and-trace/3SQRS123/NL/1111AA',
-    });
+  it('parses code/country/postal from the link, stores them and looks the parcel up once', async () => {
+    const link =
+      'https://www.internationalparceltracking.com/Main.aspx#/track/3SQRS123/DE/80331';
+    prismaMock.payment.findUnique
+      .mockResolvedValueOnce({
+        paymentId: 'p1',
+        shippingCode: null,
+        printApiTrackingLink: link,
+      })
+      .mockResolvedValueOnce({
+        paymentId: 'p1',
+        shippingCode: '3SQRS123',
+        shippingCountry: 'DE',
+        shippingPostalCode: '80331',
+        printApiTrackingLink: link,
+        shippingStatus: null,
+      });
     prismaMock.payment.update
       .mockResolvedValueOnce({}) // shipping info update
-      .mockResolvedValueOnce({ paymentId: 'p1', shippingId: 'tm-1' });
-    axiosRequest.mockResolvedValue({
-      data: { meta: { code: 200 }, data: { id: 'tm-1' } },
-    } as any);
+      .mockResolvedValueOnce({ paymentId: 'p1', shippingStatus: 'inforeceived' });
+    fetchStatus.mockResolvedValue({
+      status: 'inforeceived',
+      message: 'Shipment expected, but not yet arrived or processed at PostNL',
+      pickedUpAt: null,
+      deliveredAt: null,
+    });
 
     const updated = await shipping.createShipment('p1');
 
@@ -178,47 +205,37 @@ describe('createShipment', () => {
       where: { paymentId: 'p1' },
       data: {
         shippingCode: '3SQRS123',
-        shippingCountry: 'NL',
-        shippingPostalCode: '1111AA',
+        shippingCountry: 'DE',
+        shippingPostalCode: '80331',
       },
     });
-    expect(axiosRequest).toHaveBeenCalledWith({
-      method: 'POST',
-      url: 'https://api.trackingmore.com/v4/trackings/create',
-      headers: TM_HEADERS,
-      data: {
-        tracking_number: '3SQRS123',
-        courier_code: 'postnl-3s',
-        tracking_postal_code: '1111AA',
-        tracking_destination_country: 'NL',
-      },
-    });
-    expect(prismaMock.payment.update).toHaveBeenNthCalledWith(2, {
-      where: { paymentId: 'p1' },
-      data: { shippingId: 'tm-1' },
-    });
-    expect(updated).toEqual({ paymentId: 'p1', shippingId: 'tm-1' });
+    expect(fetchStatus).toHaveBeenCalledWith('3SQRS123', 'DE', '80331');
+    expect(updated).toEqual({ paymentId: 'p1', shippingStatus: 'inforeceived' });
   });
 
-  it('keeps the parsed shipping info but stores no shippingId when TrackingMore rejects the shipment', async () => {
+  it('keeps the parsed shipping info when the first lookup fails', async () => {
     const payment = {
       paymentId: 'p1',
-      shippingId: null,
+      shippingCode: null,
       printApiTrackingLink:
-        'https://jouw.postnl.nl/track-and-trace/3SQRS123/DE/80331',
+        'https://jouw.postnl.nl/track-and-trace/3SQRS123/NL/1111 AA',
+    };
+    const stored = {
+      ...payment,
+      shippingCode: '3SQRS123',
+      shippingCountry: 'NL',
+      shippingPostalCode: '1111 AA',
     };
     prismaMock.payment.findUnique
       .mockResolvedValueOnce(payment)
-      .mockResolvedValueOnce({ ...payment, shippingCode: '3SQRS123' });
+      .mockResolvedValue(stored);
     prismaMock.payment.update.mockResolvedValue({});
-    axiosRequest.mockResolvedValue({
-      data: { meta: { code: 400 }, data: null },
-    } as any);
+    fetchStatus.mockRejectedValue(new Error('timeout of 15000ms exceeded'));
 
     const result = await shipping.createShipment('p1');
 
     expect(prismaMock.payment.update).toHaveBeenCalledTimes(1); // only the info update
-    expect(result).toEqual({ ...payment, shippingCode: '3SQRS123' });
+    expect(result).toEqual(stored);
   });
 });
 
@@ -233,7 +250,7 @@ describe('createAllShipments', () => {
     });
     const where = prismaMock.payment.findMany.mock.calls[0][0].where;
     expect(where.printApiStatus).toBe('Shipped');
-    expect(where.shippingId).toBeNull();
+    expect(where.shippingCode).toBeNull();
     expect(where.createdAt.gte).toBeInstanceOf(Date);
   });
 
@@ -241,20 +258,18 @@ describe('createAllShipments', () => {
     const byId: Record<string, any> = {
       p1: {
         paymentId: 'p1',
-        shippingId: null,
+        shippingCode: null,
         printApiTrackingLink:
           'https://jouw.postnl.nl/track-and-trace/3S1/NL/1111AA',
       },
-      p2: { paymentId: 'p2', shippingId: null, printApiTrackingLink: null },
+      p2: { paymentId: 'p2', shippingCode: null, printApiTrackingLink: null },
     };
     prismaMock.payment.findMany.mockResolvedValue([byId['p1'], byId['p2']]);
     prismaMock.payment.findUnique.mockImplementation(
       async ({ where }: any) => byId[where.paymentId]
     );
     prismaMock.payment.update.mockResolvedValue({});
-    axiosRequest.mockResolvedValue({
-      data: { meta: { code: 200 }, data: { id: 'tm-9' } },
-    } as any);
+    fetchStatus.mockResolvedValue(null);
 
     const summary = await shipping.createAllShipments();
 
@@ -268,11 +283,11 @@ describe('createAllShipments', () => {
 });
 
 describe('getTrackingInfo', () => {
-  const TM_GET = {
-    method: 'GET',
-    url: 'https://api.trackingmore.com/v4/trackings/get',
-    params: { tracking_numbers: '3SX', courier_code: 'postnl-3s' },
-    headers: TM_HEADERS,
+  const TRACKED = {
+    paymentId: 'p1',
+    shippingCode: '3SX',
+    shippingCountry: 'DE',
+    shippingPostalCode: '80331',
   };
 
   it('throws for unknown payments and payments without a tracking number', async () => {
@@ -290,50 +305,67 @@ describe('getTrackingInfo', () => {
     );
   });
 
-  it('never overwrites an already-delivered payment (fetches info but skips the DB update)', async () => {
-    const payment = {
-      paymentId: 'p1',
-      shippingCode: '3SX',
-      shippingStatus: 'delivered',
-    };
+  it('never looks up or overwrites an already-delivered payment', async () => {
+    const payment = { ...TRACKED, shippingStatus: 'delivered' };
     prismaMock.payment.findUnique.mockResolvedValue(payment);
-    axiosRequest.mockResolvedValue({ data: { meta: { code: 200 } } } as any);
 
     const { result, updatedPayment } = await shipping.getTrackingInfo('p1');
 
-    expect(axiosRequest).toHaveBeenCalledWith(TM_GET);
+    expect(fetchStatus).not.toHaveBeenCalled();
     expect(prismaMock.payment.update).not.toHaveBeenCalled();
     expect(updatedPayment).toBe(payment);
-    expect(result).toEqual({ meta: { code: 200 } });
+    expect(result).toBeNull();
+  });
+
+  it('takes country and postcode from the tracking link when the payment has none', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({
+      paymentId: 'p1',
+      shippingCode: '3SX',
+      shippingCountry: null,
+      shippingPostalCode: null,
+      printApiTrackingLink:
+        'https://jouw.postnl.nl/track-and-trace/3SX/NL/1111 AA',
+    });
+    fetchStatus.mockResolvedValue(null);
+
+    await shipping.getTrackingInfo('p1');
+
+    expect(fetchStatus).toHaveBeenCalledWith('3SX', 'NL', '1111 AA');
+  });
+
+  it('throws when there is neither a stored destination nor a link', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({
+      paymentId: 'p1',
+      shippingCode: '3SX',
+      shippingCountry: null,
+      shippingPostalCode: null,
+      printApiTrackingLink: '',
+    });
+    await expect(shipping.getTrackingInfo('p1')).rejects.toThrow(
+      'Payment p1 has no country or postcode to track with'
+    );
+    expect(fetchStatus).not.toHaveBeenCalled();
   });
 
   it('maps a first transit scan to status/message/pickup and records the change type', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({
-      paymentId: 'p1',
-      shippingCode: '3SX',
+      ...TRACKED,
       shippingStatus: null,
       shippingMessage: null,
       shippingStartDateTime: null,
       shippingDeliveryDateTime: null,
     });
     prismaMock.payment.update.mockResolvedValue({ paymentId: 'p1' });
-    axiosRequest.mockResolvedValue({
-      data: {
-        meta: { code: 200 },
-        data: [
-          {
-            delivery_status: 'transit',
-            origin_info: {
-              trackinfo: [{ tracking_detail: 'On its way' }],
-              milestone_date: { pickup_date: '2026-06-01T08:00:00Z' },
-            },
-          },
-        ],
-      },
-    } as any);
+    fetchStatus.mockResolvedValue({
+      status: 'transit',
+      message: 'On its way',
+      pickedUpAt: new Date('2026-06-01T08:00:00Z'),
+      deliveredAt: null,
+    });
 
     await shipping.getTrackingInfo('p1');
 
+    expect(fetchStatus).toHaveBeenCalledWith('3SX', 'DE', '80331');
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'p1' },
       data: {
@@ -349,33 +381,19 @@ describe('getTrackingInfo', () => {
 
   it('maps a delivery scan to a delivery datetime and a "… → delivered, delivered" change type', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({
-      paymentId: 'p1',
-      shippingCode: '3SX',
+      ...TRACKED,
       shippingStatus: 'transit',
       shippingMessage: 'On its way',
       shippingStartDateTime: new Date('2026-06-01T08:00:00Z'),
       shippingDeliveryDateTime: null,
     });
     prismaMock.payment.update.mockResolvedValue({ paymentId: 'p1' });
-    axiosRequest.mockResolvedValue({
-      data: {
-        meta: { code: 200 },
-        data: [
-          {
-            delivery_status: 'delivered',
-            origin_info: {
-              trackinfo: [
-                {
-                  tracking_detail: 'Delivered at neighbours',
-                  checkpoint_date: '2026-06-03T10:00:00Z',
-                },
-              ],
-              milestone_date: { pickup_date: '2026-06-01T08:00:00Z' },
-            },
-          },
-        ],
-      },
-    } as any);
+    fetchStatus.mockResolvedValue({
+      status: 'delivered',
+      message: 'Delivered at neighbours',
+      pickedUpAt: new Date('2026-06-01T08:00:00Z'),
+      deliveredAt: new Date('2026-06-03T10:00:00Z'),
+    });
 
     await shipping.getTrackingInfo('p1');
 
@@ -394,28 +412,19 @@ describe('getTrackingInfo', () => {
 
   it('does not bump shippingLastTrackedAt when nothing changed', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({
-      paymentId: 'p1',
-      shippingCode: '3SX',
+      ...TRACKED,
       shippingStatus: 'transit',
       shippingMessage: 'On its way',
       shippingStartDateTime: new Date('2026-06-01T08:00:00Z'),
       shippingDeliveryDateTime: null,
     });
     prismaMock.payment.update.mockResolvedValue({ paymentId: 'p1' });
-    axiosRequest.mockResolvedValue({
-      data: {
-        meta: { code: 200 },
-        data: [
-          {
-            delivery_status: 'transit',
-            origin_info: {
-              trackinfo: [{ tracking_detail: 'On its way' }],
-              milestone_date: { pickup_date: '2026-06-01T08:00:00Z' },
-            },
-          },
-        ],
-      },
-    } as any);
+    fetchStatus.mockResolvedValue({
+      status: 'transit',
+      message: 'On its way',
+      pickedUpAt: new Date('2026-06-01T08:00:00Z'),
+      deliveredAt: null,
+    });
 
     await shipping.getTrackingInfo('p1');
 
@@ -430,16 +439,10 @@ describe('getTrackingInfo', () => {
     });
   });
 
-  it('returns the payment untouched when TrackingMore has no data for the number', async () => {
-    const payment = {
-      paymentId: 'p1',
-      shippingCode: '3SX',
-      shippingStatus: null,
-    };
+  it('returns the payment untouched when PostNL does not know the parcel', async () => {
+    const payment = { ...TRACKED, shippingStatus: null };
     prismaMock.payment.findUnique.mockResolvedValue(payment);
-    axiosRequest.mockResolvedValue({
-      data: { meta: { code: 200 }, data: [] },
-    } as any);
+    fetchStatus.mockResolvedValue(null);
 
     const { updatedPayment } = await shipping.getTrackingInfo('p1');
 
@@ -474,7 +477,7 @@ describe('updateAllShippingStatuses', () => {
             updatedPayment: { paymentId: 'pp1', shippingStatus: 'delivered' },
           } as any;
         }
-        throw new Error('TM down');
+        throw new Error('PostNL down');
       });
 
     try {
@@ -484,14 +487,58 @@ describe('updateAllShippingStatuses', () => {
         processed: 2,
         delivered: 1,
         failed: 1,
-        errors: ['Payment pp2: TM down'],
+        errors: ['Payment pp2: PostNL down'],
       });
       expect(prismaMock.payment.update).toHaveBeenCalledWith({
         where: { paymentId: 'pp1' },
         data: { printApiStatus: 'Delivered' },
       });
+      expect(sendMessage).not.toHaveBeenCalled();
     } finally {
       spy.mockRestore();
+    }
+  });
+
+  it('pushes one alert a day when every lookup of a run fails', async () => {
+    prismaMock.payment.findMany.mockResolvedValue(
+      Array.from({ length: 10 }, (_, i) => ({ paymentId: `pp${i}` }))
+    );
+    const spy = vi
+      .spyOn(shipping, 'getTrackingInfo')
+      .mockRejectedValue(new Error('Request failed with status code 403'));
+    const timers = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation(((fn: () => void) => {
+        fn();
+        return 0;
+      }) as any);
+
+    try {
+      await shipping.updateAllShippingStatuses();
+
+      expect(cacheMock.set).toHaveBeenCalledWith(
+        'shipping:tracking_down_alerted',
+        '1',
+        86400
+      );
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      expect(sendMessage).toHaveBeenCalledWith(
+        {
+          title: 'Parcel tracking is down',
+          message:
+            'PostNL track & trace failed for all 10 shipped orders. First error: Payment pp0: Request failed with status code 403',
+        },
+        '',
+        true
+      );
+
+      // Already alerted today
+      cacheMock.get.mockResolvedValue('1');
+      await shipping.updateAllShippingStatuses();
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+      timers.mockRestore();
     }
   });
 });

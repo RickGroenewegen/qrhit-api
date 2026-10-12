@@ -4,7 +4,7 @@
      Mirror of the Claude Doc "QRSong! Technology Overview"
      (https://claude.ai/code/artifact/b0c45aee-9b2c-458d-b490-239466ee73bb):
      change both together. The cover takes its date from `as-of` below. -->
-<!-- as-of: 2026-10-09 -->
+<!-- as-of: 2026-10-12 -->
 
 ## About QRSong!
 
@@ -97,7 +97,7 @@ Six services are essential to taking and fulfilling an order: Mollie, the two pr
 | Apple Music, Deezer, YouTube Music, Tidal | Playlists from the other music services | Important |
 | MusicBrainz, Discogs, MusicFetch | Release years and links to other services | Important |
 | OpenAI, Anthropic | Assembling described playlists, checking release years, translations, support replies | Important |
-| PostNL, TrackingMore | Shipping labels and parcel tracking | Important |
+| PostNL | Shipping labels and parcel tracking | Important |
 | Moneybird | Bookkeeping and business invoices | Important |
 | ConvertAPI | Merging print PDFs | Important |
 | PostHog | Error tracking, and analytics with consent | Supporting |
@@ -129,7 +129,7 @@ Twenty jobs run on a schedule, most of them hourly; the printer hand-off is the 
 | --- | --- | --- |
 | Every 15 minutes | Game rooms | Ends quiz and bingo rooms that have been idle for 4 hours. |
 | Hourly at :00 (Amsterdam time) | Printer hand-off | Sends paid physical orders to Print&Bind after the pre-print checks. An order that fails a check is held; an order waiting on the customer's corrections gets one reminder. |
-| Hourly at :00 | Parcel tracking | Reads the PostNL status of shipped parcels through TrackingMore and marks them delivered. |
+| Hourly at :00 | Parcel tracking | Reads the status of shipped parcels from PostNL's public track & trace and marks them delivered. Alerts the owner if PostNL stops answering. |
 | Hourly at :00 | Review eligibility | Marks an order eligible for a review request once 25 or more of its songs have been scanned. |
 | Hourly at :00 | Scan link cache | Rebuilds the cache of streaming links that every QR scan is redirected through. |
 | Hourly at :05 | Review requests | Mails a review request 10 days after the order, only to customers who opted in, never twice to one address. |
@@ -154,6 +154,7 @@ Each hardening step is added here when it ships, newest first.
 
 | Date | Change | What it does |
 | --- | --- | --- |
+| 2026-10-12 | One supplier fewer | Parcel tracking reads PostNL's public track & trace directly instead of through a paid tracking service, so one service fewer receives order data, and an alert fires if PostNL stops answering. |
 | 2026-10-09 | Lighter track refresh | The hourly refresh of corrected track data reads only the tracks that changed since the previous run, one server process at a time, instead of every process reloading all 423,000 tracks at once. |
 | 2026-10-09 | Help-text editor replaced | The App Designer's rich-text editor (Quill, an open vulnerability with no fixed release) became a Markdown editor that stores exactly the same HTML, so nothing downstream changed. |
 | 2026-10-09 | Session hardening | Only the site's own addresses may call the API with a login session, and the session cookie no longer travels with requests that other sites start. |

@@ -1,5 +1,4 @@
 import { color } from 'console-log-colors';
-import axios from 'axios';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import Logger from './logger';
@@ -9,7 +8,14 @@ import Cache from './cache';
 import ExcelJS from 'exceljs';
 import SiteSettings from './sitesettings';
 import ShippingConfig from './shippingconfig';
+import PostNLTracking from './postnlTracking';
+import PushoverClient from './pushover';
 import { SHIPPING_INFO_CACHE_KEY } from './config/constants';
+
+// A parcel still not delivered this long after shipping is lost or returned;
+// the hourly run stops asking PostNL about it.
+const TRACKING_GIVE_UP_DAYS = 60;
+const TRACKING_DOWN_ALERT_KEY = 'shipping:tracking_down_alerted';
 
 class Shipping {
   private static instance: Shipping;
@@ -17,6 +23,8 @@ class Shipping {
   private logger = new Logger();
   private utils = new Utils();
   private cache = Cache.getInstance();
+  private postnlTracking = PostNLTracking.getInstance();
+  private pushover = new PushoverClient();
 
   private constructor() {
     // Schedule shipping status updates to run hourly
@@ -46,70 +54,29 @@ class Shipping {
   }
 
   /**
-   * Creates a tracking order in TrackingMore API
-   * @param trackingNumber The tracking number from the carrier
-   * @param postalCode The destination postal code
-   * @param destinationCountry The destination country code
-   * @returns The tracking ID from TrackingMore or null if failed
+   * Barcode, country and postcode from a tracking link. Both formats end in
+   * them: https://jouw.postnl.nl/track-and-trace/{code}/NL/{postcode} and
+   * https://www.internationalparceltracking.com/Main.aspx#/track/{code}/{country}/{postcode}
    */
-  private async createTrackingMoreShipment(
-    trackingNumber: string,
-    postalCode: string,
-    destinationCountry: string
-  ): Promise<string | null> {
-    try {
-      const apiKey = process.env['TRACKINGMORE_API_KEY'] || '';
-
-      const options = {
-        method: 'POST' as const,
-        url: 'https://api.trackingmore.com/v4/trackings/create',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'Tracking-Api-Key': apiKey,
-        },
-        data: {
-          tracking_number: trackingNumber,
-          courier_code: 'postnl-3s',
-          tracking_postal_code: postalCode,
-          tracking_destination_country: destinationCountry,
-        },
-      };
-
-      const { data: result } = await axios.request(options);
-
-      if (result?.meta?.code === 200 && result?.data?.id) {
-        const trackingId = result.data.id;
-        return trackingId;
-      } else {
-        this.logger.log(
-          color.red.bold(
-            `Failed to create TrackingMore shipment. Response: ${JSON.stringify(
-              result
-            )}`
-          )
-        );
-        return null;
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error calling TrackingMore API: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
-      return null;
+  private parseTrackingLink(url: string) {
+    const urlParts = url.split('/').filter((part) => part.length > 0);
+    if (urlParts.length < 3) {
+      throw new Error(`Invalid tracking URL format: ${url}`);
     }
+    return {
+      shippingCode: urlParts[urlParts.length - 3],
+      shippingCountry: urlParts[urlParts.length - 2],
+      shippingPostalCode: urlParts[urlParts.length - 1],
+    };
   }
 
   /**
-   * Creates a shipment by parsing the tracking URL and updating shipping information
+   * Stores the barcode, country and postcode of a shipped order's tracking
+   * link and looks the parcel up once, so it has a status straight away.
    * @param paymentId The payment ID to process
-   * @returns The updated payment object or null if no update needed
+   * @returns The updated payment, or null when this parcel is already tracked
    */
   public async createShipment(paymentId: string) {
-    // Retrieve the payment
     const payment = await this.prisma.payment.findUnique({
       where: { paymentId },
     });
@@ -118,38 +85,24 @@ class Shipping {
       throw new Error(`Payment with ID ${paymentId} not found`);
     }
 
-    // Check if shippingId is already filled
-    if (payment.shippingId) {
+    if (!payment.printApiTrackingLink) {
+      throw new Error(`No tracking link found for payment ${paymentId}`);
+    }
+
+    const { shippingCode, shippingCountry, shippingPostalCode } =
+      this.parseTrackingLink(payment.printApiTrackingLink);
+
+    if (payment.shippingCode === shippingCode) {
       this.logger.log(
         color.yellow.bold(
-          `Shipping information already exists for payment ${color.white.bold(
+          `Payment ${color.white.bold(
             paymentId
-          )} with TrackingMore ID: ${color.white.bold(payment.shippingId)}`
+          )} is already tracked as ${color.white.bold(shippingCode)}`
         )
       );
       return null;
     }
 
-    // Check if tracking link exists
-    if (!payment.printApiTrackingLink) {
-      throw new Error(`No tracking link found for payment ${paymentId}`);
-    }
-
-    // Parse the URL to extract shipping information
-    // URL format: https://jouw.postnl.nl/track-and-trace/{shippingCode}/{shippingCountry}/{shippingPostalCode}
-    const url = payment.printApiTrackingLink;
-    const urlParts = url.split('/').filter((part) => part.length > 0);
-
-    // Get the last 3 parts
-    if (urlParts.length < 3) {
-      throw new Error(`Invalid tracking URL format: ${url}`);
-    }
-
-    const shippingPostalCode = urlParts[urlParts.length - 1];
-    const shippingCountry = urlParts[urlParts.length - 2];
-    const shippingCode = urlParts[urlParts.length - 3];
-
-    // Update the payment with shipping information
     await this.prisma.payment.update({
       where: { paymentId },
       data: {
@@ -169,48 +122,28 @@ class Shipping {
       )
     );
 
-    // Create tracking order in TrackingMore
-    const trackingMoreId = await this.createTrackingMoreShipment(
-      shippingCode,
-      shippingPostalCode,
-      shippingCountry
-    );
-
-    if (!trackingMoreId) {
+    try {
+      const { updatedPayment } = await this.getTrackingInfo(paymentId);
+      return updatedPayment;
+    } catch (error) {
       this.logger.log(
         color.yellow.bold(
-          `Failed to create TrackingMore shipment for payment ${color.white.bold(
+          `First PostNL lookup for payment ${color.white.bold(
             paymentId
-          )}, but shipping info was saved`
+          )} failed, the hourly run tries again: ${color.white.bold(
+            error instanceof Error ? error.message : 'Unknown error'
+          )}`
         )
       );
       return await this.prisma.payment.findUnique({
         where: { paymentId },
       });
     }
-
-    // Update payment with TrackingMore ID
-    const updatedPayment = await this.prisma.payment.update({
-      where: { paymentId },
-      data: {
-        shippingId: trackingMoreId,
-      },
-    });
-
-    this.logger.log(
-      color.green.bold(
-        `Successfully created shipment for payment ${color.white.bold(
-          paymentId
-        )} with TrackingMore ID: ${color.white.bold(trackingMoreId)}`
-      )
-    );
-
-    return updatedPayment;
   }
 
   /**
-   * Creates shipments for all payments with printApiStatus = 'Shipped' and no shippingId
-   * Processes all payments from the last 3 months with 500ms delay between each
+   * Fills the tracking fields of every Shipped payment of the last 3 months
+   * that has none yet, with 500ms between payments
    * @returns Summary of processing results
    */
   public async createAllShipments() {
@@ -222,11 +155,10 @@ class Shipping {
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-    // Query payments with printApiStatus = 'Shipped' and no shippingId
     const payments = await this.prisma.payment.findMany({
       where: {
         printApiStatus: 'Shipped',
-        shippingId: null,
+        shippingCode: null,
         createdAt: {
           gte: threeMonthsAgo,
         },
@@ -311,9 +243,10 @@ class Shipping {
   }
 
   /**
-   * Retrieves tracking information from TrackingMore by payment ID
+   * Looks the payment's parcel up at PostNL and stores its status
    * @param paymentId The payment ID to retrieve tracking for
-   * @returns The tracking response or null if not found
+   * @returns PostNL's status (null when PostNL does not know the parcel) and
+   * the payment as stored afterwards
    */
   public async getTrackingInfo(paymentId: string) {
     // Retrieve the payment
@@ -335,71 +268,34 @@ class Shipping {
       throw new Error(`Payment ${paymentId} has no tracking number`);
     }
 
-    // If already delivered, don't overwrite
+    // A delivered parcel has nothing left to report and is never overwritten
     if (payment.shippingStatus === 'delivered') {
-      // Still return the tracking info but don't update the database
-      try {
-        const apiKey = process.env['TRACKINGMORE_API_KEY'] || '';
-        const options = {
-          method: 'GET' as const,
-          url: 'https://api.trackingmore.com/v4/trackings/get',
-          params: {
-            tracking_numbers: payment.shippingCode,
-            courier_code: 'postnl-3s',
-          },
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'Tracking-Api-Key': apiKey,
-          },
-        };
-        const { data: result } = await axios.request(options);
-        return { result, updatedPayment: payment };
-      } catch (error) {
-        throw error;
-      }
+      return { result: null, updatedPayment: payment };
+    }
+
+    let country = payment.shippingCountry;
+    let postalCode = payment.shippingPostalCode;
+    if ((!country || !postalCode) && payment.printApiTrackingLink) {
+      const parsed = this.parseTrackingLink(payment.printApiTrackingLink);
+      country = country || parsed.shippingCountry;
+      postalCode = postalCode || parsed.shippingPostalCode;
+    }
+    if (!country || !postalCode) {
+      throw new Error(`Payment ${paymentId} has no country or postcode to track with`);
     }
 
     try {
-      const apiKey = process.env['TRACKINGMORE_API_KEY'] || '';
+      const result = await this.postnlTracking.fetchStatus(
+        payment.shippingCode,
+        country,
+        postalCode
+      );
 
-      const options = {
-        method: 'GET' as const,
-        url: 'https://api.trackingmore.com/v4/trackings/get',
-        params: {
-          tracking_numbers: payment.shippingCode,
-          courier_code: 'postnl-3s',
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'Tracking-Api-Key': apiKey,
-        },
-      };
-
-      const { data: result } = await axios.request(options);
-
-      if (result?.meta?.code === 200 && result?.data?.length > 0) {
-        // Extract delivery status and latest tracking message
-        const trackingData = result.data[0];
-        const shippingStatus = trackingData.delivery_status || null;
-        const shippingMessage = trackingData.origin_info?.trackinfo?.[0]?.tracking_detail || null;
-
-        // Extract pickup/start date/time
-        let shippingStartDateTime = null;
-        const pickupDate = trackingData.origin_info?.milestone_date?.pickup_date;
-        if (pickupDate) {
-          shippingStartDateTime = new Date(pickupDate);
-        }
-
-        // Extract delivery date/time if status is 'delivered'
-        let shippingDeliveryDateTime = null;
-        if (shippingStatus === 'delivered') {
-          const checkpointDate = trackingData.origin_info?.trackinfo?.[0]?.checkpoint_date;
-          if (checkpointDate) {
-            shippingDeliveryDateTime = new Date(checkpointDate);
-          }
-        }
+      if (result) {
+        const shippingStatus = result.status;
+        const shippingMessage = result.message;
+        const shippingStartDateTime = result.pickedUpAt;
+        const shippingDeliveryDateTime = result.deliveredAt;
 
         // Check if data actually changed
         const oldStartTime = payment.shippingStartDateTime?.getTime();
@@ -465,20 +361,25 @@ class Shipping {
 
   /**
    * Cron job method to update shipping statuses for all Shipped payments
-   * Runs through all payments with printApiStatus = 'Shipped' and updates their tracking info
+   * Runs through the payments with printApiStatus = 'Shipped' shipped in the
+   * last TRACKING_GIVE_UP_DAYS and updates their tracking info
    * If status is 'delivered', also updates printApiStatus to 'Delivered'
    */
   public async updateAllShippingStatuses() {
-    
+    const giveUpBefore = new Date();
+    giveUpBefore.setDate(giveUpBefore.getDate() - TRACKING_GIVE_UP_DAYS);
 
     try {
-      // Query all payments with printApiStatus = 'Shipped'
       const shippedPayments = await this.prisma.payment.findMany({
         where: {
           printApiStatus: 'Shipped',
           shippingCode: {
             not: null,
           },
+          OR: [
+            { printApiShippedAt: { gte: giveUpBefore } },
+            { printApiShippedAt: null, createdAt: { gte: giveUpBefore } },
+          ],
         },
         orderBy: {
           createdAt: 'desc',
@@ -561,6 +462,10 @@ class Shipping {
         errors,
       };
 
+      if (shippedPayments.length >= 10 && failed === shippedPayments.length) {
+        await this.alertTrackingDown(failed, errors[0]);
+      }
+
       // this.logger.log(
       //   color.green.bold(
       //     `Shipping status update job complete: ${color.white.bold(
@@ -582,6 +487,28 @@ class Shipping {
       );
       throw error;
     }
+  }
+
+  /**
+   * Every lookup of a run failed: PostNL is down, changed its endpoint or put
+   * a bot wall in front of it. Logged every run, pushed at most once a day.
+   */
+  private async alertTrackingDown(failed: number, firstError: string) {
+    const message = `PostNL track & trace failed for all ${failed} shipped orders. First error: ${firstError}`;
+    this.logger.log(color.red.bold(message));
+    try {
+      if (await this.cache.get(TRACKING_DOWN_ALERT_KEY)) {
+        return;
+      }
+      await this.cache.set(TRACKING_DOWN_ALERT_KEY, '1', 24 * 60 * 60);
+    } catch {
+      // Without Redis, push anyway
+    }
+    await this.pushover.sendMessage(
+      { title: 'Parcel tracking is down', message },
+      '',
+      true
+    );
   }
 
   /**

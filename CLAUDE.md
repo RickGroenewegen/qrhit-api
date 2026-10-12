@@ -208,8 +208,40 @@ poll cannot see orders placed on the other API.
   only mails orders placed in the last 30 days. v1 only knew `Verzonden`, so
   every order that skipped it stayed `Submitted` forever; the first v2 poll
   after the September 2026 deploy mailed tracking links for orders delivered
-  a year earlier. Older ones are now closed without a mail or a TrackingMore
-  shipment.
+  a year earlier. Older ones are now closed without a mail or tracking.
+
+## Parcel tracking: PostNL's public track & trace
+
+Print&Bind ships on its own PostNL contract, so PostNL's Shippingstatus API
+with our key (`postnl.ts`, labels for business shipments) cannot see these
+parcels. `postnlTracking.ts` reads the JSON endpoint behind the tracking page
+instead, which needs no account:
+`https://jouw.postnl.nl/track-and-trace/api/trackAndTrace/{barcode}-{country}-{postcode}?language=en`.
+It replaced TrackingMore ($74 a month, which did the same lookup) on
+2026-10-12; the TrackingMore account is shared with 21pix, so it is only
+cancelled once 21pix has moved too.
+
+- `createShipment` (called when the printer poll stores a tracking link)
+  takes barcode, country and postcode off the link's tail (both the
+  `jouw.postnl.nl` and the `internationalparceltracking.com` form) and looks
+  the parcel up once. The hourly cron (`updateAllShippingStatuses`) asks again
+  for every Shipped payment shipped in the last 60 days, 500 ms apart, and
+  marks delivered ones `Delivered`.
+- The postcode must be right: a wrong one answers `{"colli":{}}`, which we
+  read as "unknown parcel", not as an error. PostNL ignores spaces and dashes
+  in it, and the dash also separates the key, so both are stripped.
+- `shippingStatus` keeps TrackingMore's words (`inforeceived`, `transit`,
+  `pickup`, `delivered`, `exception`) because the admin tracking page and the
+  chat read them. `isDelivered` + `deliveryDate` decide delivery; the
+  delivery is not one of the `observations` (newest first). Picked up is the
+  first observation that is not `A01` (the pre-announcement). Never use
+  `internationalStatus`: it says `ReceivedByPostNl` on a delivered domestic
+  parcel.
+- When a run of 10 or more lookups fails completely (PostNL down, the endpoint
+  moved, a bot wall in front), it logs red every run and sends one Pushover a
+  day. That is the moment to look at what jouw.postnl.nl itself calls now.
+- `payments.shippingId` holds the old TrackingMore ids and is not read any
+  more.
 
 ## Adding New Music Services
 
