@@ -1162,8 +1162,12 @@ class Suggestion {
   }
 
   /**
-   * Validates if a playlist can be reloaded from its music service based on track count limits.
-   * Users can only reload if the current playlist has <= tracks than they paid for.
+   * Fetches the playlist's current tracks from its music service and checks
+   * that they fit in the cards paid for. The tracks go through the same
+   * duplicate filter as the order (the line's own allowDuplicates), and the
+   * count is taken after it: the service's own track count includes the
+   * duplicates the order left out, so a playlist ordered as 95 cards after
+   * 5 duplicates were dropped counted as 100 and could never be reloaded.
    */
   private async validateTrackCountForReload(
     paymentId: string,
@@ -1175,12 +1179,15 @@ class Suggestion {
     currentTracks?: number;
     serviceType?: string;
     locale?: string;
+    tracks?: any[];
     error?: string;
   }> {
     try {
-      // Get the number of tracks the user paid for, the service type, and the payment locale
+      // Get the number of tracks the user paid for, the service type, the payment locale
+      // and whether the customer kept different versions of the same song
       const paymentInfo = await this.prisma.$queryRaw<any[]>`
-        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType, p.locale
+        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType, p.locale,
+          php.allowDuplicates
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -1201,6 +1208,7 @@ class Suggestion {
       const paidTracks = paymentInfo[0].paidTracks;
       const serviceType = paymentInfo[0].serviceType || 'spotify';
       const locale = paymentInfo[0].locale || 'en';
+      const allowDuplicates = !!paymentInfo[0].allowDuplicates;
 
       // Get the correct provider for this service type
       const provider = this.musicRegistry.getProviderByString(serviceType);
@@ -1211,20 +1219,26 @@ class Suggestion {
         };
       }
 
-      // Fetch current playlist data from the music service (bypass cache to get fresh track count)
+      // Fetch fresh tracks from the music service (cache=false to get latest data)
       // For Apple Music, use the payment's locale to determine the storefront
-      const playlistData = serviceType === 'apple_music'
-        ? await (provider as any).getPlaylist(playlistId, AppleMusicProvider.getInstance().getStorefrontForLocale(locale), false)
-        : await provider.getPlaylist(playlistId, false);
+      const serviceTracks = await provider.getTracks(playlistId, {
+        cache: false,
+        allowDuplicates,
+        storefront:
+          serviceType === 'apple_music'
+            ? AppleMusicProvider.getInstance().getStorefrontForLocale(locale)
+            : undefined,
+      });
 
-      if (!playlistData.success || !playlistData.data) {
+      if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
         return {
           valid: false,
-          error: `Failed to fetch playlist from ${serviceType}`,
+          error: `Failed to fetch tracks from ${serviceType}`,
         };
       }
 
-      const currentTracks = playlistData.data.trackCount;
+      const tracks = serviceTracks.data.tracks;
+      const currentTracks = tracks.length;
 
       // Validate: service tracks must be <= paid tracks
       if (currentTracks > paidTracks) {
@@ -1248,6 +1262,7 @@ class Suggestion {
         currentTracks,
         serviceType,
         locale,
+        tracks,
       };
     } catch (error) {
       this.logger.log(
@@ -1369,7 +1384,7 @@ class Suggestion {
         playlistId
       );
 
-      if (!validation.valid) {
+      if (!validation.valid || !validation.tracks) {
         return {
           success: false,
           error: validation.error,
@@ -1379,6 +1394,7 @@ class Suggestion {
       }
 
       const serviceType = validation.serviceType || 'spotify';
+      const tracks = validation.tracks;
 
       this.logger.log(
         color.blue.bold(
@@ -1399,47 +1415,21 @@ class Suggestion {
         };
       }
 
-      // Get the correct provider for this service type
-      const provider = this.musicRegistry.getProviderByString(serviceType);
-      if (!provider) {
-        return {
-          success: false,
-          error: `Unsupported music service: ${serviceType}`,
-        };
-      }
-
-      // Fetch fresh tracks from the music service (cache=false to get latest data)
-      // For Apple Music, use the payment's locale to determine the storefront
-      const serviceTracks = await provider.getTracks(playlistId, {
-        cache: false,
-        storefront:
-          serviceType === 'apple_music'
-            ? AppleMusicProvider.getInstance().getStorefrontForLocale(validation.locale)
-            : undefined,
-      });
-
-      if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
-        return {
-          success: false,
-          error: `Failed to fetch tracks from ${serviceType}`,
-        };
-      }
-
       // Store updated tracks in database with order from playlist
       const trackOrder = new Map<string, number>();
-      serviceTracks.data.tracks.forEach((track: any, index: number) => {
+      tracks.forEach((track: any, index: number) => {
         trackOrder.set(track.id, index + 1);
       });
       await this.data.storeTracks(
         playlist.id,
         playlistId,
-        serviceTracks.data.tracks,
+        tracks,
         trackOrder,
         serviceType,
         validation.locale || 'en'
       );
 
-      // Update playlist numberOfTracks to match service
+      // Update playlist numberOfTracks to the filtered count, as the order stored it
       await this.prisma.playlist.update({
         where: { id: playlist.id },
         data: { numberOfTracks: validation.currentTracks },

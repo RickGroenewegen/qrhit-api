@@ -1158,6 +1158,9 @@ describe('reloadPlaylist', () => {
     });
   });
 
+  const tracksOf = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `trk_${i + 1}` }));
+
   it('blocks the reload when the service now has more tracks than were paid for', async () => {
     routeRaw([
       OWNED,
@@ -1171,9 +1174,9 @@ describe('reloadPlaylist', () => {
     h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
       lastReloadAt: null,
     });
-    h.provider.getPlaylist.mockResolvedValue({
+    h.provider.getTracks.mockResolvedValue({
       success: true,
-      data: { trackCount: 15 },
+      data: { tracks: tracksOf(15) },
     });
 
     expect(await reload()).toEqual({
@@ -1182,8 +1185,81 @@ describe('reloadPlaylist', () => {
       paidTracks: 10,
       currentTracks: 15,
     });
-    expect(h.provider.getPlaylist).toHaveBeenCalledWith('pl_1', false);
+    expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
+      cache: false,
+      allowDuplicates: false,
+      storefront: undefined,
+    });
     expect(h.storeTracks).not.toHaveBeenCalled();
+  });
+
+  it('counts the tracks after the duplicate filter, not the service total', async () => {
+    // The order took 95 cards from a playlist of 100 with 5 duplicates. The
+    // service still reports 100, but the filtered list fits the paid cards.
+    routeRaw([
+      OWNED,
+      [
+        SQL.paidTracks,
+        [{ paidTracks: 95, playlistDbId: 3, serviceType: 'spotify', locale: 'de', allowDuplicates: 0 }],
+      ],
+    ]);
+    h.prisma.payment.findFirst.mockResolvedValue({ id: 9 });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 3, numberOfTracks: 95 });
+    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
+      lastReloadAt: null,
+    });
+    h.provider.getPlaylist.mockResolvedValue({
+      success: true,
+      data: { trackCount: 100 },
+    });
+    h.provider.getTracks.mockResolvedValue({
+      success: true,
+      data: { tracks: tracksOf(95), total: 95 },
+    });
+
+    const res = await reload();
+
+    expect(res).toEqual({
+      success: true,
+      message: 'Playlist reloaded successfully',
+      paidTracks: 95,
+      currentTracks: 95,
+    });
+    expect(h.provider.getPlaylist).not.toHaveBeenCalled();
+    expect(h.provider.getTracks).toHaveBeenCalledTimes(1);
+    expect(h.storeTracks).toHaveBeenCalledTimes(1);
+    expect(h.prisma.playlist.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { numberOfTracks: 95 },
+    });
+  });
+
+  it("fetches with the line's own allowDuplicates, so kept versions survive a reload", async () => {
+    routeRaw([
+      OWNED,
+      [
+        SQL.paidTracks,
+        [{ paidTracks: 50, playlistDbId: 3, serviceType: 'spotify', locale: 'en', allowDuplicates: 1 }],
+      ],
+    ]);
+    h.prisma.payment.findFirst.mockResolvedValue({ id: 9 });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 3, numberOfTracks: 48 });
+    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
+      lastReloadAt: null,
+    });
+    h.provider.getTracks.mockResolvedValue({
+      success: true,
+      data: { tracks: tracksOf(48) },
+    });
+
+    const res = await reload();
+
+    expect(res.success).toBe(true);
+    expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
+      cache: false,
+      allowDuplicates: true,
+      storefront: undefined,
+    });
   });
 
   it('rejects unsupported music services', async () => {
@@ -1227,17 +1303,22 @@ describe('reloadPlaylist', () => {
       lastReloadAt: null,
     });
     h.getStorefrontForLocale.mockReturnValue('nl');
-    h.provider.getPlaylist.mockResolvedValue({
+    h.provider.getTracks.mockResolvedValue({
       success: true,
-      data: { trackCount: 99 },
+      data: { tracks: tracksOf(99) },
     });
 
     const res = await reload();
 
     expect(h.getStorefrontForLocale).toHaveBeenCalledWith('nl');
-    expect(h.provider.getPlaylist).toHaveBeenCalledWith('pl_1', 'nl', false);
+    expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
+      cache: false,
+      allowDuplicates: false,
+      storefront: 'nl',
+    });
     // 99 > 10 stops the flow right after the storefront-aware fetch
     expect(res.error).toBe('track_limit_exceeded');
+    expect(h.storeTracks).not.toHaveBeenCalled();
   });
 
   it('fails cleanly when fetching fresh tracks errors out', async () => {
@@ -1256,16 +1337,14 @@ describe('reloadPlaylist', () => {
     h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
       lastReloadAt: null,
     });
-    h.provider.getPlaylist.mockResolvedValue({
-      success: true,
-      data: { trackCount: 42 },
-    });
     h.provider.getTracks.mockResolvedValue({ success: false });
 
     const res = await reload();
     expect(res).toEqual({
       success: false,
       error: 'Failed to fetch tracks from spotify',
+      paidTracks: undefined,
+      currentTracks: undefined,
     });
     expect(h.storeTracks).not.toHaveBeenCalled();
     expect(h.prisma.playlist.update).not.toHaveBeenCalled();
@@ -1287,11 +1366,7 @@ describe('reloadPlaylist', () => {
     h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
       lastReloadAt: null,
     });
-    h.provider.getPlaylist.mockResolvedValue({
-      success: true,
-      data: { trackCount: 42 },
-    });
-    const tracks = [{ id: 'trk_a' }, { id: 'trk_b' }];
+    const tracks = [...tracksOf(41), { id: 'trk_last' }];
     h.provider.getTracks.mockResolvedValue({
       success: true,
       data: { tracks },
@@ -1307,6 +1382,7 @@ describe('reloadPlaylist', () => {
     });
     expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
       cache: false,
+      allowDuplicates: false,
       storefront: undefined,
     });
 
@@ -1321,10 +1397,9 @@ describe('reloadPlaylist', () => {
       'nl',
     ]);
     expect(order).toBeInstanceOf(Map);
-    expect([...order.entries()]).toEqual([
-      ['trk_a', 1],
-      ['trk_b', 2],
-    ]);
+    expect(order.size).toBe(42);
+    expect(order.get('trk_1')).toBe(1);
+    expect(order.get('trk_last')).toBe(42);
 
     expect(h.prisma.playlist.update).toHaveBeenCalledWith({
       where: { id: 3 },
@@ -1354,13 +1429,9 @@ describe('reloadPlaylist', () => {
     h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
       lastReloadAt: null,
     });
-    h.provider.getPlaylist.mockResolvedValue({
-      success: true,
-      data: { trackCount: 40 },
-    });
     h.provider.getTracks.mockResolvedValue({
       success: true,
-      data: { tracks: [{ id: 'trk_a' }] },
+      data: { tracks: tracksOf(40) },
     });
 
     const res = await reload();
