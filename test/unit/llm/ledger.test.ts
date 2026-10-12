@@ -63,11 +63,19 @@ describe('recordLlmCalls', () => {
       outputTokens: 10,
       cacheReadTokens: 5,
       cacheWriteTokens: 2,
+      webSearches: 0,
       costUsd: 0.0012,
       estimated: false,
       durationMs: 813,
       error: null,
     });
+  });
+
+  it('writes the web searches a run made', () => {
+    recordLlmCalls('yearLookup', 'text', [
+      attempt({ usage: { inputTokens: 20_000, outputTokens: 500, cacheReadTokens: 0, cacheWriteTokens: 0, webSearchRequests: 1 } }),
+    ]);
+    expect(createMock.mock.calls[0][0].data.webSearches).toBe(1);
   });
 
   it('counts image input tokens as input', () => {

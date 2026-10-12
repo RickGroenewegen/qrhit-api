@@ -1,8 +1,9 @@
 /**
  * Unit tests for src/music.ts (Music class).
  *
- * The Music class queries MusicBrainz, Discogs, Wikipedia + Google via axios,
- * caches ISRC lookups, and uses AiTasks to weight the final release year.
+ * The Music class queries MusicBrainz and Discogs via axios, caches ISRC
+ * lookups, and asks AiTasks (with a web search when the sources disagree) for
+ * the year it weighs into the final release year.
  *
  * All I/O is mocked:
  *  - axios (instance + global) → controlled responses
@@ -40,7 +41,9 @@ vi.mock('../../src/prisma', () => ({
 }));
 
 // ─── AiTasks mock ─────────────────────────────────────────────────────────
-const chatGptAskMock = vi.fn(async (_prompt: string) => ({ year: 1985 }));
+const chatGptAskMock = vi.fn(
+  async (_prompt: string, _options?: { webSearches?: number }): Promise<any> => ({ year: 1985 })
+);
 vi.mock('../../src/aiTasks', () => ({
   AiTasks: class {
     ask = chatGptAskMock;
@@ -197,8 +200,6 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
   function stubSources(mb: number, discogs: number, ai: number) {
     vi.spyOn(music as any, 'searchMusicBrainz').mockResolvedValue({ year: mb });
     vi.spyOn(music as any, 'searchDiscogs').mockResolvedValue({ year: discogs });
-    vi.spyOn(music as any, 'performGoogleSearch').mockResolvedValue([]);
-    vi.spyOn(music as any, 'searchWikipedia').mockResolvedValue([]);
     chatGptAskMock.mockResolvedValue({ year: ai });
   }
 
@@ -320,5 +321,82 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
     const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1975);
     expect(result.year).toBe(1975);
     expect(result.standardDeviation).toBe(0);
+  });
+});
+
+describe('Music.getReleaseDate – web search', () => {
+  let music: Music;
+
+  beforeEach(() => {
+    chatGptAskMock.mockReset();
+    music = new Music();
+  });
+
+  function stubSources(mb: number, discogs: number) {
+    vi.spyOn(music as any, 'searchMusicBrainz').mockResolvedValue({ year: mb });
+    vi.spyOn(music as any, 'searchDiscogs').mockResolvedValue({ year: discogs });
+  }
+
+  it('searches the web once when the sources disagree', async () => {
+    stubSources(1995, 1994);
+    chatGptAskMock.mockResolvedValue({ year: 1995 });
+    await music.getReleaseDate(1, 'ISRC', 'Guus Meeuwis & Vagant', 'Het Is Een Nacht', 1995);
+    const [prompt, options] = chatGptAskMock.mock.calls[0];
+    expect(options).toEqual({ webSearches: 1 });
+    expect(prompt).toContain('Search the web once');
+    expect(prompt).toContain('MusicBrainz thinks the release year is 1995');
+    expect(prompt).toContain('Discogs thinks the release year is 1994');
+  });
+
+  it('searches when MusicBrainz has no year, even if Discogs and Spotify agree', async () => {
+    stubSources(0, 1990);
+    chatGptAskMock.mockResolvedValue({ year: 1990 });
+    await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1990);
+    expect(chatGptAskMock.mock.calls[0][1]).toEqual({ webSearches: 1 });
+  });
+
+  it('does not search when MusicBrainz, Discogs and Spotify agree', async () => {
+    stubSources(1983, 1983);
+    chatGptAskMock.mockResolvedValue({ year: 1983 });
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1983);
+    const [prompt, options] = chatGptAskMock.mock.calls[0];
+    expect(options).toEqual({ webSearches: 0 });
+    expect(prompt).not.toContain('Search the web');
+    expect(result.year).toBe(1983);
+    expect(result.googleResults).toBe('[]');
+  });
+
+  it('stores the pages the search read for the year-check page', async () => {
+    stubSources(1995, 1994);
+    chatGptAskMock.mockResolvedValue({
+      year: 1995,
+      sources: [
+        { url: 'https://en.wikipedia.org/wiki/Het_is_een_nacht', title: 'Het is een nacht', pageAge: null },
+        { url: 'https://www.discogs.com/master/922022', title: 'Guus Meeuwis', pageAge: null, citedText: 'Released: 1995' },
+      ],
+    });
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 2004);
+    expect(JSON.parse(result.googleResults)).toEqual([
+      {
+        title: 'Het is een nacht',
+        url: 'https://en.wikipedia.org/wiki/Het_is_een_nacht',
+        snippet: '',
+        domain: 'en.wikipedia.org',
+      },
+      {
+        title: 'Guus Meeuwis',
+        url: 'https://www.discogs.com/master/922022',
+        snippet: 'Released: 1995',
+        domain: 'www.discogs.com',
+      },
+    ]);
+  });
+
+  it('counts no usable answer as no year instead of failing', async () => {
+    stubSources(1980, 1982);
+    chatGptAskMock.mockResolvedValue(undefined);
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1990);
+    expect(result.sources.ai).toBe(0);
+    expect(result.googleResults).toBe('[]');
   });
 });

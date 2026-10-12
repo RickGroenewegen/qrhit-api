@@ -5,8 +5,10 @@
  * change therefore applies from the moment it is edited and never rewrites
  * history.
  *
- * Prices are USD per 1M tokens. Sources, read 2026-10-08:
+ * Prices are USD per 1M tokens, web searches USD per 1,000. Sources, read
+ * 2026-10-08 (web search 2026-10-12):
  *   Anthropic  https://platform.claude.com/docs/en/about-claude/pricing
+ *              https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool
  *   OpenAI     https://developers.openai.com/api/docs/pricing
  *              (gpt-5.6-sol's price is promotional, "at least through
  *              November 21, 2026"; check it then)
@@ -48,10 +50,19 @@ export interface ModelInfo {
   serverFallback?: boolean;
   /** OpenAI GPT-5.6: temperature other than 1 only with reasoning 'none'. */
   temperatureWithoutReasoningOnly?: boolean;
+  /**
+   * USD per 1,000 web searches, on top of the tokens. Set on every Anthropic
+   * model, the server-side fallback targets included: a search is billed to
+   * whichever model ran it.
+   */
+  webSearchPer1k?: number;
   vision?: boolean;
   /** Kept to price old rows; not used by a task. */
   retired?: boolean;
 }
+
+/** Anthropic's web search costs the same on every model. */
+const ANTHROPIC_WEB_SEARCH_PER_1K = 10;
 
 export const MODELS = {
   // Anthropic -----------------------------------------------------------------
@@ -62,6 +73,7 @@ export const MODELS = {
     price: { input: 4, output: 20, cachedInput: 0.2, cacheWrite5m: 5, cacheWrite1h: 8 },
     thinkingOff: null,
     serverFallback: true,
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     vision: true,
   },
   'claude-sonnet-5-5': {
@@ -71,6 +83,7 @@ export const MODELS = {
     price: { input: 2, output: 10, cachedInput: 0.1, cacheWrite5m: 2.5, cacheWrite1h: 4 },
     thinkingOff: 'between_tools',
     serverFallback: true,
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     vision: true,
   },
   'claude-haiku-5-5': {
@@ -84,6 +97,7 @@ export const MODELS = {
     },
     thinkingOff: 'disabled',
     serverFallback: false,
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     vision: true,
   },
   // Server-side fallback targets: their tokens are billed when Opus or Sonnet
@@ -93,6 +107,7 @@ export const MODELS = {
     kind: 'text',
     label: 'Claude Opus 5',
     price: { input: 5, output: 25, cachedInput: 0.5, cacheWrite5m: 6.25, cacheWrite1h: 10 },
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     retired: true,
   },
   'claude-opus-4-8': {
@@ -100,6 +115,7 @@ export const MODELS = {
     kind: 'text',
     label: 'Claude Opus 4.8',
     price: { input: 5, output: 25, cachedInput: 0.5, cacheWrite5m: 6.25, cacheWrite1h: 10 },
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     retired: true,
   },
   'claude-sonnet-5': {
@@ -107,6 +123,7 @@ export const MODELS = {
     kind: 'text',
     label: 'Claude Sonnet 5',
     price: { input: 2, output: 10, cachedInput: 0.2, cacheWrite5m: 2.5, cacheWrite1h: 4 },
+    webSearchPer1k: ANTHROPIC_WEB_SEARCH_PER_1K,
     retired: true,
   },
 
@@ -224,5 +241,7 @@ export function priceCall(model: string, usage: LlmUsage): number {
     write5m * (p.cacheWrite5m ?? p.input) +
     write1h * (p.cacheWrite1h ?? p.input) +
     (usage.imageInputTokens ?? 0) * (p.imageInput ?? p.input);
-  return perMillion / 1_000_000;
+  const searches =
+    ((usage.webSearchRequests ?? 0) * (modelInfo(model)?.webSearchPer1k ?? 0)) / 1000;
+  return perMillion / 1_000_000 + searches;
 }

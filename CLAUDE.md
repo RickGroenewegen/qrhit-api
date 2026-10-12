@@ -315,7 +315,8 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 5. PDF generation for physical cards
 
 #### 3. Track Metadata Enhancement
-- **Multi-source year detection** - Spotify, MusicBrainz, Discogs, OpenAI
+- **Multi-source year detection** - Spotify, MusicBrainz, Discogs, and Claude
+  (task `yearLookup`) with one Anthropic web search when the three disagree
 - **YouTube link association** - Automatic YouTube link finding
 - **Manual verification system** - Admin interface for data quality
 
@@ -394,7 +395,23 @@ is a standalone dev script and stays outside it.
   `GET /admin/ai-costs` (`routes/aiCostRoutes.ts`).
 - **Live check**: `npx tsx scripts/llm-smoke.ts [task...]` runs every text task
   once on its primary route (about $0.05) and lists the ledger rows;
-  `--compare [--routes=provider/model:effort,...]` compares release years.
+  `--compare [--routes=provider/model:effort,...]` compares release years;
+  `--web` runs the release-year cases with a real web search (about $0.19).
+- **Web search** (2026-10-12): a request with `webSearch: { maxUses }` gets
+  Anthropic's basic `web_search_20250305` tool. Each search is $0.01
+  (`webSearchPer1k` in `models.ts`, priced into `costUsd`) and the pages read
+  count as input tokens; `usage.server_tool_use.web_search_requests` becomes
+  `webSearchRequests` and the ledger's `webSearches` column, shown on the AI
+  costs page. The answer is the text after the last search, the pages come
+  back as `result.sources`, and a `pause_turn` is resumed up to three times.
+  An OpenAI fallback answers without searching. The only user is
+  `yearLookup` (`music.ts`): one search per new track, none when MusicBrainz,
+  Discogs and Spotify agree (about a quarter of tracks). It replaced
+  RapidAPI's real-time-web-search and wikipedia-api2, which the lookup called
+  for every track. At ~9,200 lookups a month that is ~$80 a month, inside the
+  €200 Anthropic credit; measured 15/16 on the `--web` cases at $0.0117 a
+  track. The pages found go to `tracks.googleResults` (named after the old
+  Google search) for the admin year-check page.
 
 **Anthropic rules the adapter follows** (all a 400 otherwise; Claude 5.5 models):
 
@@ -1363,7 +1380,9 @@ This replaced a RapidAPI Trustpilot reseller that was called when the API
 booted and a ChatGPT pass that translated the results in batches of five with a
 pause in between, which is what made startup take minutes. Nothing review
 related runs at boot or on a cron any more. `RAPID_API_KEY` is still needed: the
-Spotify scrapers, `music.ts` and `data/musicLinks.ts` use it.
+Spotify RapidAPI clients and scraper (`spotify_rapidapi*.ts`, `spotify_scraper.ts`)
+use it. The year lookup's Google and Wikipedia searches went through RapidAPI
+too until 2026-10-12 (see "Web search" under the LLM layer).
 
 - Like the blog, the file reaches production through `ncp ./src ./build` at the
   end of `npm run build`, and `CONTENT_FILES` in `reviews.ts` has the same

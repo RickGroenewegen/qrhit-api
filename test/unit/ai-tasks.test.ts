@@ -138,6 +138,7 @@ describe('AiTasks.ask', () => {
       certainty: 95,
       source: 'https://example.com',
       costUsd: (100 * 2 + 50 * 12) / 1e6,
+      sources: [],
     });
 
     const payload = createMock.mock.calls[0][0];
@@ -155,6 +156,16 @@ describe('AiTasks.ask', () => {
       role: 'user',
       content: '"Thriller" by Michael Jackson',
     });
+  });
+
+  it('still answers on the OpenAI route when a web search was asked for, without one', async () => {
+    createMock.mockResolvedValueOnce(
+      toolCallResponse('parseYear', { year: 1995, reasoning: 'Discogs', certainty: 80, source: '' })
+    );
+    const answer = await gpt.ask('prompt', { webSearches: 1 });
+    expect(answer.year).toBe(1995);
+    expect(answer.sources).toEqual([]);
+    expect(createMock.mock.calls[0][0].tools).toBeUndefined();
   });
 
   it('returns a zeroed result when the function arguments are not valid JSON', async () => {

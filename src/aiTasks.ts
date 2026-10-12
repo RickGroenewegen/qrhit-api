@@ -721,9 +721,16 @@ Description: ${description ? description.replace(/\s+/g, ' ').trim() : '(none)'}
     return {};
   }
 
-  public async ask(prompt: string): Promise<any> {
+  /**
+   * The release year of a song from the prompt music.ts builds. With
+   * `webSearches` the model may search the web that many times (each search
+   * is billed, see src/llm/models.ts); the pages it got back are `sources`.
+   */
+  public async ask(prompt: string, options: { webSearches?: number } = {}): Promise<any> {
+    const webSearches = options.webSearches ?? 0;
     try {
-      const { data, costUsd } = await llm.json<any>('yearLookup', {
+      const { data, costUsd, sources } = await llm.json<any>('yearLookup', {
+        ...(webSearches > 0 ? { webSearch: { maxUses: webSearches } } : {}),
         messages: [
           {
             role: 'system',
@@ -764,7 +771,7 @@ Description: ${description ? description.replace(/\s+/g, ' ').trim() : '(none)'}
         },
       });
       // The cost rides along for the caller's log line (music.ts).
-      return { ...data, costUsd };
+      return { ...data, costUsd, sources: sources ?? [] };
     } catch (error) {
       if (!(error instanceof LlmOutputError)) throw error;
       // An answer that is not JSON reads as "no year"; no answer at all as unknown.

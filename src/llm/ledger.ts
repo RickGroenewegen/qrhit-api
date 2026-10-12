@@ -47,6 +47,7 @@ export function recordLlmCalls(task: string, kind: LlmKind, attempts: LlmAttempt
           outputTokens: attempt.usage.outputTokens,
           cacheReadTokens: attempt.usage.cacheReadTokens,
           cacheWriteTokens: attempt.usage.cacheWriteTokens,
+          webSearches: attempt.usage.webSearchRequests ?? 0,
           costUsd: attempt.costUsd,
           estimated: attempt.estimated,
           durationMs: Math.round(attempt.durationMs),

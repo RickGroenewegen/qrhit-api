@@ -10,6 +10,10 @@
  *   - function tools are a 400 with reasoning on, so structured output is
  *     `response_format: { type: 'json_schema' }` read from message.content;
  *   - `max_tokens` is rejected; `max_completion_tokens` is the name.
+ *
+ * A request's `webSearch` is left out: chat completions have no search tool
+ * on these models, so an OpenAI fallback answers from what the prompt and the
+ * model know.
  */
 import OpenAI from 'openai';
 import { modelInfo } from '../models';

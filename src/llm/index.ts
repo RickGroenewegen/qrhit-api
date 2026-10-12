@@ -38,6 +38,7 @@ import type {
   LlmSystemBlock,
   LlmTaskConfig,
   LlmUsage,
+  LlmWebSource,
   NormalizedRequest,
   ProviderBinaryResponse,
   ProviderCallOptions,
@@ -80,7 +81,13 @@ export function normalizeRequest(req: LlmRequest): NormalizedRequest {
     }
     messages.push({ role: message.role, content: message.content });
   }
-  return { system, messages, schema: req.schema, temperature: req.temperature };
+  return {
+    system,
+    messages,
+    schema: req.schema,
+    temperature: req.temperature,
+    ...(req.webSearch ? { webSearch: req.webSearch } : {}),
+  };
 }
 
 function callOptions(config: LlmTaskConfig, route: LlmRoute, req?: LlmRequest): ProviderCallOptions {
@@ -178,6 +185,9 @@ function logCall(task: string, attempts: LlmAttempt[], ok: boolean, durationMs: 
         level(' w') +
         color.white.bold(String(usage.cacheWriteTokens))
       : '';
+  const searches = usage.webSearchRequests
+    ? level(' searches ') + color.white.bold(String(usage.webSearchRequests))
+    : '';
   let line =
     level('[') +
     color.white.bold('llm') +
@@ -190,6 +200,7 @@ function logCall(task: string, attempts: LlmAttempt[], ok: boolean, durationMs: 
     level(' out ') +
     color.white.bold(String(usage.outputTokens)) +
     cache +
+    searches +
     level(' ') +
     color.white.bold(formatCostUsd(costUsd)) +
     level(' ') +
@@ -307,7 +318,7 @@ class Llm {
           ...attemptsFromParts(route, role, response.parts, OUTPUT_STATUS[failure], durationMs)
         );
         finish(task, 'text', attempts, true, Date.now() - started);
-        return this.result(response.text as T, route, response.parts, attempts, started, failure);
+        return this.result(response.text as T, route, response.parts, attempts, started, failure, response.sources);
       }
 
       attempts.push(
@@ -322,7 +333,7 @@ class Llm {
       );
       if (!failure) {
         finish(task, 'text', attempts, true, Date.now() - started);
-        return this.result(data as T, route, response.parts, attempts, started);
+        return this.result(data as T, route, response.parts, attempts, started, undefined, response.sources);
       }
       outputError = new LlmOutputError(task, failure, response.text);
       lastError = outputError;
@@ -347,7 +358,8 @@ class Llm {
     parts: UsagePart[],
     attempts: LlmAttempt[],
     started: number,
-    stopReason?: string
+    stopReason?: string,
+    sources?: LlmWebSource[]
   ): LlmResult<T> {
     const { usage, costUsd } = totals(attempts);
     return {
@@ -360,6 +372,7 @@ class Llm {
       fellBack: attempts.some((a) => a.role === 'fallback'),
       attempts,
       ...(stopReason ? { stopReason } : {}),
+      ...(sources ? { sources } : {}),
     };
   }
 

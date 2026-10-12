@@ -15,6 +15,12 @@
  * refusal is retried on an older model inside the same call, and its tokens
  * are recorded as a fallback row. Streams don't, because the second model
  * would continue an answer the customer is already reading.
+ *
+ * A request with `webSearch` gets the basic web search tool (no dynamic
+ * filtering: with a search or two there is nothing to filter, and it would
+ * add code execution to every call). The searches come back in
+ * `usage.server_tool_use` and are priced in models.ts; a turn the server
+ * paused (`pause_turn`) is sent back unchanged to resume it.
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { LlmRequestError } from '../errors';
@@ -25,6 +31,7 @@ import type {
   LlmImagePart,
   LlmProvider,
   LlmUsage,
+  LlmWebSource,
   NormalizedRequest,
   ProviderCallOptions,
   ProviderStopReason,
@@ -33,6 +40,9 @@ import type {
 } from '../types';
 
 const SERVER_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+const WEB_SEARCH_TOOL = 'web_search_20250305';
+/** How often a paused server-tool turn is resumed before we take what it has. */
+const MAX_PAUSE_RESUMES = 3;
 
 const IMAGE_MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
@@ -92,12 +102,14 @@ function stopReasonOf(reason: string | null | undefined): ProviderStopReason {
 }
 
 function partUsage(u: any): LlmUsage {
+  const searches = u?.server_tool_use?.web_search_requests ?? 0;
   return {
     inputTokens: u?.input_tokens ?? 0,
     outputTokens: u?.output_tokens ?? 0,
     cacheReadTokens: u?.cache_read_input_tokens ?? 0,
     cacheWriteTokens: u?.cache_creation_input_tokens ?? 0,
     cacheWrite1hTokens: u?.cache_creation?.ephemeral_1h_input_tokens ?? 0,
+    ...(searches ? { webSearchRequests: searches } : {}),
   };
 }
 
@@ -114,12 +126,60 @@ function usageParts(message: any, requestedModel: string): UsagePart[] {
     return [{ model: message?.model ?? requestedModel, usage: partUsage(message?.usage) }];
   }
   const fellBack = iterations.some((it) => it.type === 'fallback_message');
-  return iterations.map((it, index) => ({
+  const parts: UsagePart[] = iterations.map((it, index) => ({
     model: it.model ?? requestedModel,
     usage: partUsage(it),
     serverFallback: it.type === 'fallback_message',
     refused: fellBack && index < iterations.length - 1,
   }));
+  // Searches the iterations don't report one by one go to the run that answered.
+  const searches = message?.usage?.server_tool_use?.web_search_requests ?? 0;
+  if (searches && !parts.some((part) => part.usage.webSearchRequests)) {
+    parts[parts.length - 1].usage.webSearchRequests = searches;
+  }
+  return parts;
+}
+
+/**
+ * The answer: the text after the last web search. Text before a search is
+ * the model saying what it is about to look up.
+ */
+function answerText(blocks: any[]): string {
+  let start = 0;
+  blocks.forEach((block, index) => {
+    if (block?.type === 'server_tool_use' || block?.type === 'web_search_tool_result') {
+      start = index + 1;
+    }
+  });
+  return blocks
+    .slice(start)
+    .filter((block) => block?.type === 'text')
+    .map((block) => block.text)
+    .join('');
+}
+
+/**
+ * Every page the searches returned, once each, with what the answer quoted
+ * from it. A failed search (`content` is an error object, not a list) adds
+ * nothing and is not billed.
+ */
+function webSources(blocks: any[]): LlmWebSource[] {
+  const byUrl = new Map<string, LlmWebSource>();
+  for (const block of blocks) {
+    if (block?.type !== 'web_search_tool_result' || !Array.isArray(block.content)) continue;
+    for (const result of block.content) {
+      if (result?.type !== 'web_search_result' || !result.url || byUrl.has(result.url)) continue;
+      byUrl.set(result.url, { url: result.url, title: result.title ?? '', pageAge: result.page_age ?? null });
+    }
+  }
+  for (const block of blocks) {
+    if (block?.type !== 'text') continue;
+    for (const citation of block.citations ?? []) {
+      const source = byUrl.get(citation?.url);
+      if (source && !source.citedText && citation.cited_text) source.citedText = citation.cited_text;
+    }
+  }
+  return [...byUrl.values()];
 }
 
 export class AnthropicProvider implements LlmProvider {
@@ -177,6 +237,9 @@ export class AnthropicProvider implements LlmProvider {
       body.betas = [SERVER_FALLBACK_BETA];
       body.fallbacks = 'default';
     }
+    if (req.webSearch) {
+      body.tools = [{ type: WEB_SEARCH_TOOL, name: 'web_search', max_uses: req.webSearch.maxUses }];
+    }
     return body;
   }
 
@@ -185,20 +248,28 @@ export class AnthropicProvider implements LlmProvider {
     opts: ProviderCallOptions,
     onToken?: (token: string) => void
   ): Promise<ProviderTextResponse> {
-    const stream = this.getClient().beta.messages.stream(
-      this.buildBody(req, opts, !!onToken),
-      { timeout: opts.timeoutMs, maxRetries: opts.maxRetries }
-    );
-    if (onToken) stream.on('text', (delta: string) => onToken(delta));
-    const message: any = await stream.finalMessage();
-    const text = (message?.content ?? [])
-      .filter((block: any) => block?.type === 'text')
-      .map((block: any) => block.text)
-      .join('');
+    const body = this.buildBody(req, opts, !!onToken);
+    const parts: UsagePart[] = [];
+    const blocks: any[] = [];
+    let messages: any[] = body.messages;
+    let message: any;
+    for (let resumes = 0; ; resumes++) {
+      const stream = this.getClient().beta.messages.stream(
+        { ...body, messages },
+        { timeout: opts.timeoutMs, maxRetries: opts.maxRetries }
+      );
+      if (onToken) stream.on('text', (delta: string) => onToken(delta));
+      message = await stream.finalMessage();
+      parts.push(...usageParts(message, opts.route.model));
+      blocks.push(...(message?.content ?? []));
+      if (message?.stop_reason !== 'pause_turn' || resumes >= MAX_PAUSE_RESUMES) break;
+      messages = [...messages, { role: 'assistant', content: message.content }];
+    }
     return {
-      text,
+      text: answerText(blocks),
       stopReason: stopReasonOf(message?.stop_reason),
-      parts: usageParts(message, opts.route.model),
+      parts,
+      ...(req.webSearch ? { sources: webSources(blocks) } : {}),
     };
   }
 

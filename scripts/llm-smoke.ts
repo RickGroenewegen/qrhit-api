@@ -7,6 +7,7 @@
  *   npx tsx scripts/llm-smoke.ts --compare       # release years: primary vs fallback route
  *   npx tsx scripts/llm-smoke.ts --compare --routes=anthropic/claude-opus-5-5:low,openai/gpt-5.6-terra:low
  *   npx tsx scripts/llm-smoke.ts --sources --routes=...   # the same, with production-style source data
+ *   npx tsx scripts/llm-smoke.ts --web           # the year lookup as production runs it: one real web search (~$0.20)
  *
  * Each task runs a real call site where one exists without a database
  * (AiTasks methods), otherwise a small request with the same kind of schema.
@@ -24,6 +25,7 @@ import type { LlmResult, LlmRoute, TextTask } from '../src/llm';
 import { LLM_TASKS, taskConfig } from '../src/llm/tasks';
 import { getProvider } from '../src/llm/providers';
 import { priceCall } from '../src/llm/models';
+import { yearLookupPrompt } from '../src/music';
 
 type Check = () => Promise<{ sample: unknown; result?: LlmResult<unknown> }>;
 
@@ -434,6 +436,43 @@ async function compareSources(routeArg?: string): Promise<void> {
   );
 }
 
+/**
+ * The release-year cases the way production asks them since 2026-10-12: the
+ * case's MusicBrainz and Discogs years, music.ts's prompt and one real web
+ * search instead of the canned Google and Wikipedia data, through the layer
+ * (fallback and ledger included). The truth years were written for that
+ * canned data, so read a miss before believing it.
+ */
+async function compareWeb(): Promise<void> {
+  let right = 0;
+  let cost = 0;
+  let ms = 0;
+  let searched = 0;
+  for (const c of SOURCE_CASES) {
+    const t0 = Date.now();
+    const answer = await gpt.ask(yearLookupPrompt(c.artist, c.title, c.mb, c.discogs, true), {
+      webSearches: 1,
+    });
+    ms += Date.now() - t0;
+    const year = answer?.year ?? 0;
+    const ok = Array.isArray(c.year) ? year >= c.year[0] && year <= c.year[1] : year === c.year;
+    right += ok ? 1 : 0;
+    cost += answer?.costUsd ?? 0;
+    const pages: Array<{ url: string }> = answer?.sources ?? [];
+    if (pages.length) searched++;
+    const truth = Array.isArray(c.year) ? `${c.year[0]}-${c.year[1]}` : String(c.year);
+    const hosts = [...new Set(pages.map((p) => new URL(p.url).hostname.replace(/^www\./, '')))].slice(0, 4);
+    console.log(
+      `${truth.padEnd(10)} ${`${c.artist} - ${c.title}`.slice(0, 46).padEnd(47)} ${`${year}${ok ? '' : ' ✗'}`.padEnd(7)} $${(answer?.costUsd ?? 0).toFixed(4)}  ${hosts.join(', ')}`
+    );
+    if (!ok) console.log(color.yellow(`           ${String(answer?.reasoning ?? '').slice(0, 300)}`));
+  }
+  console.log(
+    color.white.bold('yearLookup with web search: ') +
+      `${right}/${SOURCE_CASES.length} right, ${searched} searched, $${cost.toFixed(4)} ($${(cost / SOURCE_CASES.length).toFixed(4)} per track), ${(ms / SOURCE_CASES.length / 1000).toFixed(1)}s per track`
+  );
+}
+
 /** "provider/model:effort,..." from --routes. */
 function parseRoutes(arg: string | undefined): LlmRoute[] | null {
   if (!arg) return null;
@@ -501,6 +540,11 @@ async function compareYears(routeArg?: string): Promise<void> {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+  if (args.includes('--web')) {
+    await compareWeb();
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // the last ledger writes
+    return;
+  }
   if (args.includes('--sources')) {
     await compareSources(args.find((a) => a.startsWith('--routes=')));
     return;

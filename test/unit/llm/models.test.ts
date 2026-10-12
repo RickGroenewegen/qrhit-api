@@ -48,6 +48,16 @@ describe('priceCall', () => {
     expect(cost).toBeCloseTo(5 + 8 + 30, 10);
   });
 
+  it('adds $10 per 1,000 web searches on Anthropic models, on top of the tokens', () => {
+    const cost = priceCall('claude-haiku-5-5', usage({ inputTokens: 20_000, outputTokens: 500, webSearchRequests: 1 }));
+    expect(cost).toBeCloseTo((20_000 * 0.1 + 500 * 0.5) / 1e6 + 0.01, 12);
+    // a server-side fallback target bills the searches it ran too
+    expect(priceCall('claude-opus-5', usage({ webSearchRequests: 3 }))).toBeCloseTo(0.03, 12);
+    for (const [id, info] of Object.entries(MODELS)) {
+      if (info.provider === 'anthropic') expect('webSearchPer1k' in info && info.webSearchPer1k, id).toBe(10);
+    }
+  });
+
   it('costs nothing for an unknown model', () => {
     expect(priceCall('nope', usage({ inputTokens: 1_000_000 }))).toBe(0);
   });

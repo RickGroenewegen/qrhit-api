@@ -22,6 +22,7 @@ interface Sums {
   outputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
+  webSearches: number;
   costUsd: number;
 }
 
@@ -31,6 +32,7 @@ const emptySums = (): Sums => ({
   outputTokens: 0,
   cacheReadTokens: 0,
   cacheWriteTokens: 0,
+  webSearches: 0,
   costUsd: 0,
 });
 
@@ -40,6 +42,7 @@ function addTo(target: Sums, source: Sums): void {
   target.outputTokens += source.outputTokens;
   target.cacheReadTokens += source.cacheReadTokens;
   target.cacheWriteTokens += source.cacheWriteTokens;
+  target.webSearches += source.webSearches;
   target.costUsd += source.costUsd;
 }
 
@@ -114,6 +117,7 @@ export default async function aiCostRoutes(
               outputTokens: true,
               cacheReadTokens: true,
               cacheWriteTokens: true,
+              webSearches: true,
               costUsd: true,
               durationMs: true,
             },
@@ -157,6 +161,7 @@ export default async function aiCostRoutes(
             outputTokens: g._sum.outputTokens ?? 0,
             cacheReadTokens: g._sum.cacheReadTokens ?? 0,
             cacheWriteTokens: g._sum.cacheWriteTokens ?? 0,
+            webSearches: g._sum.webSearches ?? 0,
             costUsd: g._sum.costUsd ?? 0,
           };
           let task = tasks.get(g.task);
@@ -247,6 +252,7 @@ export default async function aiCostRoutes(
           retired: 'retired' in info ? !!info.retired : false,
           price: info.price,
           longContext: 'longContext' in info ? info.longContext : null,
+          webSearchPer1k: 'webSearchPer1k' in info ? info.webSearchPer1k : null,
         }));
 
         reply.send({

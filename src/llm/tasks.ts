@@ -33,10 +33,12 @@ export const LLM_TASKS = {
   yearLookup: {
     kind: 'text',
     label: 'Release year lookup',
-    description: 'Picks the release year of a new track from Google, Wikipedia, MusicBrainz and Discogs data.',
+    description: 'Picks the release year of a new track from MusicBrainz, Discogs and one web search (none when MusicBrainz, Discogs and Spotify agree).',
     // 2026-10-08, 16 tracks with conflicting source data (llm-smoke.ts
     // --sources): Haiku medium 16/16 at $0.00023 a call, Sonnet low 15/16 at
     // $0.0032, terra 15/16 at $0.0020. Haiku low missed one (a cover's year).
+    // The web search (2026-10-12, replacing RapidAPI's Google and Wikipedia
+    // lookups) runs on Anthropic only; the terra fallback answers without it.
     primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'medium' },
     fallback: { provider: 'openai', model: 'gpt-5.6-terra', effort: 'low' },
   },

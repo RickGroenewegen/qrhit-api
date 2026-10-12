@@ -919,6 +919,7 @@ model LlmCall {
   outputTokens     Int      @default(0)
   cacheReadTokens  Int      @default(0)
   cacheWriteTokens Int      @default(0)
+  webSearches      Int      @default(0) // Anthropic web searches, priced into costUsd
   costUsd          Float    @default(0)
   estimated        Boolean  @default(false)
   durationMs       Int      @default(0)

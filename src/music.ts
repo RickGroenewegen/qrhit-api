@@ -4,7 +4,33 @@ import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
 import { AiTasks } from './aiTasks';
 import { formatCostUsd } from './llm';
+import type { LlmWebSource } from './llm';
 import Cache from './cache';
+
+/** Web searches the year lookup may run for a track whose sources disagree. */
+const YEAR_LOOKUP_WEB_SEARCHES = 1;
+
+/** The year lookup's question (task yearLookup); scripts/llm-smoke.ts --web asks it too. */
+export function yearLookupPrompt(
+  artist: string,
+  title: string,
+  mbYear: number,
+  discogsYear: number,
+  webSearch: boolean
+): string {
+  const search = webSearch
+    ? 'Search the web once to check the year. Wikipedia and the Discogs page of the original single or album are the best sources. Streaming services often show the year of a remaster, reissue or compilation instead of the original release.\n\n'
+    : '';
+  return (
+    `The song: ${artist} - ${title}\n` +
+    'My goal is to find the release year of this song: the year this recording was first released, on a single, an album or a soundtrack, not a later single, remaster, reissue or compilation. Use your own knowledge and the information below.\n\n' +
+    `MusicBrainz thinks the release year is ${mbYear}\n` +
+    `Discogs thinks the release year is ${discogsYear}\n\n` +
+    search +
+    'When evaluating a classical song, we are looking for the year of original composition, not the year of release.\n\n' +
+    'What is the release year of this song? Also explain on which information you based your answer.'
+  );
+}
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
@@ -35,61 +61,24 @@ export class Music {
     title: string,
     spotifyReleaseYear: number
   ): Promise<any> {
-    // Search MusicBrainz
-
     const [mbResult, discogsResult] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
     ]);
 
-    // Try Google search and extract Wikipedia languages
-    const googleResults = await this.performGoogleSearch(artist, title);
-    const wikiLangs = new Set<string>();
+    // The model checks the year with one web search (Anthropic's, $0.01 a
+    // search, src/llm/models.ts) unless MusicBrainz, Discogs and Spotify
+    // already agree, as they do for about a quarter of new tracks.
+    const sourcesAgree =
+      mbResult.year > 0 &&
+      mbResult.year === discogsResult.year &&
+      discogsResult.year === spotifyReleaseYear;
+    const webSearches = sourcesAgree ? 0 : YEAR_LOOKUP_WEB_SEARCHES;
+    const prompt = yearLookupPrompt(artist, title, mbResult.year, discogsResult.year, webSearches > 0);
 
-    if (Array.isArray(googleResults)) {
-      for (const result of googleResults) {
-        const wikiMatch = result.url.match(
-          /https?:\/\/([a-z]{2})\.wikipedia\.org/
-        );
-        if (wikiMatch) {
-          wikiLangs.add(wikiMatch[1]);
-        }
-      }
-    }
-
-    // Add English as default if no Wikipedia results found
-    if (wikiLangs.size === 0) {
-      wikiLangs.add('en');
-    }
-
-    // Try Wikipedia search in all found languages
-    const wikiResults = await this.searchWikipedia(
-      Array.from(wikiLangs),
-      artist,
-      title
-    );
-
-    let prompt = `  I have gathered information about a certain song on the internet: ${artist} - ${title}
-                    Use your own knowledge. I will share all this information with you below. My goal is to find the release year of this song.
-                    If the release date is literally found on Wikipedia, I will use that information.
-                    
-                    What a Google search on the songs artist and title returned:
-
-                    ${JSON.stringify(googleResults)}
-                    
-                    What I found on Wikipedia:
-
-                    ${JSON.stringify(wikiResults)}
-
-                    MusicBrainz thinks the release year is ${mbResult.year}
-                    Discogs thinks the release year is ${discogsResult.year}
-
-                    When evaulating a classical song, we are looking for the year of original composition, not the year of release.
-
-                    What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
-                    `;
-
-    const aiResult = await this.aiTasks.ask(prompt);
+    // No usable answer (refused, cut off, empty) counts as no year.
+    const aiResult = (await this.aiTasks.ask(prompt, { webSearches })) ?? { year: 0 };
+    const searchResults = this.searchResultsForReview(aiResult.sources ?? []);
 
     const weights = {
       ai: 0.5,
@@ -242,7 +231,7 @@ export class Music {
     const fullResult = {
       year: finalYear,
       standardDeviation,
-      googleResults: JSON.stringify(googleResults),
+      googleResults: JSON.stringify(searchResults),
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
@@ -373,95 +362,26 @@ export class Music {
     return { year: 0, source: '' };
   }
 
-  private async performGoogleSearch(
-    artist: string,
-    title: string
-  ): Promise<string> {
-    try {
-      const response = await this.axiosInstance.get(
-        'https://real-time-web-search.p.rapidapi.com/search',
-        {
-          params: {
-            q: `${artist} - ${title} (song) release date`,
-            limit: 10,
-          },
-          headers: {
-            'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
-            'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          },
-        }
-      );
-
-      const results = response.data.data;
-
-      return results;
-    } catch (error: any) {
-      this.logger.log(
-        color.red(`Error fetching Google search results: ${error.message}`)
-      );
-      return '';
-    }
-  }
-
-  private async searchWikipedia(
-    langs: string[],
-    artist: string,
-    title: string
-  ): Promise<any[]> {
-    const results = [];
-    const query = `${artist} ${title}`;
-
-    for (const lang of langs) {
+  /**
+   * The pages the year lookup's web search read, in the shape the admin
+   * year-check page lists (tracks.googleResults, named after the Google
+   * search it replaced).
+   */
+  private searchResultsForReview(
+    sources: LlmWebSource[]
+  ): Array<{ title: string; url: string; snippet: string; domain: string }> {
+    return sources.map((source) => {
+      let domain = '';
       try {
-        // Search for Wikipedia articles
-        const searchResponse = await axios.get(
-          'https://wikipedia-api2.p.rapidapi.com/search',
-          {
-            params: {
-              query: query,
-              limit: 3,
-            },
-            headers: {
-              'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
-              'x-rapidapi-key': process.env['RAPID_API_KEY'],
-            },
-          }
-        );
-
-        const searchResults = searchResponse.data;
-
-        if (searchResults && searchResults.results && searchResults.results.length > 0) {
-          // Get the summary of the first result
-          const firstResult = searchResults.results[0];
-          const summaryResponse = await axios.get(
-            'https://wikipedia-api2.p.rapidapi.com/summary',
-            {
-              params: {
-                title: firstResult.title,
-              },
-              headers: {
-                'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
-                'x-rapidapi-key': process.env['RAPID_API_KEY'],
-              },
-            }
-          );
-
-          const summary = summaryResponse.data;
-
-          results.push({
-            lang,
-            summary: summary.summary || '',
-            infobox: null, // RapidAPI Wikipedia doesn't provide infobox data
-          });
-        }
-      } catch (error: any) {
-        this.logger.log(
-          color.red(`Error in Wikipedia RapidAPI search for ${lang}: ${error.message}`)
-        );
-      }
-    }
-
-    return results;
+        domain = new URL(source.url).hostname;
+      } catch {}
+      return {
+        title: source.title,
+        url: source.url,
+        snippet: source.citedText ?? '',
+        domain,
+      };
+    });
   }
 
   private async searchDiscogs(

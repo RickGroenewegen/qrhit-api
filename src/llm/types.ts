@@ -71,6 +71,26 @@ export interface LlmSchema {
   schema: Record<string, unknown>;
 }
 
+/**
+ * Anthropic's web search tool. Every search is billed on top of the tokens
+ * (models.ts) and the pages it read count as input tokens. An OpenAI route
+ * answers without it, so a fallback still gives an answer.
+ */
+export interface LlmWebSearch {
+  /** The most searches the model may run in this call. */
+  maxUses: number;
+}
+
+/** A page a web search returned. */
+export interface LlmWebSource {
+  url: string;
+  title: string;
+  /** How old the page is, as the search engine put it ("481 days ago"). */
+  pageAge: string | null;
+  /** What the answer quoted from the page, when it cited it. */
+  citedText?: string;
+}
+
 export interface LlmRequest {
   system?: string | LlmSystemBlock[];
   messages: LlmMessage[];
@@ -79,6 +99,7 @@ export interface LlmRequest {
   temperature?: number;
   /** Overrides the task's maxOutputTokens. */
   maxOutputTokens?: number;
+  webSearch?: LlmWebSearch;
 }
 
 export interface LlmImageInput {
@@ -114,6 +135,8 @@ export interface LlmUsage {
   cacheWrite1hTokens?: number;
   /** Image input tokens (image models), priced apart from text. */
   imageInputTokens?: number;
+  /** Web searches the model ran, each billed on its own (models.ts). */
+  webSearchRequests?: number;
 }
 
 export type LlmAttemptStatus =
@@ -153,6 +176,8 @@ export interface LlmResult<T> {
   attempts: LlmAttempt[];
   /** Streams only: set when the answer stopped early ('refusal', 'truncated'). */
   stopReason?: string;
+  /** The pages the web search returned, when the request asked for one. */
+  sources?: LlmWebSource[];
 }
 
 export const ZERO_USAGE: LlmUsage = Object.freeze({
@@ -170,6 +195,7 @@ export function addUsage(a: LlmUsage, b: LlmUsage): LlmUsage {
     cacheWriteTokens: a.cacheWriteTokens + b.cacheWriteTokens,
     cacheWrite1hTokens: (a.cacheWrite1hTokens ?? 0) + (b.cacheWrite1hTokens ?? 0),
     imageInputTokens: (a.imageInputTokens ?? 0) + (b.imageInputTokens ?? 0),
+    webSearchRequests: (a.webSearchRequests ?? 0) + (b.webSearchRequests ?? 0),
   };
 }
 
@@ -183,6 +209,7 @@ export interface NormalizedRequest {
   messages: Array<{ role: 'user' | 'assistant'; content: LlmContent }>;
   schema?: LlmSchema;
   temperature?: number;
+  webSearch?: LlmWebSearch;
 }
 
 export interface ProviderCallOptions {
@@ -209,6 +236,7 @@ export interface ProviderTextResponse {
   text: string;
   stopReason: ProviderStopReason;
   parts: UsagePart[];
+  sources?: LlmWebSource[];
 }
 
 export interface ProviderBinaryResponse {

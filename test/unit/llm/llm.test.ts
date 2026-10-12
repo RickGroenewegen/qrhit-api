@@ -94,6 +94,11 @@ describe('normalizeRequest', () => {
     expect(n.messages).toEqual([{ role: 'user', content: 'Question' }]);
   });
 
+  it('keeps a web search and adds nothing without one', () => {
+    expect(normalizeRequest({ ...req, webSearch: { maxUses: 1 } }).webSearch).toEqual({ maxUses: 1 });
+    expect('webSearch' in normalizeRequest(req)).toBe(false);
+  });
+
   it('refuses a system message in the middle of the conversation', () => {
     expect(() =>
       normalizeRequest({
@@ -185,6 +190,22 @@ describe('llm.json', () => {
     provider('openai', { complete: fallback });
     await expect(llm.json('withFallback' as any, req)).rejects.toBeInstanceOf(LlmRequestError);
     expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('passes a web search on, prices each search and returns the pages found', async () => {
+    const complete = vi.fn().mockResolvedValue(
+      answer('{"year":1995}', 'claude-sonnet-5-5', {
+        parts: [{ model: 'claude-sonnet-5-5', usage: { ...usage(1000, 100), webSearchRequests: 2 } }],
+        sources: [{ url: 'https://en.wikipedia.org/wiki/X', title: 'X', pageAge: null }],
+      })
+    );
+    provider('anthropic', { complete });
+    const res = await llm.json('withFallback' as any, { ...req, webSearch: { maxUses: 2 } });
+    expect(complete.mock.calls[0][0].webSearch).toEqual({ maxUses: 2 });
+    expect(res.sources).toEqual([{ url: 'https://en.wikipedia.org/wiki/X', title: 'X', pageAge: null }]);
+    expect(res.usage.webSearchRequests).toBe(2);
+    expect(res.costUsd).toBeCloseTo(priceCall('claude-sonnet-5-5', usage(1000, 100)) + 0.02, 12);
+    expect(recordMock.mock.calls[0][2][0].usage.webSearchRequests).toBe(2);
   });
 
   it('records the server-side fallback runs as their own rows', async () => {

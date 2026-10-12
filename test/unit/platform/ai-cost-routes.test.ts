@@ -54,6 +54,7 @@ const group = (over: any) => ({
     outputTokens: 2_000,
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
+    webSearches: 6,
     costUsd: 0.04,
     durationMs: 15_000,
   },
@@ -133,6 +134,15 @@ describe('GET /admin/ai-costs', () => {
       monthToDateUsd: 12.5,
     });
     expect(data.prices.find((p: any) => p.model === 'claude-haiku-5-5').longContext.thresholdTokens).toBe(100_000);
+
+    // Web searches add up like tokens (rows without the column count 0), and
+    // the price list carries their price.
+    expect(year.webSearches).toBe(6);
+    expect(year.rows[0].webSearches).toBe(6);
+    expect(anthropic.webSearches).toBe(6);
+    expect(data.totals.webSearches).toBe(6);
+    expect(data.prices.find((p: any) => p.model === 'claude-haiku-5-5').webSearchPer1k).toBe(10);
+    expect(data.prices.find((p: any) => p.model === 'gpt-5.6-terra').webSearchPer1k).toBeNull();
   });
 
   it('defaults to the current month and survives a missing exchange rate', async () => {
