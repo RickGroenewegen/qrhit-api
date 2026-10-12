@@ -14,6 +14,9 @@ import Cache from '../cache';
 import { setAuthCookie, clearAuthCookie } from '../cookieAuth';
 import { APP_DESIGN_PRICE } from '../config/constants';
 import { CARD_DESIGN_SELECT, pickCardDesign } from '../cardDesigns';
+import Data from '../data';
+import Designer from '../designer';
+import Generator from '../generator';
 
 const prisma = PrismaInstance.getInstance();
 const rateLimiter = LoginRateLimiter.getInstance();
@@ -58,6 +61,21 @@ function orderLineType(php: { type: string; subType: string | null }): 'digital'
   if (php.subType === 'sheets') return 'sheets';
   return php.type === 'physical' ? 'physical' : 'digital';
 }
+
+/**
+ * A digital card line whose PDF has been made can get a new card design from
+ * the account: the PDF is made again and mailed. Printed cards cannot.
+ */
+function canChangeDesign(php: {
+  type: string;
+  filenameDigital: string | null;
+  playlist: { type: string };
+}): boolean {
+  return php.type === 'digital' && !!php.filenameDigital && php.playlist.type !== 'giftcard';
+}
+
+/** Design saves (each a new PDF and a mail) per line per hour. */
+const MAX_REDESIGNS_PER_HOUR = 10;
 
 export default async function accountRoutes(
   fastify: FastifyInstance,
@@ -884,6 +902,7 @@ export default async function accountRoutes(
                     type: true,
                   },
                 },
+                extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' } },
                 bingoFiles: {
                   orderBy: {
                     createdAt: 'desc',
@@ -955,6 +974,12 @@ export default async function accountRoutes(
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
                 : payment.finalized === true && !!php.filenameDigital,
+              canChangeDesign: canChangeDesign(php),
+              // The card design, for the preview in the list. A gift card has none.
+              design: php.playlist.type === 'giftcard' ? null : pickCardDesign(php),
+              extraDesigns: php.extraDesigns.map(pickCardDesign),
+              eco: php.eco,
+              doubleSided: php.doubleSided,
               // Whether bingo is enabled for this playlist
               gamesEnabled: php.gamesEnabled,
               boxEnabled: php.boxEnabled,
@@ -1074,6 +1099,130 @@ export default async function accountRoutes(
         });
       } catch (error) {
         console.error('Error in order again:', error);
+        reply.status(500).send({ success: false, error: 'internalServerError' });
+      }
+    }
+  );
+
+  /**
+   * The signed-in customer's paid card line `paymentHasPlaylistId` (not a gift
+   * card), with what the designer and the card previews need.
+   */
+  async function ownCardLine(userId: string, paymentHasPlaylistId: unknown) {
+    const phpId = parseInt(String(paymentHasPlaylistId), 10);
+    if (!Number.isInteger(phpId)) return null;
+    const user = await prisma.user.findUnique({
+      where: { userId },
+      select: { id: true, hash: true },
+    });
+    const php = await prisma.paymentHasPlaylist.findUnique({
+      where: { id: phpId },
+      include: {
+        payment: { select: { paymentId: true, userId: true, status: true } },
+        playlist: { select: { playlistId: true, serviceType: true, type: true, name: true } },
+        extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' } },
+      },
+    });
+    if (
+      !user ||
+      !php ||
+      php.payment.userId !== user.id ||
+      php.payment.status !== 'paid' ||
+      php.playlist.type === 'giftcard'
+    ) {
+      return null;
+    }
+    return { user, php };
+  }
+
+  // A line's card design and its cards in print order: for the designer
+  // ("Change design", digital lines) and the larger view of the cards
+  fastify.get(
+    '/api/account/card-design/:paymentHasPlaylistId',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const found = await ownCardLine(
+          request.user.userId,
+          request.params.paymentHasPlaylistId
+        );
+        if (!found) {
+          reply.status(404).send({ success: false, error: 'orderNotFound' });
+          return;
+        }
+        const { php } = found;
+        const order = await Data.getInstance().getPlaylistTrackOrder(php.id);
+        const tracks = (order.tracks ?? []).slice(0, php.numberOfTracks).map((track) => ({
+          trackId: track.trackId,
+          name: track.name,
+          artist: track.artist,
+          year: track.year,
+        }));
+        reply.send({
+          success: true,
+          line: {
+            paymentHasPlaylistId: php.id,
+            playlistId: php.playlist.playlistId,
+            serviceType: php.playlist.serviceType || 'spotify',
+            name: php.playlist.name,
+            numberOfTracks: php.numberOfTracks,
+            type: php.type,
+            subType: php.subType,
+            eco: php.eco,
+            doubleSided: php.doubleSided,
+            design: pickCardDesign(php),
+            extraDesigns: php.extraDesigns.map(pickCardDesign),
+            canChangeDesign: canChangeDesign(php),
+          },
+          tracks,
+        });
+      } catch (error) {
+        console.error('Error in get card design:', error);
+        reply.status(500).send({ success: false, error: 'internalServerError' });
+      }
+    }
+  );
+
+  // Save the new design, then make the PDF again and mail it (queued, so the
+  // customer is told it arrives within a few minutes)
+  fastify.post(
+    '/api/account/card-design/:paymentHasPlaylistId',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const found = await ownCardLine(
+          request.user.userId,
+          request.params.paymentHasPlaylistId
+        );
+        if (!found || !canChangeDesign(found.php)) {
+          reply.status(404).send({ success: false, error: 'orderNotFound' });
+          return;
+        }
+        const { user, php } = found;
+
+        const saves = await cache.increment(`card-redesign:${php.id}`, 3600);
+        if (saves > MAX_REDESIGNS_PER_HOUR) {
+          reply.status(429).send({ success: false, error: 'tooManyRedesigns' });
+          return;
+        }
+
+        const saved = await Designer.getInstance().updateCardDesign(
+          php.payment.paymentId,
+          user.hash,
+          php.playlist.playlistId,
+          php.type,
+          php.subType ?? 'none',
+          request.body ?? {}
+        );
+        if (!saved) {
+          reply.status(500).send({ success: false, error: 'internalServerError' });
+          return;
+        }
+
+        await Generator.getInstance().queueDigitalRedesign(php.payment.paymentId, php.id);
+        reply.send({ success: true });
+      } catch (error) {
+        console.error('Error in save card design:', error);
         reply.status(500).send({ success: false, error: 'internalServerError' });
       }
     }

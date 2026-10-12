@@ -1026,3 +1026,134 @@ describe('finalizeOrder()', () => {
     expect(printerUpdate).toBeUndefined();
   });
 });
+
+describe('queueDigitalRedesign()', () => {
+  beforeEach(() => {
+    (gen as any).generatorQueue = null;
+  });
+
+  it('adds a redesign job for the line when the queue is available', async () => {
+    process.env['REDIS_URL'] = 'redis://localhost:6379';
+
+    await gen.queueDigitalRedesign('pay_1', 31);
+
+    expect(h.queue.addDigitalRedesignJob).toHaveBeenCalledWith('pay_1', 31);
+    expect(h.queue.addGenerateJob).not.toHaveBeenCalled();
+  });
+
+  it('runs the rebuild in the background without a queue, never failing the caller', async () => {
+    delete process.env['REDIS_URL'];
+    const rebuild = vi
+      .spyOn(gen, 'regenerateDigitalLine')
+      .mockRejectedValue(new Error('lambda down'));
+
+    await expect(gen.queueDigitalRedesign('pay_1', 31)).resolves.toBeUndefined();
+
+    expect(rebuild).toHaveBeenCalledWith('pay_1', 31);
+    expect(h.queue.addDigitalRedesignJob).not.toHaveBeenCalled();
+  });
+});
+
+describe('regenerateDigitalLine()', () => {
+  function arrange(playlistOver = {}, paymentOver = {}) {
+    const payment = makePayment(paymentOver);
+    const playlist = makePlaylist(playlistOver);
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([
+      makePlaylist({ paymentHasPlaylistId: 32, orderType: 'physical' }),
+      playlist,
+    ]);
+    h.data.getTracks.mockResolvedValue(dbTracksFixture);
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([
+      { id: 41, index: 1, filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf' },
+    ]);
+    return { payment, playlist, mollie };
+  }
+
+  it('rebuilds the QR codes and PDF of that line only, then sends the digital mail', async () => {
+    const { payment, playlist, mollie } = arrange();
+
+    await gen.regenerateDigitalLine('pay_1', 31, mollie);
+
+    // From the stored tracks: the playlist is not fetched again, nothing cleared
+    expect(h.provider.getTracks).not.toHaveBeenCalled();
+    expect((mollie as any).clearPDFs).not.toHaveBeenCalled();
+    expect(h.data.getTracks).toHaveBeenCalledWith(21, 7, 31);
+    expect(h.qr.generateQRLambda).toHaveBeenCalledTimes(dbTracksFixture.length);
+    expect(h.utils.createDir).toHaveBeenCalledWith(expect.stringMatching(/\/qr\/qsub_31$/));
+
+    expect(h.pdf.generatePDF).toHaveBeenCalledTimes(1);
+    expect(h.pdf.generatePDF).toHaveBeenCalledWith(
+      'pay_1_21_my_list_digital_cards_1.pdf',
+      playlist,
+      payment,
+      'digital',
+      'qsub',
+      false,
+      'printnbind',
+      1
+    );
+    expect(h.prisma.paymentHasPlaylistItem.update).toHaveBeenCalledWith({
+      where: { id: 41 },
+      data: { filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf' },
+    });
+    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 31 },
+      data: { filenameDigital: 'pay_1_21_my_list_digital_cards_1.pdf' },
+    });
+    // The other line of the order is left alone, the printer window too
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+
+    const mails = outbound.calls('Mail', 'sendEmail');
+    expect(mails).toHaveLength(1);
+    expect(mails[0].args).toEqual([
+      'digital',
+      payment,
+      [playlist],
+      '',
+      'pay_1_21_my_list_digital_cards_1.pdf',
+      '',
+      undefined,
+    ]);
+    expect(h.cache.acquireLock).toHaveBeenCalledWith('finalizeOrder:pay_1', 900);
+    expect(h.cache.releaseLock).toHaveBeenCalledWith('finalizeOrder:pay_1');
+  });
+
+  it('names an eco, double-sided PDF for what it now is', async () => {
+    const { mollie } = arrange({ eco: 1, doubleSided: 1 }, { countrycode: 'US' });
+
+    await gen.regenerateDigitalLine('pay_1', 31, mollie);
+
+    const [filename, , , template, , eco] = h.pdf.generatePDF.mock.calls[0];
+    expect(filename).toBe('pay_1_21_my_list_digital_cards_eco_1.pdf');
+    expect(template).toBe('digital_double_us');
+    expect(eco).toBe(true);
+    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 31 },
+      data: { filenameDigital: 'pay_1_21_my_list_digital_cards_eco_1.pdf' },
+    });
+  });
+
+  it('refuses a line that is not digital, and mails nothing', async () => {
+    const { mollie } = arrange();
+
+    await expect(gen.regenerateDigitalLine('pay_1', 32, mollie)).rejects.toThrow(
+      'has no digital line 32'
+    );
+
+    expect(h.pdf.generatePDF).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail', 'sendEmail')).toHaveLength(0);
+    expect(h.cache.releaseLock).toHaveBeenCalledWith('finalizeOrder:pay_1');
+  });
+
+  it('never makes a new QR directory for an order without one', async () => {
+    const { mollie } = arrange({}, { qrSubDir: '' });
+
+    await expect(gen.regenerateDigitalLine('pay_1', 31, mollie)).rejects.toThrow(
+      'has no QR code directory'
+    );
+
+    expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail', 'sendEmail')).toHaveLength(0);
+  });
+});

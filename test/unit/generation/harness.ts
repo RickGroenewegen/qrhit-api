@@ -91,6 +91,7 @@ export const h = {
   },
   queue: {
     addGenerateJob: vi.fn(),
+    addDigitalRedesignJob: vi.fn(),
   },
   appleStorefront: {
     setStorefront: vi.fn(),
@@ -195,6 +196,7 @@ export function resetGeneratorMocks(): void {
   h.cache.acquireLock.mockResolvedValue(true);
   h.cache.releaseLock.mockResolvedValue(undefined);
   h.queue.addGenerateJob.mockResolvedValue('job-77');
+  h.queue.addDigitalRedesignJob.mockResolvedValue('job-78');
   h.appleStorefront.setStorefront.mockReturnValue(undefined);
   h.finalCheck.runCheck.mockResolvedValue({ ok: true });
   h.suggestion.checkIfReadyForPrinter.mockResolvedValue(undefined);

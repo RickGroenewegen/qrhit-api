@@ -1176,34 +1176,8 @@ class Generator {
             });
           }
 
-          const hash = (
-            payment.paymentId +
-            '_' +
-            playlist.id +
-            '_' +
-            playlist.name.replace(/ /g, '_')
-          )
-            .replace(/[^a-zA-Z0-9_]/g, '') // Keep underscores
-            .toLowerCase();
-
-          let eco = false;
-          let ecoString = '';
-
-          if (playlist.eco == 1) {
-            eco = true;
-            ecoString = '_eco';
-          }
-
-          let digitalTemplate = 'digital';
-
-          if (playlist.doubleSided == 1) {
-            digitalTemplate = 'digital_double';
-          }
-
-          // Use US Letter format for US customers
-          if (payment.countrycode === 'US') {
-            digitalTemplate = digitalTemplate + '_us';
-          }
+          const eco = playlist.eco == 1;
+          const digitalTemplate = this.digitalTemplateFor(playlist, payment);
 
           let printerTemplate = 'printer';
 
@@ -1219,21 +1193,14 @@ class Generator {
           let firstPrinterFilename = '';
           let firstDigitalFilename = '';
 
-          // Add product type to filename to differentiate cards vs sheets
-          const productTypeString = playlist.subType === 'sheets' ? '_sheets' : '_cards';
-
           const qrSubDir = await resolveQrSubDir(
             payment.qrSubDir,
             playlist.paymentHasPlaylistId
           );
 
           for (const item of items) {
-            const filename = sanitizeFilename(
-              `${hash}_printer${productTypeString}${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
-            ).toLowerCase();
-            const filenameDigital = sanitizeFilename(
-              `${hash}_digital${productTypeString}${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
-            ).toLowerCase();
+            const filename = this.linePdfFilename(payment, playlist, 'printer', item.index);
+            const filenameDigital = this.linePdfFilename(payment, playlist, 'digital', item.index);
 
             const [generatedFilenameDigital, generatedFilename] =
               await Promise.all([
@@ -1395,6 +1362,208 @@ class Generator {
     } finally {
       // Always release the lock when done
       await this.cache.releaseLock(`finalizeOrder:${paymentId}`);
+    }
+  }
+
+  /** Template of a line's digital PDF: one or both sides, US Letter for US customers. */
+  private digitalTemplateFor(playlist: any, payment: any): string {
+    const template = playlist.doubleSided == 1 ? 'digital_double' : 'digital';
+    return payment.countrycode === 'US' ? `${template}_us` : template;
+  }
+
+  /**
+   * File name of an order line's PDF for card set `index` (1-based): payment,
+   * playlist, kind of file, cards or sheets, and eco.
+   */
+  private linePdfFilename(
+    payment: any,
+    playlist: any,
+    kind: 'printer' | 'digital',
+    index: number
+  ): string {
+    const hash = (
+      payment.paymentId +
+      '_' +
+      playlist.id +
+      '_' +
+      playlist.name.replace(/ /g, '_')
+    )
+      .replace(/[^a-zA-Z0-9_]/g, '') // Keep underscores
+      .toLowerCase();
+    const productType = playlist.subType === 'sheets' ? '_sheets' : '_cards';
+    const eco = playlist.eco == 1 ? '_eco' : '';
+    return sanitizeFilename(
+      `${hash}_${kind}${productType}${eco}_${index}.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+  }
+
+  /**
+   * Queue regenerateDigitalLine for a design the customer changed in their
+   * account. Without a queue it runs in the background here.
+   */
+  public async queueDigitalRedesign(
+    paymentId: string,
+    paymentHasPlaylistId: number
+  ): Promise<void> {
+    const queue = this.getGeneratorQueue();
+    if (!queue) {
+      this.regenerateDigitalLine(paymentId, paymentHasPlaylistId).catch((error) => {
+        this.logger.log(
+          color.red.bold(
+            `Rebuilding digital line ${white.bold(
+              String(paymentHasPlaylistId)
+            )} of payment ${white.bold(paymentId)} failed: ${white.bold(String(error))}`
+          )
+        );
+      });
+      return;
+    }
+    await queue.addDigitalRedesignJob(paymentId, paymentHasPlaylistId);
+  }
+
+  /**
+   * Rebuild the QR codes and digital PDF of one digital order line from what
+   * is stored, then send the customer the usual digital mail with the new
+   * download. For a card design changed in the customer's account, which can
+   * be months after the order.
+   *
+   * Deliberately not generate(): that deletes every PDF of the payment first,
+   * fetches the playlist from the music service again (it may have changed or
+   * gone since) and finalizes every line, the physical ones included. Here the
+   * stored track list is used, no other line is touched, and the old PDF is
+   * only replaced once the new one is written.
+   */
+  public async regenerateDigitalLine(
+    paymentId: string,
+    paymentHasPlaylistId: number,
+    mollie: Mollie = new Mollie()
+  ): Promise<void> {
+    // finalizeOrder's lock: both write this payment's PDFs. A redesign saved
+    // while another is rendering waits for it and then renders the newest.
+    const lockKey = `finalizeOrder:${paymentId}`;
+    const giveUpAt = Date.now() + 10 * 60 * 1000;
+    while (!(await this.cache.acquireLock(lockKey, 900))) {
+      if (Date.now() > giveUpAt) {
+        throw new Error(
+          `PDFs of payment ${paymentId} have been generating for over 10 minutes`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+
+    try {
+      const payment = await mollie.getPayment(paymentId);
+      const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
+      const playlist = playlists.find(
+        (line: any) => line.paymentHasPlaylistId === paymentHasPlaylistId
+      );
+      if (!payment || !playlist || playlist.orderType !== 'digital') {
+        throw new Error(
+          `Payment ${paymentId} has no digital line ${paymentHasPlaylistId}`
+        );
+      }
+      // Never a new directory: every other line of the order reads its QR
+      // codes from this one
+      if (!payment.qrSubDir) {
+        throw new Error(`Payment ${paymentId} has no QR code directory`);
+      }
+
+      this.logger.log(
+        blue.bold(
+          `Rebuilding the digital cards of ${white.bold(
+            playlist.name
+          )} for payment ${white.bold(paymentId)} after a design change`
+        )
+      );
+
+      // The QR codes carry the design's QR colour and centre logo
+      const dbTracks = await this.data.getTracks(
+        playlist.id,
+        payment.userId,
+        paymentHasPlaylistId
+      );
+      await this.generateQRCodes(playlist, dbTracks, payment.qrSubDir);
+      const qrSubDir = await resolveQrSubDir(
+        payment.qrSubDir,
+        paymentHasPlaylistId
+      );
+
+      // Lines from before card sets had rows of their own are one set
+      const items = await this.prisma.paymentHasPlaylistItem.findMany({
+        where: { paymentHasPlaylistId },
+        orderBy: { index: 'asc' },
+      });
+      const line = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { filenameDigital: true },
+      });
+      const sets: { id: number | null; index: number; filenameDigital: string | null }[] =
+        items.length > 0
+          ? items
+          : [{ id: null, index: 1, filenameDigital: line?.filenameDigital ?? null }];
+
+      const template = this.digitalTemplateFor(playlist, payment);
+      const replaced: string[] = [];
+      let firstFilename = '';
+      for (const set of sets) {
+        // Eco or a renamed playlist changes the name
+        const filename = await this.pdf.generatePDF(
+          this.linePdfFilename(payment, playlist, 'digital', set.index),
+          playlist,
+          payment,
+          template,
+          qrSubDir,
+          playlist.eco == 1,
+          playlist.printerType || DEFAULT_PRINTER_TYPE,
+          set.index
+        );
+        if (set.filenameDigital && set.filenameDigital !== filename) {
+          replaced.push(set.filenameDigital);
+        }
+        if (set.id !== null) {
+          await this.prisma.paymentHasPlaylistItem.update({
+            where: { id: set.id },
+            data: { filenameDigital: filename },
+          });
+        }
+        if (set.index === 1) {
+          firstFilename = filename;
+        }
+      }
+      if (firstFilename) {
+        await this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylistId },
+          data: { filenameDigital: firstFilename },
+        });
+      }
+      for (const filename of replaced) {
+        await fs
+          .unlink(`${process.env['PUBLIC_DIR']}/pdf/${filename}`)
+          .catch(() => undefined);
+      }
+
+      const bingoDownloadUrl = playlist.gamesEnabled
+        ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
+        : undefined;
+      await this.mail.sendEmail(
+        'digital',
+        payment,
+        [playlist],
+        '',
+        firstFilename,
+        '',
+        bingoDownloadUrl
+      );
+
+      this.logger.log(
+        color.green.bold(
+          `Mailed the new digital cards of ${white.bold(
+            playlist.name
+          )} for payment ${white.bold(paymentId)}`
+        )
+      );
+    } finally {
+      await this.cache.releaseLock(lockKey);
     }
   }
 

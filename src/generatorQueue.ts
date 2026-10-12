@@ -10,6 +10,9 @@ import Translation from './translation';
 
 interface GenerateJobData {
   paymentId: string;
+  // Set on a 'redesignDigital' job: the digital line whose design changed
+  // (Generator.regenerateDigitalLine). Its other fields are unused.
+  paymentHasPlaylistId?: number;
   ip: string;
   refreshPlaylists: string;
   forceFinalize?: boolean;
@@ -285,6 +288,30 @@ class GeneratorQueue {
     return job.id || '';
   }
 
+  /** Rebuild and mail one digital line whose customer changed its card design. */
+  public async addDigitalRedesignJob(
+    paymentId: string,
+    paymentHasPlaylistId: number
+  ): Promise<string> {
+    const job = await this.queue.add(
+      'redesignDigital',
+      { paymentId, paymentHasPlaylistId, ip: '', refreshPlaylists: '' },
+      { priority: 1 }
+    );
+
+    this.logger.log(
+      blue.bold(
+        `Added digital redesign job for payment ${white.bold(
+          paymentId
+        )} line ${white.bold(String(paymentHasPlaylistId))} with job ID: ${white.bold(
+          job.id || 'unknown'
+        )}`
+      )
+    );
+
+    return job.id || '';
+  }
+
   public async initializeWorkers(concurrency: number = 2): Promise<void> {
     this.logger.log(
       blue.bold(
@@ -326,16 +353,23 @@ class GeneratorQueue {
 
             await job.updateProgress({ status: 'processing', workerId: i + 1 });
 
-            await generator.generate(
-              paymentId,
-              ip,
-              refreshPlaylists,
-              mollie,
-              forceFinalize || false,
-              skipMainMail || false,
-              onlyProductMail || false,
-              userAgent || ''
-            );
+            if (job.name === 'redesignDigital') {
+              await generator.regenerateDigitalLine(
+                paymentId,
+                job.data.paymentHasPlaylistId as number
+              );
+            } else {
+              await generator.generate(
+                paymentId,
+                ip,
+                refreshPlaylists,
+                mollie,
+                forceFinalize || false,
+                skipMainMail || false,
+                onlyProductMail || false,
+                userAgent || ''
+              );
+            }
 
             await job.updateProgress({ status: 'completed', workerId: i + 1 });
 
