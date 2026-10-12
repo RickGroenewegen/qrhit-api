@@ -1,9 +1,8 @@
 {{#> mail-layout title=productName preheader=translations.greatNewsDigital }}
 <p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
 <p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.greatNewsDigital }}</p>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.weHopeYouHaveFunDigital }}</p>
-<!-- Download buttons -->
-<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 4px 0 8px;">
+{{!-- Download first, right under "click the button below"; corrections as the quieter second choice --}}
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 4px 0 10px;">
     <tr>
         <td align="center" style="padding-bottom: 14px;">{{> mail-btn-pop href=digitalDownloadLink label=translations.downloadButton }}</td>
     </tr>
@@ -12,14 +11,12 @@
     </tr>
     {{#if sendPhysicalLink}}
     <tr>
-        <td align="center" style="padding-bottom: 14px;">{{> mail-btn-disco href=downloadLink label=translations.physicalDownloadButton }}</td>
+        <td align="center" style="padding-bottom: 14px;">{{> mail-btn-outline href=downloadLink label=translations.physicalDownloadButton }}</td>
     </tr>
     {{/if}}
 </table>
-{{> games-section }}
-{{> app-design-section }}
-<!-- Order information -->
-<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin: 24px 0 0;">
+<p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.weHopeYouHaveFunDigital }}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
     {{> mail-th label=translations.orderInformation }}
     {{> mail-tr label=translations.orderNumber value=orderId }}
     {{#each playlists}}
@@ -32,6 +29,8 @@
     {{> mail-tr label=translations.fullname value=fullname }}
     {{> mail-tr label=translations.email value=email }}
 </table>
+{{> games-section }}
+{{> app-design-section }}
 {{> promo-cta }}
 {{> mail-closing }}
 {{/mail-layout}}
