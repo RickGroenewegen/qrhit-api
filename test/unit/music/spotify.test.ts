@@ -33,6 +33,7 @@ const holder = vi.hoisted(() => {
       searchTracks: vi.fn(),
       createOrUpdatePlaylist: vi.fn(async () => ({ success: true })),
       deletePlaylist: vi.fn(async () => ({ success: true })),
+      followPlaylist: vi.fn(async () => ({ success: true })),
       getTokensFromAuthCode: vi.fn(async () => 'token-123'),
       createAuthorizationUrl: vi.fn(async () => 'https://auth.example'),
     },
@@ -967,7 +968,7 @@ describe('Spotify.searchTracks', () => {
 // ---------------------------------------------------------------------------
 
 describe('Spotify delegation methods', () => {
-  it('delegates createOrUpdatePlaylist/deletePlaylist/auth to the v1 api', async () => {
+  it('delegates createOrUpdatePlaylist/deletePlaylist/followPlaylist/auth to the v1 api', async () => {
     await spotify.createOrUpdatePlaylist('My list', ['t1', 't2']);
     expect(holder.spotifyApi.createOrUpdatePlaylist).toHaveBeenCalledWith(
       'My list',
@@ -976,6 +977,9 @@ describe('Spotify delegation methods', () => {
 
     await spotify.deletePlaylist('pl-del');
     expect(holder.spotifyApi.deletePlaylist).toHaveBeenCalledWith('pl-del');
+
+    await spotify.followPlaylist('pl-back');
+    expect(holder.spotifyApi.followPlaylist).toHaveBeenCalledWith('pl-back');
 
     expect(await spotify.getTokensFromAuthCode('code1')).toBe('token-123');
     expect(holder.spotifyApi.getTokensFromAuthCode).toHaveBeenCalledWith(

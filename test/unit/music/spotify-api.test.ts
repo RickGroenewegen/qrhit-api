@@ -26,6 +26,7 @@ const h = vi.hoisted(() => {
   const axiosGet = vi.fn();
   const axiosPost = vi.fn();
   const axiosDelete = vi.fn();
+  const axiosPut = vi.fn();
   const axiosRequest = vi.fn(); // bare axios(config) calls
 
   return {
@@ -39,6 +40,7 @@ const h = vi.hoisted(() => {
     axiosGet,
     axiosPost,
     axiosDelete,
+    axiosPut,
     axiosRequest,
   };
 });
@@ -48,6 +50,7 @@ vi.mock('axios', () => {
   axiosFn.get = h.axiosGet;
   axiosFn.post = h.axiosPost;
   axiosFn.delete = h.axiosDelete;
+  axiosFn.put = h.axiosPut;
   axiosFn.isAxiosError = (e: any) => e?.isAxiosError === true;
   return { default: axiosFn };
 });
@@ -143,6 +146,7 @@ beforeEach(() => {
   h.axiosGet.mockReset();
   h.axiosPost.mockReset();
   h.axiosDelete.mockReset();
+  h.axiosPut.mockReset();
   h.axiosRequest.mockReset();
 });
 
@@ -882,5 +886,40 @@ describe('SpotifyApi.deletePlaylist', () => {
       error: 'Spotify API error: 429 Too Many Requests. Retry after: 1 seconds.',
       retryAfter: 1,
     });
+  });
+});
+
+describe('SpotifyApi.followPlaylist', () => {
+  beforeEach(() => seedValidToken());
+
+  it('follows (restores) the playlist via PUT /followers', async () => {
+    h.axiosPut.mockResolvedValueOnce({});
+
+    const res = await makeApi().followPlaylist('pl1');
+
+    expect(res).toEqual({ success: true });
+    expect(h.axiosPut).toHaveBeenCalledWith(
+      'https://api.spotify.com/v1/playlists/pl1/followers',
+      { public: true },
+      { headers: { Authorization: 'Bearer valid-token' } }
+    );
+  });
+
+  it('maps a 404 to "Spotify resource not found" without retrying', async () => {
+    h.axiosPut.mockRejectedValueOnce(axiosError(404));
+    const res = await makeApi().followPlaylist('pl1');
+    expect(res).toEqual({
+      success: false,
+      error: 'Spotify resource not found',
+      needsReAuth: false,
+    });
+    expect(h.axiosPut).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for re-auth without calling Spotify when there is no token', async () => {
+    h.settingsStore.clear();
+    const res = await makeApi().followPlaylist('pl1');
+    expect(res).toMatchObject({ success: false, needsReAuth: true });
+    expect(h.axiosPut).not.toHaveBeenCalled();
   });
 });

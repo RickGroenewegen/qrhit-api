@@ -1459,6 +1459,17 @@ class Spotify {
   }
 
   /**
+   * Public method to follow a Spotify playlist, which restores one of our
+   * own playlists that deletePlaylist unfollowed.
+   * Delegates to the SpotifyApi instance.
+   * @param playlistId The Spotify playlist ID to follow/restore.
+   * @returns {Promise<ApiResult>} Result of the follow operation.
+   */
+  public async followPlaylist(playlistId: string): Promise<ApiResult> {
+    return this.spotifyApi.followPlaylist(playlistId);
+  }
+
+  /**
    * Public method to exchange an authorization code for tokens.
    * Delegates to the SpotifyApi instance.
    * @param authCode The authorization code from Spotify callback.

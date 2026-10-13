@@ -228,7 +228,9 @@ vi.mock('../../../src/services/MusicServiceRegistry', () => ({
   default: { getInstance: () => ({ getProviderByString: () => providerMock }) },
 }));
 
+const aiPlaylistMock = vi.hoisted(() => ({ restoreCleanedPlaylists: vi.fn() }));
 vi.mock('../../../src/aiPlaylist', () => ({
+  default: { getInstance: () => aiPlaylistMock },
   aiPlaylistPromptKey: (spotifyId: string) => `ai:${spotifyId}`,
 }));
 
@@ -1258,6 +1260,54 @@ describe('getPaymentUri', () => {
         .create[0];
     expect(row.aiPrompt).toBe('songs about rain');
     expect(cacheMock.del).toHaveBeenCalledWith('ai:sp1');
+  });
+
+  // A basket lives only in the browser, so an AI list can be ordered after
+  // the nightly cleanup removed it (order 100009165).
+  it('restores cleaned AI playlists of the physical lines, once per playlist', async () => {
+    const params = makeParams({
+      orderType: 'physical',
+      cart: {
+        items: [
+          makeItem({ type: 'physical' }),
+          makeItem({ type: 'physical', amount: 2 }),
+          makeItem({ type: 'digital', playlistId: 'sp-digital' }),
+        ],
+      },
+    });
+
+    await mollie.getPaymentUri(params, IP);
+
+    expect(aiPlaylistMock.restoreCleanedPlaylists).toHaveBeenCalledTimes(1);
+    expect(aiPlaylistMock.restoreCleanedPlaylists).toHaveBeenCalledWith(['sp1']);
+    // Only once the order exists, so the cleanup's print guard sees it.
+    expect(
+      prismaMock.payment.create.mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      aiPlaylistMock.restoreCleanedPlaylists.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('restores nothing for a digital-only order', async () => {
+    await mollie.getPaymentUri(makeParams(), IP);
+    expect(aiPlaylistMock.restoreCleanedPlaylists).not.toHaveBeenCalled();
+  });
+
+  it('still completes the checkout when restoring a playlist fails', async () => {
+    aiPlaylistMock.restoreCleanedPlaylists.mockRejectedValueOnce(
+      new Error('Spotify down')
+    );
+
+    const result = await mollie.getPaymentUri(
+      makeParams({
+        orderType: 'physical',
+        cart: { items: [makeItem({ type: 'physical' })] },
+      }),
+      IP
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.paymentUri).toBe('https://pay.mollie.test/tr_test123');
   });
 
   it('records a QRGames purchase and box pricing for cards with games + boxes', async () => {

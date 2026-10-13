@@ -49,6 +49,10 @@ export const AI_PLAYLIST_JOB_KEY = 'aiPlaylistJob';
 export const aiPlaylistJobKey = (jobId: string) =>
   `${AI_PLAYLIST_JOB_KEY}:${jobId}`;
 
+// Payment statuses of an order that is still going: unpaid but payable, or
+// paid. canceled / expired / failed orders no longer hold a playlist.
+const ONGOING_PAYMENT_STATUSES = ['open', 'pending', 'authorized', 'paid'];
+
 export interface AIPlaylistSnapshot {
   jobId: string;
   status: 'running' | 'success' | 'error';
@@ -143,8 +147,8 @@ class AIPlaylistGenerator {
 
   /**
    * Schedule a daily sweep that removes AI-generated Spotify playlists
-   * older than three days which were never purchased (no paid, non-test
-   * payment attached). Only the cluster primary on the main server (or
+   * older than three days, except those in a physical order that is not
+   * at the printer yet. Only the cluster primary on the main server (or
    * dev) runs the cron so we don't multi-fire across workers/servers.
    */
   private scheduleCleanup(): void {
@@ -158,7 +162,7 @@ class AIPlaylistGenerator {
         if (!isMain && !dev) return;
         this.cleanupJob = new CronJob('30 3 * * *', async () => {
           try {
-            await this.cleanupUnpurchasedPlaylists();
+            await this.cleanupOldPlaylists();
           } catch (err) {
             this.logger.log(
               color.red.bold(`[AI cleanup] crashed: ${err}`)
@@ -180,13 +184,14 @@ class AIPlaylistGenerator {
    *   • are at least 3 days old,
    *   • completed successfully (status='success'),
    *   • have a Spotify playlist ID we still know about,
-   *   • were never purchased — no `playlists` row with the same Spotify id
-   *     has a paid, non-test payment attached (same definition the admin
-   *     AI-creations dashboard uses for its "Purchased" column).
+   *   • are not in a physical order that is still going (paid or payable)
+   *     and not at the printer yet. Generating that order reads the
+   *     playlist; a digital order is delivered at payment and a printed
+   *     one no longer needs it, so neither keeps it.
    * Delete each from the app-owned Spotify account and mark the
    * AISearch row so we don't try again.
    */
-  public async cleanupUnpurchasedPlaylists(): Promise<{
+  public async cleanupOldPlaylists(): Promise<{
     scanned: number;
     deleted: number;
     skipped: number;
@@ -200,15 +205,15 @@ class AIPlaylistGenerator {
 
     this.logger.log(
       color.blue.bold(
-        `[AI cleanup] scanning for unpurchased AI playlists older than ${white.bold(
+        `[AI cleanup] scanning for AI playlists older than ${white.bold(
           cutoff.toISOString()
         )}`
       )
     );
 
     // Find AISearch rows that look like prime candidates. We re-check
-    // each one's purchase status individually since the `playlists`
-    // table is keyed on `playlistId` (Spotify id), not a foreign key.
+    // each one's orders individually since the `playlists` table is
+    // keyed on `playlistId` (Spotify id), not a foreign key.
     const candidates = await this.prisma.aISearch.findMany({
       where: {
         status: 'success',
@@ -231,18 +236,22 @@ class AIPlaylistGenerator {
     for (const row of candidates) {
       const spId = row.spotifyPlaylistId!;
       try {
-        // Purchase guard: skip (never delete) if this playlist was bought.
-        // "Purchased" = a `playlists` row with the same Spotify id that has
-        // at least one paid, non-test payment attached — identical to the
-        // admin AI-creations dashboard's "Purchased" column.
-        const purchased = await this.prisma.playlist.findFirst({
+        // Print guard: skip (never delete) while the playlist is in a
+        // physical order that is still going and not at the printer yet.
+        // Only the Print&Bind send sets sentToPrinter, so a list in a
+        // Schneiders / Tromp order is kept for good.
+        const awaitingPrint = await this.prisma.paymentHasPlaylist.findFirst({
           where: {
-            playlistId: spId,
-            Payment: { some: { payment: { status: 'paid' } } },
+            type: 'physical',
+            playlist: { playlistId: spId },
+            payment: {
+              sentToPrinter: false,
+              status: { in: ONGOING_PAYMENT_STATUSES },
+            },
           },
           select: { id: true },
         });
-        if (purchased) {
+        if (awaitingPrint) {
           skipped += 1;
           continue;
         }
@@ -263,7 +272,7 @@ class AIPlaylistGenerator {
         deleted += 1;
         this.logger.log(
           color.green.bold(
-            `[AI cleanup] deleted unpurchased playlist ${white.bold(spId)} (job ${white.bold(row.jobId)})`
+            `[AI cleanup] deleted playlist ${white.bold(spId)} (job ${white.bold(row.jobId)})`
           )
         );
       } catch (err) {
@@ -283,6 +292,65 @@ class AIPlaylistGenerator {
     );
 
     return { scanned, deleted, skipped, errors };
+  }
+
+  /**
+   * Bring back AI playlists the cleanup already removed, for lists that
+   * just went into a physical order. A basket lives only in the browser,
+   * so a list can sit in one past the cleanup and still be ordered (order
+   * 100009165). Following our own unfollowed playlist restores it on
+   * Spotify; clearing the 'cleaned:' marker hands it back to the cleanup,
+   * which then keeps it until the order is at the printer. Never throws:
+   * a failed restore must not fail the checkout.
+   */
+  public async restoreCleanedPlaylists(
+    spotifyPlaylistIds: string[]
+  ): Promise<number> {
+    if (spotifyPlaylistIds.length === 0) return 0;
+    let rows: { id: number; spotifyPlaylistId: string | null }[];
+    try {
+      rows = await this.prisma.aISearch.findMany({
+        where: {
+          spotifyPlaylistId: { in: spotifyPlaylistIds },
+          errorMessage: { startsWith: 'cleaned:' },
+        },
+        select: { id: true, spotifyPlaylistId: true },
+      });
+    } catch (err) {
+      this.logger.log(color.red.bold(`[AI cleanup] restore lookup failed: ${err}`));
+      return 0;
+    }
+
+    let restored = 0;
+    for (const row of rows) {
+      const spId = row.spotifyPlaylistId!;
+      try {
+        const result = await this.spotify.followPlaylist(spId);
+        if (!result?.success) {
+          this.logger.log(
+            color.yellow.bold(
+              `[AI cleanup] could not restore ${white.bold(spId)}: ${result?.error || 'unknown'}`
+            )
+          );
+          continue;
+        }
+        await this.prisma.aISearch.update({
+          where: { id: row.id },
+          data: { errorMessage: null },
+        });
+        restored += 1;
+        this.logger.log(
+          color.green.bold(
+            `[AI cleanup] restored ordered playlist ${white.bold(spId)}`
+          )
+        );
+      } catch (err) {
+        this.logger.log(
+          color.red.bold(`[AI cleanup] error restoring ${spId}: ${err}`)
+        );
+      }
+    }
+    return restored;
   }
 
   public async run(data: AIPlaylistJobData): Promise<void> {

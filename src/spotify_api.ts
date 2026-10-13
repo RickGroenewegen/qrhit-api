@@ -1316,6 +1316,59 @@ class SpotifyApi {
       return this.handleApiError(error, `deleting playlist ${playlistId}`);
     }
   }
+
+  /**
+   * Follows a playlist again. For one of our own playlists that
+   * deletePlaylist unfollowed, this restores it: Spotify never deletes a
+   * playlist, and recovering one is the same as its owner following it.
+   * @param playlistId The Spotify playlist ID to follow/restore.
+   * @returns {Promise<ApiResult>} Result of the follow operation.
+   */
+  public async followPlaylist(playlistId: string): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
+    }
+
+    try {
+      const result = await this.executeWithRetry(async () => {
+        await axios.put(
+          `https://api.spotify.com/v1/playlists/${playlistId}/followers`,
+          { public: true },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        return { success: true };
+      }, `following/restoring playlist ${playlistId}`);
+
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (
+        result &&
+        typeof result === 'object' &&
+        'success' in result &&
+        !(result as any).success
+      ) {
+        return result as ApiResult;
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Successfully followed/restored playlist ${color.white.bold(
+            playlistId
+          )}`
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      return this.handleApiError(error, `following playlist ${playlistId}`);
+    }
+  }
 }
 
 export default SpotifyApi;

@@ -19,11 +19,12 @@ const h = vi.hoisted(() => {
     createMock: vi.fn(),
     prismaMock: {
       aISearch: { create: vi.fn(), update: vi.fn(), findMany: vi.fn() },
-      playlist: { findFirst: vi.fn() },
+      paymentHasPlaylist: { findFirst: vi.fn() },
       $queryRaw: vi.fn(),
     },
     spotifyCreate: vi.fn(),
     spotifyDelete: vi.fn(),
+    spotifyFollow: vi.fn(),
     wsProgress: vi.fn(),
     wsComplete: vi.fn(),
     wsError: vi.fn(),
@@ -62,6 +63,7 @@ vi.mock('../../../src/spotify', () => ({
     getInstance: () => ({
       createOrUpdatePlaylist: h.spotifyCreate,
       deletePlaylist: h.spotifyDelete,
+      followPlaylist: h.spotifyFollow,
     }),
   },
 }));
@@ -169,10 +171,11 @@ beforeEach(() => {
   h.prismaMock.aISearch.create.mockReset().mockResolvedValue({});
   h.prismaMock.aISearch.update.mockReset().mockResolvedValue({});
   h.prismaMock.aISearch.findMany.mockReset();
-  h.prismaMock.playlist.findFirst.mockReset();
+  h.prismaMock.paymentHasPlaylist.findFirst.mockReset();
   h.prismaMock.$queryRaw.mockReset();
   h.spotifyCreate.mockReset();
   h.spotifyDelete.mockReset();
+  h.spotifyFollow.mockReset();
   h.wsProgress.mockClear();
   h.wsComplete.mockClear();
   h.wsError.mockClear();
@@ -1512,28 +1515,43 @@ describe('getSnapshot', () => {
 });
 
 // ---------------------------------------------------------------------------
-// cleanupUnpurchasedPlaylists
+// cleanupOldPlaylists
 // ---------------------------------------------------------------------------
 
-describe('cleanupUnpurchasedPlaylists', () => {
-  it('deletes unpurchased playlists, skips purchased ones and counts failures', async () => {
+describe('cleanupOldPlaylists', () => {
+  it('deletes playlists, skips those awaiting print and counts failures', async () => {
     h.prismaMock.aISearch.findMany.mockResolvedValue([
       { id: 1, jobId: 'j-del', spotifyPlaylistId: 'sp-del' },
-      { id: 2, jobId: 'j-bought', spotifyPlaylistId: 'sp-bought' },
+      { id: 2, jobId: 'j-print', spotifyPlaylistId: 'sp-print' },
       { id: 3, jobId: 'j-fail', spotifyPlaylistId: 'sp-fail' },
       { id: 4, jobId: 'j-crash', spotifyPlaylistId: 'sp-crash' },
     ]);
-    h.prismaMock.playlist.findFirst.mockImplementation(async ({ where }: any) => {
-      if (where.playlistId === 'sp-bought') return { id: 99 };
-      if (where.playlistId === 'sp-crash') throw new Error('db hiccup');
+    h.prismaMock.paymentHasPlaylist.findFirst.mockImplementation(async ({ where }: any) => {
+      if (where.playlist.playlistId === 'sp-print') return { id: 99 };
+      if (where.playlist.playlistId === 'sp-crash') throw new Error('db hiccup');
       return null;
     });
     h.spotifyDelete.mockImplementation(async (id: string) =>
       id === 'sp-del' ? { success: true } : { success: false, error: 'denied' }
     );
 
-    const result = await gen.cleanupUnpurchasedPlaylists();
+    const result = await gen.cleanupOldPlaylists();
     expect(result).toEqual({ scanned: 4, deleted: 1, skipped: 1, errors: 2 });
+
+    // Print guard: a physical line of an order that is still going (paid or
+    // payable) and not at the printer yet. Digital lines and printed orders
+    // do not keep a playlist.
+    expect(h.prismaMock.paymentHasPlaylist.findFirst).toHaveBeenCalledWith({
+      where: {
+        type: 'physical',
+        playlist: { playlistId: 'sp-del' },
+        payment: {
+          sentToPrinter: false,
+          status: { in: ['open', 'pending', 'authorized', 'paid'] },
+        },
+      },
+      select: { id: true },
+    });
 
     // Candidate query: successful, at least 3 days old, not yet cleaned.
     const where = h.prismaMock.aISearch.findMany.mock.calls[0][0].where;
@@ -1548,7 +1566,7 @@ describe('cleanupUnpurchasedPlaylists', () => {
       { NOT: { errorMessage: { startsWith: 'cleaned:' } } },
     ]);
 
-    // Only the unpurchased ones reach Spotify; the purchased one never does.
+    // The one awaiting print never reaches Spotify.
     expect(h.spotifyDelete.mock.calls.map((c) => c[0])).toEqual(['sp-del', 'sp-fail']);
 
     // Only the successful deletion is marked with the cleaned: sentinel.
@@ -1561,7 +1579,7 @@ describe('cleanupUnpurchasedPlaylists', () => {
 
   it('returns all zeros when there are no candidates', async () => {
     h.prismaMock.aISearch.findMany.mockResolvedValue([]);
-    expect(await gen.cleanupUnpurchasedPlaylists()).toEqual({
+    expect(await gen.cleanupOldPlaylists()).toEqual({
       scanned: 0,
       deleted: 0,
       skipped: 0,
@@ -1569,5 +1587,68 @@ describe('cleanupUnpurchasedPlaylists', () => {
     });
     expect(h.spotifyDelete).not.toHaveBeenCalled();
     expect(h.prismaMock.aISearch.update).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// restoreCleanedPlaylists
+// ---------------------------------------------------------------------------
+
+describe('restoreCleanedPlaylists', () => {
+  it('follows cleaned playlists again and hands them back to the cleanup', async () => {
+    h.prismaMock.aISearch.findMany.mockResolvedValue([
+      { id: 7, spotifyPlaylistId: 'sp-back' },
+      { id: 8, spotifyPlaylistId: 'sp-refused' },
+    ]);
+    h.spotifyFollow.mockImplementation(async (id: string) =>
+      id === 'sp-back' ? { success: true } : { success: false, error: 'denied' }
+    );
+
+    expect(
+      await gen.restoreCleanedPlaylists(['sp-back', 'sp-refused', 'sp-never-cleaned'])
+    ).toBe(1);
+
+    // Only rows the cleanup marked; a list it never removed is left alone.
+    expect(h.prismaMock.aISearch.findMany).toHaveBeenCalledWith({
+      where: {
+        spotifyPlaylistId: { in: ['sp-back', 'sp-refused', 'sp-never-cleaned'] },
+        errorMessage: { startsWith: 'cleaned:' },
+      },
+      select: { id: true, spotifyPlaylistId: true },
+    });
+    expect(h.spotifyFollow.mock.calls.map((c) => c[0])).toEqual(['sp-back', 'sp-refused']);
+
+    // The marker is cleared only for the one Spotify restored.
+    expect(h.prismaMock.aISearch.update).toHaveBeenCalledTimes(1);
+    expect(h.prismaMock.aISearch.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { errorMessage: null },
+    });
+  });
+
+  it('does nothing for an empty list', async () => {
+    expect(await gen.restoreCleanedPlaylists([])).toBe(0);
+    expect(h.prismaMock.aISearch.findMany).not.toHaveBeenCalled();
+    expect(h.spotifyFollow).not.toHaveBeenCalled();
+  });
+
+  it('never throws, so a failed restore cannot fail a checkout', async () => {
+    h.prismaMock.aISearch.findMany.mockRejectedValue(new Error('db down'));
+    expect(await gen.restoreCleanedPlaylists(['sp-x'])).toBe(0);
+
+    // One playlist failing does not stop the next.
+    h.prismaMock.aISearch.findMany.mockResolvedValue([
+      { id: 9, spotifyPlaylistId: 'sp-y' },
+      { id: 10, spotifyPlaylistId: 'sp-z' },
+    ]);
+    h.spotifyFollow
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ success: true });
+    expect(await gen.restoreCleanedPlaylists(['sp-y', 'sp-z'])).toBe(1);
+    expect(h.prismaMock.aISearch.update).toHaveBeenCalledTimes(1);
+    expect(h.prismaMock.aISearch.update).toHaveBeenCalledWith({
+      where: { id: 10 },
+      data: { errorMessage: null },
+    });
   });
 });

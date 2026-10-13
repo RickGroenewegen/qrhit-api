@@ -2818,6 +2818,30 @@ class Mollie {
         }
       }
 
+      // A basket lives only in the browser, so an AI list in it may already
+      // have been removed by the nightly cleanup. Bring it back now that a
+      // physical order holds it; the cleanup keeps it until it is printed.
+      const physicalSpotifyIds = Array.from(
+        new Set(
+          (params.cart.items || [])
+            .filter((it: any) => it?.type == 'physical')
+            .map((it: any) => it?.playlistId)
+            .filter((id: any) => typeof id === 'string' && id.length > 0)
+        )
+      ) as string[];
+      if (physicalSpotifyIds.length > 0) {
+        try {
+          const { default: AIPlaylistGenerator } = await import('./aiPlaylist');
+          await AIPlaylistGenerator.getInstance().restoreCleanedPlaylists(
+            physicalSpotifyIds
+          );
+        } catch (err) {
+          this.logger.log(
+            color.yellow.bold(`Failed to restore cleaned AI playlists: ${err}`)
+          );
+        }
+      }
+
       // Log QRGames purchase if any playlists have gamesEnabled
       const gamesPlaylists = playlists.filter((p: any) => p.gamesEnabled === true);
       if (gamesPlaylists.length > 0) {
