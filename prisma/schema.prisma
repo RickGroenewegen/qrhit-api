@@ -289,6 +289,7 @@ model User {
   Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
   CompanyEvent              CompanyEvent[]
+  ContactForLists           CompanyList[]    @relation("CompanyListContact")
   GameRoom                  GameRoom[]
   ResellerMedia             ResellerMedia[]
   GamesPurchase             GamesPurchase[]
@@ -1310,10 +1311,21 @@ model CompanyList {
   approverName            String?
   specialNotes            String?   @db.Text
   internalNotes           String?   @db.Text
+  // The admin's Order status board (src/orderBoard.ts). Not `status`, which
+  // is the old voting wizard's and is rewritten by the API itself.
+  orderStatus             String    @default("interest") @db.VarChar(20)
+  // When it last moved; null = never moved by hand (the backfill's guess).
+  orderStatusAt           DateTime?
+  orderPosition           Int       @default(0)
+  orderNote               String?   @db.VarChar(500)
+  orderArchived           Boolean   @default(false)
+  // The primary contact: one of the company's users.
+  contactUserId           Int?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
   Company                    Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ContactUser                User?                        @relation("CompanyListContact", fields: [contactUserId], references: [id], onDelete: SetNull)
   CompanyListSubmission      CompanyListSubmission[]
   CompanyListQuestion        CompanyListQuestion[]
   Playlist                   Playlist?                    @relation(fields: [playlistId], references: [id], onDelete: SetNull)

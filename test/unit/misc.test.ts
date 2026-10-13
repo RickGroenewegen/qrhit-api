@@ -168,16 +168,22 @@ describe('getPDFFilepath', () => {
     expect(deps.utils.isTrustedIp).toHaveBeenCalledWith('1.2.3.4');
   });
 
-  it('returns cached result (parsed from JSON) when cache hit', async () => {
-    const cached = { fileName: 'cached.pdf', filePath: '/some/path/cached.pdf' };
+  it('reads the current file from the database, never a cached path', async () => {
+    // A cached path outlived a regeneration that renamed the file, and
+    // skipped the user hash check (order 100008211)
+    process.env['PUBLIC_DIR'] = '/public';
+    const stale = { fileName: 'old.pdf', filePath: '/public/pdf/deleted_file.pdf' };
+    const dbRow = { filename: '', filenameDigital: 'renamed_file.pdf', name: 'My Playlist' };
     const deps = makeDeps({
-      utils: { isTrustedIp: vi.fn(() => true), generateFilename: vi.fn() },
-      cache: { get: vi.fn(async () => JSON.stringify(cached)), set: vi.fn(), del: vi.fn(), delPattern: vi.fn(), executeCommand: vi.fn() },
+      utils: { isTrustedIp: vi.fn(() => true), generateFilename: vi.fn(() => 'My_Playlist') },
+      cache: { get: vi.fn(async () => JSON.stringify(stale)), set: vi.fn(), del: vi.fn(), delPattern: vi.fn(), executeCommand: vi.fn() },
+      prisma: { $queryRaw: vi.fn(async () => [dbRow]) },
     });
     const result = await getPDFFilepath(deps, '10.0.0.1', 'PAY1', 'HASH1', 'PL1', 'digital');
-    expect(result).toEqual(cached);
-    // DB should not be queried
-    expect(deps.prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(result!.filePath).toBe('/public/pdf/renamed_file.pdf');
+    expect(deps.prisma.$queryRaw).toHaveBeenCalledOnce();
+    expect(deps.cache.get).not.toHaveBeenCalled();
+    expect(deps.cache.set).not.toHaveBeenCalled();
   });
 
   it('returns null when DB query returns empty array', async () => {
@@ -216,23 +222,6 @@ describe('getPDFFilepath', () => {
     expect(result).not.toBeNull();
     expect(result!.fileName).toBe('My_Playlist.pdf');
     expect(result!.filePath).toBe('/public/pdf/digital_file.pdf');
-  });
-
-  it('stores result in cache after DB fetch and returns it', async () => {
-    process.env['PUBLIC_DIR'] = '/public';
-    const dbRow = { filename: 'pfile.pdf', filenameDigital: 'dfile.pdf', name: 'Playlist A' };
-    const setCacheFn = vi.fn(async () => undefined);
-    const deps = makeDeps({
-      utils: { isTrustedIp: vi.fn(() => true), generateFilename: vi.fn(() => 'Playlist_A') },
-      cache: { get: vi.fn(async () => null), set: setCacheFn, del: vi.fn(), delPattern: vi.fn(), executeCommand: vi.fn() },
-      prisma: { $queryRaw: vi.fn(async () => [dbRow]) },
-    });
-    const result = await getPDFFilepath(deps, '10.0.0.1', 'PAY2', 'HASH2', 'PL2', 'digital');
-    expect(result).not.toBeNull();
-    expect(setCacheFn).toHaveBeenCalledOnce();
-    const [cacheKey, cacheValue] = setCacheFn.mock.calls[0];
-    expect(cacheKey).toContain('PAY2');
-    expect(JSON.parse(cacheValue)).toEqual(result);
   });
 });
 

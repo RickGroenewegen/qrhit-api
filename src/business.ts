@@ -487,7 +487,10 @@ class Business {
    * @param listId Optional company list ID to get specific list info
    * @returns Object containing company information and list questions
    */
-  public async getState(listId?: number): Promise<any> {
+  public async getState(
+    listId?: number,
+    options: { includeOrderBoard?: boolean } = {}
+  ): Promise<any> {
     try {
       // Get questions and ranking for the list if listId is provided
       let questions: any[] = [];
@@ -544,6 +547,9 @@ class Business {
           ...Object.fromEntries(DELIVERY_FIELDS.map((f) => [f, true])),
           desiredDeliveryDate: true,
           deliveryAsap: true,
+          ...(options.includeOrderBoard
+            ? { orderStatus: true, contactUserId: true, orderNote: true }
+            : {}),
         };
         // Add all description fields for each locale
         for (const locale of availableLocales) {

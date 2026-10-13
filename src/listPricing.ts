@@ -91,6 +91,37 @@ export function variantCalculationColumn(
   return variant === 'qrsong' ? 'calculationTromp' : 'calculationSchneider';
 }
 
+/**
+ * The saved calculator state of the list's own printer (quantity, cardCount
+ * or printingType, isReseller, pricing...), or {} when there is none.
+ */
+export function listCalculationState(list: {
+  printer?: string | null;
+  calculationTromp?: string | null;
+  calculationSchneider?: string | null;
+}): Record<string, any> {
+  const column = variantCalculationColumn(listPrinterVariant(list.printer));
+  try {
+    const state = JSON.parse(list[column] || '{}');
+    return state && typeof state === 'object' ? state : {};
+  } catch {
+    return {};
+  }
+}
+
+// Lists saved before numberOfBoxes existed only have the quantity inside the
+// calculator JSON, the same fallback the Lists table uses.
+export function listBoxes(list: {
+  numberOfBoxes?: number | null;
+  printer?: string | null;
+  calculationTromp?: string | null;
+  calculationSchneider?: string | null;
+}): number {
+  const boxes = Number(list.numberOfBoxes) || 0;
+  if (boxes) return boxes;
+  return Number(listCalculationState(list).quantity) || 0;
+}
+
 function money(value: unknown): number | null {
   const n = typeof value === 'string' ? Number(value) : value;
   return typeof n === 'number' && Number.isFinite(n) ? n : null;

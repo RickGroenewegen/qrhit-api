@@ -14,11 +14,7 @@
  * invoices.
  */
 import PrismaInstance from './prisma';
-import {
-  listPrinterVariant,
-  round2,
-  variantCalculationColumn,
-} from './listPricing';
+import { listBoxes, round2 } from './listPricing';
 import { normalizeCountryIso, quotationVatContext } from './services/vat';
 
 export type SalesSegment = 'consumer' | 'business' | 'both';
@@ -69,19 +65,6 @@ export function emptyBusinessFigures(): BusinessFigures {
     businessProfit: 0,
     businessProfitKnownCount: 0,
   };
-}
-
-// Lists saved before numberOfBoxes existed only have the quantity inside the
-// calculator JSON, the same fallback the Lists table uses.
-function listBoxes(list: any): number {
-  const boxes = Number(list.numberOfBoxes) || 0;
-  if (boxes) return boxes;
-  const column = variantCalculationColumn(listPrinterVariant(list.printer));
-  try {
-    return Number(JSON.parse(list[column] || '{}').quantity) || 0;
-  } catch {
-    return 0;
-  }
 }
 
 export function toBusinessSale(list: any): BusinessSale {

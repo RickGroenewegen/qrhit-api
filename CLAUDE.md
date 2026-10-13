@@ -1069,6 +1069,44 @@ so no invoice matched the quotation or the Sell column.
   shipping, total excl. VAT, and without one keeps shipping as the last
   item row.
 
+## Order status board (company lists from interest to delivered)
+
+The admin's Order status board (frontend `src/app/admin-order-status/`, see
+its CLAUDE.md) shows every company list as a sticky in one of six columns.
+`src/orderBoard.ts` builds the cards and validates changes; built
+2026-10-13.
+
+- Columns are `CompanyList.orderStatus`: `interest | contact | offer_sent |
+  agreed | in_production | delivered` (default `interest`). Not `status`,
+  which the old voting wizard owns and the API rewrites by itself (every
+  `new` list becomes `company` when its company is saved; `finalizeList`).
+  Agreed does not touch `sold`.
+- Also on the list: `orderStatusAt` (last move; null = never moved by
+  hand), `orderPosition` (order in the column), `orderNote` (500 chars,
+  not `internalNotes`, which qquote fills with where a request came from),
+  `orderArchived`, `contactUserId` (a user of the list's company, checked
+  on every save; `SetNull` when the user goes).
+- `GET /business/order-board` returns all cards (archived ones too).
+  `PATCH /business/order-board/lists/:listId` takes a drop (`orderStatus` +
+  `orderIds`, the target column's ids in their new order) or the sticky's
+  edit (`contactUserId`, `orderNote`, `desiredDeliveryDate`,
+  `deliveryAsap`, `orderArchived`). `PUT .../lists/:listId/info` accepts
+  `orderStatus`, `contactUserId` and `orderNote` too. A changed column
+  stamps `orderStatusAt`, puts the list on top of its new column unless the
+  drop placed it, and writes a `status_change` CompanyEvent (the Timeline).
+- A card's reseller flag, box type and cards per box come from the
+  calculator JSON of the list's printer (`listCalculationState`, next to
+  `listBoxes` in `listPricing.ts`); profit is `sellPrice − buyPrice` when
+  both are known.
+- `GET /business/state/:listId` adds the board fields for admins only: the
+  note is internal and `companyadmin` users can call that route.
+- **One-time backfill** after the first deploy:
+  `npx tsx scripts/backfill-order-status.ts` (report) and `--write`: a sold
+  list goes to Agreed, a list with a quotation to Sent offer, the rest stays
+  Interest; only lists never moved by hand.
+- The deadline warnings (Schneider's 15/20 business days) are worked out
+  by the page; the API only stores the delivery date.
+
 ## Business quote requests and the company asset store
 
 The /business form, the private file store behind a company's Assets tab and

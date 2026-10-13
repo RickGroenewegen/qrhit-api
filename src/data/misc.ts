@@ -29,13 +29,10 @@ export async function getPDFFilepath(
     return null;
   }
 
-  const cacheKey = `pdfFilePath:${paymentId}:${playlistId}:${type}`;
-  const cachedFilePath = await deps.cache.get(cacheKey);
-
-  if (cachedFilePath) {
-    return JSON.parse(cachedFilePath);
-  }
-
+  // Never cached. A cached path outlived every regeneration that renamed the
+  // file (a playlist renamed on Spotify, eco, a redesign in the account) and
+  // answered "PDF not found" for good; it also skipped the user hash check,
+  // so any hash downloaded a PDF that someone had downloaded before.
   const result: any[] = await deps.prisma.$queryRaw`
     SELECT
       php.filename,
@@ -77,13 +74,10 @@ export async function getPDFFilepath(
     filename = paymentHasPlaylist.filenameDigital!;
   }
 
-  const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-  const finalResult = {
+  return {
     fileName: sanitizedFileName + '.pdf',
-    filePath: filePath,
+    filePath: `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
   };
-  await deps.cache.set(cacheKey, JSON.stringify(finalResult));
-  return finalResult;
 }
 
 export async function getLastPlays(deps: DataDeps): Promise<any[]> {

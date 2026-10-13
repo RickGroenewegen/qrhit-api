@@ -34,6 +34,13 @@ import {
 } from '../listInvoices';
 import { markListSold } from '../businessSales';
 import {
+  completeOrderBoardUpdate,
+  getOrderBoard,
+  parseOrderBoardFields,
+  recordStatusChange,
+  updateBoardList,
+} from '../orderBoard';
+import {
   PRICE_LIST_EDITIONS,
   PriceListEdition,
   PriceListError,
@@ -816,6 +823,18 @@ export default async function companyRoutes(
         }
       }
 
+      // The Order status board's fields: column, primary contact, note.
+      const boardFields = parseOrderBoardFields({
+        orderStatus: body.orderStatus,
+        contactUserId: body.contactUserId,
+        orderNote: body.orderNote,
+      });
+      if ('error' in boardFields) {
+        reply.status(400).send({ error: boardFields.error });
+        return;
+      }
+      Object.assign(updateData, boardFields.data);
+
       if (Object.keys(updateData).length === 0) {
         reply.status(400).send({ error: 'No fields to update' });
         return;
@@ -825,6 +844,12 @@ export default async function companyRoutes(
       const list = await prisma.companyList.findUnique({ where: { id: listId } });
       if (!list || list.companyId !== companyId) {
         reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const board = await completeOrderBoardUpdate(updateData, list);
+      if ('error' in board) {
+        reply.status(400).send({ error: board.error });
         return;
       }
 
@@ -842,6 +867,9 @@ export default async function companyRoutes(
         where: { id: listId },
         data: updateData,
       });
+      if (board.statusChange) {
+        await recordStatusChange(companyId, request.user?.id ?? null, updated.name, board.statusChange);
+      }
 
       // The voting page caches the list; a renamed slug leaves the old copies too.
       await business.clearCompanyListCache(list.slug);
@@ -876,6 +904,43 @@ export default async function companyRoutes(
       }
 
       const result = await markListSold(companyId, listId, body.sold, body.soldAt);
+      if (!result.success) {
+        reply.status(result.status).send({ error: result.error });
+        return;
+      }
+      reply.send(result);
+    }
+  );
+
+  // ---- Order status board (src/orderBoard.ts) ----
+
+  // Every list of every company as a sticky, archived ones included.
+  fastify.get(
+    '/business/order-board',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        reply.send({ success: true, cards: await getOrderBoard() });
+      } catch (error) {
+        console.error('Error loading the order board:', error);
+        reply.status(500).send({ error: 'Failed to load the order board' });
+      }
+    }
+  );
+
+  // A drop on the board ({ orderStatus, orderIds }: the target column's ids
+  // in their new order) or the sticky's edit ({ contactUserId, orderNote,
+  // desiredDeliveryDate, deliveryAsap, orderStatus, orderArchived }).
+  fastify.patch(
+    '/business/order-board/lists/:listId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const listId = parseInt(request.params.listId);
+      if (isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid list ID' });
+        return;
+      }
+      const result = await updateBoardList(listId, request.body || {}, request.user?.id ?? null);
       if (!result.success) {
         reply.status(result.status).send({ error: result.error });
         return;
@@ -2049,7 +2114,10 @@ export default async function companyRoutes(
       try {
         const listId = parseInt(request.params.listId);
 
-        const result = await business.getState(listId);
+        // The Order status board's fields (the note is internal) are for staff only.
+        const result = await business.getState(listId, {
+          includeOrderBoard: !!request.user?.userGroups?.includes('admin'),
+        });
 
         if (!result.success) {
           reply.status(404).send({ error: result.error });
