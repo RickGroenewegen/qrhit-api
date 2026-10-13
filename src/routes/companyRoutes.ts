@@ -36,6 +36,7 @@ import { markListSold } from '../businessSales';
 import {
   completeOrderBoardUpdate,
   getOrderBoard,
+  moveBoardLists,
   parseOrderBoardFields,
   recordStatusChange,
   updateBoardList,
@@ -928,9 +929,23 @@ export default async function companyRoutes(
     }
   );
 
-  // A drop on the board ({ orderStatus, orderIds }: the target column's ids
-  // in their new order) or the sticky's edit ({ contactUserId, orderNote,
-  // desiredDeliveryDate, deliveryAsap, orderStatus, orderArchived }).
+  // A drop on the board: { listIds, orderStatus, orderIds } (orderIds is the
+  // target column's ids in their new order).
+  fastify.post(
+    '/business/order-board/move',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const result = await moveBoardLists(request.body || {}, request.user?.id ?? null);
+      if (!result.success) {
+        reply.status(result.status).send({ error: result.error });
+        return;
+      }
+      reply.send(result);
+    }
+  );
+
+  // The sticky's edit of one list: { contactUserId, orderNote,
+  // desiredDeliveryDate, deliveryAsap, orderStatus, orderArchived }.
   fastify.patch(
     '/business/order-board/lists/:listId',
     getAuthHandler(['admin']),

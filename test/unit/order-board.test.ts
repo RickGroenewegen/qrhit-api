@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const prismaMock = vi.hoisted(() => ({
   companyList: {
     findUnique: vi.fn(),
+    findMany: vi.fn(),
     findUniqueOrThrow: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('../../src/prisma', () => ({
 
 import {
   completeOrderBoardUpdate,
+  moveBoardLists,
   parseOrderBoardFields,
   toBoardCard,
   updateBoardList,
@@ -212,23 +214,54 @@ describe('completeOrderBoardUpdate', () => {
 });
 
 describe('updateBoardList', () => {
-  it('moves a dropped list, renumbers the target column and writes the Timeline', async () => {
+  it('saves the sticky\'s edit and writes the Timeline when the column changed', async () => {
     prismaMock.companyList.findUnique.mockResolvedValue({
       id: 7,
       companyId: 3,
       name: 'Summer list',
       orderStatus: 'contact',
     });
-    prismaMock.companyList.findUniqueOrThrow.mockResolvedValue(
-      list({ orderStatus: 'offer_sent', orderPosition: 1 })
-    );
+    prismaMock.companyList.findUniqueOrThrow.mockResolvedValue(list({ orderStatus: 'someday' }));
 
-    const result = await updateBoardList(7, { orderStatus: 'offer_sent', orderIds: [4, 7, 5] }, 1);
+    const result = await updateBoardList(7, { orderStatus: 'someday', orderNote: 'Next year' }, 1);
 
     expect(result.success).toBe(true);
     expect(prismaMock.companyList.update).toHaveBeenCalledWith({
       where: { id: 7 },
-      data: expect.objectContaining({ orderStatus: 'offer_sent', orderPosition: 1 }),
+      data: expect.objectContaining({ orderStatus: 'someday', orderNote: 'Next year' }),
+    });
+    expect(prismaMock.companyEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ content: 'Order status of “Summer list”: Contact → Someday' }),
+    });
+  });
+
+  it('answers 404 for an unknown list and 400 for nothing to save', async () => {
+    prismaMock.companyList.findUnique.mockResolvedValue(null);
+    expect(await updateBoardList(7, { orderNote: 'x' }, 1)).toMatchObject({ success: false, status: 404 });
+    expect(await updateBoardList(7, {}, 1)).toMatchObject({ success: false, status: 400 });
+  });
+});
+
+describe('moveBoardLists', () => {
+  it('moves every list of a sticky, renumbers the target column and writes the Timeline', async () => {
+    prismaMock.companyList.findMany
+      .mockResolvedValueOnce([
+        { id: 7, companyId: 3, name: 'Summer list', orderStatus: 'contact' },
+        { id: 8, companyId: 3, name: 'Winter list', orderStatus: 'contact' },
+      ])
+      .mockResolvedValueOnce([list({ id: 7, orderStatus: 'offer_sent' }), list({ id: 8, orderStatus: 'offer_sent' })]);
+
+    const result = await moveBoardLists({ listIds: [7, 8], orderStatus: 'offer_sent', orderIds: [4, 7, 8, 5] }, 1);
+
+    expect(result).toMatchObject({ success: true });
+    expect((result as any).cards).toHaveLength(2);
+    expect(prismaMock.companyList.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: expect.objectContaining({ orderStatus: 'offer_sent', orderPosition: 1, orderStatusAt: expect.any(Date) }),
+    });
+    expect(prismaMock.companyList.update).toHaveBeenCalledWith({
+      where: { id: 8 },
+      data: expect.objectContaining({ orderStatus: 'offer_sent', orderPosition: 2 }),
     });
     expect(prismaMock.companyList.updateMany).toHaveBeenCalledWith({
       where: { id: 4, orderStatus: 'offer_sent' },
@@ -236,8 +269,9 @@ describe('updateBoardList', () => {
     });
     expect(prismaMock.companyList.updateMany).toHaveBeenCalledWith({
       where: { id: 5, orderStatus: 'offer_sent' },
-      data: { orderPosition: 2 },
+      data: { orderPosition: 3 },
     });
+    expect(prismaMock.companyEvent.create).toHaveBeenCalledTimes(2);
     expect(prismaMock.companyEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         companyId: 3,
@@ -248,29 +282,25 @@ describe('updateBoardList', () => {
     });
   });
 
-  it('reorders within a column without a Timeline line', async () => {
-    prismaMock.companyList.findUnique.mockResolvedValue({
-      id: 7,
-      companyId: 3,
-      name: 'Summer list',
-      orderStatus: 'contact',
-    });
-    prismaMock.companyList.findUniqueOrThrow.mockResolvedValue(list({ orderStatus: 'contact' }));
+  it('reorders within a column without stamping or a Timeline line', async () => {
+    prismaMock.companyList.findMany
+      .mockResolvedValueOnce([{ id: 7, companyId: 3, name: 'Summer list', orderStatus: 'contact' }])
+      .mockResolvedValueOnce([list({ id: 7, orderStatus: 'contact' })]);
 
-    const result = await updateBoardList(7, { orderStatus: 'contact', orderIds: [7, 4] }, 1);
+    await moveBoardLists({ listIds: [7], orderStatus: 'contact', orderIds: [4, 7] }, 1);
 
-    expect(result.success).toBe(true);
     expect(prismaMock.companyList.update).toHaveBeenCalledWith({
       where: { id: 7 },
-      data: { orderPosition: 0 },
+      data: { orderStatus: 'contact', orderPosition: 1 },
     });
     expect(prismaMock.companyEvent.create).not.toHaveBeenCalled();
   });
 
-  it('answers 404 for an unknown list and 400 for bad order ids', async () => {
-    prismaMock.companyList.findUnique.mockResolvedValue(null);
-    expect(await updateBoardList(7, { orderNote: 'x' }, 1)).toMatchObject({ success: false, status: 404 });
-    expect(await updateBoardList(7, { orderIds: ['a'] }, 1)).toMatchObject({ success: false, status: 400 });
-    expect(await updateBoardList(7, {}, 1)).toMatchObject({ success: false, status: 400 });
+  it('refuses an unknown column, bad ids and a list that is not there', async () => {
+    expect(await moveBoardLists({ listIds: [7], orderStatus: 'won', orderIds: [] }, 1)).toMatchObject({ status: 400 });
+    expect(await moveBoardLists({ listIds: [], orderStatus: 'contact', orderIds: [] }, 1)).toMatchObject({ status: 400 });
+    expect(await moveBoardLists({ listIds: [7], orderStatus: 'contact', orderIds: ['a'] }, 1)).toMatchObject({ status: 400 });
+    prismaMock.companyList.findMany.mockResolvedValueOnce([]);
+    expect(await moveBoardLists({ listIds: [7], orderStatus: 'contact', orderIds: [7] }, 1)).toMatchObject({ status: 404 });
   });
 });

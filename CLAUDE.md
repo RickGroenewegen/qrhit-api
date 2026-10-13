@@ -1072,12 +1072,13 @@ so no invoice matched the quotation or the Sell column.
 ## Order status board (company lists from interest to delivered)
 
 The admin's Order status board (frontend `src/app/admin-order-status/`, see
-its CLAUDE.md) shows every company list as a sticky in one of six columns.
-`src/orderBoard.ts` builds the cards and validates changes; built
-2026-10-13.
+its CLAUDE.md) shows every company list as a sticky in one of six columns,
+with a Someday section under it. `src/orderBoard.ts` builds the cards and
+validates changes; built 2026-10-13.
 
 - Columns are `CompanyList.orderStatus`: `interest | contact | offer_sent |
-  agreed | in_production | delivered` (default `interest`). Not `status`,
+  agreed | in_production | delivered`, plus `someday` (out of the process
+  for now, not archived; Rick's ask) (default `interest`). Not `status`,
   which the old voting wizard owns and the API rewrites by itself (every
   `new` list becomes `company` when its company is saved; `finalizeList`).
   Agreed does not touch `sold`.
@@ -1087,13 +1088,15 @@ its CLAUDE.md) shows every company list as a sticky in one of six columns.
   `orderArchived`, `contactUserId` (a user of the list's company, checked
   on every save; `SetNull` when the user goes).
 - `GET /business/order-board` returns all cards (archived ones too).
-  `PATCH /business/order-board/lists/:listId` takes a drop (`orderStatus` +
-  `orderIds`, the target column's ids in their new order) or the sticky's
-  edit (`contactUserId`, `orderNote`, `desiredDeliveryDate`,
-  `deliveryAsap`, `orderArchived`). `PUT .../lists/:listId/info` accepts
-  `orderStatus`, `contactUserId` and `orderNote` too. A changed column
-  stamps `orderStatusAt`, puts the list on top of its new column unless the
-  drop placed it, and writes a `status_change` CompanyEvent (the Timeline).
+  `POST /business/order-board/move` is a drop: `listIds` (the board sends
+  one), `orderStatus`, and `orderIds`, the target column's ids in their new
+  order, which renumbers that column. `PATCH /business/order-board/lists/:listId`
+  is the sticky's edit (`orderStatus`, `contactUserId`, `orderNote`,
+  `desiredDeliveryDate`, `deliveryAsap`, `orderArchived`); a changed column
+  puts the list on top of its new column. `PUT .../lists/:listId/info`
+  accepts `orderStatus`, `contactUserId` and `orderNote` too. Every change
+  of column stamps `orderStatusAt` and writes a `status_change`
+  CompanyEvent (the Timeline).
 - A card's reseller flag, box type and cards per box come from the
   calculator JSON of the list's printer (`listCalculationState`, next to
   `listBoxes` in `listPricing.ts`); profit is `sellPrice − buyPrice` when

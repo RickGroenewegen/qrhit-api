@@ -18,6 +18,8 @@ import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import { listBoxes, listCalculationState, listPrinterVariant, ListVariant, round2 } from './listPricing';
 
+// The six columns, then `someday`: the section under the board for lists
+// that left the process but may come back (Rick: not archived).
 export const ORDER_STATUSES = [
   'interest',
   'contact',
@@ -25,6 +27,7 @@ export const ORDER_STATUSES = [
   'agreed',
   'in_production',
   'delivered',
+  'someday',
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -36,6 +39,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   agreed: 'Agreed',
   in_production: 'In production',
   delivered: 'Delivered',
+  someday: 'Someday',
 };
 
 export const ORDER_NOTE_MAX = 500;
@@ -323,9 +327,8 @@ export type BoardUpdateResult =
   | { success: false; status: number; error: string };
 
 /**
- * A change from the board: a drop (`orderStatus` and `orderIds`, the target
- * column's ids in their new order), or the sticky's edit (contact, note,
- * deadline, status, archive).
+ * The sticky's edit of one list: contact, note, deadline, column (the list
+ * goes on top of its new column) or archive.
  */
 export async function updateBoardList(
   listId: number,
@@ -335,24 +338,8 @@ export async function updateBoardList(
   const parsed = parseOrderBoardFields(body);
   if ('error' in parsed) return { success: false, status: 400, error: parsed.error };
 
-  let orderIds: number[] | null = null;
-  if (body.orderIds !== undefined) {
-    if (
-      !Array.isArray(body.orderIds) ||
-      body.orderIds.length > 1000 ||
-      !body.orderIds.every((id: unknown) => Number.isInteger(id))
-    ) {
-      return { success: false, status: 400, error: 'orderIds must be a list of list ids' };
-    }
-    orderIds = body.orderIds;
-  }
-
   const data: Record<string, any> = { ...parsed.data };
-  if (orderIds) {
-    const index = orderIds.indexOf(listId);
-    if (index >= 0) data.orderPosition = index;
-  }
-  if (Object.keys(data).length === 0 && !orderIds) {
+  if (Object.keys(data).length === 0) {
     return { success: false, status: 400, error: 'No fields to update' };
   }
 
@@ -366,21 +353,7 @@ export async function updateBoardList(
   const completed = await completeOrderBoardUpdate(data, list);
   if ('error' in completed) return { success: false, status: 400, error: completed.error };
 
-  const target = data.orderStatus ?? list.orderStatus;
-  await prisma.$transaction([
-    prisma.companyList.update({ where: { id: listId }, data }),
-    // The rest of the target column takes the positions of the drop.
-    ...(orderIds ?? [])
-      .map((id, position) => ({ id, position }))
-      .filter(({ id }) => id !== listId)
-      .map(({ id, position }) =>
-        prisma.companyList.updateMany({
-          where: { id, orderStatus: target },
-          data: { orderPosition: position },
-        })
-      ),
-  ]);
-
+  await prisma.companyList.update({ where: { id: listId }, data });
   if (completed.statusChange) {
     await recordStatusChange(list.companyId, userId, list.name, completed.statusChange);
   }
@@ -390,4 +363,89 @@ export async function updateBoardList(
     select: BOARD_LIST_SELECT,
   });
   return { success: true, card: toBoardCard(updated) };
+}
+
+function isIdList(value: unknown, max: number): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= max &&
+    value.every((id) => Number.isInteger(id) && id > 0)
+  );
+}
+
+export type BoardMoveResult =
+  | { success: true; cards: BoardCard[] }
+  | { success: false; status: number; error: string };
+
+/**
+ * A drop on the board: `listIds` (the board sends one) move into
+ * `orderStatus`, in the place `orderIds` (the target column's ids in their
+ * new order) gives them. The rest of that column takes its positions from
+ * `orderIds` too.
+ */
+export async function moveBoardLists(
+  body: Record<string, any>,
+  userId: number | null
+): Promise<BoardMoveResult> {
+  if (!isOrderStatus(body.orderStatus)) {
+    return { success: false, status: 400, error: 'Invalid order status' };
+  }
+  if (!isIdList(body.listIds, 100) || body.listIds.length === 0) {
+    return { success: false, status: 400, error: 'listIds must be a list of list ids' };
+  }
+  if (!isIdList(body.orderIds, 2000)) {
+    return { success: false, status: 400, error: 'orderIds must be a list of list ids' };
+  }
+  const to: OrderStatus = body.orderStatus;
+  const listIds: number[] = body.listIds;
+  const orderIds: number[] = body.orderIds;
+
+  const prisma = PrismaInstance.getInstance();
+  const lists = await prisma.companyList.findMany({
+    where: { id: { in: listIds } },
+    select: { id: true, companyId: true, name: true, orderStatus: true },
+  });
+  if (lists.length !== new Set(listIds).size) {
+    return { success: false, status: 404, error: 'List not found' };
+  }
+
+  const now = new Date();
+  const moved = lists.filter((l) => l.orderStatus !== to);
+  const movedIds = new Set(moved.map((l) => l.id));
+  const position = (id: number) => {
+    const index = orderIds.indexOf(id);
+    return index >= 0 ? index : orderIds.length;
+  };
+
+  await prisma.$transaction([
+    ...lists.map((l) =>
+      prisma.companyList.update({
+        where: { id: l.id },
+        data: {
+          orderStatus: to,
+          orderPosition: position(l.id),
+          ...(movedIds.has(l.id) ? { orderStatusAt: now } : {}),
+        },
+      })
+    ),
+    ...orderIds
+      .filter((id) => !listIds.includes(id))
+      .map((id) =>
+        prisma.companyList.updateMany({
+          where: { id, orderStatus: to },
+          data: { orderPosition: position(id) },
+        })
+      ),
+  ]);
+
+  for (const list of moved) {
+    const from: OrderStatus = isOrderStatus(list.orderStatus) ? list.orderStatus : 'interest';
+    await recordStatusChange(list.companyId, userId, list.name, { from, to });
+  }
+
+  const updated = await prisma.companyList.findMany({
+    where: { id: { in: listIds } },
+    select: BOARD_LIST_SELECT,
+  });
+  return { success: true, cards: updated.map(toBoardCard) };
 }
