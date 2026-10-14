@@ -258,13 +258,14 @@ export async function getFirstUncheckedTrack(deps: DataDeps): Promise<{
 }> {
   // Use a single optimized query to get both the track and count
   // Only include tracks that are associated with payments where processedFirstTime = true
-  // Get candidate track IDs: unchecked OR missing year (both are small sets)
+  // Get candidate track IDs: unchecked OR missing year (both are small sets).
+  // A missing Spotify link is not a reason: a track from an Apple Music (or
+  // other non-Spotify) playlist has none until MusicFetch finds one, and the
+  // card does not need it.
   const candidateIds = await deps.prisma.$queryRaw<{ id: number }[]>`
     SELECT id FROM tracks WHERE manuallyChecked = false
     UNION
     SELECT id FROM tracks WHERE year = 0
-    UNION
-    SELECT id FROM tracks WHERE spotifyLink IS NULL AND spotifyLinkIgnored = false
   `;
 
   if (candidateIds.length === 0) {
@@ -331,8 +332,6 @@ export async function getYearCheckQueue(deps: DataDeps): Promise<
     SELECT id FROM tracks WHERE manuallyChecked = false
     UNION
     SELECT id FROM tracks WHERE year = 0
-    UNION
-    SELECT id FROM tracks WHERE spotifyLink IS NULL AND spotifyLinkIgnored = false
   `;
 
   if (candidateIds.length === 0) {
@@ -379,14 +378,6 @@ export async function updateTrackCheck(
 ): Promise<{ success: boolean; checkedPaymentIds?: string[] }> {
   const { checkUnfinalizedPayments } = await import('./users');
   try {
-    // Check if track has a spotifyLink; if not, mark it as ignored so
-    // areAllTracksManuallyChecked doesn't block finalization for
-    // non-Spotify service tracks (Apple Music, YouTube Music, etc.)
-    const track = await deps.prisma.track.findUnique({
-      where: { id: trackId },
-      select: { spotifyLink: true },
-    });
-
     await deps.prisma.track.update({
       where: {
         id: trackId,
@@ -394,7 +385,6 @@ export async function updateTrackCheck(
       data: {
         manuallyChecked: true,
         year,
-        ...(track && !track.spotifyLink ? { spotifyLinkIgnored: true } : {}),
       },
     });
 

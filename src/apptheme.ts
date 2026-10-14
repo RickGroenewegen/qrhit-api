@@ -273,6 +273,7 @@ export const PHP_ALIASES: ReadonlyArray<readonly [number, number]> = [
   [8497, 8499], // user 780, Von Rock'n'Roll und Flower-Power bis Disco Fever
   [5427, 5429], // user 780, Big Mix
   [2660, 2662], // user 780, Best of Rock
+  [4197, 4199], // user 2465, Hitster Playlist
 ];
 
 /**
