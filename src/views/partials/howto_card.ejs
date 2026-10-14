@@ -32,6 +32,12 @@ const howtoNumberColor = php.howToCardNumberColor || php.backgroundBackColor || 
 </div>
 <% } %>
 <div style="page-break-after: always;"></div>
+<% if (php.howToCardRulesImage && php.howToCardRulesImage.length) { %>
+<!-- How-To Card - Back: the customer's own rules artwork, full bleed -->
+<div class="card-back" style="position: relative; overflow: hidden;">
+    <img class="background-image-back" style="opacity: 1;" src="<%= process.env['API_URI'] %>/public/background/<%= php.howToCardRulesImage %>" alt="Rules">
+</div>
+<% } else { %>
 <!-- How-To Card - Back (uses same styling as regular card backs) -->
 <div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
@@ -68,4 +74,5 @@ const howtoNumberColor = php.howToCardNumberColor || php.backgroundBackColor || 
         </div>
     </div>
 </div>
+<% } %>
 <div style="page-break-after: always;"></div>

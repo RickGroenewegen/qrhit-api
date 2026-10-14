@@ -154,8 +154,11 @@ class ToolkitOrder {
     return ToolkitOrder.instance;
   }
 
+  // The same folder the PDF renderer reads (server.ts: APP_ROOT/views). tsc puts this file in
+  // build/src/, so __dirname/views does not exist in production.
   private viewsDir(): string {
-    return path.join(__dirname, 'views');
+    const appRoot = process.env['APP_ROOT'];
+    return appRoot ? path.join(appRoot, 'views') : path.join(__dirname, 'views');
   }
 
   public async create(input: ToolkitOrderInput): Promise<ToolkitOrderResult> {

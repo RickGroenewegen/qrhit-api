@@ -215,6 +215,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.addHowToCard,
       payment_has_playlist.addHowToCardLocale,
       payment_has_playlist.howToCardImage,
+      payment_has_playlist.howToCardRulesImage,
       payment_has_playlist.howToCardNumberColor,
       playlists.numberOfTracks,
       payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
@@ -715,11 +716,18 @@ export async function updateAddHowToCard(
   }
 }
 
+/**
+ * The custom image of one side of the how-to card: 'cover' = the "How to play" side
+ * (howToCardImage), 'rules' = the side with the rules, replacing the standard rules
+ * (howToCardRulesImage). null clears it.
+ */
 export async function updateHowToCardImage(
   deps: DataDeps,
   paymentHasPlaylistId: number,
-  howToCardImage: string | null
+  image: string | null,
+  side: 'cover' | 'rules' = 'cover'
 ): Promise<{ success: boolean; error?: string }> {
+  const field = side === 'rules' ? 'howToCardRulesImage' : 'howToCardImage';
   try {
     const php = await deps.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
@@ -732,14 +740,14 @@ export async function updateHowToCardImage(
 
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
-      data: { howToCardImage },
+      data: { [field]: image },
     });
 
     deps.logger.log(
       color.blue.bold(
-        `Updated howToCardImage for playlist ${color.white.bold(
+        `Updated ${field} for playlist ${color.white.bold(
           paymentHasPlaylistId
-        )} to ${color.white.bold(howToCardImage || '(cleared)')}`
+        )} to ${color.white.bold(image || '(cleared)')}`
       )
     );
 
@@ -747,7 +755,7 @@ export async function updateHowToCardImage(
   } catch (error: any) {
     deps.logger.log(
       color.red.bold(
-        `Error updating howToCardImage for playlist ${color.white.bold(
+        `Error updating ${field} for playlist ${color.white.bold(
           paymentHasPlaylistId
         )}: ${error.message}`
       )

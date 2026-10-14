@@ -1557,13 +1557,14 @@ export default async function adminRoutes(
     }
   );
 
-  // Upload or clear the custom "How to play" front image for the how-to card
+  // Upload or clear a custom image for one side of the how-to card: side 'cover' (default)
+  // is the "How to play" side, 'rules' replaces the standard rules on the other side.
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/howto-card-image',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { paymentHasPlaylistId } = request.params;
-      const { image } = request.body;
+      const { image, side = 'cover' } = request.body;
 
       if (!paymentHasPlaylistId) {
         reply.status(400).send({
@@ -1573,11 +1574,19 @@ export default async function adminRoutes(
         return;
       }
 
+      if (side !== 'cover' && side !== 'rules') {
+        reply.status(400).send({
+          success: false,
+          error: "side must be 'cover' or 'rules'",
+        });
+        return;
+      }
+
       const phpId = parseInt(paymentHasPlaylistId, 10);
 
       // Empty/null image clears the custom image
       if (!image) {
-        const result = await data.updateHowToCardImage(phpId, null);
+        const result = await data.updateHowToCardImage(phpId, null, side);
         if (result.success) {
           reply.send({ success: true, filename: null });
         } else {
@@ -1605,7 +1614,7 @@ export default async function adminRoutes(
         return;
       }
 
-      const result = await data.updateHowToCardImage(phpId, upload.filename);
+      const result = await data.updateHowToCardImage(phpId, upload.filename, side);
 
       if (result.success) {
         reply.send({ success: true, filename: upload.filename });

@@ -327,8 +327,8 @@ class Data {
     );
   }
 
-  public async updateHowToCardImage(paymentHasPlaylistId: number, howToCardImage: string | null) {
-    return playlistsModule.updateHowToCardImage(this.deps, paymentHasPlaylistId, howToCardImage);
+  public async updateHowToCardImage(paymentHasPlaylistId: number, image: string | null, side: 'cover' | 'rules' = 'cover') {
+    return playlistsModule.updateHowToCardImage(this.deps, paymentHasPlaylistId, image, side);
   }
 
   public async resetJudgedStatus(paymentHasPlaylistId: number) {

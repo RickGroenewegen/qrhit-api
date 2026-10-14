@@ -1944,6 +1944,7 @@ class Mollie {
             addHowToCard: true,
             addHowToCardLocale: true,
             howToCardImage: true,
+            howToCardRulesImage: true,
             howToCardNumberColor: true,
             playlist: {
               select: {

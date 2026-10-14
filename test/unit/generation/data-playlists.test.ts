@@ -716,6 +716,18 @@ describe('small toggle updaters', () => {
     });
   });
 
+  it('updateHowToCardImage with side rules sets the rules-side image only', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 1 });
+
+    const res = await updateHowToCardImage(deps, 1, 'rules.png', 'rules');
+    expect(res).toEqual({ success: true });
+    expect(prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { howToCardRulesImage: 'rules.png' },
+    });
+  });
+
   it('resetJudgedStatus resets both line item and payment flags in a transaction', async () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 1, paymentId: 10 });
