@@ -1355,6 +1355,58 @@ pictures and fonts. Rick's qrsong toolkit pushes them
   over means a new name (and setting it on their orders) or removing the file
   in a deploy first.
 
+## Printer card previews and die lines (dashboard and toolkit)
+
+The dashboard's per-line card preview (`app-deck-designs`) draws a card from
+the design columns in the browser and knows nothing about card templates, so
+a template order showed another card than the one printed. For a line with a
+template the dashboard shows pictures the API makes instead
+(`src/cardPreview.ts`, built 2026-10-15):
+
+- `GET /admin/playlist/:phpId/card-preview` (admin): the first card's front
+  and back as cut (`front`, `back`, 720 px) and as printed with the 3 mm bleed
+  and the printer's guides (`frontDie`, `backDie`, 900 px): the die line
+  (magenta, corners 4.35 mm on the 56 mm card, Schneiders' measured die, the
+  same ratio for 60 mm), the bleed edge (grey, dashed) and the safe zone
+  (cyan, 3 mm inside). Paths under `/public/card-previews/`.
+- **Source**: the line's stored printer PDF while its `pdfFingerprint` still
+  matches (`source: 'pdf'`; the first card is after the how-to card), else one
+  card rendered now through the PDF Lambda from `/qr/pdf`, the way the
+  generator asks for item 1 (`source: 'render'`). `pdf.ts` addBleed scales the
+  content up to fill page plus bleed, so a fresh render is scaled the same way
+  before the 3 mm come off; `test/unit/card-preview.test.ts` checks that
+  against addBleed itself.
+- **The fingerprint now includes the line's template and pinned version**
+  (`orderTemplate@orderTemplateVersion`, only when there is one, so lines
+  without keep their hash). `template` in its field list is the playlist's
+  legacy column; until 2026-10-15 a new template on a line left its PDF
+  looking current, also for `regenerateStalePrinterPdfs`.
+- Pictures are named `<phpId>-<HMAC on JWT_SECRET of everything they show>`
+  (source, template and version, a file template's mtime, the card size, the
+  design and the first card's track and year, the PDF's mtime): any change is
+  a new name, the files are public but not guessable, a line keeps only its
+  newest set.
+- **Nothing waits for the Lambda** (Rick, 2026-10-15). Pictures that are
+  there answer 200 `ready`. Otherwise the route starts the render in the
+  background (one per line: in the worker, plus a Redis lock across
+  workers), waits `inlineWaitMs` (1.5 s, enough for a stored PDF) and else
+  answers 202 `generating`; the dashboard says so and asks again. A render
+  that fails answers 502 `failed` and is remembered for 10 minutes
+  (`card-preview-failed:<name>`), so polling does not start one per request;
+  `?retry=1` clears that. A stored PDF that does not render is passed over
+  for a day (`card-preview-unreadable:<file>:<mtime>`).
+- `POST /admin/card-preview/die-lines` (admin, multipart) is what the qrsong
+  toolkit's `design cut-check` uses (Rick: the toolkit gets its die line
+  pictures from the API): `file` (PDF, taken as it is, or a PNG/JPEG canvas of
+  `pageMm`, default card + 6) or `paymentHasPlaylistId`, plus `pages`,
+  `cardMm` (56) and `views`, a JSON list of `{ px, x, y, sizeMm, guides }`
+  parts in page mm (up to 12, 3000 px). The card sits in the middle of the
+  page. Answers base64 PNGs.
+- PDF pages are rasterised by `src/pdfRaster.ts` (PDFium, shared with the
+  Merchant Center's AI images). It sizes the bitmap from the page's exact
+  size: pdfium itself floors the size in points, which read a 62 mm page as
+  61.74 mm.
+
 ## Card order: service, year mix, hand order
 
 Cards print in `playlist_has_tracks.order` (`getTracks`; QR colours, the PDF

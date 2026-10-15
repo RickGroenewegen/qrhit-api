@@ -1935,8 +1935,10 @@ class Mollie {
             boxBackText: true,
             boxBackSelectedFont: true,
             boxBackSelectedFontSize: true,
-            // Production settings
+            // Production settings: a card template, and the version of a
+            // stored one the line is pinned to (src/cardTemplates.ts)
             template: true,
+            templateVersion: true,
             // Bingo
             gamesEnabled: true,
             appleStoreFront: true,

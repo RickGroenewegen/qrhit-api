@@ -19,7 +19,7 @@ import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
 import { applyQrLogo, clampScale, resolveLogoPath } from './qr-logo';
-import PDF, { forcedPrinterTemplate } from './pdf';
+import PDF, { printerTemplateFor } from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
@@ -1179,15 +1179,8 @@ class Generator {
           const eco = playlist.eco == 1;
           const digitalTemplate = this.digitalTemplateFor(playlist, payment);
 
-          let printerTemplate = 'printer';
-
           // An admin-chosen order template (see forcedPrinterTemplate).
-          const forcedTemplate = forcedPrinterTemplate(playlist.orderTemplate);
-          if (forcedTemplate) {
-            printerTemplate = forcedTemplate;
-          } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
-            printerTemplate = PRINTER_TYPE.SCHNEIDERS;
-          }
+          const printerTemplate = printerTemplateFor(playlist.orderTemplate, playlist.printerType);
 
           // Generate PDFs for each item
           let firstPrinterFilename = '';
@@ -1819,13 +1812,7 @@ class Generator {
         playlist.paymentHasPlaylistId
       );
 
-      let printerTemplate = 'printer';
-      const forcedTemplate = forcedPrinterTemplate(playlist.orderTemplate);
-      if (forcedTemplate) {
-        printerTemplate = forcedTemplate;
-      } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
-        printerTemplate = PRINTER_TYPE.SCHNEIDERS;
-      }
+      const printerTemplate = printerTemplateFor(playlist.orderTemplate, playlist.printerType);
 
       for (const item of items) {
         // Reuse the stored filename so the print API and every existing

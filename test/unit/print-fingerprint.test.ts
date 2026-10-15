@@ -150,6 +150,29 @@ describe('computePrintFingerprint', () => {
     expect(computePrintFingerprint(playlist, [])).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  describe('the line\'s card template', () => {
+    it('keeps the hash a line without a template was generated with', () => {
+      // Pinned from before the template entered the hash: those lines must
+      // not all read as stale.
+      const before = '22d46a55cbb193aa94c4cdc4787ec144350166977985dc32c2998fc271ab7b57';
+      expect(computePrintFingerprint(playlist, tracks)).toBe(before);
+      expect(
+        computePrintFingerprint({ ...playlist, orderTemplate: null, orderTemplateVersion: null }, tracks)
+      ).toBe(before);
+    });
+
+    it('changes when a line gets a template, another one, or another version', () => {
+      const asito1 = computePrintFingerprint({ ...playlist, orderTemplate: 'asito', orderTemplateVersion: 1 }, tracks);
+      expect(asito1).not.toBe(computePrintFingerprint(playlist, tracks));
+      expect(
+        computePrintFingerprint({ ...playlist, orderTemplate: 'asito', orderTemplateVersion: 2 }, tracks)
+      ).not.toBe(asito1);
+      expect(
+        computePrintFingerprint({ ...playlist, orderTemplate: 'sportstuif', orderTemplateVersion: null }, tracks)
+      ).not.toBe(asito1);
+    });
+  });
+
   describe('alternating designs', () => {
     const design2 = { background: 'bg2.webp', qrColor: '#ff0000', fontColor: '#ffffff' };
 

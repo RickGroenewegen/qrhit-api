@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import CardTemplates, { CardTemplateError } from '../cardTemplates';
+import CardPreviews, { CardPreviewError } from '../cardPreview';
 import * as crypto from 'crypto';
 import Logger from '../logger';
 import { color } from 'console-log-colors';
@@ -591,6 +592,99 @@ export default async function adminRoutes(
           success: false,
           error: result.error,
         });
+      }
+    }
+  );
+
+  // The line's first card as the printer gets it, front and back as PNGs
+  // (src/cardPreview.ts): the dashboard shows it for lines with a card
+  // template, which its in-browser preview cannot draw. Pictures that are not
+  // there yet are made in the background: 202 `generating` until they are,
+  // 502 `failed` when that went wrong (?retry=1 tries again).
+  fastify.get(
+    '/admin/playlist/:paymentHasPlaylistId/card-preview',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const paymentHasPlaylistId = parseInt(request.params.paymentHasPlaylistId, 10);
+      if (!Number.isFinite(paymentHasPlaylistId)) {
+        reply.status(400).send({ success: false, error: 'Playlist ID is required' });
+        return;
+      }
+      try {
+        const retry = request.query?.retry === '1' || request.query?.retry === 'true';
+        const state = await CardPreviews.getInstance().forLine(paymentHasPlaylistId, { retry });
+        if (state.status === 'failed') {
+          reply.status(502).send({ success: false, ...state });
+          return;
+        }
+        reply.status(state.status === 'generating' ? 202 : 200).send({ success: true, ...state });
+      } catch (error) {
+        if (error instanceof CardPreviewError) {
+          reply.status(error.statusCode).send({ success: false, error: error.message });
+          return;
+        }
+        logger.log(color.red.bold(`Card preview of php ${paymentHasPlaylistId} failed: ${(error as Error).message}`));
+        reply.status(502).send({ success: false, error: `The card could not be rendered: ${(error as Error).message}` });
+      }
+    }
+  );
+
+  // Pictures with the printer's guides (die line, bleed, safe zone) of an
+  // uploaded card or an order line's first card, for the qrsong toolkit's
+  // `design cut-check` (src/cardPreview.ts dieLines). Multipart: `file` or
+  // `paymentHasPlaylistId`, and optionally `pages`, `cardMm`, `pageMm` and
+  // `views` (JSON). The pictures come back as base64 PNGs.
+  fastify.post(
+    '/admin/card-preview/die-lines',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      if (!request.isMultipart()) {
+        reply.status(400).send({ success: false, error: 'send multipart/form-data: a file or a paymentHasPlaylistId' });
+        return;
+      }
+      try {
+        const fields: Record<string, string> = {};
+        let file: Buffer | null = null;
+        for await (const part of request.parts({ limits: { fileSize: 100 * 1024 * 1024, files: 1 } })) {
+          if (part.type === 'file') {
+            const bytes = await part.toBuffer();
+            if (part.fieldname === 'file') file = bytes;
+          } else if (typeof part.value === 'string') {
+            fields[part.fieldname] = part.value;
+          }
+        }
+        const phpId = fields['paymentHasPlaylistId'] ? parseInt(fields['paymentHasPlaylistId'], 10) : null;
+        if (phpId !== null && !Number.isFinite(phpId)) {
+          reply.status(400).send({ success: false, error: 'paymentHasPlaylistId must be a number' });
+          return;
+        }
+        const result = await CardPreviews.getInstance().dieLines({
+          file,
+          paymentHasPlaylistId: phpId,
+          pages: fields['pages'],
+          cardMm: fields['cardMm'],
+          pageMm: fields['pageMm'],
+          views: fields['views'],
+        });
+        reply.send({
+          success: true,
+          ...result,
+          pages: result.pages.map((page) => ({
+            ...page,
+            views: page.views.map((view) => ({ ...view, png: view.png.toString('base64') })),
+          })),
+        });
+      } catch (error: any) {
+        if (error instanceof CardPreviewError) {
+          reply.status(error.statusCode).send({ success: false, error: error.message });
+          return;
+        }
+        if (error?.code === 'FST_REQ_FILE_TOO_LARGE') {
+          reply.status(413).send({ success: false, error: 'file larger than 100 MB' });
+          return;
+        }
+        logger.log(color.red.bold(`Die lines failed: ${error?.message || error}`));
+        reply.status(502).send({ success: false, error: `The pictures could not be made: ${error?.message || error}` });
       }
     }
   );

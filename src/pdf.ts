@@ -70,6 +70,20 @@ export function forcedPrinterTemplate(
 }
 
 /**
+ * The template of a line's single-card printer PDF, as the generator picks
+ * it: the order's own template, else the Schneiders layout for Schneiders,
+ * else the regular printer layout.
+ */
+export function printerTemplateFor(
+  orderTemplate: string | null | undefined,
+  printerType: string | null | undefined
+): string {
+  const forced = forcedPrinterTemplate(orderTemplate);
+  if (forced) return forced;
+  return printerType === PRINTER_TYPE.SCHNEIDERS ? PRINTER_TYPE.SCHNEIDERS : 'printer';
+}
+
+/**
  * Page size (mm) for a single-card printer PDF. The template decides, not the
  * printer type: a playlist can force a company template on any printer, and
  * a 56 mm card on a 60 mm page leaves a white strip on two sides.
@@ -149,7 +163,7 @@ class PDF {
    * (src/cardTemplates.ts) carries its own, at the version the order line
    * pinned; everything else is printerPageSizeMm.
    */
-  private async printerPageSize(template: string, printerType: string, playlist: any): Promise<number> {
+  public async printerPageSize(template: string, printerType: string, playlist: any): Promise<number> {
     const pinned = template === playlist?.orderTemplate ? playlist?.orderTemplateVersion : null;
     const stored = await CardTemplates.getInstance().cardSizeMm(template, pinned);
     return stored ?? printerPageSizeMm(template, printerType);

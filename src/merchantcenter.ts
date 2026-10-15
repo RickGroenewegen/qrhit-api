@@ -16,6 +16,7 @@ import { formatCostUsd, llm } from './llm';
 import PrismaInstance from './prisma';
 import Fx from './services/fx';
 import PDF from './pdf';
+import { renderPdfPagesToPng } from './pdfRaster';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
 import {
@@ -1064,9 +1065,9 @@ export class MerchantCenterService {
         pageRanges: '1-2',
       });
 
-      // Render pages 1 and 2 of the PDF to PNG buffers (front + back) using
-      // pdfjs-dist + node-canvas. No external service required.
-      const [frontPng, backPng] = await this.renderPdfPagesToPng(pdfBuffer, [1, 2]);
+      // Render pages 1 and 2 of the PDF to PNG buffers (front + back) with
+      // PDFium (src/pdfRaster.ts). No external service required.
+      const [frontPng, backPng] = await renderPdfPagesToPng(pdfBuffer, [1, 2]);
 
       // Build OpenAI input files. The first image is the base template; the
       // remaining ones are the references the model should style-match.
@@ -1154,45 +1155,6 @@ export class MerchantCenterService {
         )
       );
       return null;
-    }
-  }
-
-  /**
-   * Render specific pages of a PDF buffer to PNG buffers via @hyzyla/pdfium
-   * (MIT, WebAssembly build of Chromium's PDFium — no native deps, no AGPL).
-   * Page numbers are 1-based to match PDF conventions.
-   */
-  private async renderPdfPagesToPng(
-    pdfBuffer: Buffer,
-    pages: number[],
-    scale: number = 4
-  ): Promise<Buffer[]> {
-    const { PDFiumLibrary } = await import('@hyzyla/pdfium');
-    const library = await PDFiumLibrary.init();
-    try {
-      const doc = await library.loadDocument(new Uint8Array(pdfBuffer));
-      try {
-        const out: Buffer[] = [];
-        for (const pageNum of pages) {
-          // pdfium uses 0-based page indexes
-          const page = doc.getPage(pageNum - 1);
-          const rendered = await page.render({
-            scale,
-            render: async (opts) =>
-              sharp(opts.data, {
-                raw: { width: opts.width, height: opts.height, channels: 4 },
-              })
-                .png()
-                .toBuffer(),
-          });
-          out.push(Buffer.from(rendered.data));
-        }
-        return out;
-      } finally {
-        doc.destroy();
-      }
-    } finally {
-      library.destroy();
     }
   }
 

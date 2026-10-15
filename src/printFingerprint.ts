@@ -99,6 +99,12 @@ interface FingerprintTrack {
  * `extraDesigns` are the alternating designs 2..10 (src/cardDesigns.ts), in
  * position order. They only enter the hash when there are any, so a
  * single-design line keeps the fingerprint it was generated with.
+ *
+ * The line's own card template (`orderTemplate` and the pinned
+ * `orderTemplateVersion`, src/cardTemplates.ts) enters it the same way, only
+ * when there is one. `template` in DESIGN_FIELDS is the playlist's legacy
+ * column (data/playlists.ts), so until 2026-10-15 a new template on a line
+ * left its PDF looking current.
  */
 export function computePrintFingerprint(
   playlist: Record<string, any>,
@@ -117,6 +123,9 @@ export function computePrintFingerprint(
   extraDesigns.forEach((extra, index) => {
     design += `\ndesign${index + 2}:${fieldsOf(extra, CARD_DESIGN_COLUMNS)}`;
   });
+  if (playlist?.orderTemplate) {
+    design += `\norderTemplate:${playlist.orderTemplate}@${playlist.orderTemplateVersion ?? ''}`;
+  }
 
   const trackPart = tracks
     .map((track, index) =>

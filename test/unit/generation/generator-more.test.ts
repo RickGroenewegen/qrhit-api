@@ -43,6 +43,7 @@ vi.mock('../../../src/pdf', async () => {
   return {
     default: function () { return h.pdf; },
     forcedPrinterTemplate: actual.forcedPrinterTemplate,
+    printerTemplateFor: actual.printerTemplateFor,
   };
 });
 vi.mock('../../../src/order', async () => {
