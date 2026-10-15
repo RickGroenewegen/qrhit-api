@@ -318,6 +318,12 @@ describe('card preview routes', () => {
     const png = Buffer.from(body.pages[0].views[0].png, 'base64');
     expect((await sharp(png).metadata()).width).toBe(620);
 
+    // Chromium's page comes out a little larger than the card; the generator
+    // scales it to the card exactly before the bleed, and so does this
+    render.mockResolvedValueOnce(await pdfOf(56.2, [
+      [RED, BLUE],
+      [RED, BLUE],
+    ]));
     const line = await dieLines({ paymentHasPlaylistId: String(phpId), views: '[{"px":300}]' });
     expect(line.statusCode, line.body).toBe(200);
     expect(line.json()).toMatchObject({ cardMm: 56 });

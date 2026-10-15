@@ -102,6 +102,9 @@ export class CardPreviewError extends Error {
  * scales a card's content up to fill the page plus bleed, so a stored printer
  * PDF already is that page (`card + 6` mm) and a fresh render, the `card` mm
  * page from before addBleed, is scaled up by (card + 6) / card the same way.
+ * Pass a fresh render's `pageMm` as the card size, not its own: Chromium's
+ * page comes out a little larger (about 56.1 mm for 56) and the generator
+ * scales it to the card exactly (resizePDFPages) before adding the bleed.
  */
 export async function withBleed(page: Buffer, pageMm: number, hasBleed: boolean): Promise<{ png: Buffer; pageMm: number }> {
   if (hasBleed) return { png: page, pageMm };
@@ -365,7 +368,7 @@ class CardPreviews {
       const made = source === line.source ? wanted : previewOf(source);
       const [front, back] = await Promise.all(
         pages.map(async (page) => {
-          const bled = await withBleed(page.png, page.widthMm, source === 'pdf');
+          const bled = await withBleed(page.png, source === 'pdf' ? page.widthMm : cardSizeMm, source === 'pdf');
           return { cut: await cropToCut(bled.png, bled.pageMm), die: await drawDieLines(bled.png, bled.pageMm) };
         })
       );
@@ -416,7 +419,7 @@ class CardPreviews {
       pages = await Promise.all(
         numbers.map(async (n) => {
           const page = first.pages[n - 1];
-          const bled = await withBleed(page.png, page.widthMm, first.source === 'pdf');
+          const bled = await withBleed(page.png, first.source === 'pdf' ? page.widthMm : cardMm, first.source === 'pdf');
           return { page: n, png: bled.png, pageMm: bled.pageMm };
         })
       );
