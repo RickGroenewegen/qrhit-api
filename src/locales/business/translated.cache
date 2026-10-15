@@ -71,18 +71,6 @@
     "nl",
     "de"
   ],
-  "instructions.endUserOption2": [
-    "nl",
-    "de"
-  ],
-  "instructions.endUserOption3": [
-    "nl",
-    "de"
-  ],
-  "instructions.endUserOption4": [
-    "nl",
-    "de"
-  ],
   "instructions.section2Title": [
     "nl",
     "de"
@@ -91,35 +79,7 @@
     "nl",
     "de"
   ],
-  "instructions.cardBleed": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardShift": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardQrCenter": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardImages": [
-    "nl",
-    "de"
-  ],
   "instructions.cardContrast": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardPsd": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardMetaLayer": [
-    "nl",
-    "de"
-  ],
-  "instructions.cardFont": [
     "nl",
     "de"
   ],
@@ -1772,6 +1732,62 @@
     "de"
   ],
   "invoice_lines.shipping": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption2": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption3": [
+    "nl",
+    "de"
+  ],
+  "instructions.endUserOption4": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardBleed": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardShift": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardCorners": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardEdges": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardQrCenter": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardImages": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardPsd": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardMetaLayer": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardFont": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardColours": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardTemplate": [
     "nl",
     "de"
   ]

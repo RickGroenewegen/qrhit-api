@@ -415,7 +415,7 @@
                     <%= t('endUserIntro') %>
                     <ul style="margin: 6px 0 0 18px; padding: 0;">
                         <li><%- t('endUserOption1') %></li>
-                        <li><%- t('endUserOption2') %></li>
+                        <li><%- t('endUserOption2', { howToUrl: 'https://www.qrsong.io/' + locale + '/how-to' }) %></li>
                         <li><%- t('endUserOption3') %></li>
                         <li><%- t('endUserOption4') %></li>
                     </ul>
@@ -432,14 +432,23 @@
 
             <ul class="instructions-list">
                 <li><%- t('cardSize', { size: printer === 'tromp' ? '60x60mm' : '56x56mm' }) %></li>
-                <li><%- t('cardBleed') %></li>
+                <li><%- t('cardBleed', { canvas: printer === 'tromp' ? '66x66mm' : '62x62mm' }) %></li>
                 <li><%- t('cardShift') %></li>
+                <% if (printer !== 'tromp') { %>
+                <%# Schneiders' die (reference/printers/schneiders in the qrsong toolkit): rounded corners, r ~4.35 mm %>
+                <li><%- t('cardCorners') %></li>
+                <% } %>
+                <li><%- t('cardEdges') %></li>
                 <li><%- t('cardQrCenter') %></li>
                 <li><%- t('cardImages') %></li>
                 <li><%- t('cardContrast') %></li>
                 <li><%- t('cardPsd') %></li>
                 <li><%- t('cardMetaLayer') %></li>
                 <li><%- t('cardFont') %></li>
+                <li><%- t('cardColours') %></li>
+                <% if (printer !== 'tromp') { %>
+                <li><%- t('cardTemplate') %></li>
+                <% } %>
             </ul>
 
             <div class="highlight-box">
