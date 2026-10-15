@@ -23,7 +23,7 @@ import { resolveQrSubDir } from './qrPaths';
  *
  * Two sources. The line's stored printer PDF when it is current: its
  * pdfFingerprint (src/printFingerprint.ts) still matches the design and the
- * cards. Otherwise one card rendered now through the PDF Lambda from the
+ * cards, or it has none (made before fingerprints, as printed). Otherwise one card rendered now through the PDF Lambda from the
  * /qr/pdf route, the way the generator renders it. Each side comes twice:
  * the card as cut (the 3 mm bleed off, for the order list) and the page with
  * its bleed and the printer's guides on it (die line, bleed edge, safe zone,
@@ -262,9 +262,15 @@ export interface DieLinesPage {
   views: (Required<Omit<DieView, 'guides'>> & { guides: boolean; png: Buffer })[];
 }
 
-/** The stored printer PDF when it is current, else a fresh render. */
+/**
+ * The stored printer PDF when it is current, else a fresh render. A PDF
+ * without a fingerprint is from before fingerprints (September 2026) and is
+ * what went to the printer then, legacy company layouts (Kramp, Klomp) and
+ * all: a render would draw today's layout instead.
+ */
 export function previewSource(pdfExists: boolean, storedFingerprint: string | null | undefined, currentFingerprint: string): CardPreviewSource {
-  return pdfExists && !!storedFingerprint && storedFingerprint === currentFingerprint ? 'pdf' : 'render';
+  if (!pdfExists) return 'render';
+  return !storedFingerprint || storedFingerprint === currentFingerprint ? 'pdf' : 'render';
 }
 
 /** The file name (without side) of the preview that shows exactly `parts`. */

@@ -246,7 +246,11 @@ describe('card preview', () => {
       expect(previewSource(true, 'abc', 'abc')).toBe('pdf');
       expect(previewSource(true, 'abc', 'def')).toBe('render');
       expect(previewSource(false, 'abc', 'abc')).toBe('render');
-      expect(previewSource(true, null, 'abc')).toBe('render');
+    });
+
+    it('reads a printer PDF from before fingerprints as it is: that is what was printed', () => {
+      expect(previewSource(true, null, 'abc')).toBe('pdf');
+      expect(previewSource(false, null, 'abc')).toBe('render');
     });
   });
 

@@ -1370,12 +1370,17 @@ template the dashboard shows pictures the API makes instead
   same ratio for 60 mm), the bleed edge (grey, dashed) and the safe zone
   (cyan, 3 mm inside). Paths under `/public/card-previews/`.
 - **Source**: the line's stored printer PDF while its `pdfFingerprint` still
-  matches (`source: 'pdf'`; the first card is after the how-to card), else one
-  card rendered now through the PDF Lambda from `/qr/pdf`, the way the
-  generator asks for item 1 (`source: 'render'`). `pdf.ts` addBleed scales the
-  content up to fill page plus bleed, so a fresh render is scaled the same way
-  before the 3 mm come off; `test/unit/card-preview.test.ts` checks that
-  against addBleed itself.
+  matches, or when it has none (`source: 'pdf'`; the first card is after the
+  how-to card). A PDF without a fingerprint predates them and is what was
+  printed, legacy layouts such as Kramp's included; a render would draw
+  today's layout. Otherwise one card rendered now through the PDF Lambda from
+  `/qr/pdf`, the way the generator asks for item 1 (`source: 'render'`).
+  `pdf.ts` addBleed scales the content up to fill page plus bleed, so a fresh
+  render (taken as exactly the card, as resizePDFPages does) is scaled the
+  same way before the 3 mm come off; `test/unit/card-preview.test.ts` checks
+  that against addBleed itself.
+- The dashboard shows these for every line whose cards a template draws: its
+  own card template, or the Schneiders layout of every Schneiders line.
 - **The fingerprint now includes the line's template and pinned version**
   (`orderTemplate@orderTemplateVersion`, only when there is one, so lines
   without keep their hash). `template` in its field list is the playlist's
