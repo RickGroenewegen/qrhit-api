@@ -1227,6 +1227,9 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
 - `GET /admin/toolkit/order/:paymentId` (design, print files, every card with
   its year check), `PUT .../design`, `POST .../regenerate` (forced finalize,
   no mail; not once at a printer, and a Print&Bind order only while on hold).
+  `template` on the order and its design is a `pdf_*.ejs` file or a stored
+  template (see "Card templates stored as data"), with optional
+  `templateVersion`.
 
 ### Only printnbind goes to Print&Bind
 
@@ -1252,6 +1255,99 @@ That hold is no longer set.
   template (`Mail.sendCustomMail`). Mail scanners such as Microsoft Safe Links open links
   themselves, so the mail shows the browser. `GET /admin/toolkit/share` lists
   shares with their download counts, `DELETE .../:token` removes one.
+
+## Card templates stored as data (no deploy)
+
+A company card layout used to be a `views/pdf_<name>.ejs` file: JavaScript on
+the API server, so a new one needed a deploy and a restart, and uploading one
+would have been remote code execution behind the admin token. Since
+2026-10-15 a layout can be **stored as data** instead (`src/cardTemplates.ts`,
+routes in `src/routes/cardTemplateRoutes.ts`, table `card_templates`): Liquid
+(LiquidJS) for one card front, one card back and the CSS, plus its own
+pictures and fonts. Rick's qrsong toolkit pushes them
+(`qrsong template …`); the format and how to write one is
+`~/Sites/skill-qrsong/reference/card-templates/README.md`.
+
+- **Versions never change.** Every push is version N+1. An order line pins the
+  version it is given (`payment_has_playlist.templateVersion`): POST `/php/:id`
+  and the toolkit order routes take `template` plus optional `templateVersion`
+  (a number or `'latest'`). Without a version, a line that already has that
+  stored template **keeps its pin**: the dashboard's production settings send
+  the template on every save and must not move an order to a newer version.
+  A file template has no version (null). `resolveForLine` /
+  `resolveAssignment` refuse a name that is neither a file nor stored.
+- **Card size = printer.** A version is drawn for 56 mm (Schneiders) or 60 mm
+  (Tromp, Print&Bind), or `cardSizeMm` null follows the printer. Assigning a
+  template, or changing a line's printer, refuses a mismatch
+  (`checkCardSize`). `pdf.ts` takes the page size from the pinned version
+  (`printerPageSize`); the 3 mm bleed is added after as before.
+- **Rendering.** The PDF route (`/qr/pdf/...`) renders a stored template when
+  the name is not a `pdf_*.ejs` file (files win; a stored template cannot take
+  a file's name). Liquid renders `stored.css` once and each card's front and
+  back; `views/stored_card_page.ejs` (deliberately not `pdf_*`, so it is not a
+  template name) writes the page: the order's design font unless the template
+  says `designFont: false`, the how-to card, the page breaks, the `@font-face`
+  rules of its `fonts`, and the fit script. Compiled templates are cached per
+  name and version, so a push works at once in every worker.
+- **What Liquid gets** is a plain JSON copy: `track`, `qrUrl`, `qr` (module
+  grid of the QR picture, for exact placement), `card`, `design` (the card's
+  design columns plus `backgroundUrl`, `backgroundBackUrl`, `logoUrl`,
+  `yearFontSize`), `order` (`lineId`, `printerType`, `doubleSided`), `eco`,
+  `batchNumber`, `template`, `data`. No e-mail, address or payment. The engine:
+  no file system (`templates: {}`), own properties only, strict variables and
+  filters, output HTML-escaped like `<%=` (`| raw` opts out), JavaScript
+  truthiness (`jsTruthy`, so `| default` is `||`), LiquidJS's parse, render and
+  memory limits (a loop over 1..1e8 stops in ms).
+- **The page runs under a Content-Security-Policy** (`cardTemplateCsp`): no
+  default source, pictures and fonts from this API and Google Fonts, inline
+  styles, and only the script with the response's nonce (the fit script).
+  That is the enforcement in the PDF Lambda's Chromium; `checkSource` refuses
+  `<script>`, `on…=`, `javascript:`, `<iframe>`, `<link>`, URLs outside the
+  template and `include`/`render` at push, with the line, so the author sees
+  why instead of a silently blocked element.
+- **Assets** (`PUBLIC_DIR/card-templates/<name>/<sha256>.<ext>`,
+  content-addressed): PNG, JPEG, WebP and the fonts TTF, OTF, WOFF, WOFF2,
+  known by their bytes, never their name; SVG (can carry script) and font
+  collections are refused, pictures over 50 MP, files over 15 MB, more than 40
+  assets or 60 MB per push. Fonts are read with fontkit at push (a broken file
+  is an error, not a fallback font on the cards) and the push answers each
+  font's family, weight and style.
+- **Fit building block** (`FIT_SCRIPT`): an element with `data-fit` gets the
+  largest size at which its child boxes stay inside it, measured by Chromium
+  after `document.fonts.ready` (the Lambda waits for that plus 500 ms). It sets
+  `font-size`, `--fit-size` and `data-fit-size`. It replaces the text-size
+  estimates of the Bird and Facta templates for new work.
+- **Push** (`POST /admin/card-templates/:name`, multipart `manifest` +
+  `asset` files) checks the source, every asset, every literally named asset
+  and a trial render on the sample cards in three designs (an error in one
+  design is caught here, not at the printer). `?check=1` does all of it and
+  stores nothing.
+- **Proof**: `POST /admin/card-templates/:name/:version/proof` (sample cards
+  with real QR pictures in `qrColor`, or an order's own cards) prints the
+  signed page `GET /card-templates/proof/:name/:version` (HMAC on
+  `JWT_SECRET`, an hour; the Lambda has no session) through the PDF Lambda.
+  In development the Lambda reaches the local API through the ngrok
+  `API_URI`.
+- **The PDF route read the wrong template column until 2026-10-15.**
+  `getPlaylistsByPaymentId` selects the line's template as `orderTemplate`;
+  `template` there is the playlist's legacy column. The route forced
+  `php[0].template`, so a request for the plain `printer` layout (finalCheck's
+  design-drift render) got the printer layout, not the company template. It
+  now reads `orderTemplate` and `orderTemplateVersion`, and refuses a template
+  name that is neither a file nor stored (404) instead of rendering
+  `pdf_<anything>.ejs`.
+- **Checking a conversion**: `npx tsx scripts/card-templates/compare.ts --dir
+  <templates> [name …]` renders a `pdf_*.ejs` and its stored conversion with
+  the same fixture cards in three designs, prints both like the Lambda (local
+  Chrome via `puppeteer-core`), rasterises with pdftoppm and compares every
+  page pixel by pixel. All 18 company templates were converted (in the
+  toolkit's `reference/card-templates/`) and came out identical: 57 cases,
+  950 pages. `scripts/card-templates/render.ts` prints one folder with given
+  cards and QR colour, as a local proof.
+- The 18 conversions are not pushed: the `pdf_*.ejs` files still serve those
+  orders. A stored template cannot take a file's name, so moving a company
+  over means a new name (and setting it on their orders) or removing the file
+  in a deploy first.
 
 ## Card order: service, year mix, hand order
 

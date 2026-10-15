@@ -1,4 +1,5 @@
 import { existsSync } from 'fs';
+import CardTemplates, { CardTemplateError, checkCardSize } from './cardTemplates';
 import path from 'path';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
@@ -40,8 +41,13 @@ export interface ToolkitOrderInput {
   /** Refuse unless the playlist has exactly this many tracks on Spotify. */
   expectedTracks?: number;
   printerType?: string;
-  /** Order template (pdf_<template>.ejs), e.g. a customer layout; null for the printer default. */
+  /**
+   * Order template, e.g. a customer layout: a views/pdf_<template>.ejs file or
+   * a stored template (src/cardTemplates.ts); null for the printer default.
+   */
   template?: string | null;
+  /** A stored template's version to pin; the latest when left out. */
+  templateVersion?: number | 'latest' | null;
   design?: Record<string, any>;
   /** Copies of the deck in this order (the boxes are ordered from the printer, not here). */
   amount?: number;
@@ -132,12 +138,38 @@ export function checkPrinter(printerType: string | undefined): PrinterType {
   return p;
 }
 
+/** File templates only; resolveTemplate also knows the stored ones. Exported for the tests. */
 export function checkTemplate(template: string | null | undefined, viewsDir: string): string | null {
   if (template === undefined || template === null || template === '') return null;
   if (!TEMPLATE.test(template) || !existsSync(path.join(viewsDir, `pdf_${template}.ejs`))) {
     throw new ToolkitOrderError(`no card template pdf_${template}.ejs`);
   }
   return template;
+}
+
+/** The template columns an order line stores for `template` (src/cardTemplates.ts). */
+async function resolveTemplate(
+  template: string | null | undefined,
+  version: number | 'latest' | null | undefined,
+  printerType: string | undefined,
+  phpId?: number
+): Promise<{ template: string | null; templateVersion: number | null } | undefined> {
+  try {
+    const templates = CardTemplates.getInstance();
+    if (phpId !== undefined) return await templates.resolveForLine(phpId, template, version, printerType);
+    if (version !== undefined && version !== null && version !== 'latest' && !(Number.isInteger(version) && version > 0)) {
+      throw new CardTemplateError('templateVersion must be a version number or "latest"');
+    }
+    const assignment = await templates.resolveAssignment(template, typeof version === 'number' ? version : null);
+    if (assignment?.template && assignment.templateVersion) {
+      const stored = await templates.get(assignment.template, assignment.templateVersion);
+      if (stored) checkCardSize(stored, printerType);
+    }
+    return assignment;
+  } catch (error) {
+    if (error instanceof CardTemplateError) throw new ToolkitOrderError(error.message, error.status);
+    throw error;
+  }
 }
 
 class ToolkitOrder {
@@ -154,19 +186,15 @@ class ToolkitOrder {
     return ToolkitOrder.instance;
   }
 
-  // The same folder the PDF renderer reads (server.ts: APP_ROOT/views). tsc puts this file in
-  // build/src/, so __dirname/views does not exist in production.
-  private viewsDir(): string {
-    const appRoot = process.env['APP_ROOT'];
-    return appRoot ? path.join(appRoot, 'views') : path.join(__dirname, 'views');
-  }
-
   public async create(input: ToolkitOrderInput): Promise<ToolkitOrderResult> {
     const email = String(input.email ?? '').trim().toLowerCase();
     if (!email) throw new ToolkitOrderError('email is required');
     if (!PLAYLIST_ID.test(String(input.playlistId ?? ''))) throw new ToolkitOrderError('playlistId must be a Spotify playlist id');
     const printerType = checkPrinter(input.printerType);
-    const template = checkTemplate(input.template, this.viewsDir());
+    const { template, templateVersion } = (await resolveTemplate(input.template ?? null, input.templateVersion, printerType)) ?? {
+      template: null,
+      templateVersion: null,
+    };
     const design = designColumns(input.design);
     const amount = input.amount ?? 1;
     if (!(Number.isInteger(amount) && amount >= 1 && amount <= 50)) throw new ToolkitOrderError('amount must be 1..50');
@@ -240,6 +268,7 @@ class ToolkitOrder {
               printApiPrice: 0,
               printerType,
               template,
+              templateVersion,
               gamesEnabled: false,
               gamesPrice: 0,
               ...design,
@@ -292,7 +321,12 @@ class ToolkitOrder {
   /** Changes the design / template of an order line. The caller regenerates. */
   public async updateDesign(
     paymentId: string,
-    input: { design?: Record<string, any>; template?: string | null; printerType?: string }
+    input: {
+      design?: Record<string, any>;
+      template?: string | null;
+      templateVersion?: number | 'latest' | null;
+      printerType?: string;
+    }
   ): Promise<void> {
     const { payment, php } = await this.line(paymentId);
     if (payment.sentToPrinter) throw new ToolkitOrderError('order was already sent to a printer', 409);
@@ -304,8 +338,13 @@ class ToolkitOrder {
       designColumns({ ...this.pickDesign(php), ...input.design });
       Object.assign(data, input.design);
     }
-    if (input.template !== undefined) data.template = checkTemplate(input.template, this.viewsDir());
-    if (input.printerType !== undefined) data.printerType = checkPrinter(input.printerType);
+    const printerType = input.printerType !== undefined ? checkPrinter(input.printerType) : undefined;
+    // A new printer is checked against the line's template too (card size).
+    if (input.template !== undefined || printerType !== undefined) {
+      const assignment = await resolveTemplate(input.template, input.templateVersion, printerType, php.id);
+      if (assignment) Object.assign(data, assignment);
+    }
+    if (printerType !== undefined) data.printerType = printerType;
     if (Object.keys(data).length === 0) throw new ToolkitOrderError('nothing to change');
     await this.prisma.paymentHasPlaylist.update({ where: { id: php.id }, data });
   }

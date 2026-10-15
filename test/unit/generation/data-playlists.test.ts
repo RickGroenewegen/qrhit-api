@@ -365,7 +365,8 @@ describe('updatePaymentHasPlaylist', () => {
       'tpl-x',
       '{"a":1}',
       'Dark',
-      2
+      2,
+      4
     );
 
     expect(res).toEqual({ success: true });
@@ -380,6 +381,8 @@ describe('updatePaymentHasPlaylist', () => {
         theme: '{"a":1}',
         themeName: 'Dark',
         template: 'tpl-x',
+        // The stored-template version the line is pinned to (src/cardTemplates.ts).
+        templateVersion: 4,
       },
     });
     // The template is per order; the shared playlist row is left alone so a

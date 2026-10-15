@@ -14,6 +14,7 @@ import {
 import { getQrTotalModules } from '../qr';
 import GoogleFonts from '../googleFonts';
 import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
+import CardTemplates, { CardTemplateError, isFileTemplate, sendStoredPage, TEMPLATE_NAME } from '../cardTemplates';
 import {
   deckDesigns,
   designIndexForCard,
@@ -446,8 +447,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         // An admin-chosen order template (see forcedPrinterTemplate) replaces
         // the single-card printer layout only: digital downloads and sheets
         // keep their multi-card layout instead of coming out one card per page.
+        // php[0].template is the playlist's (legacy) column in this query;
+        // the order line's own template is orderTemplate.
         const requestedTemplate: string = request.params.template;
-        const forcedTemplate = forcedPrinterTemplate(php[0].template);
+        const forcedTemplate = forcedPrinterTemplate(php[0].orderTemplate);
         const template =
           forcedTemplate && !isMultiCardTemplate(requestedTemplate)
             ? forcedTemplate
@@ -474,7 +477,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         );
         const cardDesigns = cardDesignIndexes.map((k: number) => designs[k]);
 
-        await reply.view(`pdf_${template}.ejs`, {
+        const view = {
           subdir,
           payment,
           playlist,
@@ -498,7 +501,44 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           getGoogleFontName,
           getFontWeight,
           getQrTotalModules,
-        });
+        };
+
+        // A stored template (src/cardTemplates.ts) at the version the order
+        // line pinned; any other name must be a views/pdf_<name>.ejs file.
+        const stored = await CardTemplates.getInstance().forRender(
+          template,
+          template === php[0].orderTemplate ? php[0].orderTemplateVersion : null
+        );
+        if (stored) {
+          try {
+            await sendStoredPage(
+              reply,
+              stored,
+              {
+                php: php[0],
+                designs,
+                cardDesignIndexes,
+                tracks,
+                subdir,
+                eco,
+                startIndex,
+                batchNumber,
+                apiUri: process.env['API_URI'] as string,
+              },
+              view
+            );
+          } catch (error) {
+            if (!(error instanceof CardTemplateError)) throw error;
+            logger.log(color.red.bold(`Card template ${template} v${stored.version}: ${error.message}`));
+            reply.status(500).send({ error: `card template ${template}: ${error.message}` });
+          }
+          return;
+        }
+        if (!TEMPLATE_NAME.test(template) || !isFileTemplate(template)) {
+          reply.status(404).send({ error: 'Unknown template' });
+          return;
+        }
+        await reply.view(`pdf_${template}.ejs`, view);
       }
     }
   );

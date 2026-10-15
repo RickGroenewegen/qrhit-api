@@ -754,6 +754,7 @@ model PaymentHasPlaylist {
   themeName                String? // User-readable theme name (e.g., "Acme Company")
   printerType              String                   @default("printnbind") // Printer type: "printnbind", "tromp", "schneiders" or "musicmatch"
   template                 String? // Admin-chosen card template for this order only (e.g. "facta"); beats Playlist.template
+  templateVersion          Int? // The CardTemplate version pinned when `template` names a stored template (src/cardTemplates.ts); null for a pdf_<name>.ejs file
   promotionalCredited      Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt    DateTime? // When the promotional credit was applied
   gamesEnabled             Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
@@ -1460,6 +1461,36 @@ model CompanyListSubmissionTrack {
 }
 
 // Model for storing application-wide settings
+/// A card template stored as data (src/cardTemplates.ts): Liquid HTML/CSS for
+/// one card, rendered inside the fixed views/pdf_stored.ejs. Every push is a
+/// new, immutable version; an order line pins the version it was given
+/// (payment_has_playlist.templateVersion), so a printed order never changes
+/// when the template does.
+model CardTemplate {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(40)
+  version    Int
+  /// 56 or 60; null follows the printer (56 mm at Schneiders, 60 mm elsewhere)
+  cardSizeMm Int?
+  css        String   @db.MediumText
+  front      String   @db.MediumText
+  back       String   @db.MediumText
+  /// { "<name used in the template>": "<stored file under PUBLIC_DIR/card-templates/<name>/>" }
+  assets     Json
+  /// Fixed values the template reads as `data` (geometry, tables); plain JSON
+  data       Json?
+  /// Load the order's design font (partials/font-import-inline); false for a template with its own fonts
+  designFont Boolean  @default(true)
+  /// The template's own fonts as @font-face rules: [{ family, file, weight, style, format }]
+  fonts      Json?
+  note       String?  @db.VarChar(500)
+  createdBy  String?  @db.VarChar(191)
+  createdAt  DateTime @default(now())
+
+  @@unique([name, version])
+  @@map("card_templates")
+}
+
 model AppSetting {
   key       String   @id @unique // Unique key for the setting (e.g., "spotify_access_token")
   value     String   @db.Text // Value of the setting (use Text for potentially long tokens)

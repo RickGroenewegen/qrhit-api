@@ -178,6 +178,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
       payment_has_playlist.template AS orderTemplate,
+      payment_has_playlist.templateVersion AS orderTemplateVersion,
       playlists.template,
       payment_has_playlist.theme,
       payment_has_playlist.themeName,
@@ -265,7 +266,8 @@ export async function updatePaymentHasPlaylist(
   template?: string | null,
   theme?: string | null,
   themeName?: string | null,
-  boxQuantity?: number
+  boxQuantity?: number,
+  templateVersion?: number | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const updateData: any = {
@@ -295,6 +297,8 @@ export async function updatePaymentHasPlaylist(
     // carries the company list's forceTemplate (see forcedPrinterTemplate).
     if (template !== undefined) {
       updateData.template = template;
+      // The stored template version this line is pinned to (src/cardTemplates.ts).
+      updateData.templateVersion = templateVersion ?? null;
     }
 
     const paymentHasPlaylist = await deps.prisma.paymentHasPlaylist.findUnique({

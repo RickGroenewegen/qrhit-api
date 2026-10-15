@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import CardTemplates, { CardTemplateError } from '../cardTemplates';
 import * as crypto from 'crypto';
 import Logger from '../logger';
 import { color } from 'console-log-colors';
@@ -2610,6 +2611,7 @@ export default async function adminRoutes(
           doubleSided,
           printerType,
           template,
+          templateVersion,
           theme,
           themeName,
           boxQuantity,
@@ -2662,6 +2664,22 @@ export default async function adminRoutes(
           return;
         }
 
+        // A file template (views/pdf_<name>.ejs) or a stored one, pinned
+        // to a version (src/cardTemplates.ts); anything else is refused.
+        let assignment: { template: string | null; templateVersion: number | null } | undefined;
+        try {
+          assignment = await CardTemplates.getInstance().resolveForLine(
+            paymentHasPlaylistId,
+            template,
+            templateVersion,
+            printerType
+          );
+        } catch (error) {
+          if (!(error instanceof CardTemplateError)) throw error;
+          reply.status(400).send({ success: false, error: error.message });
+          return;
+        }
+
         // Validate theme if provided
         if (theme !== undefined && theme !== null && typeof theme !== 'string') {
           reply.status(400).send({
@@ -2700,10 +2718,11 @@ export default async function adminRoutes(
           eco,
           doubleSided,
           printerType,
-          template,
+          assignment?.template,
           theme,
           themeName,
-          boxQuantity
+          boxQuantity,
+          assignment?.templateVersion
         );
 
         if (!result.success) {

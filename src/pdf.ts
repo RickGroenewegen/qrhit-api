@@ -1,4 +1,5 @@
 import { color, white } from 'console-log-colors';
+import CardTemplates from './cardTemplates';
 import Logger from './logger';
 import { Playlist } from '@prisma/client';
 import { PRINTER_TYPE } from './config/constants';
@@ -143,6 +144,17 @@ class PDF {
   /**
    * Invoke the Lambda function to convert HTML to PDF
    */
+  /**
+   * Page size (mm) of a single-card printer PDF: a stored card template
+   * (src/cardTemplates.ts) carries its own, at the version the order line
+   * pinned; everything else is printerPageSizeMm.
+   */
+  private async printerPageSize(template: string, printerType: string, playlist: any): Promise<number> {
+    const pinned = template === playlist?.orderTemplate ? playlist?.orderTemplateVersion : null;
+    const stored = await CardTemplates.getInstance().cardSizeMm(template, pinned);
+    return stored ?? printerPageSizeMm(template, printerType);
+  }
+
   private async convertHtmlToPdf(
     url: string,
     options: LambdaPdfOptions['options']
@@ -686,7 +698,7 @@ class PDF {
 
         if (!isDigitalTemplate) {
           // Printer templates - determine page size based on template
-          const pageSize = printerPageSizeMm(template, printerType);
+          const pageSize = await this.printerPageSize(template, printerType, playlist);
           options['PageWidth'] = pageSize;
           options['PageHeight'] = pageSize;
         } else if (isUsTemplate) {
@@ -729,7 +741,7 @@ class PDF {
 
       // Post-processing
       if (!isDigitalTemplate) {
-        const pageSize = printerPageSizeMm(template, printerType);
+        const pageSize = await this.printerPageSize(template, printerType, playlist);
         await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
         if (needsOutlinedText(printerType)) {
@@ -820,7 +832,7 @@ class PDF {
       options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
       // Printer templates - determine page size based on template
-      const pageSize = printerPageSizeMm(template, printerType);
+      const pageSize = await this.printerPageSize(template, printerType, playlist);
       options.width = pageSize;
       options.height = pageSize;
     }
@@ -916,7 +928,7 @@ class PDF {
 
     // Post-processing
     if (!isDigitalTemplate) {
-      const pageSize = printerPageSizeMm(template, printerType);
+      const pageSize = await this.printerPageSize(template, printerType, playlist);
       await this.resizePDFPages(finalPath, pageSize, pageSize);
       await this.addBleed(finalPath, 3);
       if (needsOutlinedText(printerType)) {

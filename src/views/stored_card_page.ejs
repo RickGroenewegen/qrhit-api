@@ -1,0 +1,38 @@
+<%
+// The page around a stored card template (src/cardTemplates.ts). The cards
+// themselves (stored.css, stored.cards[].front/.back) are rendered by Liquid
+// from the template's version in card_templates; everything else here is ours:
+// the fonts of the order's design, the how-to card, the page breaks the
+// printer expects (front, back, front, back) and the fit script. Served with
+// cardTemplateCsp, which only lets the script with this response's nonce run.
+%><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<% if (stored.designFont) { %>
+<%- include('partials/font-import-inline') %>
+<% } %>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+    }
+</style>
+<style>
+<%- stored.css %>
+</style>
+</head>
+<body>
+<% if (php.addHowToCard && startIndex === 0) { %>
+  <%- include('partials/howto_card') %>
+<% } %>
+<% stored.cards.forEach((card) => { %>
+<%- card.front %>
+<div style="page-break-after: always;"></div>
+<%- card.back %>
+<div style="page-break-after: always;"></div>
+<% }); %>
+<script nonce="<%= fitNonce %>"><%- fitScript %></script>
+</body>
+</html>
