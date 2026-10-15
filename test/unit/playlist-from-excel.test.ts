@@ -56,7 +56,7 @@ vi.mock('../../src/utils', () => ({
   },
 }));
 
-import PlaylistFromExcel from '../../src/playlistFromExcel';
+import PlaylistFromExcel, { SPOTIFY_TRACK_ID_SQL } from '../../src/playlistFromExcel';
 
 async function buildSheet(rows: any[][], filename = 'party.xlsx') {
   const workbook = new ExcelJS.Workbook();
@@ -188,6 +188,40 @@ describe('PlaylistFromExcel job', () => {
     // The plain query found an artist match, so the field-filtered query was not needed.
     expect(h.searchTracks).toHaveBeenCalledTimes(1);
     expect(h.searchTracks.mock.calls[0][0]).toBe('Scatman Scatman John');
+  });
+
+  it('takes only Spotify tracks from the database (other services have numeric or short ids)', async () => {
+    // Asito, 2026-10-15: "Walking on Sunshine" matched a database row with an
+    // Apple Music id (723501674) and Spotify refused the whole playlist with a 400.
+    const sql: string[] = [];
+    h.queryRaw.mockImplementation(async (strings: TemplateStringsArray, ...values: any[]) => {
+      sql.push(strings.join('?'));
+      expect(values).toContain(SPOTIFY_TRACK_ID_SQL);
+      return [];
+    });
+    h.searchTracks.mockResolvedValue({
+      success: true,
+      data: { tracks: [{ id: '05wIrZSwuaVWhcv5FfqeH0', artist: 'Katrina & The Waves', name: 'Walking On Sunshine' }] },
+    });
+    h.createOrUpdatePlaylist.mockResolvedValue({
+      success: true,
+      data: { playlistId: 'pl1', playlistUrl: 'https://open.spotify.com/playlist/pl1' },
+    });
+    const jobId = service.startJob({
+      rows: [{ row: 2, artist: 'Katrina & The Waves', title: 'Walking on Sunshine' }],
+      filename: 'x.xlsx',
+      playlistName: 'Test list',
+      artistColumn: 0,
+      titleColumn: 1,
+      hasHeader: true,
+    });
+    const job = await waitForJob(service, jobId);
+    expect(sql.length).toBeGreaterThan(0);
+    expect(sql.every((q) => /trackId REGEXP \?/.test(q))).toBe(true);
+    expect(new RegExp(SPOTIFY_TRACK_ID_SQL).test('05wIrZSwuaVWhcv5FfqeH0')).toBe(true);
+    expect(new RegExp(SPOTIFY_TRACK_ID_SQL).test('723501674')).toBe(false);
+    expect(job.foundOnSpotify).toBe(1);
+    expect(h.createOrUpdatePlaylist).toHaveBeenCalledWith('Test list', ['05wIrZSwuaVWhcv5FfqeH0']);
   });
 
   it('reports rows that neither source can match and fails when nothing matched', async () => {

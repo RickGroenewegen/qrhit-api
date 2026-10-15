@@ -7,6 +7,10 @@ import Spotify from './spotify';
 import Cache from './cache';
 import Utils from './utils';
 
+
+/** A Spotify track id in SQL: 22 base62 characters (the other services' ids are numeric or shorter). */
+export const SPOTIFY_TRACK_ID_SQL = '^[0-9A-Za-z]{22}$';
+
 // Snapshot of an in-flight or finished job. Kept in memory for fast polling
 // and mirrored to Redis so a status poll still resolves after a restart.
 const JOB_KEY_PREFIX = 'playlistFromExcel';
@@ -385,6 +389,12 @@ class PlaylistFromExcel {
    * Exact normalized match first, then a looser match on the cleaned title
    * (suffixes like " - Remastered" and "(feat. …)" stripped) so a sheet that
    * says "Bohemian Rhapsody" still hits "Bohemian Rhapsody - Remastered 2011".
+   *
+   * Only Spotify tracks: the playlist is made on Spotify, and `tracks` also
+   * holds Apple Music, Deezer, Tidal and YouTube ids (about 9% in October
+   * 2026). One of those in the list made Spotify refuse the whole playlist
+   * with a bare 400 (Asito, "Walking on Sunshine" as 723501674, 2026-10-15).
+   * A song we only know under another service is found by the Spotify search.
    */
   private async findInDatabase(row: PlaylistFromExcelRow): Promise<FoundTrack | null> {
     const artist = row.artist.toLowerCase().trim();
@@ -395,6 +405,7 @@ class PlaylistFromExcel {
       FROM tracks
       WHERE LOWER(TRIM(artist)) = ${artist}
         AND LOWER(TRIM(name)) = ${title}
+        AND trackId REGEXP ${SPOTIFY_TRACK_ID_SQL}
       ORDER BY manuallyChecked DESC, id ASC
       LIMIT 1
     `;
@@ -412,6 +423,7 @@ class PlaylistFromExcel {
       FROM tracks
       WHERE LOWER(artist) LIKE ${`%${primaryArtist}%`}
         AND LOWER(name) LIKE ${`${cleanedTitle}%`}
+        AND trackId REGEXP ${SPOTIFY_TRACK_ID_SQL}
       ORDER BY manuallyChecked DESC, id ASC
       LIMIT 10
     `;

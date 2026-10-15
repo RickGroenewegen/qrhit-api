@@ -1213,6 +1213,12 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   Spotify, `exact` or `loose`, the matched name and artist, `duplicateOfRow`).
   Loose matches deserve a look: the prefix rule took BLØF "Hier" for "Hier
   Aan De Kust", and "Grease" as an artist matched the 2016 Grease Live cast.
+  The database lookup only takes Spotify tracks (`trackId` of 22 base62
+  characters, `SPOTIFY_TRACK_ID_SQL`): `tracks` also holds Apple Music,
+  Deezer, Tidal and YouTube ids (about 9% in October 2026), and one of those
+  in the list made Spotify refuse the whole playlist with a bare 400 (Asito,
+  "Walking on Sunshine" as 723501674, 2026-10-15). A song we only know under
+  another service goes to the Spotify search like any unknown row.
 - `POST /admin/toolkit/playlist` makes or refills a playlist from exact track
   ids; `GET /admin/toolkit/playlist/:id/items` reads one back exactly as
   Spotify holds it (`src/playlistItems.ts`; `Spotify.getTracks` merges and
