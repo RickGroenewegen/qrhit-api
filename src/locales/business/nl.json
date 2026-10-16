@@ -24,12 +24,12 @@
   "instructions.cardSize": "De kaarten hebben een formaat van <strong>{{size}}</strong> (eindformaat na snijden)",
   "instructions.cardBleed": "Ontwerp elke zijde op een <strong>vierkant canvas van {{canvas}}</strong>: de kaart plus <strong>rondom 3 mm afloop</strong>, die wordt weggesneden",
   "instructions.cardShift": "Houd tekst, logo's en de QR-code <strong>minimaal 3 mm binnen de snijlijn</strong> (dus minimaal 6 mm van de rand van het canvas): het stansmes snijdt met een kleine tolerantie",
-  "instructions.cardQrCenter": "QR codes zullen <strong>in het midden van de kaart</strong> geplaatst worden",
+  "instructions.cardQrCenter": "Standaard plaatsen wij de QR-code <strong>in het midden van de kaart</strong>. Wilt u deze op een andere plek of in een ander formaat? Plaats dan een <strong>voorbeeld-QR-code</strong> in het ontwerp, precies waar u deze wilt hebben: wij plaatsen de code van elke kaart op die plek",
   "instructions.cardImages": "Lever de voor- en achterkant elk aan als <strong>vierkant ontwerp</strong> van minimaal <em>1600x1600 pixels</em> (het volledige canvas, inclusief afloop)",
   "instructions.cardContrast": "De QR scanner werkt het beste met een <strong>donkerdere QR code op een lichtere achtergrond</strong>",
   "instructions.cardPsd": "Lever het ontwerp aan als <strong>PSD-bestand</strong> of als <strong>pdf uit InDesign of Illustrator</strong>, met de QR-code in een <strong>aparte laag</strong> (in een pdf: een apart object of aparte laag), zodat deze uitgeschakeld kan worden",
   "instructions.cardMetaLayer": "Plaats ook de <strong>artiest, titel en jaartal op de achterkant in een aparte layer</strong>, zodat deze indien gewenst uitgezet kan worden",
-  "instructions.cardFont": "<strong>Elk lettertype</strong> kan worden gebruikt. Stuur de fontbestanden mee (bij voorkeur OTF of TTF; WOFF/WOFF2 is ook mogelijk, fontcollecties (.ttc) niet) en zorg dat de licentie gebruik in drukwerk dekt. Voor lettertypen van <strong>Google Fonts</strong> zijn geen bestanden nodig",
+  "instructions.cardFont": "Onze voorkeur gaat uit naar een lettertype van <strong>Google Fonts</strong> (geen bestanden nodig), maar <strong>elk lettertype</strong> is mogelijk: stuur in dat geval de lettertypebestanden mee (bij voorkeur OTF of TTF; WOFF/WOFF2 kan ook, lettertypecollecties (.ttc) niet) en zorg ervoor dat de licentie gebruik in drukwerk dekt",
   "instructions.tipTitle": "Tip voor optimale scanbaarheid",
   "instructions.tipContent": "Zorg voor voldoende contrast tussen de QR code en de achtergrond. Een donkere QR code (zwart, donkerblauw, donkergroen) op een lichte achtergrond (wit, crème, lichtgrijs) geeft de beste resultaten.",
   "instructions.footerContact": "Vragen over deze instructies? Neem contact op met uw contactpersoon.",
@@ -446,5 +446,6 @@
   "instructions.cardCorners": "De kaarten worden gestanst met <strong>afgeronde hoeken</strong> (straal ca. 4,35 mm). Teken zelf geen afgeronde hoeken in het ontwerp: het stansmes maakt deze",
   "instructions.cardEdges": "Laat achtergrondkleuren en gekleurde vlakken <strong>doorlopen in de afloop</strong>. Vermijd <strong>dunne kaders of witte randen</strong> langs de snijlijn: door de tolerantie van het stansmes worden deze ongelijk. Wilt u toch een witte rand, maak deze dan minimaal 3 mm breed",
   "instructions.cardColours": "Kleuren: <strong>CMYK met een ingesloten kleurprofiel</strong> (bij voorkeur Coated FOGRA39) of RGB. Gebruik geen steunkleuren (PMS)",
-  "instructions.cardTemplate": "Op verzoek sturen wij u het <strong>kaartsjabloon</strong> (snijlijn en afloop) voor gebruik in uw ontwerpsoftware"
+  "instructions.cardTemplate": "Het <strong>kaartsjabloon</strong> van onze drukker (stanslijn en afloop) is <strong>bijgevoegd</strong> bij deze instructies, voor gebruik in uw ontwerpsoftware",
+  "instructions.cardOneDesign": "U hoeft slechts <strong>één kaart</strong> te ontwerpen (voor- en achterkant): wij maken daarvan alle andere kaarten, elk met <strong>een eigen QR-code</strong> en de juiste <strong>artiest, titel en jaartal</strong>"
 }

@@ -24,12 +24,12 @@
   "instructions.cardSize": "Die Karten haben ein Format von <strong>{{size}}</strong> (Endformat nach dem Schneiden)",
   "instructions.cardBleed": "Gestalten Sie jede Seite auf einer <strong>quadratischen Arbeitsfläche von {{canvas}}</strong>: die Karte zzgl. <strong>3 mm Beschnitt rundum</strong>, der abgeschnitten wird",
   "instructions.cardShift": "Platzieren Sie Text, Logos und den QR-Code <strong>mindestens 3 mm innerhalb der Schnittlinie</strong> (also mindestens 6 mm vom Rand der Arbeitsfläche): Die Stanzform schneidet mit einer geringen Toleranz",
-  "instructions.cardQrCenter": "Die QR-Codes werden <strong>mittig auf der Karte</strong> platziert",
+  "instructions.cardQrCenter": "Standardmäßig wird der QR-Code <strong>in der Mitte der Karte</strong> platziert. Wünschen Sie eine andere Position oder Größe? Dann platzieren Sie bitte einen <strong>Beispiel-QR-Code</strong> genau an der gewünschten Stelle im Design: Wir setzen den Code jeder Karte an diese Stelle",
   "instructions.cardImages": "Liefern Sie Vorder- und Rückseite jeweils als <strong>quadratisches Design</strong> mit mindestens <em>1600x1600 Pixeln</em> (die gesamte Arbeitsfläche, inkl. Beschnitt)",
   "instructions.cardContrast": "Der QR-Scanner funktioniert am besten mit einem <strong>dunkleren QR-Code auf hellerem Hintergrund</strong>",
   "instructions.cardPsd": "Liefern Sie das Design als <strong>PSD-Datei</strong> oder als <strong>PDF aus InDesign oder Illustrator</strong>, mit dem QR-Code auf einer <strong>separaten Ebene</strong> (im PDF: ein separates Objekt oder eine separate Ebene), damit er ausgeblendet werden kann",
   "instructions.cardMetaLayer": "Platzieren Sie außerdem <strong>Interpret, Titel und Jahreszahl auf der Rückseite auf einer separaten Ebene</strong>, damit diese bei Bedarf ausgeblendet werden können",
-  "instructions.cardFont": "<strong>Jede Schriftart</strong> ist möglich. Bitte senden Sie die Schriftdateien mit (vorzugsweise OTF oder TTF; WOFF/WOFF2 ist ebenfalls möglich, Schriftsammlungen (.ttc) nicht) und stellen Sie sicher, dass die Lizenz die Verwendung im Druck abdeckt. Für Schriften von <strong>Google Fonts</strong> sind keine Dateien nötig",
+  "instructions.cardFont": "Wir bevorzugen eine Schriftart von <strong>Google Fonts</strong> (keine Dateien erforderlich), es kann jedoch <strong>jede Schriftart</strong> verwendet werden: Bitte senden Sie die Schriftdateien mit (vorzugsweise OTF oder TTF; WOFF/WOFF2 ist ebenfalls möglich, Schriftsammlungen (.ttc) nicht) und stellen Sie sicher, dass die Lizenz die Verwendung im Druck abdeckt",
   "instructions.tipTitle": "Hinweis für optimale Scanbarkeit",
   "instructions.tipContent": "Achten Sie auf ausreichenden Kontrast zwischen QR-Code und Hintergrund. Ein dunkler QR-Code (Schwarz, Dunkelblau, Dunkelgrün) auf hellem Hintergrund (Weiß, Creme, Hellgrau) liefert die besten Ergebnisse.",
   "instructions.footerContact": "Haben Sie Fragen zu diesen Anweisungen? Wenden Sie sich bitte an Ihren Ansprechpartner.",
@@ -446,5 +446,6 @@
   "instructions.cardCorners": "Die Karten werden mit <strong>abgerundeten Ecken</strong> gestanzt (Radius ca. 4,35 mm). Bitte zeichnen Sie keine abgerundeten Ecken in das Design: Diese entstehen durch die Stanzform",
   "instructions.cardEdges": "Lassen Sie Hintergrundfarben und farbige Flächen <strong>in den Beschnitt laufen</strong>. Vermeiden Sie <strong>dünne Rahmen oder weiße Ränder</strong> entlang der Schnittlinie: Aufgrund der Toleranz der Stanzform fallen diese ungleichmäßig aus. Wünschen Sie dennoch einen weißen Rand, sollte dieser mindestens 3 mm breit sein",
   "instructions.cardColours": "Farben: <strong>CMYK mit eingebettetem Farbprofil</strong> (vorzugsweise Coated FOGRA39) oder RGB. Bitte verwenden Sie keine Sonderfarben (PMS)",
-  "instructions.cardTemplate": "Auf Anfrage senden wir Ihnen die <strong>Kartenvorlage</strong> (Stanzkontur und Beschnitt) zur Verwendung in Ihrer Designsoftware"
+  "instructions.cardTemplate": "Die <strong>Kartenvorlage</strong> unserer Druckerei (Stanzlinie und Beschnitt) ist diesen Anweisungen <strong>beigefügt</strong>, zur Verwendung in Ihrer Designsoftware",
+  "instructions.cardOneDesign": "Sie müssen nur <strong>eine Karte</strong> gestalten (Vorder- und Rückseite): Daraus erstellen wir alle weiteren Karten, jeweils mit <strong>eigenem QR-Code</strong> und dem richtigen <strong>Interpreten, Titel und Jahr</strong>"
 }

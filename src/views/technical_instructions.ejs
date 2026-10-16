@@ -339,6 +339,42 @@
             margin-top: 10px;
         }
 
+
+        /* Print overrides, last so they win over the rules above */
+        @media print {
+            /* @page already gives the 15 mm margin: no second one from the container, and two
+               pages in every language: boxes on the first, cards (with the tip and the footer)
+               on the second. A section that runs long flows on instead of jumping whole to the
+               next page and leaving the first one empty (the German text did, 2026-10-15). */
+            .container {
+                border: none;
+                box-shadow: none;
+                width: 100%;
+                min-height: 0;
+                padding: 0;
+            }
+            .section {
+                page-break-inside: auto;
+            }
+            .section + .section {
+                break-before: page;
+            }
+            .highlight-box,
+            .footer {
+                break-inside: avoid;
+            }
+            .footer {
+                break-before: avoid;
+                margin-top: 12px;
+            }
+            /* The card list holds 16 points in the longest (German) text; tighter rows keep
+               page two at about 250 of the 267 mm a page holds */
+            .instructions-list li {
+                padding-top: 5px;
+                padding-bottom: 5px;
+                margin-bottom: 3px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -432,6 +468,7 @@
 
             <ul class="instructions-list">
                 <li><%- t('cardSize', { size: printer === 'tromp' ? '60x60mm' : '56x56mm' }) %></li>
+                <li><%- t('cardOneDesign') %></li>
                 <li><%- t('cardBleed', { canvas: printer === 'tromp' ? '66x66mm' : '62x62mm' }) %></li>
                 <li><%- t('cardShift') %></li>
                 <% if (printer !== 'tromp') { %>

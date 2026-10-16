@@ -1763,10 +1763,6 @@
     "nl",
     "de"
   ],
-  "instructions.cardQrCenter": [
-    "nl",
-    "de"
-  ],
   "instructions.cardImages": [
     "nl",
     "de"
@@ -1779,11 +1775,19 @@
     "nl",
     "de"
   ],
-  "instructions.cardFont": [
+  "instructions.cardColours": [
     "nl",
     "de"
   ],
-  "instructions.cardColours": [
+  "instructions.cardQrCenter": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardOneDesign": [
+    "nl",
+    "de"
+  ],
+  "instructions.cardFont": [
     "nl",
     "de"
   ],

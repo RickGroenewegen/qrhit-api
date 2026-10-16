@@ -95,6 +95,15 @@ from a separate bundle instead:
   `_scripts/remove-from-cache.sh` cleans this bundle's cache too. A key removed
   from `en.json` has to leave `nl.json`/`de.json` as well: `translate.js` never
   prunes, and an orphan with a `{{placeholder}}` fails the translation test.
+- **The technical instructions are two pages in every language** (2026-10-15):
+  boxes on the first, cards with the tip and the footer on the second. The print
+  rules at the end of `technical_instructions.ejs` do it (no container padding on
+  top of the 15 mm `@page` margin, a page break before the card section, tighter
+  list rows); they come last because a print rule placed above the base rules
+  loses to them. German runs longest (page two at ~251 of 267 mm): after changing
+  the copy, print nl/en/de for both printers the way the Lambda does (viewport
+  1920x1080, A4, margin 0, `preferCSSPageSize`) and count the pages. Before this
+  the German document came out on three pages, the first holding only the title.
 - **The Algemene Voorwaarden / IP clauses in this bundle are contract text.**
   Have any change to `quotation.terms*` / `quotation.ip*` reviewed before it
   reaches a customer.
