@@ -4,13 +4,6 @@ import Business from '../business';
 import Bookkeeping from '../bookkeeping';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
-import Data from '../data';
-import {
-  getSuggestionArtwork,
-  parsePlaylistSuggestionOptions,
-  playlistSuggestionQuery,
-  suggestionArtPath,
-} from '../playlistSuggestions';
 import {
   quotationVatContext,
   normalizeCountryIso,
@@ -62,7 +55,6 @@ export default async function companyRoutes(
   const business = Business.getInstance();
   const bookkeeping = Bookkeeping.getInstance();
   const translation = new Translation();
-  const data = Data.getInstance();
 
 
   // Pull the optional order metrics (sent along by the calculators) out of a
@@ -2520,169 +2512,6 @@ export default async function companyRoutes(
     fastify.get(`/business/${edition}-pricing`, renderPriceList(edition));
     fastify.post(`/business/${edition}-pricing/pdf`, getAuthHandler(['admin']), priceListPdf(edition));
   }
-
-  // ============================================
-  // Playlist suggestions (featured playlists brochure)
-  // ============================================
-
-  // HTML view, screenshotted by Lambda for the PDF. Unauthenticated: the
-  // Lambda carries no session, so every filter travels in the query string
-  // and is validated by parsePlaylistSuggestionOptions. It shows no prices,
-  // so unlike the price lists it needs no signature.
-  fastify.get(
-    '/business/playlist-suggestions',
-    async (request: any, reply: any) => {
-      try {
-        const parsed = parsePlaylistSuggestionOptions(request.query, translation);
-        if (!parsed.ok) {
-          reply.status(400).send({ error: parsed.error });
-          return;
-        }
-        const { locale, cardCount } = parsed.opts;
-        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const intlTag = translation.getIntlTag(locale);
-
-        // Cover and closing page are shared with the price lists and read
-        // their labels from `t`. The suggestions bundle overrides the copy
-        // that is specific to this document and falls through to `pricing.*`
-        // for everything else (edition/version/contact labels, closing page).
-        const suggestionsT = await translation.getBusinessTranslator(locale, 'suggestions');
-        const pricingT = await translation.getBusinessTranslator(locale, 'pricing');
-        const t = (key: string, vars?: Record<string, any>) => {
-          const own = suggestionsT(key, vars);
-          return own === key ? pricingT(key, vars) : own;
-        };
-
-        const formatDate = (date: Date) =>
-          new Intl.DateTimeFormat(intlTag, {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          }).format(date);
-        const formatNumber = (value: number) => new Intl.NumberFormat(intlTag).format(value);
-
-        const truncate = (text: string, max: number): string => {
-          const clean = String(text || '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          if (clean.length <= max) return clean;
-          const cut = clean.slice(0, max);
-          const lastSpace = cut.lastIndexOf(' ');
-          return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).replace(/[,;:.\s]+$/, '')}…`;
-        };
-
-        const rows = await data.getPlaylistSuggestions(locale, parsed.opts);
-        const playlists = rows.map((p: any) => {
-          const numberOfTracks = Number(p.numberOfTracks) || 0;
-          return {
-            id: p.id,
-            playlistId: p.playlistId,
-            name: p.name,
-            genreName: p.genreName || t('genreUnknown'),
-            description: truncate(p.description, 200),
-            numberOfTracks,
-            showTrackNote: numberOfTracks > cardCount,
-            // Small cached JPEG instead of the full-size source, see getSuggestionArtwork.
-            imageUrl: p.customImage || p.image ? `${baseUrl}${suggestionArtPath(p.playlistId)}` : null,
-            spotifyUrl: `https://open.spotify.com/playlist/${p.playlistId}`,
-          };
-        });
-
-        await reply.view('playlist_suggestions.ejs', {
-          locale,
-          t,
-          playlists,
-          cardCount,
-          formatDate,
-          formatNumber,
-          baseUrl,
-        });
-      } catch (error) {
-        console.error('Error rendering playlist suggestions view:', error);
-        reply.status(500).send({ error: 'Failed to render playlist suggestions' });
-      }
-    }
-  );
-
-  // Playlist artwork as a small cached JPEG for the brochure. Unauthenticated
-  // because the Lambda's Chromium fetches it while rendering the view.
-  fastify.get(
-    '/business/playlist-suggestions/art/:playlistId',
-    async (request: any, reply: any) => {
-      try {
-        const playlistId = String(request.params.playlistId || '');
-        if (!playlistId || playlistId.length > 64) {
-          reply.status(404).send({ error: 'Not found' });
-          return;
-        }
-        const jpeg = await getSuggestionArtwork(playlistId);
-        if (!jpeg) {
-          reply.status(404).send({ error: 'Not found' });
-          return;
-        }
-        reply.header('Content-Type', 'image/jpeg');
-        reply.header('Cache-Control', 'public, max-age=86400');
-        reply.send(jpeg);
-      } catch (error) {
-        console.error('Error serving playlist suggestion artwork:', error);
-        reply.status(500).send({ error: 'Failed to load artwork' });
-      }
-    }
-  );
-
-  // Playlist suggestions PDF download
-  fastify.post(
-    '/business/playlist-suggestions/pdf',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      try {
-        const parsed = parsePlaylistSuggestionOptions(request.body, translation);
-        if (!parsed.ok) {
-          reply.status(400).send({ error: parsed.error });
-          return;
-        }
-
-        const PDF = require('../pdf').default;
-        const pdfManager = new PDF();
-        const path = require('path');
-        const fs = require('fs').promises;
-
-        const tempDir = '/tmp';
-        const fileName = `playlist_suggestions_${Date.now()}.pdf`;
-        const filePath = path.join(tempDir, fileName);
-
-        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const htmlUrl = `${baseUrl}/business/playlist-suggestions?${playlistSuggestionQuery(parsed.opts)}`;
-
-        await pdfManager.generateFromUrl(htmlUrl, filePath, {
-          format: 'a4',
-          marginTop: 0,
-          marginBottom: 0,
-          marginLeft: 0,
-          marginRight: 0,
-        });
-
-        const pdfBuffer = await fs.readFile(filePath);
-
-        try {
-          await fs.unlink(filePath);
-        } catch (unlinkError) {
-          console.warn('Failed to delete temp file:', unlinkError);
-        }
-
-        const suggestionsT = await translation.getBusinessTranslator(parsed.opts.locale, 'suggestions');
-        const downloadFilename = `${suggestionsT('editionName').replace(/\s+/g, '_')}_${parsed.opts.cardCount}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-        reply.header('Content-Type', 'application/pdf');
-        reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
-        reply.send(pdfBuffer);
-      } catch (error) {
-        console.error('Error generating playlist suggestions PDF:', error);
-        reply.status(500).send({ error: 'Failed to generate playlist suggestions PDF' });
-      }
-    }
-  );
 
   // ============================================
   // Company Events

@@ -42,5 +42,5 @@ if [[ -z "$host" || -z "$user" ]]; then
   exit 1
 fi
 
-MYSQL_PWD="$(value LIVE_DB_READONLY_PASSWORD)" mysql -h "$host" -u "$user" ${vertical} qrhit \
+MYSQL_PWD="$(value LIVE_DB_READONLY_PASSWORD)" mysql --default-character-set=utf8mb4 -h "$host" -u "$user" ${vertical} qrhit \
   -e "SET SESSION max_execution_time = 10000; ${sql}" 2> >(grep -v "Using a password" >&2)

@@ -94,7 +94,7 @@ vi.mock('../../../src/pushover', () => ({
   },
 }));
 
-import SpotifyApi from '../../../src/spotify_api';
+import SpotifyApi, { sanitizePlaylistDescription } from '../../../src/spotify_api';
 
 const CLIENT_ID = 'test-client-id';
 const CLIENT_SECRET = 'test-client-secret';
@@ -829,6 +829,150 @@ describe('SpotifyApi.createOrUpdatePlaylist', () => {
     const res = await makeApi().createOrUpdatePlaylist('My List', ['a']);
     expect(res).toMatchObject({ success: false, needsReAuth: true });
     expect(h.axiosGet).not.toHaveBeenCalled();
+  });
+});
+
+describe('SpotifyApi.createOrUpdatePlaylist with playlistId and description (toolkit)', () => {
+  beforeEach(() => seedValidToken());
+
+  const OURS = 'Ours11111111111111111A';
+  const trackIds = Array.from({ length: 130 }, (_, i) => `id${i}`);
+  const meta = (owner: string, name = 'Old name') => ({
+    data: { id: OURS, name, owner: { id: owner }, external_urls: { spotify: `https://open.spotify.com/playlist/${OURS}` } },
+  });
+
+  it('refills exactly that playlist without the name lookup, renames it and sets the description', async () => {
+    h.axiosGet.mockImplementation(async (url: string, config: any) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      if (url === `https://api.spotify.com/v1/playlists/${OURS}`) {
+        expect(config.params).toEqual({ fields: 'id,name,owner(id),external_urls' });
+        return meta('user1');
+      }
+      throw new Error(`unexpected GET ${url}`);
+    });
+    h.axiosRequest.mockResolvedValue({});
+    h.axiosPut.mockResolvedValue({});
+
+    const res = await makeApi().createOrUpdatePlaylist('80s Hits (96)', trackIds, {
+      playlistId: OURS,
+      description: 'Synthesizers and big hair.\nThe hits of the 80s.',
+    });
+
+    expect(res).toEqual({
+      success: true,
+      data: { playlistId: OURS, playlistUrl: `https://open.spotify.com/playlist/${OURS}`, playlistName: '80s Hits (96)' },
+    });
+    // Never the first-50 name lookup, never a new playlist.
+    expect(h.axiosGet.mock.calls.map((c) => c[0])).not.toContain('https://api.spotify.com/v1/me/playlists');
+    expect(h.axiosPost).not.toHaveBeenCalled();
+    // 130 tracks: PUT the first 100, POST the other 30.
+    const [first, second] = h.axiosRequest.mock.calls.map((c) => c[0]);
+    expect(h.axiosRequest).toHaveBeenCalledTimes(2);
+    expect(first).toMatchObject({ method: 'put', url: `https://api.spotify.com/v1/playlists/${OURS}/tracks` });
+    expect(JSON.parse(first.data).uris).toHaveLength(100);
+    expect(second).toMatchObject({ method: 'post', url: `https://api.spotify.com/v1/playlists/${OURS}/tracks` });
+    expect(JSON.parse(second.data).uris).toHaveLength(30);
+    // Name and description in one PUT, the line break gone.
+    expect(h.axiosPut).toHaveBeenCalledTimes(1);
+    expect(h.axiosPut.mock.calls[0][0]).toBe(`https://api.spotify.com/v1/playlists/${OURS}`);
+    expect(JSON.parse(h.axiosPut.mock.calls[0][1])).toEqual({
+      name: '80s Hits (96)',
+      description: 'Synthesizers and big hair. The hits of the 80s.',
+      public: true,
+    });
+  });
+
+  it('leaves name and description alone when the name is the same and no description is sent', async () => {
+    h.axiosGet.mockImplementation(async (url: string) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      return meta('user1', 'Same name');
+    });
+    h.axiosRequest.mockResolvedValue({});
+
+    const res = await makeApi().createOrUpdatePlaylist('Same name', ['a'], { playlistId: OURS });
+
+    expect(res.success).toBe(true);
+    expect(h.axiosRequest).toHaveBeenCalledTimes(1);
+    expect(h.axiosPut).not.toHaveBeenCalled();
+  });
+
+  it('refuses a playlist another account owns and touches nothing', async () => {
+    h.axiosGet.mockImplementation(async (url: string) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      return meta('someone-else');
+    });
+
+    const res = await makeApi().createOrUpdatePlaylist('Name', ['a'], { playlistId: OURS });
+
+    expect(res).toMatchObject({ success: false, data: { reason: 'not_owned' } });
+    expect(res.error).toContain('someone-else');
+    expect(h.axiosRequest).not.toHaveBeenCalled();
+    expect(h.axiosPut).not.toHaveBeenCalled();
+  });
+
+  it('answers not_found for a playlist Spotify does not know', async () => {
+    h.axiosGet.mockImplementation(async (url: string) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      throw axiosError(404);
+    });
+
+    const res = await makeApi().createOrUpdatePlaylist('Name', ['a'], { playlistId: OURS });
+
+    expect(res).toMatchObject({ success: false, data: { reason: 'not_found' } });
+    expect(h.axiosRequest).not.toHaveBeenCalled();
+  });
+
+  it('creates a new playlist with the given description instead of "Created automatically."', async () => {
+    h.axiosGet.mockImplementation(async (url: string) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      if (url === 'https://api.spotify.com/v1/me/playlists') return { data: { items: [] } };
+      throw new Error(`unexpected GET ${url}`);
+    });
+    h.axiosPost.mockImplementation(async (url: string) =>
+      url === 'https://api.spotify.com/v1/me/playlists'
+        ? { data: { id: 'pl-new', external_urls: { spotify: 'https://open.spotify.com/playlist/pl-new' } } }
+        : {}
+    );
+
+    await makeApi().createOrUpdatePlaylist('Christmas (48)', ['a'], { description: 'From Bing Crosby to Mariah Carey.' });
+
+    expect(JSON.parse(h.axiosPost.mock.calls[0][1])).toEqual({
+      name: 'Christmas (48)',
+      description: 'From Bing Crosby to Mariah Carey.',
+      public: true,
+    });
+  });
+
+  it('sets the description on a playlist found by name', async () => {
+    h.axiosGet.mockImplementation(async (url: string) => {
+      if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+      return {
+        data: {
+          items: [{ id: 'pl-exist', name: 'My List', owner: { id: 'user1' }, external_urls: { spotify: 'https://open.spotify.com/playlist/pl-exist' } }],
+        },
+      };
+    });
+    h.axiosRequest.mockResolvedValue({});
+    h.axiosPut.mockResolvedValue({});
+
+    const res = await makeApi().createOrUpdatePlaylist('My List', ['a'], { description: 'New words' });
+
+    expect(res.success).toBe(true);
+    expect(JSON.parse(h.axiosPut.mock.calls[0][1])).toEqual({ name: 'My List', description: 'New words', public: true });
+  });
+});
+
+describe('sanitizePlaylistDescription', () => {
+  it('turns line breaks, tabs and runs of spaces into single spaces', () => {
+    expect(sanitizePlaylistDescription('  One\r\nTwo\tThree   four \n')).toBe('One Two Three four');
+  });
+
+  it('keeps Spotify\'s 300 characters, cutting at a word', () => {
+    const long = 'word '.repeat(100);
+    const clean = sanitizePlaylistDescription(long);
+    expect(clean.length).toBeLessThanOrEqual(300);
+    expect(clean.endsWith('word…')).toBe(true);
+    expect(sanitizePlaylistDescription('x'.repeat(300))).toHaveLength(300);
   });
 });
 

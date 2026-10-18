@@ -19,11 +19,12 @@ import Mail from '../mail';
 import { PRINTER_TYPE } from '../config/constants';
 
 /**
- * Routes for Rick's qrsong toolkit (~/Sites/skill-qrsong), a CLI the agent
+ * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
  * runs with the admin bearer token. Admin only: there is no dashboard screen
  * behind them, and none of them is meant for a customer or a company admin.
  *
  * - POST /admin/toolkit/playlist                  make or refill a playlist in our Spotify account from exact track ids
+ *                                                  (optional `playlistId`: refill exactly that one of ours; `description`)
  * - GET  /admin/toolkit/playlist/:playlistId/items  the playlist exactly as Spotify holds it (for verifying)
  * - POST /admin/toolkit/tracks                    Spotify metadata for track ids (for a hand-picked match)
  * - POST /admin/toolkit/order                     a Schneiders/Tromp order without Mollie or mails, on printer hold (src/toolkitOrder.ts)
@@ -55,6 +56,8 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
   fastify.post('/admin/toolkit/playlist', adminOnly, async (request: any, reply: any) => {
     const name = String(request.body?.name ?? '').trim();
     const trackIds: unknown = request.body?.trackIds;
+    const playlistId: unknown = request.body?.playlistId;
+    const description: unknown = request.body?.description;
     if (!name) return reply.status(400).send({ success: false, error: 'name is required' });
     if (!Array.isArray(trackIds) || trackIds.length === 0) {
       return reply.status(400).send({ success: false, error: 'trackIds must be a non-empty array' });
@@ -64,12 +67,24 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
     if (new Set(trackIds).size !== trackIds.length) {
       return reply.status(400).send({ success: false, error: 'trackIds contains duplicates' });
     }
-    // createOrUpdatePlaylist replaces the tracks of an existing playlist with
-    // this name (among the account's first 50); say so in the answer.
+    if (playlistId !== undefined && (typeof playlistId !== 'string' || !PLAYLIST_ID.test(playlistId))) {
+      return reply.status(400).send({ success: false, error: 'playlistId must be a Spotify playlist id' });
+    }
+    if (description !== undefined && (typeof description !== 'string' || description.length > 2000)) {
+      return reply.status(400).send({ success: false, error: 'description must be a string (Spotify keeps 300 characters)' });
+    }
+    // Without playlistId, createOrUpdatePlaylist replaces the tracks of an
+    // existing playlist with this name (among the account's first 50). With
+    // it, exactly that playlist is refilled and renamed to `name`, and only
+    // when our account owns it (the default playlists, 2026-10-16).
     const ownId = await spotifyApi.getOwnUserId().catch(() => null);
-    const result = await spotify.createOrUpdatePlaylist(name, trackIds as string[]);
+    const result = await spotify.createOrUpdatePlaylist(name, trackIds as string[], {
+      ...(playlistId !== undefined ? { playlistId: playlistId as string } : {}),
+      ...(description !== undefined ? { description: description as string } : {}),
+    });
     if (!result?.success) {
-      return reply.status(502).send({ success: false, error: result?.error || 'Spotify refused the playlist' });
+      const status = result?.data?.reason === 'not_found' ? 404 : result?.data?.reason === 'not_owned' ? 403 : 502;
+      return reply.status(status).send({ success: false, error: result?.error || 'Spotify refused the playlist' });
     }
     return {
       success: true,

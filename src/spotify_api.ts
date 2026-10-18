@@ -29,6 +29,28 @@ interface SpotifyErrorResponse {
   };
 }
 
+/** Optional extras of createOrUpdatePlaylist (the toolkit's playlist route). */
+export interface PlaylistWriteOptions {
+  /** Refill exactly this playlist of our own account instead of looking the name up. */
+  playlistId?: string;
+  /** The public description; without it a new playlist says "Created automatically." */
+  description?: string;
+}
+
+/** Spotify refuses a playlist description with a line break or of more than 300 characters. */
+export const PLAYLIST_DESCRIPTION_MAX = 300;
+
+export function sanitizePlaylistDescription(text: string): string {
+  const clean = String(text ?? '')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (clean.length <= PLAYLIST_DESCRIPTION_MAX) return clean;
+  const cut = clean.slice(0, PLAYLIST_DESCRIPTION_MAX - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > PLAYLIST_DESCRIPTION_MAX * 0.7 ? cut.slice(0, space) : cut).replace(/[,;:.\s]+$/, '')}…`;
+}
+
 class SpotifyApi {
   private logger = new Logger();
   private settings = Settings.getInstance();
@@ -1027,7 +1049,8 @@ class SpotifyApi {
    */
   public async createOrUpdatePlaylist(
     playlistName: string,
-    trackIds: string[]
+    trackIds: string[],
+    options: PlaylistWriteOptions = {}
   ): Promise<ApiResult> {
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
@@ -1039,7 +1062,13 @@ class SpotifyApi {
     }
 
     const trackUris = trackIds.map((id) => `spotify:track:${id}`);
-    const playlistDescription = `Created automatically.`; // Simple description
+    const description =
+      options.description !== undefined ? sanitizePlaylistDescription(options.description) : undefined;
+    const playlistDescription = description || `Created automatically.`;
+
+    if (options.playlistId) {
+      return this.refillOwnPlaylist(accessToken, options.playlistId, playlistName, trackUris, description);
+    }
 
     // Fetch User ID for ownership check when looking for existing playlists
     const userId = await this.getUserId(accessToken);
@@ -1148,6 +1177,9 @@ class SpotifyApi {
             return updateResult as ApiResult;
           }
         }
+        if (description !== undefined) {
+          await this.updatePlaylistDetails(accessToken, playlistId, playlistName, description);
+        }
         // Ensure playlistUrl is set if we found an existing playlist
         if (!playlistUrl) {
           // Fetch details if URL wasn't included in the initial check (e.g., due to fields param)
@@ -1242,6 +1274,103 @@ class SpotifyApi {
         `creating/updating playlist "${playlistName}"`
       );
     }
+  }
+
+  /**
+   * Refills exactly one playlist of our own account (the toolkit's
+   * `playlistId`): with ~90 default playlists on the account, the name lookup
+   * among the first 50 no longer finds older ones. Refuses a playlist another
+   * account owns (data.reason `not_owned`) or Spotify does not know
+   * (`not_found`). Replaces the tracks (PUT the first 100, POST the rest),
+   * renames it when the name differs and sets the description when one is
+   * given.
+   */
+  private async refillOwnPlaylist(
+    accessToken: string,
+    playlistId: string,
+    playlistName: string,
+    trackUris: string[],
+    description?: string
+  ): Promise<ApiResult> {
+    const headers = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+    try {
+      const userId = await this.getUserId(accessToken);
+      if (!userId) return { success: false, error: 'Could not read our own Spotify user id' };
+
+      let current: any;
+      try {
+        current = await this.executeWithRetry(async () => {
+          const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+            params: { fields: 'id,name,owner(id),external_urls' },
+            headers,
+          });
+          return response.data;
+        }, `reading playlist ${playlistId}`);
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          return { success: false, error: `Spotify has no playlist ${playlistId}`, data: { reason: 'not_found' } };
+        }
+        throw error;
+      }
+      const owner = current?.owner?.id ?? null;
+      if (owner !== userId) {
+        return {
+          success: false,
+          error: `Playlist ${playlistId} belongs to ${owner ?? 'another account'}, not to ours (${userId})`,
+          data: { reason: 'not_owned' },
+        };
+      }
+
+      const chunkSize = 100;
+      for (let i = 0; i < trackUris.length; i += chunkSize) {
+        const chunk = trackUris.slice(i, i + chunkSize);
+        await this.executeWithRetry(async () => {
+          await axios({
+            method: i === 0 ? 'put' : 'post', // the first chunk replaces, the rest is added
+            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+            headers,
+            data: JSON.stringify({ uris: chunk }),
+          });
+          return { success: true };
+        }, `refilling playlist ${playlistId} (chunk ${i / chunkSize + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
+      }
+
+      if (current.name !== playlistName || description !== undefined) {
+        await this.updatePlaylistDetails(accessToken, playlistId, playlistName, description);
+      }
+
+      return {
+        success: true,
+        data: {
+          playlistId,
+          playlistUrl: current.external_urls?.spotify || `https://open.spotify.com/playlist/${playlistId}`,
+          playlistName,
+        },
+      };
+    } catch (error) {
+      return this.handleApiError(error, `refilling playlist ${playlistId}`);
+    }
+  }
+
+  /** PUT /v1/playlists/{id}: the name, the public description when given, and public. Throws on failure. */
+  private async updatePlaylistDetails(
+    accessToken: string,
+    playlistId: string,
+    playlistName: string,
+    description?: string
+  ): Promise<void> {
+    await this.executeWithRetry(async () => {
+      await axios.put(
+        `https://api.spotify.com/v1/playlists/${playlistId}`,
+        JSON.stringify({
+          name: playlistName,
+          ...(description !== undefined ? { description } : {}),
+          public: true,
+        }),
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+      );
+      return { success: true };
+    }, `updating the details of playlist ${playlistId}`);
   }
 
   /**

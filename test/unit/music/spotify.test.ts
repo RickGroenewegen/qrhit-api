@@ -972,8 +972,15 @@ describe('Spotify delegation methods', () => {
     await spotify.createOrUpdatePlaylist('My list', ['t1', 't2']);
     expect(holder.spotifyApi.createOrUpdatePlaylist).toHaveBeenCalledWith(
       'My list',
-      ['t1', 't2']
+      ['t1', 't2'],
+      {}
     );
+    // The toolkit's playlistId and description travel along unchanged.
+    await spotify.createOrUpdatePlaylist('My list', ['t1'], { playlistId: 'pl-own', description: 'Words' });
+    expect(holder.spotifyApi.createOrUpdatePlaylist).toHaveBeenLastCalledWith('My list', ['t1'], {
+      playlistId: 'pl-own',
+      description: 'Words',
+    });
 
     await spotify.deletePlaylist('pl-del');
     expect(holder.spotifyApi.deletePlaylist).toHaveBeenCalledWith('pl-del');

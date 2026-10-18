@@ -4,7 +4,7 @@ import Cache from '../cache';
  * The client price of a QRSong! Box (Schneider) for 48, 96 and 192 cards,
  * worked out exactly as the admin calculator does it
  * (qrhit admin-calculator-schneider.component.ts `calculatedPrices`, mirrored
- * in skill-qrsong-quotation src/pricing.ts): the printer's cost per box from
+ * in skill-qrsong/quotation src/pricing.ts): the printer's cost per box from
  * calculateSchneiderPricing, then the shared profit table in Redis, with the
  * calculator's tier pick and its rounding at every step. The price-list
  * brochure (priceList.ts) prints these prices.

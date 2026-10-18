@@ -77,11 +77,12 @@ from a separate bundle instead:
 
 - `src/locales/business/{en,nl,de}.json` — flat dotted keys under the
   `quotation.*`, `instructions.*`, `invoice_lines.*`, `pricing.*` and
-  `suggestions.*` prefixes (`pricing.*` covers the price-list brochure and
-  the partials `front_page` and `closing_page`; `suggestions.*` is the
-  playlist suggestions brochure, which reuses those two partials through a
+  `defaultPlaylists.*` prefixes (`pricing.*` covers the price-list brochure and
+  the partials `front_page` and `closing_page`; `defaultPlaylists.*` is the
+  default playlists brochure, which reuses those partials through a
   translator that falls back to `pricing.*` for any key it does not define
-  itself).
+  itself, see "Default playlists"). The `suggestions.*` keys went with the
+  playlist suggestions brochure on 2026-10-16.
 - Only these three languages are produced. `Translation.resolveBusinessLocale()`
   is the single fallback point: any other `Company.locale` becomes `en`. Missing
   keys fall back to the English string, never to `undefined`.
@@ -1213,7 +1214,7 @@ System → "Sync business lists", `POST /admin/mail-octopus/business-sync`,
 
 ## The qrsong toolkit's routes (admin only)
 
-Rick's `qrsong` CLI (`~/Sites/skill-qrsong`) drives business orders with the
+Rick's `qrsong` CLI (`~/Sites/skills/skill-qrsong`) drives business orders with the
 admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
 `getAuthHandler(['admin'])`, none behind a dashboard screen:
 
@@ -1229,7 +1230,15 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   "Walking on Sunshine" as 723501674, 2026-10-15). A song we only know under
   another service goes to the Spotify search like any unknown row.
 - `POST /admin/toolkit/playlist` makes or refills a playlist from exact track
-  ids; `GET /admin/toolkit/playlist/:id/items` reads one back exactly as
+  ids. Without `playlistId` it refills a playlist with the same name among the
+  account's first 50 (or makes one); with `playlistId` it refills exactly that
+  playlist (PUT the first 100 tracks, POST the rest) and renames it to `name`,
+  but only when our account owns it (403 otherwise, 404 when Spotify does not
+  know it). `description` sets the public description (`PUT /v1/playlists/{id}`,
+  line breaks removed, cut to Spotify's 300 characters); without it a new
+  playlist still says "Created automatically.". Both were added for the
+  default playlists (2026-10-16), whose ~90 playlists push older ones out of
+  the first 50. `GET /admin/toolkit/playlist/:id/items` reads one back exactly as
   Spotify holds it (`src/playlistItems.ts`; `Spotify.getTracks` merges and
   filters, which is right for printing and wrong for verifying);
   `POST /admin/toolkit/tracks` gives metadata for ids.
@@ -1271,6 +1280,86 @@ That hold is no longer set.
   themselves, so the mail shows the browser. `GET /admin/toolkit/share` lists
   shares with their download counts, `DELETE .../:token` removes one.
 
+## Default playlists (Companies → Default playlists)
+
+About 30 curated themes ("80s Hits", "Rock Classics", "Christmas" …), each in
+the three box sizes (48, 96, 192 cards): ~90 playlists in our own Spotify
+account that we offer companies and resellers as standard lists. Built
+2026-10-16; they replace the playlist suggestions brochure (every featured
+playlist by market, genre and box size), which Rick dropped: "We gaan nu uit
+van deze 30x3 lijsten."
+
+- **Model** `DefaultPlaylist` (`default_playlists`): one row per theme and
+  size, unique on (`themeKey`, `cardCount`) and on `spotifyPlaylistId`;
+  `category` is `decades` | `genres` | `themes` | `local` (Dutch and German
+  language hits), names and descriptions in en/nl/de, `yearFrom`/`yearTo`,
+  `decades` ([{ decade, count }] ascending), up to 8 `artists`, `sortOrder`.
+  Logic in `src/defaultPlaylists.ts`, routes in
+  `src/routes/defaultPlaylistRoutes.ts`.
+- **Who fills it:** Rick's toolkit (`qrsong default-playlists …`, in
+  `~/Sites/skills/skill-qrsong`) builds the playlists with
+  `POST /admin/toolkit/playlist` (`playlistId` + `description`, see the
+  toolkit routes) and writes the rows with `PUT /business/default-playlists`.
+  The dashboard (Companies → Default playlists, frontend repo) lists them,
+  filters, and downloads the brochure of the checked ones; the toolkit can
+  download it too.
+
+| route | |
+|---|---|
+| `GET /business/default-playlists` | admin: every row, by sortOrder, themeKey, cardCount |
+| `PUT /business/default-playlists` | admin: `{ playlists: [...] }`, upsert on theme and size, up to 300; answers the saved rows in the order sent |
+| `DELETE /business/default-playlists/:id` | admin: one row; the Spotify playlist is left alone |
+| `POST /business/default-playlists/pdf` | admin: `{ locale, ids }` → the brochure PDF; name in `Content-Disposition` (`QRSong_Default_playlists_<date>.pdf`, Dutch `QRSong_Standaard_playlists_…`) |
+| `GET /business/default-playlists/view?locale=&ids=` | **public**: the HTML the PDF Lambda prints |
+
+A row as answered: `{ id, themeKey, cardCount, category, name: { en, nl, de },
+description: { en, nl, de } (null allowed), spotifyPlaylistId, spotifyUrl,
+trackCount, yearFrom, yearTo, decades, artists, sortOrder, updatedAt }`. The PUT
+takes the same without `id`/`spotifyUrl`/`updatedAt` (sent back unchanged they
+are ignored) and is strict: unknown fields, a decade outside the year range,
+more songs in `decades` than `trackCount`, or a Spotify playlist that already
+belongs to another theme or size are a 400 that names the row and the field,
+and nothing of the call is stored.
+
+- **The view is public on purpose**, like the suggestions view before it: the
+  Lambda has no session, and the brochure shows no prices, only playlists that
+  are public on Spotify. Ids and locale are validated (1–300 whole numbers;
+  any other language is English); unknown ids are left out, none known is a
+  404 (the PDF route answers 400 before it calls the Lambda).
+- **The brochure** (`views/default_playlists.ejs`, formal copy under
+  `defaultPlaylists.*`): the shared cover (`partials/front_page`, the
+  categories as its contents), an introduction page (the three box sizes, how
+  the lists are made, listen first, your own music is always possible), the
+  themes grouped by category, and the shared closing page. One row per theme:
+  number, name, year range, description, a decade chart (one axis for the
+  whole brochure, the busiest decade in POP when there is a single one), a few
+  artists (whole names only) and a tile per **selected** size with a QR code
+  of its Spotify link (an inline SVG from `qrcode`, the code itself 16.5 mm
+  plus a four-module quiet zone) that is also a link in the PDF. The size
+  tiles are columns down the page; a size nobody selected gets no column.
+- **Pages never overflow by construction:** `buildDefaultPlaylistsView` cuts
+  the pages from fixed heights (`BROCHURE_LAYOUT`: 245 mm of body, 13 mm a
+  section title, 43.5 mm a theme; five themes a page) and the view uses the
+  same numbers. A section that runs on repeats its title. It takes rows and a
+  translator and touches no database, so it can be proofed from a fixture.
+- **Proof** after any change to the view, the copy or the layout numbers:
+  `npx tsx scripts/default-playlists/render.ts` renders
+  `scripts/default-playlists/fixture.json` (30 themes x 3 sizes, fake ids) in
+  nl, en and de with the local Chrome, printed like the Lambda, and checks in
+  the page that nothing overflows a sheet, a row or its text, that artist
+  names are not cut, that every QR code is at least 16 mm and that the PDF
+  has the planned pages (`--themes`, `--sizes`, `--ids` for other
+  selections; `--png 60` writes PNGs to look at). Exit code 1 on a problem.
+- **Removed with the suggestions brochure:** `GET /business/playlist-suggestions`,
+  `GET /business/playlist-suggestions/art/:playlistId`,
+  `POST /business/playlist-suggestions/pdf`, `GET /admin/playlist-suggestions/count`,
+  `GET /admin/genres` (only its modal used it), `src/playlistSuggestions.ts`,
+  `views/playlist_suggestions.ejs`, the suggestion filter in
+  `data/featuredPlaylists.ts` and its `Data` wrappers, and the `suggestions.*`
+  copy. `src/playlistArtwork.ts` stays (the product page cover); the old
+  thumbnail cache `PUBLIC_DIR/suggestion_art` is unused and can be deleted on
+  the servers.
+
 ## Card templates stored as data (no deploy)
 
 A company card layout used to be a `views/pdf_<name>.ejs` file: JavaScript on
@@ -1281,7 +1370,7 @@ routes in `src/routes/cardTemplateRoutes.ts`, table `card_templates`): Liquid
 (LiquidJS) for one card front, one card back and the CSS, plus its own
 pictures and fonts. Rick's qrsong toolkit pushes them
 (`qrsong template …`); the format and how to write one is
-`~/Sites/skill-qrsong/reference/card-templates/README.md`.
+`~/Sites/skills/skill-qrsong/reference/card-templates/README.md`.
 
 - **Versions never change.** Every push is version N+1. An order line pins the
   version it is given (`payment_has_playlist.templateVersion`): POST `/php/:id`
@@ -1573,8 +1662,8 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   source URL. The frontend uses it for the deck, og:image, twitter:image and
   Product.image, because Spotify deletes the old file when an owner changes
   the cover and that used to break the cached rich result and every earlier
-  share. The brochure thumbnails in `playlistSuggestions.ts` share the
-  loader and its SSRF guards.
+  share. (The playlist suggestions brochure shared the loader and its SSRF
+  guards for its thumbnails until it was removed on 2026-10-16.)
 
 ## Customer reviews: a committed JSON file
 
@@ -1904,6 +1993,7 @@ The frontend consumes this API through the following key endpoints:
 - **GET** `/list/:listId` - Get individual list details with submissions
 - **POST** `/business/submit` - Submit track suggestions to company voting lists
 - **GET** `/business/submissions/:companyId` - Get company submission data
+- **GET/PUT** `/business/default-playlists`, **DELETE** `/:id`, **POST** `/pdf` - The default playlists and their brochure (see "Default playlists")
 
 ### Development Workflow
 1. **Frontend Development**: Use Angular dev server (port 4200)

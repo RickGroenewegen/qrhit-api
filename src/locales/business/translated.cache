@@ -643,86 +643,6 @@
     "nl",
     "de"
   ],
-  "suggestions.docTitle": [
-    "nl",
-    "de"
-  ],
-  "suggestions.editionName": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTagline": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack1": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack1Note": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack2": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack2Note": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack3": [
-    "nl",
-    "de"
-  ],
-  "suggestions.coverTrack3Note": [
-    "nl",
-    "de"
-  ],
-  "suggestions.sheetTitle": [
-    "nl",
-    "de"
-  ],
-  "suggestions.sectionTitle": [
-    "nl",
-    "de"
-  ],
-  "suggestions.sectionMeta": [
-    "nl",
-    "de"
-  ],
-  "suggestions.intro": [
-    "nl",
-    "de"
-  ],
-  "suggestions.tracks": [
-    "nl",
-    "de"
-  ],
-  "suggestions.trackNote": [
-    "nl",
-    "de"
-  ],
-  "suggestions.openInSpotify": [
-    "nl",
-    "de"
-  ],
-  "suggestions.genreUnknown": [
-    "nl",
-    "de"
-  ],
-  "suggestions.noResults": [
-    "nl",
-    "de"
-  ],
-  "suggestions.footTitle": [
-    "nl",
-    "de"
-  ],
-  "suggestions.footNote": [
-    "nl",
-    "de"
-  ],
   "instructions.boxFormatsTitle": [
     "nl",
     "de"
@@ -1792,6 +1712,154 @@
     "de"
   ],
   "instructions.cardTemplate": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.docTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.editionName": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.fileName": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverTagline": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverPromise1": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverPromise2": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverPromise3": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverIntro": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.coverIntroNote": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.themesOne": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.themesCount": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.categoryDecades": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.categoryGenres": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.categoryThemes": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.categoryLocal": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.introLeadStrong": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.introLeadBody": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.sizesTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.sizesCopy": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.madeTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.made1": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.made2": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.made3": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.made4": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listenTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.ownTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.ownCopy": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.chartLabel": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.artistsLabel": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listen": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.footNote": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.closingTitle": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.closingCopy": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listenCopy": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listenStep1": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listenStep2": [
+    "nl",
+    "de"
+  ],
+  "defaultPlaylists.listenStep3": [
     "nl",
     "de"
   ]

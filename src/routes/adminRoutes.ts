@@ -41,7 +41,6 @@ import AbuseGuard from '../abuse_guard';
 import IpAllowlist from '../ipAllowlist';
 import BlockedIp from '../blockedIp';
 import Translation from '../translation';
-import { parsePlaylistSuggestionOptions } from '../playlistSuggestions';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import { TidalProvider } from '../providers';
@@ -1058,33 +1057,6 @@ export default async function adminRoutes(
           error: result.error,
         });
       }
-    }
-  );
-
-  // Genres with their visible featured playlist counts (for the playlist
-  // suggestions document filter).
-  fastify.get(
-    '/admin/genres',
-    getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const genres = await data.getGenresWithFeaturedCount();
-      reply.send({ success: true, data: genres });
-    }
-  );
-
-  // Live "N matching playlists" count for the playlist suggestions modal.
-  // Same filters as GET /business/playlist-suggestions.
-  fastify.get(
-    '/admin/playlist-suggestions/count',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const parsed = parsePlaylistSuggestionOptions(request.query, translation);
-      if (!parsed.ok) {
-        reply.status(400).send({ error: parsed.error });
-        return;
-      }
-      const playlists = await data.getPlaylistSuggestions(parsed.opts.locale, parsed.opts);
-      reply.send({ success: true, count: playlists.length });
     }
   );
 

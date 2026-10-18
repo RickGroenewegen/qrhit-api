@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <%
+        // The default playlists brochure (src/defaultPlaylists.ts). The pages
+        // are cut in buildDefaultPlaylistsView from fixed heights
+        // (BROCHURE_LAYOUT); the CSS below uses the same numbers, so a page
+        // never overflows. Page 1 is the cover, page 2 the introduction.
+        var rowMm = layout.ROW_MM - layout.GAP_MM;
+        var spotifyIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 1 1-.3-1.2c3.9-.9 7.3-.5 10 1.1.3.2.4.6.2.9zm1.2-2.7a.8.8 0 0 1-1.1.3c-2.8-1.7-7-2.2-10.3-1.2a.8.8 0 1 1-.4-1.5c3.7-1.1 8.4-.6 11.5 1.3.4.2.5.7.3 1.1zm.1-2.8C14.6 8.9 9 8.7 5.8 9.7a.9.9 0 1 1-.5-1.8c3.7-1.1 9.8-.9 13.6 1.4a.9.9 0 0 1-1 1.6z"/></svg>';
+        var footNote = t('footNote', { date: formatDate(new Date()) });
+        var formats = [
+            { cards: 48, image: '1x1.jpeg' },
+            { cards: 96, image: '2x1.jpeg' },
+            { cards: 192, image: '2x2.jpeg' }
+        ];
+    %>
+    <title><%= docTitle %> - <%= formatDate(new Date()) %></title>
+
+    <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
+    <%- include('partials/brochure/styles') %>
+
+    <style>
+        /* Every sheet is exactly one A4 page. */
+        .sheet {
+            height: 297mm;
+            min-height: 297mm;
+            max-height: 297mm;
+        }
+
+        /* =============================================================
+           Introduction
+        ============================================================= */
+        .dp-intro .b-lead {
+            max-width: 165mm;
+        }
+
+        .dp-sizes-intro {
+            display: flex;
+            gap: 10mm;
+            align-items: flex-end;
+            margin-bottom: 11px;
+        }
+
+        .dp-sizes-intro .b-intro {
+            font-size: 11px;
+            flex: 1;
+        }
+
+        .dp-formats .b-format-shot {
+            height: 54mm;
+            margin-bottom: 8px;
+        }
+
+        .dp-made {
+            flex: 1.25;
+        }
+
+        .dp-made .b-checks li {
+            font-size: 10.5px;
+            margin-bottom: 9px;
+        }
+
+        .dp-listen {
+            flex: 1;
+            padding: 16px 18px;
+        }
+
+        .dp-listen .b-h3 {
+            color: var(--pop);
+            margin-bottom: 8px;
+        }
+
+        .dp-listen .b-copy {
+            position: relative;
+            z-index: 2;
+            font-size: 11px;
+            max-width: 52mm;
+        }
+
+        .dp-listen .b-steps-list {
+            position: relative;
+            z-index: 2;
+            margin-top: 12px;
+            max-width: 58mm;
+        }
+
+        .dp-listen .b-steps-list li {
+            color: var(--off);
+            font-size: 10.5px;
+            margin-bottom: 8px;
+        }
+
+        .dp-own {
+            display: flex;
+            align-items: center;
+            gap: 8mm;
+            padding: 15px 18px;
+        }
+
+        .dp-own .b-h3 {
+            flex: 0 0 52mm;
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .dp-own .b-copy {
+            font-size: 11px;
+        }
+
+        /* =============================================================
+           Theme pages: a section title, then one row per theme
+        ============================================================= */
+        .dp-head {
+            height: 9mm;
+            margin-bottom: 4mm;
+            align-items: flex-end;
+        }
+
+        .dp-head.section-title {
+            margin-bottom: 4mm;
+            padding-bottom: 1.5mm;
+        }
+
+        .dp-head h2 {
+            font-size: 14px;
+        }
+
+        .dp-theme {
+            height: <%= rowMm %>mm;
+            margin-bottom: <%= layout.GAP_MM %>mm;
+            display: flex;
+            gap: 5mm;
+            padding: 3.6mm 4mm 3.6mm 4.5mm;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.55);
+            border: 1.5px solid var(--disco-18);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* A POP edge on the left: the record-sleeve spine of each theme. */
+        .dp-theme::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 1.6mm;
+            background: var(--pop);
+        }
+
+        .dp-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dp-name {
+            display: flex;
+            align-items: baseline;
+            gap: 7px;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+            min-width: 0;
+        }
+
+        .dp-num {
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            color: var(--pop);
+            flex-shrink: 0;
+        }
+
+        /* Natural case: uppercase would turn "80s Hits" into "80S HITS". */
+        .dp-name-text {
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 0.03em;
+            line-height: 1.15;
+            color: var(--disco);
+            min-width: 0;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .dp-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        .dp-meta .sticker {
+            font-size: 7.5px;
+            padding: 2.5px 8px;
+        }
+
+        .dp-desc {
+            font-size: 9px;
+            line-height: 12.5px;
+            color: var(--disco-70);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            flex-shrink: 0;
+        }
+
+        .dp-desc.lines-3 {
+            -webkit-line-clamp: 3;
+            max-height: 37.5px;
+        }
+
+        .dp-desc.lines-2 {
+            -webkit-line-clamp: 2;
+            max-height: 25px;
+        }
+
+        /* The label runs inline, the names wrap onto a second line at most. */
+        .dp-artists {
+            margin-top: auto;
+            padding-top: 5px;
+            border-top: 1px solid var(--disco-18);
+            font-size: 8.5px;
+            line-height: 11.5px;
+            font-weight: 600;
+            color: var(--disco);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            flex-shrink: 0;
+        }
+
+        .dp-label {
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 6px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--disco-45);
+        }
+
+        .dp-artists .dp-label {
+            margin-right: 5px;
+        }
+
+        /* Songs per decade: one axis for the whole brochure. */
+        .dp-chart {
+            flex: 0 0 27mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dp-chart .dp-label {
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+
+        .dp-bars {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            gap: 0.9mm;
+            border-bottom: 1.5px solid var(--disco-45);
+            padding: 0 0.4mm;
+        }
+
+        .dp-bar-col {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .dp-bar {
+            width: 100%;
+            background: var(--disco);
+            border-radius: 1mm 1mm 0 0;
+        }
+
+        .dp-bar.peak {
+            background: var(--pop);
+        }
+
+        .dp-axis {
+            display: flex;
+            gap: 0.9mm;
+            padding: 3px 0.4mm 0;
+        }
+
+        .dp-axis span {
+            flex: 1;
+            text-align: center;
+            font-size: 5.5px;
+            font-weight: 700;
+            color: var(--disco-45);
+            letter-spacing: -0.02em;
+        }
+
+        .dp-axis span.on {
+            color: var(--disco);
+        }
+
+        /* One tile per box size, in fixed columns down the page. */
+        .dp-sizes {
+            flex-shrink: 0;
+            display: flex;
+            gap: 3mm;
+            align-items: center;
+        }
+
+        .dp-size {
+            width: <%= layout.QR_MM %>mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: var(--disco);
+        }
+
+        .dp-qr {
+            width: <%= layout.QR_MM %>mm;
+            height: <%= layout.QR_MM %>mm;
+            border-radius: 1.6mm;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 0 0 1px var(--disco-18);
+        }
+
+        .dp-qr svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .dp-size-count {
+            margin-top: 4px;
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .dp-size-count span {
+            font-size: 6.5px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--disco-70);
+            margin-left: 2px;
+        }
+
+        .dp-size-link {
+            margin-top: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: var(--display);
+            font-weight: 900;
+            font-size: 6px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--off);
+            background: var(--disco);
+            border-radius: 99px;
+            padding: 2.5px 6px 2.5px 5px;
+            white-space: nowrap;
+        }
+
+        .dp-size-link svg {
+            width: 7px;
+            height: 7px;
+            fill: var(--pop);
+        }
+
+        .dp-size.empty {
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <%- include('partials/front_page', {
+        baseUrl: baseUrl,
+        formatDate: formatDate,
+        title: docTitle,
+        subtitle: '',
+        editionName: editionName,
+        version: version,
+        promises: [t('coverPromise1'), t('coverPromise2'), t('coverPromise3')],
+        contents: [{ name: t('coverIntro'), note: t('coverIntroNote') }].concat(sections.map(function (s) {
+            return { name: s.title, note: s.meta };
+        }))
+    }) %>
+
+    <%# Page 2: what these playlists are %>
+    <div class="sheet dp-intro">
+        <%- include('partials/brochure/sheet_head', { neutral: false, sheetTitle: docTitle, editionName: editionName }) %>
+
+        <div class="sheet-body spread">
+            <p class="b-lead">
+                <strong><%= t('introLeadStrong') %></strong>
+                <%= t('introLeadBody') %>
+            </p>
+
+            <div>
+                <div class="section-title">
+                    <h2><%= t('sizesTitle') %></h2>
+                    <div class="bar"></div>
+                </div>
+                <div class="dp-sizes-intro">
+                    <p class="b-intro"><%= t('sizesCopy') %></p>
+                </div>
+                <div class="b-formats dp-formats">
+                    <% formats.forEach(function (f) { %>
+                    <div class="b-format">
+                        <div class="b-format-shot">
+                            <img src="<%= baseUrl %>/assets/images/<%= f.image %>" alt="<%= t('variantAlt', { count: f.cards }) %>" />
+                        </div>
+                        <div class="b-format-head">
+                            <span class="b-format-count"><%= f.cards %></span>
+                            <span class="b-format-unit"><%= t('variantCards') %></span>
+                        </div>
+                    </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <div class="b-split">
+                <div class="b-panel line dp-made">
+                    <div class="b-h3"><%= t('madeTitle') %></div>
+                    <ul class="b-checks">
+                        <li><%= t('made1') %></li>
+                        <li><%= t('made2') %></li>
+                        <li><%= t('made3') %></li>
+                        <li><%= t('made4') %></li>
+                    </ul>
+                </div>
+                <div class="b-panel disco dp-listen">
+                    <div class="b-art" style="right: -7mm; bottom: -9mm; width: 30mm;">
+                        <img src="<%= baseUrl %>/assets/images/brand/note8_pop.png" alt="" />
+                    </div>
+                    <div class="b-h3"><%= t('listenTitle') %></div>
+                    <div class="b-copy"><%= t('listenCopy') %></div>
+                    <ol class="b-steps-list">
+                        <li><%= t('listenStep1') %></li>
+                        <li><%= t('listenStep2') %></li>
+                        <li><%= t('listenStep3') %></li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="b-panel tint dp-own">
+                <div class="b-h3"><%= t('ownTitle') %></div>
+                <div class="b-copy"><%= t('ownCopy') %></div>
+            </div>
+        </div>
+
+        <%- include('partials/brochure/sheet_foot', { neutral: false, pageNo: 2, pageCount: pageCount, footNote: footNote }) %>
+    </div>
+
+    <% pages.forEach(function (page) { %>
+    <div class="sheet">
+        <%- include('partials/brochure/sheet_head', { neutral: false, sheetTitle: docTitle, editionName: editionName }) %>
+
+        <div class="sheet-body">
+            <% page.items.forEach(function (item) { %>
+            <% if (item.kind === 'header') { %>
+            <div class="section-title dp-head">
+                <h2><%= item.title %></h2>
+                <div class="bar"></div>
+                <div class="section-meta"><%= item.meta %></div>
+            </div>
+            <% } else { var theme = item.theme; %>
+            <div class="dp-theme">
+                <div class="dp-info">
+                    <div class="dp-name">
+                        <span class="dp-num"><%= theme.number %></span>
+                        <span class="dp-name-text" style="font-size: <%= theme.nameSize %>px"><%= theme.name %></span>
+                    </div>
+                    <div class="dp-meta">
+                        <span class="sticker"><%= theme.years %></span>
+                    </div>
+                    <% if (theme.description) { %>
+                    <div class="dp-desc <%= theme.nameLines === 2 ? 'lines-2' : 'lines-3' %>"><%= theme.description %></div>
+                    <% } %>
+                    <% if (theme.artists) { %>
+                    <div class="dp-artists"><span class="dp-label"><%= t('artistsLabel') %></span><%= theme.artists %></div>
+                    <% } %>
+                </div>
+
+                <div class="dp-chart">
+                    <div class="dp-label"><%= t('chartLabel') %></div>
+                    <div class="dp-bars">
+                        <% theme.bars.forEach(function (bar) { %>
+                        <div class="dp-bar-col"><% if (bar.height) { %><div class="dp-bar<%= bar.peak ? ' peak' : '' %>" style="height: <%= bar.height %>%"></div><% } %></div>
+                        <% }); %>
+                    </div>
+                    <div class="dp-axis">
+                        <% theme.bars.forEach(function (bar) { %>
+                        <span class="<%= bar.count ? 'on' : '' %>"><%= bar.label %></span>
+                        <% }); %>
+                    </div>
+                </div>
+
+                <div class="dp-sizes">
+                    <% theme.sizes.forEach(function (size) { %>
+                    <% if (size) { %>
+                    <a class="dp-size" href="<%= size.spotifyUrl %>" target="_blank" rel="noopener">
+                        <div class="dp-qr"><%- size.qrSvg %></div>
+                        <div class="dp-size-count"><%= size.cardCount %><span><%= t('variantCards') %></span></div>
+                        <div class="dp-size-link"><%- spotifyIcon %><%= t('listen') %></div>
+                    </a>
+                    <% } else { %>
+                    <div class="dp-size empty"></div>
+                    <% } %>
+                    <% }); %>
+                </div>
+            </div>
+            <% } %>
+            <% }); %>
+        </div>
+
+        <%- include('partials/brochure/sheet_foot', { neutral: false, pageNo: page.pageNo, pageCount: pageCount, footNote: footNote }) %>
+    </div>
+    <% }); %>
+
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName
+    }) %>
+
+</body>
+</html>

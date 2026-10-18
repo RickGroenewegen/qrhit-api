@@ -8,8 +8,9 @@ import sharp from 'sharp';
 import PrismaInstance from './prisma';
 
 /**
- * Loading and resizing playlist covers, shared by the brochure thumbnails
- * (playlistSuggestions.ts) and the product page cover below.
+ * Loading and resizing playlist covers for the product page cover below.
+ * (The playlist suggestions brochure used it for its thumbnails until it was
+ * removed on 2026-10-16; its cache, PUBLIC_DIR/suggestion_art, is unused.)
  *
  * `Playlist.image` is a URL on the streaming service's CDN, and Spotify
  * deletes the file when the owner changes the cover (see the cover repair in

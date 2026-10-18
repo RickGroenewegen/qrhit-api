@@ -19,7 +19,7 @@ import { MIN_BUSINESS_BOXES } from './services/boxPricing';
 /**
  * Quote requests from the /business form: the visitor leaves their details,
  * website and brand kit and is promised a box design and a quotation within
- * 24 hours. A request lives on the lead's company; boxd (skill-box-designer)
+ * 24 hours. A request lives on the lead's company; boxd (skill-qrsong/box-designer)
  * lists the open ones, starts one (status in_progress), uploads the designs
  * (design_ready), and the admin mails design and quotation from the
  * company's Assets tab (sent). The quotations are made per box size with

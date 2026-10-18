@@ -489,17 +489,6 @@ class Data {
     return featuredPlaylistsModule.getFeaturedPlaylists(this.deps, locale, skipLocaleFilter);
   }
 
-  public async getPlaylistSuggestions(
-    docLocale: string,
-    opts: featuredPlaylistsModule.PlaylistSuggestionOptions
-  ): Promise<any[]> {
-    return featuredPlaylistsModule.getPlaylistSuggestions(this.deps, docLocale, opts);
-  }
-
-  public async getGenresWithFeaturedCount() {
-    return featuredPlaylistsModule.getGenresWithFeaturedCount(this.deps);
-  }
-
   public async getRelatedFeaturedPlaylists(
     locale: string,
     slug: string,

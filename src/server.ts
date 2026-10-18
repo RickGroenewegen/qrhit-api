@@ -40,6 +40,7 @@ import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import businessRoutes from './routes/businessRoutes';
 import toolkitRoutes from './routes/toolkitRoutes';
 import cardTemplateRoutes from './routes/cardTemplateRoutes';
+import defaultPlaylistRoutes from './routes/defaultPlaylistRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import aiCostRoutes from './routes/aiCostRoutes';
 import ExternalCardService from './externalCardService';
@@ -168,6 +169,7 @@ class Server {
     await businessRoutes(this.fastify, getAuthHandler);
     await toolkitRoutes(this.fastify, getAuthHandler);
     await cardTemplateRoutes(this.fastify, getAuthHandler);
+    await defaultPlaylistRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {

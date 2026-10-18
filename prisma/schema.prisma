@@ -1460,6 +1460,38 @@ model CompanyListSubmissionTrack {
   @@map("company_list_submission_has_tracks")
 }
 
+// The default playlists we offer companies and resellers (src/defaultPlaylists.ts,
+// dashboard Companies → Default playlists): ~30 curated themes, each in three
+// box sizes, every one a playlist in our own Spotify account. Rick's toolkit
+// (`qrsong default-playlists …`) fills them with PUT /business/default-playlists;
+// the dashboard prints a brochure of a selection. Deleting a row never touches
+// the Spotify playlist.
+model DefaultPlaylist {
+  id                Int      @id @default(autoincrement())
+  themeKey          String   @db.VarChar(64) // e.g. "80s-hits"; the three sizes of a theme share it
+  cardCount         Int // 48 | 96 | 192
+  category          String   @db.VarChar(32) // "decades" | "genres" | "themes" | "local"
+  name_en           String   @db.VarChar(120)
+  name_nl           String   @db.VarChar(120)
+  name_de           String   @db.VarChar(120)
+  description_en    String?  @db.Text
+  description_nl    String?  @db.Text
+  description_de    String?  @db.Text
+  spotifyPlaylistId String   @unique @db.VarChar(32)
+  trackCount        Int
+  yearFrom          Int
+  yearTo            Int
+  decades           Json // [{ "decade": 1980, "count": 31 }, …] ascending
+  artists           Json // a few well-known artists on the list (≤ 8)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([themeKey, cardCount])
+  @@index([sortOrder])
+  @@map("default_playlists")
+}
+
 // Model for storing application-wide settings
 /// A card template stored as data (src/cardTemplates.ts): Liquid HTML/CSS for
 /// one card, rendered inside the fixed views/pdf_stored.ejs. Every push is a

@@ -17,7 +17,7 @@ import AnalyticsClient from './analytics';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Translation from './translation';
-import SpotifyApi from './spotify_api';
+import SpotifyApi, { PlaylistWriteOptions } from './spotify_api';
 import SpotifyApi2 from './spotify_api2';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
@@ -1436,16 +1436,20 @@ class Spotify {
    * Delegates to the appropriate API implementation (SpotifyApi or SpotifyRapidApi).
    * @param playlistName The desired name of the playlist.
    * @param trackIds An array of Spotify track IDs.
+   * @param options `playlistId` refills exactly that playlist of our account
+   *   instead of the name lookup; `description` sets its public description
+   *   (both used by the toolkit's POST /admin/toolkit/playlist).
    * @returns {Promise<ApiResult>} Contains the playlist data or error info.
    */
   public async createOrUpdatePlaylist(
     playlistName: string,
-    trackIds: string[]
+    trackIds: string[],
+    options: PlaylistWriteOptions = {}
   ): Promise<ApiResult> {
     // Delegate to the currently selected API implementation
     // Note: SpotifyRapidApi's implementation might return an error if not supported.
     // Use the specific implementation instance directly
-    return this.spotifyApi.createOrUpdatePlaylist(playlistName, trackIds);
+    return this.spotifyApi.createOrUpdatePlaylist(playlistName, trackIds, options);
   }
 
   /**
