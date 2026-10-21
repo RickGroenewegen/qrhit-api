@@ -1244,8 +1244,11 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   `POST /admin/toolkit/tracks` gives metadata for ids.
 - `POST /admin/toolkit/playlist/:playlistId/replace-spotify` (`src/playlistReplace.ts`,
   2026-10-21) points an existing playlist row at another Spotify playlist
-  (`spotifyPlaylistId`) and loads its tracks into the same row (`storeTracks`
-  drops the ones not in it). Slug, product page, featured state, texts,
+  (`spotifyPlaylistId`), fetches its tracks through the music provider and
+  stores them on the row the way an order does (`storeTracks`, which drops the
+  ones not in it; fetching alone, as `/spotify/playlists/tracks` does, stores
+  nothing). The same id twice only stores the tracks again. Songs new to the
+  database come in without a checked year. Slug, product page, featured state, texts,
   translations, image, ranking and the Merchant Center product stay; caches of
   both ids and the slug are cleared and the row is marked for Merchant Center.
   For a featured list on someone else's Spotify account that needs fixing: the

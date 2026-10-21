@@ -1,13 +1,14 @@
 import PrismaInstance from './prisma';
-import Spotify from './spotify';
 import Data from './data';
+import { MusicProviderFactory } from './providers';
 
 /**
  * Points an existing playlist row at another Spotify playlist, keeping everything the row carries: slug and
  * product page, featured state, texts and translations, image, ranking and the Merchant Center product
  * (first: "Russian Hits", 2026-10-21, a featured list on someone else's Spotify account; the cleaned copy in our
- * own account takes its place). The tracks are then loaded from the new playlist, which also drops the ones
- * that are no longer in it.
+ * own account takes its place). The tracks are then fetched from the new playlist and stored on the row the
+ * way an order does (`storeTracks`, which also drops the ones that are no longer in it); a song new to the
+ * database comes in without a checked year, and `openYears` in the toolkit lists those.
  *
  * Orders keep referencing the same row, so a regenerate or "order again" of an older order uses the new list.
  * That is why it refuses while an order of the row is still open: paid but not finalized, or a physical
@@ -46,7 +47,9 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
   if (!PLAYLIST_ID.test(oldPlaylistId) || !PLAYLIST_ID.test(newPlaylistId)) {
     throw new PlaylistReplaceError('invalid playlist id');
   }
-  if (oldPlaylistId === newPlaylistId) throw new PlaylistReplaceError('the new playlist is the same one');
+  // The same id twice: the row already plays this playlist, only its tracks are stored again (a swap whose
+  // track load failed, or a list changed on Spotify since).
+  const reloadOnly = oldPlaylistId === newPlaylistId;
   const prisma = PrismaInstance.getInstance();
 
   const row = await prisma.playlist.findUnique({
@@ -56,7 +59,9 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
   if (!row) throw new PlaylistReplaceError(`no playlist row for ${oldPlaylistId}`, 404);
   if (row.serviceType !== 'spotify') throw new PlaylistReplaceError(`playlist ${oldPlaylistId} is ${row.serviceType}, not spotify`);
 
-  const taken = await prisma.playlist.findUnique({ where: { playlistId: newPlaylistId }, select: { id: true, name: true } });
+  const taken = reloadOnly
+    ? null
+    : await prisma.playlist.findUnique({ where: { playlistId: newPlaylistId }, select: { id: true, name: true } });
   if (taken) {
     throw new PlaylistReplaceError(
       `Spotify playlist ${newPlaylistId} already has its own row (${taken.id}, "${taken.name}"); it cannot take over row ${row.id}`,
@@ -97,23 +102,39 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
   }
   if (!apply) return { applied: false, before, after: { spotify: newPlaylistId } };
 
-  await prisma.playlist.update({
-    where: { id: row.id },
-    data: { playlistId: newPlaylistId, markedForMerchantCenter: true },
-  });
   const data = Data.getInstance();
-  await data.clearPlaylistCache(oldPlaylistId, row.slug || undefined);
+  if (!reloadOnly) {
+    await prisma.playlist.update({
+      where: { id: row.id },
+      data: { playlistId: newPlaylistId, markedForMerchantCenter: true },
+    });
+    await data.clearPlaylistCache(oldPlaylistId, row.slug || undefined);
+  }
   await data.clearPlaylistCache(newPlaylistId, row.slug || undefined);
 
-  // Loads the new playlist into the same row; storeTracks removes the tracks that are not in it.
-  const loaded: any = await Spotify.getInstance().getTracks(newPlaylistId, false, '', false, false, '', '', undefined, false);
+  // Fetched like the generator does, and stored on the row like an order does: fetching alone stores nothing.
+  const provider = MusicProviderFactory.getInstance().getProvider('spotify');
+  const response: any = await provider.getTracks(newPlaylistId, { cache: false, allowDuplicates: false });
+  let error: string | undefined;
+  if (response?.success && response.data?.tracks?.length) {
+    const tracks = response.data.tracks;
+    const trackOrder = new Map<string, number>();
+    tracks.forEach((track: any, index: number) => trackOrder.set(track.id, index + 1));
+    await data.storeTracks(row.id, newPlaylistId, tracks, trackOrder, 'spotify', 'en');
+    await prisma.playlist.update({ where: { id: row.id }, data: { numberOfTracks: tracks.length } });
+    await data.clearPlaylistCache(newPlaylistId, row.slug || undefined);
+  } else {
+    error = response?.error || 'no tracks fetched';
+  }
   const after = await prisma.playlist.findUnique({
     where: { id: row.id },
     select: { playlistId: true, slug: true, name: true, featured: true, numberOfTracks: true },
   });
+  const stored = await prisma.playlistHasTrack.count({ where: { playlistId: row.id } });
   return {
     applied: true,
+    reloadOnly,
     before,
-    after: { ...after, loaded: !!loaded?.success, error: loaded?.success ? undefined : loaded?.error },
+    after: { ...after, storedTracks: stored, loaded: !error, error },
   };
 }
