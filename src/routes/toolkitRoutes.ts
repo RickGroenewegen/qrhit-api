@@ -17,6 +17,7 @@ import {
 } from '../toolkitShare';
 import Mail from '../mail';
 import { PRINTER_TYPE } from '../config/constants';
+import { PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
@@ -26,6 +27,9 @@ import { PRINTER_TYPE } from '../config/constants';
  * - POST /admin/toolkit/playlist                  make or refill a playlist in our Spotify account from exact track ids
  *                                                  (optional `playlistId`: refill exactly that one of ours; `description`)
  * - GET  /admin/toolkit/playlist/:playlistId/items  the playlist exactly as Spotify holds it (for verifying)
+ * - POST /admin/toolkit/playlist/:playlistId/replace-spotify  point a playlist row (featured page, orders) at another
+ *                                                  Spotify playlist and load its tracks (src/playlistReplace.ts);
+ *                                                  `apply: true` writes, without it only the check
  * - POST /admin/toolkit/tracks                    Spotify metadata for track ids (for a hand-picked match)
  * - POST /admin/toolkit/order                     a Schneiders/Tromp order without Mollie or mails, on printer hold (src/toolkitOrder.ts)
  * - GET  /admin/toolkit/order/:paymentId          order, design, print files and every card's track + year check
@@ -107,6 +111,18 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
       return reply
         .status(status === 404 ? 404 : 502)
         .send({ success: false, error: error?.response?.data?.error?.message || error?.message || 'Spotify error' });
+    }
+  });
+
+  fastify.post('/admin/toolkit/playlist/:playlistId/replace-spotify', adminOnly, async (request: any, reply: any) => {
+    const oldId = String(request.params.playlistId ?? '');
+    const newId = String(request.body?.spotifyPlaylistId ?? '');
+    try {
+      const result = await replaceSpotifyPlaylist(oldId, newId, request.body?.apply === true);
+      return { success: true, ...result };
+    } catch (error: any) {
+      if (error instanceof PlaylistReplaceError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
     }
   });
 

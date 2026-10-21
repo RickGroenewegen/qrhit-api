@@ -1242,6 +1242,20 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   Spotify holds it (`src/playlistItems.ts`; `Spotify.getTracks` merges and
   filters, which is right for printing and wrong for verifying);
   `POST /admin/toolkit/tracks` gives metadata for ids.
+- `POST /admin/toolkit/playlist/:playlistId/replace-spotify` (`src/playlistReplace.ts`,
+  2026-10-21) points an existing playlist row at another Spotify playlist
+  (`spotifyPlaylistId`) and loads its tracks into the same row (`storeTracks`
+  drops the ones not in it). Slug, product page, featured state, texts,
+  translations, image, ranking and the Merchant Center product stay; caches of
+  both ids and the slug are cleared and the row is marked for Merchant Center.
+  For a featured list on someone else's Spotify account that needs fixing: the
+  toolkit makes a cleaned copy in our account (`qrsong playlist copy`) and this
+  puts it in place (first: "Russian Hits", row 5740). Without `apply: true` it
+  only checks. Orders keep the row, so a regenerate or "order again" of an
+  older order uses the new list; it refuses (409) while an order of the row is
+  paid but not finalized, or a Print&Bind physical line is not sent to the
+  printer yet (`openOrders`, test/unit/playlist-replace.test.ts), and when the
+  new Spotify playlist already has a row of its own.
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with
@@ -1696,15 +1710,18 @@ too until 2026-10-12 (see "Web search" under the LLM layer).
 
 ## Product feeds: Merchant Center and Channable
 
-Two modules publish the same catalogue and currently run side by side:
+Two modules publish the same catalogue:
 
 - `src/merchantcenter.ts` pushes products straight into Google via the Merchant
-  API (4 AM cron), and generates the AI product images (1 AM cron).
+  API, and generates the AI product images (1 AM cron). Its 4 AM sync cron was
+  switched off on 2026-10-19 at Rick's request; the push now only runs from
+  `POST /admin/merchant-center/upload-featured`.
 - `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron).
+  This is how products reach Merchant Center now.
 
 The agency running the Merchant Center asked for the feed to go through
-Channable first; once they have Channable wired to Merchant Center, the Google
-push can be retired.
+Channable first. The 1 AM image cron stays on: the Channable feed reads its
+images (see below).
 
 **Channable has no API to push products into.** Its API only covers orders,
 offers, returns and shipments — `POST .../offers` can update stock and price on

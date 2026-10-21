@@ -136,28 +136,14 @@ export class MerchantCenterService {
     this.fx = Fx.getInstance();
     this.merchantId = process.env.GOOGLE_MERCHANT_ID || '';
 
-    // Set up cron job to sync products at 4 AM every day
+    // The 4 AM Merchant Center sync (uploadFeaturedPlaylists) is switched off
+    // (2026-10-19): products reach Google through the Channable feed. The
+    // admin route POST /admin/merchant-center/upload-featured still runs it. The 1 AM AI product images stay,
+    // because the Channable feed reads them.
     // Only run on primary cluster worker and main server
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer) {
-          this.logger.log(
-            blue.bold('Setting up Merchant Center daily sync at 4 AM')
-          );
-          const job = new CronJob('0 4 * * *', async () => {
-            this.logger.log(
-              blue.bold('Running scheduled Merchant Center sync')
-            );
-            try {
-              await this.uploadFeaturedPlaylists();
-            } catch (error) {
-              this.logger.log(
-                red(`Scheduled Merchant Center sync failed: ${error}`)
-              );
-            }
-          });
-          job.start();
-
           this.logger.log(
             blue.bold('Setting up AI product image generation at 1 AM')
           );

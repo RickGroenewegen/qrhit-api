@@ -124,8 +124,8 @@ export class ChannableService {
     this.utils = new Utils();
     this.fx = Fx.getInstance();
 
-    // Rebuild the feed nightly at 5 AM — after the 1 AM AI product images and
-    // the 4 AM Merchant Center sync, so it picks up that night's images.
+    // Rebuild the feed nightly at 5 AM — after the 1 AM AI product images, so
+    // it picks up that night's images.
     // Only run on primary cluster worker and main server.
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
