@@ -203,10 +203,12 @@ const COLOR_RE = new RegExp(`^${COLOR}$`);
 const GRADIENT_RE = new RegExp(
   `^(?:linear|radial)-gradient\\(\\s*(?:-?\\d{1,3}deg|circle(?: at \\d{1,3}% \\d{1,3}%)?)\\s*(?:,\\s*${COLOR}(?:\\s+\\d{1,3}%)?\\s*){2,4}\\)$`
 );
-// "1px 1px 2px rgba(0,0,0,0.35)" or several such tuples, or none.
-const SHADOW_RE = new RegExp(
-  `^(?:none|(?:-?\\d{1,2}px\\s+-?\\d{1,2}px\\s+\\d{1,2}px\\s+${COLOR})(?:\\s*,\\s*-?\\d{1,2}px\\s+-?\\d{1,2}px\\s+\\d{1,2}px\\s+${COLOR}){0,3})$`
-);
+// "1px 1px 2px rgba(0,0,0,0.35)" or several such tuples, or none. A zero
+// length may go without its unit ("0 0 8px …"), as every hand-made theme writes it.
+const SHADOW_OFFSET = '(?:-?\\d{1,2}px|0)';
+const SHADOW_BLUR = '(?:\\d{1,2}px|0)';
+const SHADOW = `${SHADOW_OFFSET}\\s+${SHADOW_OFFSET}\\s+${SHADOW_BLUR}\\s+${COLOR}`;
+const SHADOW_RE = new RegExp(`^(?:none|${SHADOW}(?:\\s*,\\s*${SHADOW}){0,3})$`);
 // The one image a theme value may name: the photo bundled in the scan app
 // (qrhit-app src/assets/images/bg-disco.webp), which its built-in theme uses
 // in exactly this form. The URL is relative, so the app paints its own copy:
@@ -217,9 +219,10 @@ const BUNDLED_BACKGROUND_RE = new RegExp(
   `^${COLOR} url\\("assets/images/bg-disco\\.webp"\\) center / cover no-repeat$`
 );
 const LENGTH_RE = /^-?\d{1,3}(?:px|%)$/;
-const FILTER_RE =
-  /^(?:none|(?:(?:brightness|contrast|invert|grayscale|saturate)\(\d{1,3}(?:\.\d+)?%?\)\s*){1,4})$/;
-const FONT_FAMILY_RE = /^[A-Za-z0-9 ,'"\-]{1,160}$/;
+// brightness(1.1) contrast(1.05) …, and drop-shadow(0 2px 4px rgba(…)) for a logo.
+const FILTER_FUNCTION = `(?:(?:brightness|contrast|invert|grayscale|saturate)\\(\\d{1,3}(?:\\.\\d+)?%?\\)|drop-shadow\\(${SHADOW}\\))`;
+const FILTER_RE = new RegExp(`^(?:none|(?:${FILTER_FUNCTION}\\s*){1,4})$`);
+export const FONT_FAMILY_RE = /^[A-Za-z0-9 ,'"\-]{1,160}$/;
 
 type ValueKind = 'color' | 'background' | 'shadow' | 'length' | 'filter' | 'font';
 
@@ -284,6 +287,22 @@ const HELP_TEXT_HTML: sanitizeHtml.IOptions = {
   },
 };
 
+// Hand-made business themes (src/storedThemes.ts) also centre a closing line
+// and space it, as the help texts in src/_data/themes do:
+// <p style='text-align: center; margin-top: 24px;'>. Only those two
+// properties, with plain values.
+const HELP_TEXT_HTML_WITH_LAYOUT: sanitizeHtml.IOptions = {
+  ...HELP_TEXT_HTML,
+  allowedAttributes: { ...HELP_TEXT_HTML.allowedAttributes, p: ['style'], h2: ['style'], h3: ['style'] },
+  allowedStyles: {
+    '*': {
+      'text-align': [/^(?:left|center|right)$/],
+      'margin-top': [/^\d{1,3}px$/],
+      'margin-bottom': [/^\d{1,3}px$/],
+    },
+  },
+};
+
 /**
  * A help text is HTML when it holds a tag the editor writes (or one the
  * sanitizer maps onto those). Plain text that merely contains something in
@@ -298,7 +317,7 @@ const HELP_TEXT_TAG = /<\/?(?:p|br|h[1-6]|strong|b|em|i|u|ul|ol|li|a|div)(?:\s[^
  * Plain text (designs saved before the editor had formatting) is escaped
  * and gets paragraphs, as it always did.
  */
-export function sanitizeHelpText(text: unknown): string | null {
+export function sanitizeHelpText(text: unknown, opts: { layoutStyles?: boolean } = {}): string | null {
   if (typeof text !== 'string') return null;
   const trimmed = text.replace(/\r\n/g, '\n').trim();
   if (!trimmed) return null;
@@ -309,7 +328,7 @@ export function sanitizeHelpText(text: unknown): string | null {
       .map((p) => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
       .join('');
   }
-  const html = sanitizeHtml(trimmed.slice(0, 20000), HELP_TEXT_HTML)
+  const html = sanitizeHtml(trimmed.slice(0, 20000), opts.layoutStyles ? HELP_TEXT_HTML_WITH_LAYOUT : HELP_TEXT_HTML)
     // Quill 2.0.3 writes every space as &nbsp;, which would never wrap.
     .replace(/&nbsp;| /g, ' ')
     // Empty lines at the start or end of the editor.

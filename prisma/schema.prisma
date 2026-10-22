@@ -1523,6 +1523,29 @@ model CardTemplate {
   @@map("card_templates")
 }
 
+/// A hand-made scan-app theme stored as data (src/storedThemes.ts), pushed by
+/// Rick's qrsong toolkit instead of a folder in src/_data/themes plus a deploy.
+/// Every push is a new, immutable version; GET /theme/:slug serves the newest,
+/// and a scanned card gets `<slug>--v<version>` so the app reloads on a push.
+model AppThemeVersion {
+  id         Int      @id @default(autoincrement())
+  slug       String   @db.VarChar(64)
+  version    Int
+  name       String   @db.VarChar(191)
+  /// The theme JSON as served, without id, source, version and assets (set when served)
+  config     Json
+  /// <sha>.png under PUBLIC_DIR/app-themes/<slug>/, or null (the app then shows the QRSong! logo)
+  logo       String?  @db.VarChar(80)
+  /// <sha>.png under PUBLIC_DIR/app-themes/<slug>/, or null
+  background String?  @db.VarChar(80)
+  note       String?  @db.VarChar(500)
+  createdBy  String?  @db.VarChar(191)
+  createdAt  DateTime @default(now())
+
+  @@unique([slug, version])
+  @@map("app_theme_versions")
+}
+
 model AppSetting {
   key       String   @id @unique // Unique key for the setting (e.g., "spotify_access_token")
   value     String   @db.Text // Value of the setting (use Text for potentially long tokens)

@@ -757,16 +757,64 @@ URLs. `GET /qrlink2/:trackId/:php` tells it which slug a scanned card uses
 (`t: {s, n}`), from the in-memory `php id → slug` map in `src/apptheme.ts`.
 **All of this works with the released app; nothing here needs an app update.**
 
-Two sources, same file layout (`<slug>/<slug>.json` + optional `logo.png` /
-`background.png`), tried in this order by `src/routes/themeRoutes.ts`, which
+Three sources, tried in this order by `src/routes/themeRoutes.ts`, which
 adds `source: 'business' | 'customer'` to the response:
 
-1. Hand-made B2B themes: `src/_data/themes/<slug>/`, in git, assigned per
-   order line by an admin (`payment_has_playlist.theme`).
-2. Customer designs (App Designer): `PUBLIC_DIR/customer-themes/<slug>/`,
-   written by `src/appDesign.ts` on every save (atomically: temp file, then
-   rename). The DB row in `app_designs` keeps what the file cannot: owner,
-   scope, the editor state and the version.
+1. Hand-made B2B themes **stored as data** (since 2026-10-22,
+   `src/storedThemes.ts`, table `app_theme_versions`): pushed by Rick's
+   qrsong toolkit (`qrsong theme check|push|pull|list|history`, source
+   folders in the toolkit's `reference/app-themes/<slug>/`), so a new or
+   changed business theme needs no deploy. Details below.
+2. Hand-made B2B themes in folders: `src/_data/themes/<slug>/`, in git
+   (`<slug>/<slug>.json` + optional `logo.png` / `background.png`). The seven
+   from before (acme, ahaieee, cannock, default, derby, gebo, vanharen) are
+   served from here exactly as before until one is pushed; don't add new
+   ones here.
+3. Customer designs (App Designer): `PUBLIC_DIR/customer-themes/<slug>/`, in
+   the same layout as the folders, written by `src/appDesign.ts` on every
+   save (atomically: temp file, then rename). The DB row in `app_designs`
+   keeps what the file cannot: owner, scope, the editor state and the
+   version.
+
+Both kinds of business theme are assigned per order line by an admin
+(`payment_has_playlist.theme`, POST `/php/:id`, `qrsong theme set`).
+
+**Business themes stored as data** (`src/storedThemes.ts`, admin routes in
+`src/routes/appThemeRoutes.ts`):
+
+- `POST /admin/app-themes/:slug` (multipart: `manifest` = the folder's JSON,
+  optional `note`, files `logo` and `background`, PNG only, 15 MB / 25 MP;
+  `?check=1` checks and stores nothing) stores version N+1. Versions never
+  change; the pictures are content-addressed under
+  `PUBLIC_DIR/app-themes/<slug>/<sha>.png`. `GET /admin/app-themes`,
+  `/:slug` (versions, order lines), `/:slug/:version` (`latest` works) and
+  `/:slug/:version/logo|background` give it back for `qrsong theme pull`.
+- The JSON is checked with the App Designer's grammar (`validateCssVariables`:
+  only variables the app reads, no `url()`), a Google Fonts css2 URL only, and
+  `sanitizeHelpText(…, { layoutStyles: true })`, which also keeps
+  `text-align` and `margin-top/bottom` in px on p/h2/h3, as the folder help
+  texts use. Every problem is named in one 400. The grammar accepts a unitless
+  `0` in shadows and `drop-shadow()` in `--app-logo-filter` (2026-10-22): every
+  folder theme passes as it is (`test/unit/stored-themes.test.ts`).
+- **Slugs**: words of a-z 0-9 joined by single hyphens, at most 56; not
+  `default` (the app never asks for it), not the customer shape. A scanned
+  card of a stored theme gets `<slug>--v<version>` (`servedStoredSlug` in
+  `apptheme.ts`), for the same reason customer themes carry their version: the
+  app only reloads a theme when the slug changes, so a push reaches every card
+  at its next scan. `GET /theme/<slug>--v<n>` answers any `n` with the newest
+  version under the slug asked for; the bare slug works too (an app restoring
+  its last theme, `qrsong theme show`). A push reloads the scan map in every
+  worker (`AppTheme.reload`). A line on a folder theme keeps its plain slug.
+- **Pushing a folder theme** makes the stored one win from then on; its first
+  stored version is numbered above the folder JSON's `version`, so apps that
+  cached the folder's theme take the new one.
+- **Without the table everything works as before**: `forServe` and the scan
+  map's `storedThemeVersions` treat a database error as "nothing stored", so a
+  deploy that has not created `app_theme_versions` yet serves the folders and
+  plain slugs. The table is the only schema change of this feature (`prisma db
+  push`, or just its `CREATE TABLE` where the database has drift: the dev
+  database did on 2026-10-22, where a push wanted to drop `broken_links`,
+  `printer_invoices` and `payments.printApiInvoicePrice`).
 
 **App Designer is an upgrade on the account.** `APP_DESIGN_PRICE` in
 `src/config/constants.ts` is the only place the amount is written. A paid

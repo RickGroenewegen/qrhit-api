@@ -107,7 +107,8 @@ class AppTheme {
    * the database. Runs at startup and on every reload.
    *
    * Which theme a line gets, first match wins:
-   *   1. `php.theme` set by an admin: a hand-made B2B theme.
+   *   1. `php.theme` set by an admin: a hand-made B2B theme (served as
+   *      `<slug>--v<version>` once it is stored as data, src/storedThemes.ts).
    *   2. The line's own App Designer override, when the account owns the
    *      upgrade: `custom` serves its design, `standard` serves nothing (the
    *      app's built-in look), `default` falls through.
@@ -141,10 +142,12 @@ class AppTheme {
           ON df.userId = pay.userId AND df.paymentHasPlaylistId IS NULL
       `;
 
+      const storedVersions = await this.storedThemeVersions();
+
       this.appThemes.clear();
 
       for (const themeRow of themes) {
-        const { s, n } = resolveLineTheme(themeRow);
+        const { s, n } = resolveLineTheme(themeRow, storedVersions);
         this.appThemes.set(themeRow.id, {
           s,
           n,
@@ -172,6 +175,31 @@ class AppTheme {
       // Leave appThemesInitialized false so getTheme keeps triggering
       // ensureLoaded; retry with backoff instead of serving an empty map.
       this.scheduleRetry();
+    }
+  }
+
+  /**
+   * The newest version of every theme stored as data (src/storedThemes.ts).
+   * Empty when the table cannot be read (not created yet after a deploy):
+   * every line then keeps its plain slug and the folder themes as before.
+   */
+  private async storedThemeVersions(): Promise<Map<string, number>> {
+    try {
+      const rows = await this.prisma.appThemeVersion.groupBy({
+        by: ['slug'],
+        _max: { version: true },
+      });
+      return new Map(
+        rows
+          .filter((r) => r._max.version)
+          .map((r) => [r.slug, r._max.version as number])
+      );
+    } catch (error: any) {
+      this.logger.log(
+        color.yellow.bold('Stored app themes unavailable, serving plain slugs: ') +
+          color.white.bold(error.message)
+      );
+      return new Map();
     }
   }
 
@@ -293,13 +321,32 @@ export function applyPhpAliases<T>(
 }
 
 /**
+ * The slug a scanned card gets for a theme stored as data: the version rides
+ * along, because the app only reloads a theme when the slug changes (the same
+ * trick as `<slug>-<version>` for customer themes). `--v` cannot occur in a
+ * stored theme's own slug, so the two never mix.
+ */
+export function servedStoredSlug(slug: string, version: number): string {
+  return `${slug}--v${version}`;
+}
+
+/**
  * The slug and name one order line gets, from a row of the loadAppThemes
  * query. Kept pure so the precedence rules can be tested without a database.
  * MySQL returns the IS NOT NULL flags as 0/1 (sometimes BigInt), hence Number().
+ * `storedVersions` holds the newest version of each theme stored as data; a
+ * slug without one is a folder theme and is served as it is.
  */
-export function resolveLineTheme(row: any): { s: string; n: string } {
+export function resolveLineTheme(
+  row: any,
+  storedVersions: ReadonlyMap<string, number> = new Map()
+): { s: string; n: string } {
   if (row.theme) {
-    return { s: row.theme, n: row.themeName || row.theme };
+    const stored = storedVersions.get(row.theme);
+    return {
+      s: stored ? servedStoredSlug(row.theme, stored) : row.theme,
+      n: row.themeName || row.theme,
+    };
   }
   if (row.entitledUserId === null || row.entitledUserId === undefined) {
     return { s: '', n: '' };

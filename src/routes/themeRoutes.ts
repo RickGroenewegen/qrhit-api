@@ -6,17 +6,23 @@ import AppDesign, {
   ThemeSource,
 } from '../appDesign';
 import Logger from '../logger';
+import StoredThemes, { servedStoredTheme, themeAssetPath } from '../storedThemes';
 import fs from 'fs/promises';
 import path from 'path';
 
 /**
- * Themes for the scan app, from two directories with the same layout
- * (`<slug>/<slug>.json` plus optional `logo.png` / `background.png`), tried
- * in this order:
+ * Themes for the scan app, tried in this order:
  *
- * 1. Hand-made B2B themes: `src/_data/themes/<slug>/` (source `business`).
- * 2. Customer designs from the App Designer: `PUBLIC_DIR/customer-themes/
- *    <slug>/` (source `customer`), written by src/appDesign.ts on every save.
+ * 1. Hand-made B2B themes stored as data (src/storedThemes.ts, pushed with
+ *    `qrsong theme push`, source `business`): the newest version, under its
+ *    own slug or the `<slug>--v<n>` a scanned card carries. When the store
+ *    cannot be read the next sources answer, as before it existed.
+ * 2. Hand-made B2B themes in folders: `src/_data/themes/<slug>/` (source
+ *    `business`), `<slug>/<slug>.json` plus optional `logo.png` /
+ *    `background.png`. They keep serving every theme that was never pushed.
+ * 3. Customer designs from the App Designer: `PUBLIC_DIR/customer-themes/
+ *    <slug>/` (source `customer`), written by src/appDesign.ts on every save,
+ *    in the same layout as the folders.
  *
  * The response carries `source` so a client can tell the two apart; the
  * released app ignores fields it does not know. Customer themes are served
@@ -30,6 +36,7 @@ export default async function themeRoutes(
 ) {
   const appTheme = AppTheme.getInstance();
   const appDesign = AppDesign.getInstance();
+  const storedThemes = StoredThemes.getInstance();
   const logger = new Logger();
 
   const businessThemeDir = (slug: string) =>
@@ -67,6 +74,11 @@ export default async function themeRoutes(
     if (!isValidThemeSlug(slug)) {
       reply.code(404);
       return { success: false, error: 'Theme not found' };
+    }
+
+    const stored = await storedThemes.forServe(slug);
+    if (stored) {
+      return { success: true, data: servedStoredTheme(stored, slug, process.env['API_URI'] as string) };
     }
 
     try {
@@ -156,8 +168,15 @@ export default async function themeRoutes(
       reply.code(404);
       return { success: false, error: `${label} not found` };
     }
-    const found = await locate(slug);
-    const filePath = found ? path.join(found.dir, `${kind}.png`) : null;
+    const stored = await storedThemes.forServe(slug);
+    const found = stored ? null : await locate(slug);
+    const filePath = stored
+      ? stored[kind]
+        ? themeAssetPath(stored.slug, stored[kind]!)
+        : null
+      : found
+        ? path.join(found.dir, `${kind}.png`)
+        : null;
     try {
       if (!filePath) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
       const file = await fs.readFile(filePath);
