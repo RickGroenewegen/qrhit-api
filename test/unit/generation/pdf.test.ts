@@ -123,6 +123,8 @@ vi.mock('pdf-lib', () => ({
 import PDF, { printerPageSizeMm, isMultiCardTemplate, needsOutlinedText } from '../../../src/pdf';
 
 const PUBLIC_DIR = process.env['PUBLIC_DIR'];
+/** The work copy a generated PDF is finished on before it is moved to its public name. */
+const work = (filename: string) => `${PUBLIC_DIR}/pdf/${filename}.work.tmp`;
 const API_URI = 'https://api.test';
 process.env['API_URI'] = API_URI;
 process.env['PDF_LAMBDA_FUNCTION'] = 'pdf-fn-test';
@@ -401,9 +403,10 @@ describe('generatePDF (Lambda path)', () => {
     });
     expect(s3Commands('delete')[0].input.Key).toBe('chunks/chunk-1.pdf');
     expect(holder.fsp.writeFile).toHaveBeenCalledWith(
-      `${PUBLIC_DIR}/pdf/out.pdf`,
+      work('out.pdf'),
       expect.any(Buffer)
     );
+    expect(holder.fsp.rename).toHaveBeenCalledWith(work('out.pdf'), `${PUBLIC_DIR}/pdf/out.pdf`);
     expect(holder.increaseCounter).toHaveBeenCalledWith('pdf', 'generated', 1);
     expect(holder.increaseCounter).not.toHaveBeenCalledWith('pdf', 'merged', 1);
     // Digital cards get no resize or bleed.
@@ -459,8 +462,8 @@ describe('generatePDF (Lambda path)', () => {
     expect(payload.options.height).toBe(60);
     expect(payload.options.format).toBeUndefined();
 
-    expect(resizeSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/p.pdf`, 60, 60);
-    expect(bleedSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/p.pdf`, 3);
+    expect(resizeSpy).toHaveBeenCalledWith(work('p.pdf'), 60, 60);
+    expect(bleedSpy).toHaveBeenCalledWith(work('p.pdf'), 3);
   });
 
   it('uses 56mm pages for the schneiders printer template', async () => {
@@ -475,8 +478,8 @@ describe('generatePDF (Lambda path)', () => {
       'schneiders'
     );
     expect(invokePayload(0).options.width).toBe(56);
-    expect(resizeSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/s.pdf`, 56, 56);
-    expect(bleedSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/s.pdf`, 3);
+    expect(resizeSpy).toHaveBeenCalledWith(work('s.pdf'), 56, 56);
+    expect(bleedSpy).toHaveBeenCalledWith(work('s.pdf'), 3);
   });
 
   it.each(['tromp', 'schneiders'])(
@@ -484,12 +487,45 @@ describe('generatePDF (Lambda path)', () => {
     async (printerType) => {
       const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
       await pdf.generatePDF('o.pdf', playlist, payment, 'printer', 'sub', false, printerType);
-      expect(outlineSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/o.pdf`);
+      expect(outlineSpy).toHaveBeenCalledWith(work('o.pdf'));
       expect(outlineSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
         bleedSpy.mock.invocationCallOrder[0]
       );
     }
   );
+
+  it('publishes the PDF only once it is finished, in one rename (Medienwerft, 2026-10-22)', async () => {
+    // A download while Ghostscript was still outlining got the copy with
+    // fonts, and Schneiders' RIP dropped every card's text.
+    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
+    await pdf.generatePDF('m.pdf', playlist, payment, 'schneiders', 'sub', false, 'schneiders');
+
+    const final = `${PUBLIC_DIR}/pdf/m.pdf`;
+    expect(holder.fsp.writeFile).toHaveBeenCalledWith(work('m.pdf'), expect.any(Buffer));
+    const touched = [
+      ...holder.fsp.writeFile.mock.calls.map((c: any[]) => c[0]),
+      ...resizeSpy.mock.calls.map((c: any[]) => c[0]),
+      ...bleedSpy.mock.calls.map((c: any[]) => c[0]),
+      ...outlineSpy.mock.calls.map((c: any[]) => c[0]),
+    ];
+    expect(touched).not.toContain(final);
+    expect(holder.fsp.rename).toHaveBeenCalledTimes(1);
+    expect(holder.fsp.rename).toHaveBeenCalledWith(work('m.pdf'), final);
+    expect(holder.fsp.rename.mock.invocationCallOrder[0]).toBeGreaterThan(
+      outlineSpy.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('leaves the published PDF alone when a finishing step fails', async () => {
+    outlineSpy.mockRejectedValueOnce(new Error('gs: boom'));
+    const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
+
+    await expect(
+      pdf.generatePDF('f.pdf', playlist, payment, 'schneiders', 'sub', false, 'schneiders')
+    ).rejects.toThrow('gs: boom');
+    expect(holder.fsp.rename).not.toHaveBeenCalled();
+    expect(holder.fsp.unlink).toHaveBeenCalledWith(work('f.pdf'));
+  });
 
   it('keeps the fonts for other printers and for digital templates', async () => {
     const playlist = { playlistId: 'pl1', numberOfTracks: 4 } as any;
@@ -510,7 +546,7 @@ describe('generatePDF (Lambda path)', () => {
     );
     expect(invokePayload(0).options.format).toBe('a4');
     expect(resizeSpy).toHaveBeenCalledWith(
-      `${PUBLIC_DIR}/pdf/sheets.pdf`,
+      work('sheets.pdf'),
       210,
       297
     );
@@ -550,7 +586,7 @@ describe('generatePDF (Lambda path)', () => {
     });
     expect(s3Commands('delete')[0].input.Key).toBe('merged/output.pdf');
     expect(holder.fsp.writeFile).toHaveBeenCalledWith(
-      `${PUBLIC_DIR}/pdf/big.pdf`,
+      work('big.pdf'),
       expect.any(Buffer)
     );
     expect(holder.increaseCounter).toHaveBeenCalledWith('pdf', 'generated', 1);
@@ -1044,11 +1080,13 @@ describe('generatePDFViaConvertApi (legacy fallback, called directly)', () => {
     expect(options.PageSize).toBe('a4');
     expect(options.PageWidth).toBeUndefined();
 
-    // Single chunk: temp file renamed to the final path, nothing merged.
+    // Single chunk: temp file renamed to the work copy, nothing merged, and
+    // the work copy moved to the final path.
     expect(holder.fsp.rename).toHaveBeenCalledWith(
       `${PUBLIC_DIR}/pdf/temp_0_ca.pdf`,
-      `${PUBLIC_DIR}/pdf/ca.pdf`
+      work('ca.pdf')
     );
+    expect(holder.fsp.rename).toHaveBeenLastCalledWith(work('ca.pdf'), `${PUBLIC_DIR}/pdf/ca.pdf`);
     expect(holder.fsp.unlink).not.toHaveBeenCalled();
     expect(resizeSpy).not.toHaveBeenCalled();
   });
@@ -1084,8 +1122,8 @@ describe('generatePDFViaConvertApi (legacy fallback, called directly)', () => {
     const options = holder.convertapiConvert.mock.calls[0][1];
     expect(options.PageWidth).toBe(56);
     expect(options.PageHeight).toBe(56);
-    expect(resizeSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/pr.pdf`, 56, 56);
-    expect(bleedSpy).toHaveBeenCalledWith(`${PUBLIC_DIR}/pdf/pr.pdf`, 3);
+    expect(resizeSpy).toHaveBeenCalledWith(work('pr.pdf'), 56, 56);
+    expect(bleedSpy).toHaveBeenCalledWith(work('pr.pdf'), 3);
   });
 
   it('merges multiple chunks via ConvertAPI and deletes the temp files', async () => {
