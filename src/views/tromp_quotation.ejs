@@ -414,10 +414,9 @@
                 <div class="label"><%= t('issuedBy') %></div>
                 <img src="<%= baseUrl %>/assets/images/logo.png" alt="QRSong!" class="logo" />
                 <div class="company-details">
-                    QRSong!<br>
-                    Box A3821<br>
-                    Keurenplein 41<br>
-                    1069CD Amsterdam<br>
+                    <%= process.env['PRODUCT_NAME'] %><br>
+                    <%= process.env['PRODUCT_ADDRESS'] %><br>
+                    <%= process.env['PRODUCT_ZIPCODE'] %> <%= process.env['PRODUCT_CITY'] %><br>
                     zakelijk@qrsong.io<br>
                     <%= t('senderCoc') %>: 99311917<br>
                     <%= t('senderVat') %>: <% const vatIdCtx = (typeof vatContext !== 'undefined' && vatContext) ? vatContext : { region: 'nl' }; %><%= (vatIdCtx.region === 'nl' && locale === 'nl') ? '8689.27.764.B.01' : 'NL868927764B01' %>
