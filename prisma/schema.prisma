@@ -119,6 +119,12 @@ model Payment {
   printApiOrderRequest     String?              @default("") @db.Text
   printApiOrderResponse    String?              @default("") @db.Text
   printApiTrackingLink     String?              @default("")
+  // Our own PostNL label for the order, made from the admin dashboard to
+  // resend a returned parcel: its barcode and track & trace link, kept next
+  // to the printer's. A later label replaces the earlier one.
+  ownTrackingCode          String?
+  ownTrackingLink          String?
+  ownTrackingCreatedAt     DateTime?
   printApiPrice            Float                @default(0)
   printApiPriceInclVat     Float                @default(0)
   // Ex-VAT cost of printer orders placed for this order after the main one

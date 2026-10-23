@@ -274,6 +274,29 @@ describe('createShipmentLabels', () => {
     expect(merged.getPageCount()).toBe(3);
   });
 
+  it('returns the barcode PostNL gave each shipment, in label order', async () => {
+    const label = await labelBase64();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ResponseShipments: [
+          { Barcode: '3SQRSG0000001', Labels: [{ Content: label }] },
+          { Labels: [{ Content: label }] },
+          { Barcode: 'LA000000001NL', Labels: [{ Content: label }] },
+        ],
+      }),
+    });
+
+    const result = await postnl.createShipmentLabels([
+      makeCompany() as any,
+      makeCompany({ id: 2 }) as any,
+      makeCompany({ id: 3 }) as any,
+    ]);
+
+    expect(result.success).toBe(true);
+    expect(result.barcodes).toEqual(['3SQRSG0000001', 'LA000000001NL']);
+  });
+
   it('turns thrown errors into a { success: false, error } result', async () => {
     fetchMock.mockRejectedValue(new Error('socket hang up'));
 

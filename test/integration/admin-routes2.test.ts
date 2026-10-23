@@ -1195,6 +1195,7 @@ describe('admin routes — wave 2 coverage', () => {
       { method: 'POST',   url: '/admin/shipping/create-all' },
       { method: 'POST',   url: '/admin/shipment-labels' },
       { method: 'GET',    url: '/admin/shipment-labels/recipients' },
+      { method: 'POST',   url: '/admin/payment/tr_test/shipment-label' },
       { method: 'POST',   url: '/admin/mail-octopus/resync' },
       { method: 'GET',    url: '/day_report' },
       { method: 'GET',    url: '/monthly_report' },

@@ -32,6 +32,33 @@ const PRODUCTS: Record<string, PostNLProduct> = {
   },
 };
 
+/**
+ * PostNL's public track & trace page for a barcode: jouw.postnl.nl inside the
+ * Netherlands, internationalparceltracking.com elsewhere. shipping.ts parses
+ * `code/country/postalcode` back off the URL tail.
+ */
+export function postnlTrackingUrl(
+  code: string,
+  countrycode?: string | null,
+  zipcode?: string | null
+): string {
+  const country = (countrycode || 'NL').trim().toUpperCase();
+  let zip = (zipcode || '').trim();
+  if (country === 'NL') {
+    // PostNL formats Dutch postal codes as "1234 AB"; checkout stores them
+    // with or without the space.
+    const match = zip
+      .replace(/\s+/g, '')
+      .toUpperCase()
+      .match(/^(\d{4})([A-Z]{2})$/);
+    if (match) {
+      zip = `${match[1]} ${match[2]}`;
+    }
+    return `https://jouw.postnl.nl/track-and-trace/${code}/NL/${zip}`;
+  }
+  return `https://www.internationalparceltracking.com/Main.aspx#/track/${code}/${country}/${zip}`;
+}
+
 class PostNL {
   private static instance: PostNL;
   private logger = new Logger();
@@ -105,6 +132,8 @@ class PostNL {
   public async createShipmentLabels(companies: { id: number; name: string; contact: string; address: string; housenumber: string; city: string; zipcode: string; countrycode: string; contactemail: string; productCode?: string }[]): Promise<{
     success: boolean;
     pdfBuffer?: Buffer;
+    // The track & trace barcode of every label, in label order
+    barcodes?: string[];
     errors?: { companyId: number; companyName: string; contact: string; missingFields: string[] }[];
     error?: string;
   }> {
@@ -139,6 +168,7 @@ class PostNL {
       }
 
       const allLabelBuffers: Buffer[] = [];
+      const barcodes: string[] = [];
 
       for (const batch of batches) {
         const shipments = batch.map((company) => {
@@ -195,6 +225,9 @@ class PostNL {
 
         if (data.ResponseShipments) {
           for (const shipment of data.ResponseShipments) {
+            if (shipment.Barcode) {
+              barcodes.push(shipment.Barcode);
+            }
             if (shipment.Labels) {
               for (const label of shipment.Labels) {
                 if (label.Content) {
@@ -219,7 +252,7 @@ class PostNL {
       }
 
       const mergedBuffer = Buffer.from(await mergedPdf.save());
-      return { success: true, pdfBuffer: mergedBuffer };
+      return { success: true, pdfBuffer: mergedBuffer, barcodes };
     } catch (error: any) {
       this.logger.log(`PostNL createShipmentLabels error: ${error.message}`);
       return { success: false, error: error.message };

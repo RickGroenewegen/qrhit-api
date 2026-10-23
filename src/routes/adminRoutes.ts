@@ -41,7 +41,7 @@ import AbuseGuard from '../abuse_guard';
 import IpAllowlist from '../ipAllowlist';
 import BlockedIp from '../blockedIp';
 import Translation from '../translation';
-import PostNL from '../postnl';
+import PostNL, { postnlTrackingUrl } from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import { TidalProvider } from '../providers';
 import CalendarService from '../calendarService';
@@ -5857,6 +5857,117 @@ export default async function adminRoutes(
       reply.header('Content-Type', 'application/pdf');
       reply.header('Content-Disposition', `attachment; filename="shipment_labels_${Date.now()}.pdf"`);
       return reply.send(result.pdfBuffer);
+    }
+  );
+
+  // A PostNL label for one order's customer, to send a returned parcel again.
+  // The address is the payment's, with whatever the admin corrected in the
+  // modal on top; the address itself is not saved to the payment. The
+  // label's barcode and track & trace link are, as the order's own tracking
+  // next to the printer's. Answers JSON so the modal can show the link next
+  // to the download.
+  fastify.post(
+    '/admin/payment/:paymentId/shipment-label',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+      const { productCode, recipient = {} } = request.body || {};
+
+      const payment = await prisma.payment.findUnique({
+        where: { paymentId },
+        select: {
+          id: true,
+          orderId: true,
+          fullname: true,
+          email: true,
+          companyName: true,
+          address: true,
+          housenumber: true,
+          city: true,
+          zipcode: true,
+          countrycode: true,
+        },
+      });
+
+      if (!payment) {
+        return reply.status(404).send({ error: 'Payment not found' });
+      }
+
+      const field = (value: unknown, fallback: string | null) =>
+        typeof value === 'string' ? value.trim() : (fallback || '').trim();
+
+      const label = {
+        id: payment.id,
+        name: field(recipient.companyName, payment.companyName),
+        contact: field(recipient.name, payment.fullname),
+        contactemail: field(recipient.email, payment.email),
+        address: field(recipient.address, payment.address),
+        housenumber: field(recipient.housenumber, payment.housenumber),
+        city: field(recipient.city, payment.city),
+        zipcode: field(recipient.zipcode, payment.zipcode),
+        countrycode: field(recipient.countrycode, payment.countrycode).toUpperCase(),
+        productCode: typeof productCode === 'string' ? productCode : undefined,
+      };
+      const result = await postnl.createShipmentLabels([label]);
+
+      if (!result.success || !result.pdfBuffer) {
+        if (result.errors) {
+          return reply.status(422).send({
+            error: 'The address is incomplete',
+            missingFields: result.errors[0]?.missingFields || [],
+          });
+        }
+        logger.log(
+          color.red.bold('Shipment label for order ') +
+            color.white.bold(payment.orderId) +
+            color.red.bold(' failed: ') +
+            color.white.bold(result.error || 'unknown error')
+        );
+        return reply.status(500).send({ error: result.error || 'Failed to create the shipment label' });
+      }
+
+      const barcode = result.barcodes?.[0] || null;
+      // The link follows the address on the label, which may be a corrected one
+      const trackingLink = barcode
+        ? postnlTrackingUrl(barcode, label.countrycode, label.zipcode)
+        : null;
+      logger.log(
+        color.green.bold('Shipment label ') +
+          color.white.bold(barcode || '(no barcode)') +
+          color.green.bold(' created for order ') +
+          color.white.bold(payment.orderId)
+      );
+
+      // The label is paid for by now: a failed save must not cost the PDF
+      if (barcode) {
+        try {
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              ownTrackingCode: barcode,
+              ownTrackingLink: trackingLink,
+              ownTrackingCreatedAt: new Date(),
+            },
+          });
+        } catch (error: any) {
+          logger.log(
+            color.red.bold('Could not store tracking code ') +
+              color.white.bold(barcode) +
+              color.red.bold(' on order ') +
+              color.white.bold(payment.orderId) +
+              color.red.bold(': ') +
+              color.white.bold(error.message)
+          );
+        }
+      }
+
+      return reply.send({
+        success: true,
+        barcode,
+        trackingLink,
+        filename: `shipment_label_${payment.orderId}.pdf`,
+        pdf: result.pdfBuffer.toString('base64'),
+      });
     }
   );
 

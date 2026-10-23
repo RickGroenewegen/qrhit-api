@@ -20,6 +20,7 @@ import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import { OrderTypePrice } from '../interfaces/OrderTypePrice';
 import Discount from '../discount';
 import Shipping from '../shipping';
+import { postnlTrackingUrl } from '../postnl';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { createHash } from 'crypto';
 
@@ -356,21 +357,7 @@ class PrintEnBindV2 {
     countrycode?: string | null,
     zipcode?: string | null
   ): string {
-    const country = (countrycode || 'NL').trim().toUpperCase();
-    let zip = (zipcode || '').trim();
-    if (country === 'NL') {
-      // PostNL formats Dutch postal codes as "1234 AB"; checkout stores them
-      // with or without the space.
-      const match = zip
-        .replace(/\s+/g, '')
-        .toUpperCase()
-        .match(/^(\d{4})([A-Z]{2})$/);
-      if (match) {
-        zip = `${match[1]} ${match[2]}`;
-      }
-      return `https://jouw.postnl.nl/track-and-trace/${code}/NL/${zip}`;
-    }
-    return `https://www.internationalparceltracking.com/Main.aspx#/track/${code}/${country}/${zip}`;
+    return postnlTrackingUrl(code, countrycode, zipcode);
   }
 
   /** Tracking link for an order resource, or '' while nothing has shipped. */
