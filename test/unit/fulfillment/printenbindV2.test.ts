@@ -2133,6 +2133,33 @@ describe('createOrder', () => {
     });
   });
 
+  it('books a reverse-charge order ex VAT at the 0% it was charged, not the country rate', async () => {
+    placedRoutes();
+    dataMock.getTaxRate.mockImplementation(async (c: string) =>
+      c === 'DE' ? 19 : 21
+    );
+
+    await peb.createOrder(
+      { ...payment, countrycode: 'DE', taxRate: 0, totalPrice: 42.02 },
+      playlistsFor(),
+      'cards'
+    );
+
+    // 42.02 is all turnover: backing 19% out of it booked 35.31 (order
+    // 100009253). Profit = 42.02 − 20.00 print cost.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(prismaMock.payment.update).toHaveBeenCalledWith({
+      where: { paymentId: 'pay_9' },
+      data: {
+        printApiPrice: 20,
+        printApiPriceInclVat: 24.2,
+        totalPriceWithoutTax: 42.02,
+        profit: 22.02,
+        printApiStatus: 'Submitted',
+      },
+    });
+  });
+
   it('sends express orders as fast production and adds the box article plus packing comment', async () => {
     placedRoutes();
 

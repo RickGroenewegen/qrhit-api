@@ -987,7 +987,16 @@ wholesale cost into `profit`, at the rate the upgrade was sold at (extra
 cards) or the order's (boxes). They used to bump `totalPrice` only, so the
 tax report and the profit missed them until a "Calculate profit" pass. That
 pass (`setPaymentInfo`) recomputes from `totalPrice`, the printer's price and
-the box count and lands on the same figures; a box shipped on its own is a
+the box count and lands on the same figures. It backs the VAT out at the rate
+the payment was charged (`payments.taxRate`, `src/printers/paymentTaxRate.ts`),
+never the country's standard rate: until 2026-10-24 it took the country rate,
+so a reverse-charge order (0%, an EU business with a valid VAT ID) lost the
+country's VAT from its turnover (order 100009253: €42.02 booked as €35.31 on
+the tax report and the MoneyBird invoice). Note that checkout's own
+`totalPrice − totalVATPrice` is not the better figure for consumer orders:
+`totalVATPrice` often leaves out part of the charge (33 consumer orders in
+October 2026 alone), and this recompute is what corrects their turnover when
+they go to the printer; a box shipped on its own is a
 separate printer order whose ex-VAT price `createBoxUpgradeOrder` books as
 `payments.extraPrintCost` (off the profit at once, and again in every
 recompute).
