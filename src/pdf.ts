@@ -586,7 +586,7 @@ class PDF {
   /**
    * Merge PDFs using ConvertAPI
    */
-  private async mergePDFsViaConvertApi(filename: string, files: string[]): Promise<void> {
+  private async mergePDFsViaConvertApi(outputPath: string, files: string[]): Promise<void> {
     const result = await this.convertapi.convert(
       'merge',
       {
@@ -594,7 +594,7 @@ class PDF {
       },
       'pdf'
     );
-    await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+    await result.saveFiles(outputPath);
   }
 
   public async countPDFPages(filePath: string): Promise<number> {
@@ -736,34 +736,25 @@ class PDF {
       }
 
       const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+      const workPath = `${finalPath}.work.tmp`;
 
       if (tempFiles.length === 1) {
         // If there's only one PDF, rename it instead of merging
-        await fs.rename(tempFiles[0], finalPath);
+        await fs.rename(tempFiles[0], workPath);
         this.logger.log(
           color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
         );
         tempFiles.length = 0;
       } else {
         // Merge all temporary PDFs
-        await this.mergePDFsViaConvertApi(filename, tempFiles);
+        await this.mergePDFsViaConvertApi(workPath, tempFiles);
         this.analytics.increaseCounter('pdf', 'merged', 1);
         this.logger.log(
           color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
         );
       }
 
-      // Post-processing
-      if (!isDigitalTemplate) {
-        const pageSize = await this.printerPageSize(template, printerType, playlist);
-        await this.resizePDFPages(finalPath, pageSize, pageSize);
-        await this.addBleed(finalPath, 3);
-        if (needsOutlinedText(printerType)) {
-          await this.outlineText(finalPath);
-        }
-      } else if (template === 'printer_sheets') {
-        await this.resizePDFPages(finalPath, 210, 297);
-      }
+      await this.finishPdf(workPath, finalPath, template, printerType, playlist);
     } finally {
       // Clean up temporary files only if they were merged
       if (tempFiles.length > 0) {
@@ -829,6 +820,7 @@ class PDF {
     }
 
     const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const workPath = `${finalPath}.work.tmp`;
     const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
 
     // Build Lambda options
@@ -926,7 +918,7 @@ class PDF {
         this.analytics.increaseCounter('pdf', 'merged', 1);
       }
 
-      await fs.writeFile(finalPath, pdfBuffer);
+      await fs.writeFile(workPath, pdfBuffer);
 
       this.logger.log(
         color.blue.bold(`Generated PDF: ${color.white.bold(filename)}`)
@@ -940,19 +932,42 @@ class PDF {
       throw error;
     }
 
-    // Post-processing
-    if (!isDigitalTemplate) {
-      const pageSize = await this.printerPageSize(template, printerType, playlist);
-      await this.resizePDFPages(finalPath, pageSize, pageSize);
-      await this.addBleed(finalPath, 3);
-      if (needsOutlinedText(printerType)) {
-        await this.outlineText(finalPath);
-      }
-    } else if (template === 'printer_sheets') {
-      await this.resizePDFPages(finalPath, 210, 297);
-    }
+    await this.finishPdf(workPath, finalPath, template, printerType, playlist);
 
     return filename;
+  }
+
+  /**
+   * Post-processing (resize, bleed, outlines) on a work copy next to the final
+   * file, which is then moved in place in one rename. The final file is public
+   * and fetched by URL (dashboard, qrsong toolkit, printer mails). While it was
+   * rewritten in place, a download during the ~45 s Ghostscript takes to
+   * outline 384 pages got the copy that still had fonts; it went to Schneiders,
+   * whose RIP dropped the text of every card (Medienwerft, 2026-10-22).
+   */
+  private async finishPdf(
+    workPath: string,
+    finalPath: string,
+    template: string,
+    printerType: string,
+    playlist: Playlist
+  ): Promise<void> {
+    try {
+      if (!isMultiCardTemplate(template)) {
+        const pageSize = await this.printerPageSize(template, printerType, playlist);
+        await this.resizePDFPages(workPath, pageSize, pageSize);
+        await this.addBleed(workPath, 3);
+        if (needsOutlinedText(printerType)) {
+          await this.outlineText(workPath);
+        }
+      } else if (template === 'printer_sheets') {
+        await this.resizePDFPages(workPath, 210, 297);
+      }
+      await fs.rename(workPath, finalPath);
+    } catch (error) {
+      await fs.unlink(workPath).catch(() => undefined);
+      throw error;
+    }
   }
 
   public async generateGiftcardPDF(
