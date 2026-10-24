@@ -24,7 +24,10 @@ import {
 import { applyPhpAliases, resolveLineTheme } from '../../src/apptheme';
 
 describe('appDesignLineError (who may design an order line)', () => {
-  const line = (over: { userId?: number; status?: string; type?: string | null } = {}) => ({
+  const line = (
+    over: { userId?: number; ownerUserId?: number | null; status?: string; type?: string | null } = {}
+  ) => ({
+    ownerUserId: over.ownerUserId ?? null,
     payment: { userId: over.userId ?? 7, status: over.status ?? 'paid' },
     playlist: { type: over.type === undefined ? 'cards' : over.type },
   });
@@ -35,6 +38,14 @@ describe('appDesignLineError (who may design an order line)', () => {
 
   it("refuses another customer's line", () => {
     expect(appDesignLineError(line(), 8)).toEqual({ status: 403, error: 'Unauthorized' });
+  });
+
+  it('follows a set given away: the recipient may design it, the buyer no longer', () => {
+    expect(appDesignLineError(line({ ownerUserId: 9 }), 9)).toBeNull();
+    expect(appDesignLineError(line({ ownerUserId: 9 }), 7)).toEqual({
+      status: 403,
+      error: 'Unauthorized',
+    });
   });
 
   it('lets an admin (no requester) design any customer line', () => {
@@ -316,6 +327,56 @@ describe('resolveLineTheme (which theme a scanned card gets)', () => {
     expect(resolveLineTheme({ ...entitled, dfSlug: 'cdefault000', dfVersion: 1, dfHasTheme: 0 })).toEqual({
       s: '',
       n: '',
+    });
+  });
+
+  describe('a design that went along with a gift (keepActive)', () => {
+    const kept = { ...withOwn, ovKeepActive: 1 };
+
+    it('is served to a recipient without App Designer', () => {
+      expect(resolveLineTheme({ entitledUserId: null, ownerSwitch: null, ...kept })).toEqual({
+        s: 'cplaylist00-2',
+        n: 'Wedding',
+      });
+    });
+
+    it("beats the recipient's own default when they own App Designer", () => {
+      expect(resolveLineTheme({ ...entitled, ownerSwitch: null, ...withDefault, ...kept })).toEqual({
+        s: 'cplaylist00-2',
+        n: 'Wedding',
+      });
+    });
+
+    it("stops when the dashboard switches the recipient's App Designer off", () => {
+      expect(resolveLineTheme({ entitledUserId: null, ownerSwitch: 0, ...kept })).toEqual({ s: '', n: '' });
+      expect(resolveLineTheme({ entitledUserId: null, ownerSwitch: BigInt(0), ...kept })).toEqual({
+        s: '',
+        n: '',
+      });
+    });
+
+    it('is not served once the recipient (with App Designer) chose another mode', () => {
+      expect(
+        resolveLineTheme({ ...entitled, ...withDefault, ...kept, ovMode: 'default' })
+      ).toEqual({ s: 'cdefault000-4', n: 'Party' });
+      expect(resolveLineTheme({ entitledUserId: null, ...kept, ovMode: 'standard' })).toEqual({
+        s: '',
+        n: '',
+      });
+    });
+
+    it('still gives way to an admin theme', () => {
+      expect(resolveLineTheme({ theme: 'acme', themeName: 'Acme', ...kept })).toEqual({
+        s: 'acme',
+        n: 'Acme',
+      });
+    });
+
+    it('leaves a row without the flag to the entitlement', () => {
+      expect(resolveLineTheme({ entitledUserId: null, ...withOwn, ovKeepActive: 0 })).toEqual({
+        s: '',
+        n: '',
+      });
     });
   });
 });

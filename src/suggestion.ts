@@ -11,6 +11,7 @@ import AppleMusicProvider from './providers/AppleMusicProvider';
 import Data from './data';
 import Cache from './cache';
 import Settings from './settings';
+import { findLineByHash, lineOwnerSql, OwnedLine } from './lineOwner';
 
 /**
  * Prisma's upsert on MySQL is a read followed by a create, not one statement.
@@ -64,9 +65,11 @@ class Suggestion {
       select: { id: true, serviceType: true },
     });
 
-    const php = payment && playlist
-      ? await this.prisma.paymentHasPlaylist.findFirst({
-          where: { paymentId: payment.id, playlistId: playlist.id },
+    // The line this hash holds: after a gift, the giver's old link finds none
+    const line = await findLineByHash(paymentId, userHash, playlistId);
+    const php = line
+      ? await this.prisma.paymentHasPlaylist.findUnique({
+          where: { id: line.id },
           select: {
             id: true,
             type: true,
@@ -115,16 +118,15 @@ class Suggestion {
           )
         ) as cardIndex
       FROM payments p
-      JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       JOIN playlists pl ON pl.id = php.playlistId
       JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
       JOIN tracks t ON t.id = pht.trackId
       LEFT JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id AND us.playlistId = pl.id
       LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pl.id
       WHERE p.paymentId = ${paymentId}
-      AND u.hash = ${userHash}
-      AND pl.playlistId = ${playlistId}
+      AND php.id = ${line?.id ?? 0}
       AND t.manuallyChecked = true
     `;
     return {
@@ -156,24 +158,41 @@ class Suggestion {
     };
   }
 
-  private async verifyPaymentOwnership(
+  /**
+   * The paid line a correction link points at, when the hash is its holder's
+   * (src/lineOwner.ts). After a gift the recipient's links work and the
+   * giver's do not.
+   */
+  private verifyLine(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<OwnedLine | null> {
+    return findLineByHash(paymentId, userHash, playlistId);
+  }
+
+  /**
+   * For what acts on the whole order (the print deadline, regenerating every
+   * PDF): only the buyer may, never someone who was given one of its sets.
+   */
+  private async verifyBuyer(
     paymentId: string,
     userHash: string
-  ): Promise<{ verified: boolean; paymentDbId?: number }> {
-    const payment = await this.prisma.$queryRaw<any[]>`
-      SELECT p.id, p.status
-      FROM payments p
-      JOIN users u ON p.userId = u.id
-      WHERE p.paymentId = ${paymentId}
-      AND u.hash = ${userHash}
-      AND p.status = 'paid'
-      LIMIT 1
-    `;
+  ): Promise<boolean> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { paymentId, status: 'paid', user: { hash: userHash } },
+      select: { id: true },
+    });
+    return !!payment;
+  }
 
-    return {
-      verified: payment.length > 0,
-      paymentDbId: payment.length > 0 ? payment[0].id : undefined,
-    };
+  /**
+   * Rebuild a given set's digital PDF on its own and mail its holder. The
+   * order-wide queueGenerate would rebuild the buyer's lines too and finalize
+   * the whole order.
+   */
+  private async queueGiftedLineRebuild(line: OwnedLine): Promise<void> {
+    await this.generator.queueDigitalRedesign(line.paymentId, line.id);
   }
 
   public async saveUserSuggestion(
@@ -190,25 +209,19 @@ class Suggestion {
     }
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
-
-      if (!verified) {
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
+      if (!line) {
         return false;
       }
 
-      // Then verify the track belongs to this payment
+      // Then verify the track belongs to this line
       const check = await this.prisma.$queryRaw<any[]>`
         SELECT pl.id AS playlistDBId
         FROM  payment_has_playlist php
         JOIN  playlists pl ON pl.id = php.playlistId
         JOIN  playlist_has_tracks pht ON pht.playlistId = pl.id
-        JOIN  payments p ON p.id = php.paymentId
-        WHERE p.paymentId = ${paymentId}
+        WHERE php.id = ${line.id}
         AND   pht.trackId = ${trackId}
-        AND   pl.playlistId = ${playlistId}
         LIMIT 1
       `;
 
@@ -216,19 +229,7 @@ class Suggestion {
         return false;
       }
 
-      // Get the user ID
-      const user = await this.prisma.user.findFirst({
-        where: {
-          hash: userHash,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!user) {
-        return false;
-      }
+      const user = { id: line.owner.id };
 
       // The correction page saves each field of a track in its own request,
       // so two of them can arrive together. A find-then-create let both
@@ -267,12 +268,13 @@ class Suggestion {
     clientIp: string
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
-
-      if (!verified) {
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
+      if (!line) {
+        return false;
+      }
+      // A given physical set has been printed (src/gift.ts only allows that),
+      // so there is nothing left to send to the printer
+      if (line.gifted && line.type === 'physical') {
         return false;
       }
 
@@ -282,26 +284,15 @@ class Suggestion {
         },
       });
 
-      const playlist = await this.prisma.playlist.findFirst({
-        where: {
-          playlistId,
-        },
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: line.id },
       });
-
-      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst(
-        {
-          where: {
-            paymentId: payment?.id,
-            playlistId: playlist?.id,
-          },
-        }
-      );
 
       // Count the number of suggestions
       const suggestionCount = await this.prisma.userSuggestion.count({
         where: {
-          playlistId: playlist?.id,
-          userId: payment?.userId,
+          playlistId: line.playlistDbId,
+          userId: line.owner.id,
         },
       });
 
@@ -361,7 +352,7 @@ class Suggestion {
           {
             title: `QRSong! Correcties doorgegeven`,
             message: `${suggestionCount} correcties doorgegeven door: ${
-              payment?.fullname
+              line.gifted ? line.owner.displayName : payment?.fullname
             }${autoApproved ? ' (automatisch verwerkt)' : ''}`,
             sound: 'incoming',
           },
@@ -411,13 +402,15 @@ class Suggestion {
       } else if (paymentHasPlaylist) {
         // User approved without text corrections (digital order or other)
         // Design might have changed, regenerate PDFs to capture changes
-        await this.prisma.payment.update({
-          where: { paymentId },
-          data: {
-            userAgreedToPrinting: true,
-            userAgreedToPrintingAt: new Date(),
-          },
-        });
+        if (!line.gifted) {
+          await this.prisma.payment.update({
+            where: { paymentId },
+            data: {
+              userAgreedToPrinting: true,
+              userAgreedToPrintingAt: new Date(),
+            },
+          });
+        }
 
         // Set suggestionsPending to show "processing" view until email is sent
         await this.prisma.paymentHasPlaylist.update({
@@ -427,6 +420,11 @@ class Suggestion {
             userConfirmedPrinting: true,
           },
         });
+
+        if (line.gifted) {
+          await this.queueGiftedLineRebuild(line);
+          return true;
+        }
 
         // Regenerate PDFs (to capture any design changes)
         // Old PDFs are automatically cleared by generator.generate()
@@ -469,32 +467,27 @@ class Suggestion {
     clientIp: string
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
-
-      if (!verified) {
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
+      if (!line) {
         return false;
       }
 
-      const payment = await this.prisma.payment.findFirst({
-        where: { paymentId },
-      });
-
-      const playlist = await this.prisma.playlist.findFirst({
-        where: { playlistId },
-      });
-
-      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
-        where: {
-          paymentId: payment?.id,
-          playlistId: playlist?.id,
-        },
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: line.id },
       });
 
       if (!paymentHasPlaylist) {
         return false;
+      }
+
+      if (line.gifted) {
+        // A given physical set has been printed; a digital one is rebuilt
+        // on its own
+        if (paymentHasPlaylist.type === 'physical') {
+          return false;
+        }
+        await this.queueGiftedLineRebuild(line);
+        return true;
       }
 
       if (paymentHasPlaylist.type === 'physical') {
@@ -563,22 +556,17 @@ class Suggestion {
     trackId: number
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
-      if (!verified) {
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
+      if (!line) {
         return false;
       }
 
-      // Verify the track belongs to this payment
+      // Verify the track belongs to this line
       const hasAccess = await this.prisma.$queryRaw<any[]>`
         SELECT 1
         FROM payment_has_playlist php
-        JOIN playlists pl ON pl.id = php.playlistId
-        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
-        JOIN payments p ON p.id = php.paymentId
-        WHERE p.paymentId = ${paymentId}
+        JOIN playlist_has_tracks pht ON pht.playlistId = php.playlistId
+        WHERE php.id = ${line.id}
         AND pht.trackId = ${trackId}
         LIMIT 1
       `;
@@ -587,19 +575,7 @@ class Suggestion {
         return false;
       }
 
-      // Get the user ID
-      const user = await this.prisma.user.findFirst({
-        where: {
-          hash: userHash,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!user) {
-        return false;
-      }
+      const user = { id: line.owner.id };
 
       // Delete the suggestion for this specific user
       await this.prisma.userSuggestion.deleteMany({
@@ -617,23 +593,25 @@ class Suggestion {
   }
 
   public async getCorrections(): Promise<any[]> {
+    // The holder of each line, so the admin's links act as the person who
+    // sent the corrections (the recipient of a given set)
     const corrections = await this.prisma.$queryRaw<any[]>`
-      SELECT 
+      SELECT
         u.id as userId,
         u.email,
-        p.fullname,
+        CASE WHEN php.ownerUserId IS NULL THEN p.fullname ELSE u.displayName END as fullname,
         pl.name as playlistName,
         p.paymentId,
         u.hash as userHash,
         pl.playlistId,
         CAST(COUNT(DISTINCT us.id) AS SIGNED) as suggestionCount
       FROM payments p
-      JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       JOIN playlists pl ON pl.id = php.playlistId
-      LEFT JOIN usersuggestions us ON us.playlistId = pl.id
+      LEFT JOIN usersuggestions us ON us.playlistId = pl.id AND us.userId = u.id
       WHERE php.suggestionsPending = 1
-      GROUP BY u.id, u.email, p.fullname, pl.name, p.paymentId, u.hash, pl.playlistId
+      GROUP BY u.id, u.email, p.fullname, u.displayName, php.ownerUserId, pl.name, p.paymentId, u.hash, pl.playlistId
     `;
 
     return corrections;
@@ -650,42 +628,19 @@ class Suggestion {
     clientIp: string
   ): Promise<boolean> {
     try {
-      // First verify ownership
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
+      // First verify ownership: the line this hash holds
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
 
-      if (!verified) {
-        return false;
-      }
-
-      // Get paymentHasPlaylistId and type independently (needed even if no text corrections)
-      const phpInfo = await this.prisma.$queryRaw<any[]>`
-        SELECT
-          php.id AS paymentHasPlaylistId,
-          php.type AS playlistType,
-          p.id AS paymentDbId
-        FROM payments p
-        JOIN users u ON p.userId = u.id
-        JOIN payment_has_playlist php ON php.paymentId = p.id
-        JOIN playlists pl ON pl.id = php.playlistId
-        WHERE p.paymentId = ${paymentId}
-        AND u.hash = ${userHash}
-        AND pl.playlistId = ${playlistId}
-        LIMIT 1
-      `;
-
-      if (phpInfo.length === 0) {
+      if (!line) {
         this.logger.log(
           color.red.bold('PaymentHasPlaylist not found for correction')
         );
         return false;
       }
 
-      const paymentHasPlaylistId = phpInfo[0].paymentHasPlaylistId;
-      const playlistType = phpInfo[0].playlistType;
-      const paymentDbId = phpInfo[0].paymentDbId;
+      const paymentHasPlaylistId = line.id;
+      const playlistType = line.type;
+      const paymentDbId = line.paymentDbId;
       const hasPhysicalPlaylists = playlistType === 'physical';
 
       // Get all suggestions for this payment/playlist combination
@@ -702,17 +657,13 @@ class Suggestion {
           us.extraArtistAttribute as suggestedExtraArtistAttribute,
           tei.extraNameAttribute as originalExtraNameAttribute,
           tei.extraArtistAttribute as originalExtraArtistAttribute
-        FROM payments p
-        JOIN users u ON p.userId = u.id
-        JOIN payment_has_playlist php ON php.paymentId = p.id
+        FROM payment_has_playlist php
         JOIN playlists pl ON pl.id = php.playlistId
         JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
         JOIN tracks t ON t.id = pht.trackId
-        JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id
+        JOIN usersuggestions us ON us.trackId = t.id AND us.userId = ${line.owner.id}
         LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pl.id
-        WHERE p.paymentId = ${paymentId}
-        AND u.hash = ${userHash}
-        AND pl.playlistId = ${playlistId}
+        WHERE php.id = ${line.id}
       `;
 
       const updateQueries: (() => Promise<unknown>)[] = [];
@@ -946,16 +897,18 @@ class Suggestion {
           SET userConfirmedPrinting = false
           WHERE id = ${paymentHasPlaylistId}
         `;
-        await this.prisma.payment.update({
-          where: { id: paymentDbId },
-          data: { userAgreedToPrinting: false },
-        });
+        if (!line.gifted) {
+          await this.prisma.payment.update({
+            where: { id: paymentDbId },
+            data: { userAgreedToPrinting: false },
+          });
+        }
       }
 
       // Delete all user suggestions for this payment (if any exist)
       await this.prisma.$executeRaw`
         DELETE FROM usersuggestions
-        WHERE userId = (SELECT id FROM users WHERE hash = ${userHash})
+        WHERE userId = ${line.owner.id}
         AND trackId IN (
           SELECT id
           FROM tracks
@@ -973,6 +926,15 @@ class Suggestion {
 
       // Clear playlist cache to ensure changes are reflected
       await this.data.clearPlaylistCache(playlistId);
+
+      // A given set: its digital PDF is rebuilt on its own and mailed to its
+      // holder; a given physical set has been printed already
+      if (andSend && line.gifted) {
+        if (!hasPhysicalPlaylists) {
+          await this.queueGiftedLineRebuild(line);
+        }
+        return true;
+      }
 
       // ALWAYS regenerate PDFs when andSend=true (even if only design changes, no text corrections)
       if (andSend) {
@@ -1060,12 +1022,8 @@ class Suggestion {
     playlistId: string
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
-
-      if (!verified) {
+      // The print deadline is the whole order's: the buyer's to move
+      if (!(await this.verifyBuyer(paymentId, userHash))) {
         return false;
       }
 
@@ -1185,16 +1143,14 @@ class Suggestion {
     try {
       // Get the number of tracks the user paid for, the service type, the payment locale
       // and whether the customer kept different versions of the same song
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
       const paymentInfo = await this.prisma.$queryRaw<any[]>`
         SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType, p.locale,
           php.allowDuplicates
         FROM payments p
-        JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
         JOIN playlists pl ON pl.id = php.playlistId
-        WHERE p.paymentId = ${paymentId}
-        AND u.hash = ${userHash}
-        AND pl.playlistId = ${playlistId}
+        WHERE php.id = ${line?.id ?? 0}
         LIMIT 1
       `;
 
@@ -1294,13 +1250,10 @@ class Suggestion {
     lastReloadAt?: string;
   }> {
     try {
-      // Verify payment ownership
-      const { verified } = await this.verifyPaymentOwnership(
-        paymentId,
-        userHash
-      );
+      // Verify ownership of the line
+      const line = await this.verifyLine(paymentId, userHash, playlistId);
 
-      if (!verified) {
+      if (!line) {
         return {
           success: false,
           error: 'Unauthorized',
@@ -1494,9 +1447,8 @@ class Suggestion {
     userHash: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
-
-      if (!verified) {
+      // Rebuilds every line of the order: the buyer's to ask for
+      if (!(await this.verifyBuyer(paymentId, userHash))) {
         return { success: false, error: 'Unauthorized' };
       }
 

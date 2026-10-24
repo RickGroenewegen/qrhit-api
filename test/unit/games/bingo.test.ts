@@ -27,7 +27,8 @@ const h = vi.hoisted(() => {
         findUnique: vi.fn(async () => ({ paymentId: 77 })),
       },
       payment: {
-        findUnique: vi.fn(async () => ({ countrycode: 'NL', taxRate: 21 })),
+        findUnique: vi.fn(async () => ({ userId: 9, countrycode: 'NL', taxRate: 21 })),
+        findFirst: vi.fn(async () => null),
       },
       user: {
         findUnique: vi.fn(async () => ({ hash: 'user-hash-1' })),
@@ -211,11 +212,37 @@ describe('processBingoUpgradePayment', () => {
     h.prisma.gamesPurchase.findFirst.mockResolvedValue(null);
     h.prisma.paymentHasPlaylist.updateMany.mockResolvedValue({ count: 1 });
     h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ paymentId: 77 });
+    // The purchaser's own order (purchaserBillingOrder checks the owner)
     h.prisma.payment.findUnique.mockResolvedValue({
+      userId: 9,
       countrycode: 'NL',
       taxRate: 21,
     });
+    h.prisma.payment.findFirst.mockResolvedValue(null);
     h.prisma.user.findUnique.mockResolvedValue({ hash: 'user-hash-1' });
+  });
+
+  it('takes the rate from the purchaser\'s own order for a set received as a gift', async () => {
+    // The set's order belongs to the giver (user 5), the buyer is user 9
+    h.prisma.payment.findUnique.mockResolvedValue({ userId: 5, countrycode: 'BE', taxRate: 21 });
+    h.prisma.payment.findFirst.mockResolvedValue({ userId: 9, countrycode: 'DE', taxRate: 19 });
+
+    await bingo.processBingoUpgradePayment([4], 9);
+
+    expect(h.prisma.gamesPurchase.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'DE', taxRate: 19 }) })
+    );
+  });
+
+  it('takes the account\'s country when the purchaser has no order at all', async () => {
+    h.prisma.payment.findUnique.mockResolvedValue({ userId: 5, countrycode: 'BE', taxRate: 21 });
+    h.prisma.user.findUnique.mockResolvedValue({ hash: 'user-hash-1', country: 'FR' });
+
+    await bingo.processBingoUpgradePayment([4], 9);
+
+    expect(h.prisma.gamesPurchase.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'FR', taxRate: null }) })
+    );
   });
 
   it('rejects empty / unparseable id input', async () => {

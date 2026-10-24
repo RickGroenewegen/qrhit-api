@@ -11,6 +11,7 @@ import Cache from './cache';
 import { FONTS } from './fonts';
 import { AiTasks } from './aiTasks';
 import { round2 } from './services/discount-allocation';
+import { ownsLine } from './lineOwner';
 
 /**
  * Customer-made scan-app themes ("App Designer").
@@ -504,6 +505,8 @@ function checkoutSignature(entry: CheckoutAppDesignEntry): string {
 
 /** What the access check needs to know about an order line. */
 export interface AppDesignLine {
+  /** Set once a gift voucher for the line was redeemed (src/lineOwner.ts) */
+  ownerUserId: number | null;
   payment: { userId: number; status: string };
   playlist: { type: string | null };
 }
@@ -511,8 +514,9 @@ export interface AppDesignLine {
 /**
  * Why this order line's app design may not be worked on, as the HTTP status
  * and message to send, or null when it may. A customer (`requesterUserId`)
- * must own the line; an admin (null) acts for whoever does. Either way the
- * line has to be a paid card order.
+ * must hold the line (the buyer, or the recipient of a gift); an admin
+ * (null) acts for whoever does. Either way the line has to be a paid card
+ * order.
  */
 export function appDesignLineError(
   line: AppDesignLine | null,
@@ -521,7 +525,7 @@ export function appDesignLineError(
   if (!line) {
     return { status: 404, error: 'PaymentHasPlaylist not found' };
   }
-  if (requesterUserId !== null && line.payment.userId !== requesterUserId) {
+  if (requesterUserId !== null && !ownsLine(line, requesterUserId)) {
     return { status: 403, error: 'Unauthorized' };
   }
   if (line.payment.status !== 'paid' || line.playlist.type === 'giftcard') {

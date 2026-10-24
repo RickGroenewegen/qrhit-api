@@ -1,6 +1,29 @@
 {
   "posts": [
     {
+      "id": 20,
+      "date": "2026-10-24",
+      "author": "Rick Groenewegen",
+      "image": "blog_20.jpg",
+      "tags": [],
+      "slugs": {
+        "en": "give-qrsong-as-a-gift"
+      },
+      "titles": {
+        "en": "Give QRSong! as a gift: you pick the songs, they keep the set"
+      },
+      "summaries": {
+        "en": "Order the cards, make a gift voucher in My account, and they redeem it into their own account with the design, the PDF, QRGames and the app design."
+      },
+      "imagePrompt": "The handover of a present, seen from just above on a wooden table on a winter evening: the closed QRSong gift box of reference 3, a loose teal ribbon around it, its lid window showing a photo of a summer festival field at sunset. On top of the lid lies a folded warm off-white gift card, slightly open, with one black QR code on a white square panel and a few lines of handwriting in blue ink that are too small to read. Beside the box a short fan of QR music cards like references 1 and 2, one turned over to show its back. A hand comes in from the right edge, about to pick up the gift card. Torn kraft wrapping paper and a small sprig of fir on the table, warm lamp light from the left. No Santa, no Christmas tree, no faces.",
+      "referenceImages": [
+        {
+          "path": "blog-image-references/qrsong-gift-box-window.jpg",
+          "note": "the real QRSong gift box: square, pale peach cardboard with a faint music-note pattern and a window in the lid that shows a personal picture"
+        }
+      ]
+    },
+    {
       "id": 19,
       "date": "2026-09-21",
       "author": "Rick Groenewegen",

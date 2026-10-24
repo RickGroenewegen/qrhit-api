@@ -30,6 +30,7 @@ import Fx from '../services/fx';
 import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
 import PrismaInstance from '../prisma';
 import UpgradeInvoices from '../upgradeInvoice';
+import { isSignedRenderRequest } from '../renderSignature';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -78,6 +79,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/progress/:playlistId/:paymentId',
     async (request: any, _reply) => {
+      // The checkout's progress page, right after paying. It carries the
+      // order's totals, address and the buyer's hash, so it closes once a
+      // set of the order was given away (src/gift.ts): the Mollie id is in
+      // the recipient's links.
+      const given = await prisma.paymentHasPlaylist.count({
+        where: {
+          payment: { paymentId: String(request.params.paymentId) },
+          ownerUserId: { not: null },
+        },
+      });
+      if (given > 0) {
+        return { success: false, error: 'Payment not found' };
+      }
       const data = await Data.getInstance().getPayment(
         request.params.paymentId,
         request.params.playlistId
@@ -263,8 +277,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // Discount check / validate / voucher routes live in discountRoutes.ts.
 
-  // Invoice
+  // Invoice, the page the PDF Lambda prints (order.ts createInvoice). Signed:
+  // it shows the buyer's address and what they paid, and the Mollie id is
+  // in the links of a set given as a gift (src/gift.ts)
   fastify.get('/invoice/:paymentId', async (request: any, reply) => {
+    if (!isSignedRenderRequest('invoice', request)) {
+      reply.status(404).send({ error: 'Payment not found' });
+      return;
+    }
     const storedPayment = await mollie.getPayment(request.params.paymentId);
     if (!storedPayment) {
       reply.status(404).send({ error: 'Payment not found' });

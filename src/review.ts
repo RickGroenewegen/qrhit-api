@@ -206,6 +206,7 @@ class Review {
           paymentId: true,
           playlistId: true,
           firstScannedAt: true,
+          ownerUserId: true,
           payment: {
             select: {
               id: true,
@@ -224,6 +225,9 @@ class Review {
       >();
 
       for (const php of phpRecords) {
+        // A set given as a gift (src/gift.ts) is played by the recipient:
+        // their scans do not make the buyer's order ready for a review mail
+        if (php.ownerUserId !== null) continue;
         phpToPaymentMap.set(php.id, php.payment.id);
         paymentInfo.set(php.payment.id, {
           paymentId: php.payment.paymentId,

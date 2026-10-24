@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import PrintEnBind from './printers/printenbind';
 import PDF from './pdf';
 import { APP_DESIGN_PRICE } from './config/constants';
+import { signedRenderQuery } from './renderSignature';
 
 interface PriceResult {
   totalPrice: number;
@@ -195,10 +196,18 @@ class Order {
   }
 
   public async createInvoice(payment: any): Promise<string> {
-    const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
+    // Signed (renderSignature.ts): the page shows the buyer's address and
+    // what they paid, and the Mollie id travels in the links of a set given
+    // as a gift (src/gift.ts)
+    const invoicePath = `/invoice/${payment.paymentId}`;
+    const invoiceUrl = `${process.env['API_URI']}${invoicePath}?${signedRenderQuery(
+      'invoice',
+      { paymentId: String(payment.paymentId) },
+      {}
+    )}`;
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
-    this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoiceUrl)}`));
+    this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoicePath)}`));
 
     try {
       // Check if the file exists

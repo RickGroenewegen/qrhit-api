@@ -14,6 +14,7 @@ import AppDesign, {
   sanitizeAssetFilename,
 } from '../appDesign';
 import { APP_DESIGN_PRICE } from '../config/constants';
+import { lineOwnerId, ownedLinesWhere } from '../lineOwner';
 
 const prisma = PrismaInstance.getInstance();
 const logger = new Logger();
@@ -61,11 +62,14 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
     return user;
   }
 
-  /** The user's paid card order lines: the playlists a design can apply to. */
+  /**
+   * The paid card order lines the user holds: the playlists a design can
+   * apply to, received gifts included and sets given away left out.
+   */
   async function paidCardLines(userId: number) {
     return prisma.paymentHasPlaylist.findMany({
       where: {
-        payment: { userId, status: 'paid' },
+        AND: [ownedLinesWhere(userId), { payment: { status: 'paid' } }],
         playlist: { type: { not: 'giftcard' } },
       },
       include: {
@@ -78,8 +82,8 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
 
   /**
    * A paid card line the requester may design, or null after sending the
-   * error. `userId` is the customer, who must own the line; null is an admin,
-   * who works on it for its owner (`php.payment.userId`).
+   * error. `userId` is the customer, who must hold the line; null is an
+   * admin, who works on it for its holder (`lineOwnerId(php)`).
    */
   async function ownedLine(reply: any, userId: number | null, rawId: any) {
     const phpId = parseInt(rawId);
@@ -100,6 +104,21 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
       return null;
     }
     return php!;
+  }
+
+  /**
+   * A design that went along with a gift (`keepActive`, src/gift.ts) stays on
+   * the cards, but only an owner of App Designer may change it: without the
+   * upgrade it is shown read-only. Sends the 403 and returns true when locked.
+   */
+  async function keptDesignLocked(reply: any, ownerId: number, paymentHasPlaylistId: number) {
+    const row = await prisma.appDesign.findUnique({
+      where: { paymentHasPlaylistId },
+      select: { keepActive: true },
+    });
+    if (!row?.keepActive || (await appDesign.isEntitled(ownerId))) return false;
+    reply.status(403).send({ success: false, error: 'keptDesignReadOnly' });
+    return true;
   }
 
   function designPayload(row: any) {
@@ -137,8 +156,9 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
     }
     const php = await ownedLine(reply, requesterUserId, request.params.paymentHasPlaylistId);
     if (!php) return;
+    if (requesterUserId !== null && (await keptDesignLocked(reply, lineOwnerId(php), php.id))) return;
     try {
-      await appDesign.setOverrideMode(php.payment.userId, php.id, mode);
+      await appDesign.setOverrideMode(lineOwnerId(php), php.id, mode);
     } catch (e: any) {
       return reply.status(400).send({ success: false, error: e.message });
     }
@@ -178,6 +198,11 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
             orderedAt: line.payment.createdAt,
             mode: (override?.mode as AppDesignOverrideMode) || 'default',
             hasOwnDesign: !!override?.design,
+            // A received gift's design, kept on its cards; read-only
+            // without App Designer
+            gifted: line.ownerUserId !== null,
+            keptDesign: !!override?.keepActive,
+            readOnly: !!override?.keepActive && !entitled,
           };
         }),
       });
@@ -203,12 +228,16 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
         const override = await prisma.appDesign.findUnique({
           where: { paymentHasPlaylistId: php.id },
         });
+        const keptDesign = !!override?.keepActive;
         return reply.send({
           success: true,
           paymentHasPlaylistId: php.id,
           playlistName: php.playlist.name,
           mode: (override?.mode as AppDesignOverrideMode) || 'default',
           design: designPayload(override),
+          gifted: php.ownerUserId !== null,
+          keptDesign,
+          readOnly: keptDesign && !(await appDesign.isEntitled(user.id)),
         });
       } catch (error: any) {
         logger.log(
@@ -247,6 +276,7 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
         if (!user) return;
         const php = await ownedLine(reply, user.id, request.params.paymentHasPlaylistId);
         if (!php) return;
+        if (await keptDesignLocked(reply, user.id, php.id)) return;
         return await save(request, reply, { userId: user.id, paymentHasPlaylistId: php.id });
       } catch (error: any) {
         logger.log(
@@ -296,7 +326,7 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
       try {
         const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
         if (!php) return;
-        const ownerId = php.payment.userId;
+        const ownerId = lineOwnerId(php);
         const [entitled, designs] = await Promise.all([
           appDesign.isEntitled(ownerId),
           appDesign.getDesigns(ownerId),
@@ -332,7 +362,7 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
         const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
         if (!php) return;
         return await save(request, reply, {
-          userId: php.payment.userId,
+          userId: lineOwnerId(php),
           paymentHasPlaylistId: php.id,
         });
       } catch (error: any) {
@@ -355,7 +385,7 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
       try {
         const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
         if (!php) return;
-        return await save(request, reply, { userId: php.payment.userId });
+        return await save(request, reply, { userId: lineOwnerId(php) });
       } catch (error: any) {
         logger.log(
           color.red.bold(
@@ -405,11 +435,11 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
         }
         const php = await ownedLine(reply, null, request.params.paymentHasPlaylistId);
         if (!php) return;
-        await appDesign.setEnabled(php.payment.userId, enabled);
+        await appDesign.setEnabled(lineOwnerId(php), enabled);
         logger.log(
           color.blue.bold(
             `App Designer switched ${white.bold(enabled ? 'on' : 'off')} for user ${white.bold(
-              String(php.payment.userId)
+              String(lineOwnerId(php))
             )} from the dashboard`
           )
         );
@@ -446,8 +476,10 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
           });
         }
         // The upgrade themes the app for the customer's own cards, so there
-        // has to be at least one paid card order it can apply to. Its
-        // country also decides the VAT of the purchase.
+        // has to be at least one paid card set it can apply to: one they
+        // bought or one they received as a gift (src/lineOwner.ts). Their
+        // own order's country decides the VAT; a recipient without one is
+        // charged by their account's country, else where they are now.
         const lastOrder = await prisma.payment.findFirst({
           where: {
             userId: user.id,
@@ -457,14 +489,26 @@ const appDesignRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) =
           orderBy: { createdAt: 'desc' },
           select: { countrycode: true },
         });
-        if (!lastOrder) {
+        const receivedSet = lastOrder
+          ? null
+          : await prisma.paymentHasPlaylist.findFirst({
+              where: { ownerUserId: user.id, payment: { status: 'paid' } },
+              select: { id: true },
+            });
+        if (!lastOrder && !receivedSet) {
           return reply.status(400).send({
             success: false,
             error: 'App Designer needs a paid card order',
           });
         }
 
-        const countryCode = lastOrder.countrycode || 'NL';
+        const countryCode =
+          lastOrder?.countrycode ||
+          user.country ||
+          (typeof viewerCountry === 'string' && /^[A-Z]{2}$/i.test(viewerCountry)
+            ? viewerCountry.toUpperCase()
+            : null) ||
+          'NL';
         const taxRate = (await data.getTaxRate(countryCode)) || 0;
         const userLocale = locale || 'en';
         const mollie = new Mollie();

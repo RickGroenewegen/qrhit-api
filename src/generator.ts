@@ -403,8 +403,9 @@ class Generator {
   ): Promise<Array<{ name: string; link: string }>> {
     if (!payment.user) return [];
 
+    // A set given away is no longer the buyer's to correct
     const lines = await this.prisma.paymentHasPlaylist.findMany({
-      where: { paymentId: payment.id, suggestionsPending: false },
+      where: { paymentId: payment.id, suggestionsPending: false, ownerUserId: null },
       select: {
         type: true,
         playlist: { select: { id: true, playlistId: true, name: true } },

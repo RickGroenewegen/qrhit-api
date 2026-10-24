@@ -4,6 +4,7 @@ import Logger from '../logger';
 import { color, white } from 'console-log-colors';
 import Mollie from '../mollie';
 import Upgrade from '../upgrade';
+import { ownsLine } from '../lineOwner';
 
 const prisma = PrismaInstance.getInstance();
 const logger = new Logger();
@@ -68,7 +69,9 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           });
         }
 
-        if (php.payment.userId !== user.id) {
+        // The buyer's, and only while the set has not been given away: a box
+        // is booked and invoiced on the buyer's order and ships to the buyer
+        if (php.ownerUserId !== null || php.payment.userId !== user.id) {
           return reply.status(403).send({
             success: false,
             error: 'Unauthorized',
@@ -138,9 +141,10 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
         }
 
         // Admins can access any playlist, users can only access their own
+        // (src/lineOwner.ts: a given set is its recipient's)
         if (!isAdmin) {
           const user = await prisma.user.findUnique({ where: { userId: userIdString } });
-          if (!user || php.payment.userId !== user.id) {
+          if (!user || !ownsLine(php, user.id)) {
             return reply.status(403).send({ success: false, error: 'Unauthorized' });
           }
         }
@@ -233,7 +237,9 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           });
         }
 
-        if (php.payment.userId !== user.id) {
+        // The buyer's, and only while the set has not been given away: a box
+        // is booked and invoiced on the buyer's order and ships to the buyer
+        if (php.ownerUserId !== null || php.payment.userId !== user.id) {
           return reply.status(403).send({
             success: false,
             error: 'Unauthorized',

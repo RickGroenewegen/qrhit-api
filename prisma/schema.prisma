@@ -240,6 +240,7 @@ model Payment {
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
   CompanyList       CompanyList[]
+  GiftVoucher       GiftVoucher[]
 
   @@index([userId])
   @@index([paymentId])
@@ -301,6 +302,9 @@ model User {
   GamesPurchase             GamesPurchase[]
   AppDesignPurchase         AppDesignPurchase[]
   AppDesign                 AppDesign[]
+  OwnedLines                PaymentHasPlaylist[] @relation("LineOwner")
+  GiftVouchersGiven         GiftVoucher[]        @relation("GiftGiver")
+  GiftVouchersReceived      GiftVoucher[]        @relation("GiftRecipient")
 
   @@index([hash])
   @@map("users")
@@ -812,12 +816,21 @@ model PaymentHasPlaylist {
   bingoFiles               BingoFile[]
   quizzes                  Quiz[]
   appDesign                AppDesign?
+  // Who holds this set when it is not the order's buyer: set once, when a
+  // gift voucher for it is redeemed (src/gift.ts). Null means payments.userId.
+  // Every ownership check goes through src/lineOwner.ts. Restrict, because a
+  // cascade would take the set out of the buyer's books and SetNull would hand
+  // it back to the buyer.
+  ownerUserId              Int?
+  owner                    User?                    @relation("LineOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  giftVoucherLines         GiftVoucherLine[]
 
   @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
   @@index([playlistId])
   @@index([type])
   @@index([paymentId, type])
+  @@index([ownerUserId])
   @@map("payment_has_playlist")
 }
 
@@ -1945,6 +1958,10 @@ model AppDesign {
   logo                 String?             @db.VarChar(255)
   background           String?             @db.VarChar(255)
   helpText             String?             @db.Text
+  // A design that came with a gift (src/gift.ts): served on its order line
+  // whether or not the owner has the App Designer upgrade, because the cards
+  // were given with it. Without the upgrade the owner cannot change it.
+  keepActive           Boolean             @default(false)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1952,6 +1969,59 @@ model AppDesign {
 
   @@index([userId])
   @@map("app_designs")
+}
+
+// A gift voucher: one or more sets (order lines) of one paid order that the
+// buyer hands to someone else. The voucher PDF carries the code; redeeming it
+// at /redeem/<code> sets payment_has_playlist.ownerUserId of every line to
+// the recipient (src/gift.ts). The order itself (invoice, ledger) stays the
+// buyer's. `status` is open, claimed, cancelled or returned (an admin gave
+// every set back to the buyer); the rows stay as history.
+model GiftVoucher {
+  id              Int               @id @default(autoincrement())
+  // 12 characters without 0/O/1/I/L, stored without dashes (GIFT-XXXX-XXXX-XXXX on paper)
+  code            String            @unique @db.VarChar(16)
+  status          String            @default("open") @db.VarChar(12)
+  paymentId       Int
+  giverUserId     Int
+  recipientUserId Int?
+  giverName       String            @db.VarChar(120)
+  recipientName   String            @db.VarChar(120)
+  message         String?           @db.Text
+  locale          String            @default("en") @db.VarChar(5)
+  pdfFilename     String?           @db.VarChar(255)
+  claimedAt       DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  payment         Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  giver           User              @relation("GiftGiver", fields: [giverUserId], references: [id], onDelete: Cascade)
+  recipient       User?             @relation("GiftRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  lines           GiftVoucherLine[]
+
+  @@index([giverUserId])
+  @@index([recipientUserId])
+  @@index([paymentId, status])
+  @@map("gift_vouchers")
+}
+
+// A set on a voucher. `openLineId` is the line id while the voucher is open
+// and null afterwards: unique, so a set sits on one open voucher at most
+// (MySQL has no partial index, but a unique index takes any number of nulls).
+// `appDesignCarried` records what the redeem did with the line's app design
+// (none, moved, copied, draft; see planAppDesignTransfer).
+model GiftVoucherLine {
+  id                   Int                @id @default(autoincrement())
+  giftVoucherId        Int
+  paymentHasPlaylistId Int
+  openLineId           Int?               @unique
+  appDesignCarried     String?            @db.VarChar(8)
+  voucher              GiftVoucher        @relation(fields: [giftVoucherId], references: [id], onDelete: Cascade)
+  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+
+  @@unique([giftVoucherId, paymentHasPlaylistId])
+  @@index([paymentHasPlaylistId])
+  @@map("gift_voucher_lines")
 }
 
 // The one-off App Designer upgrade on an account (APP_DESIGN_PRICE,

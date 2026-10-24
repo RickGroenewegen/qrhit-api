@@ -49,12 +49,18 @@ function scan(php: number, trackId: number, timestamp?: string) {
   return JSON.stringify({ ip: '1.2.3.4', trackId, php, timestamp });
 }
 
-function line(id: number, playlistId: number, firstScannedAt: Date | null = null) {
+function line(
+  id: number,
+  playlistId: number,
+  firstScannedAt: Date | null = null,
+  ownerUserId: number | null = null
+) {
   return {
     id,
     paymentId: 100 + id,
     playlistId,
     firstScannedAt,
+    ownerUserId,
     payment: { id: 100 + id, paymentId: `tr_${id}`, reviewAllowed: 0 },
   };
 }
@@ -152,6 +158,19 @@ describe('processPlaybackCounts: first scan', () => {
       where: { id: 107 },
       data: { reviewAllowed: 1, reviewAllowedAt: expect.any(Date) },
     });
+    expect(prismaMock.paymentHasPlaylist.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not count the scans of a set given as a gift, but still stamps it played', async () => {
+    const scans = Array.from({ length: 25 }, (_, i) =>
+      scan(7, i + 1, '2026-09-28T10:05:00.000Z')
+    );
+    cacheMock.executeCommand.mockResolvedValue(scans);
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([line(7, 70, null, 55)]);
+
+    await review.processPlaybackCounts();
+
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
     expect(prismaMock.paymentHasPlaylist.updateMany).toHaveBeenCalledTimes(1);
   });
 

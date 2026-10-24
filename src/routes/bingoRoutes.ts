@@ -13,6 +13,7 @@ import Translation from '../translation';
 import Utils from '../utils';
 import CacheInstance from '../cache';
 import { resolveQrSubDir } from '../qrPaths';
+import { lineOwnerSql, ownsLine } from '../lineOwner';
 
 
 interface TrackRow {
@@ -29,6 +30,7 @@ interface PlaylistInfoRow {
   playlistId: string;
   playlistDbId: number;
   paymentHasPlaylistId: number;
+  ownerUserId: number | null;
   qrSubDir: string | null;
 }
 
@@ -62,10 +64,11 @@ export default async function bingoRoutes(
         pl.playlistId as playlistId,
         pl.id as playlistDbId,
         php.id as paymentHasPlaylistId,
+        php.ownerUserId as ownerUserId,
         p.qrSubDir as qrSubDir
       FROM payments p
-      JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       JOIN playlists pl ON pl.id = php.playlistId
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
@@ -94,7 +97,7 @@ export default async function bingoRoutes(
       FROM bingo_files bf
       JOIN payment_has_playlist php ON php.id = bf.paymentHasPlaylistId
       JOIN payments p ON p.id = php.paymentId
-      JOIN users u ON u.id = p.userId
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       WHERE u.hash = ${userHash}
       AND bf.createdAt >= ${today}
     `;
@@ -126,8 +129,8 @@ export default async function bingoRoutes(
       return { success: false, error: 'Bingo file not found' };
     }
 
-    // Check if the user owns this bingo file (through the payment)
-    if (bingoFile.paymentHasPlaylist.payment.userId !== userId) {
+    // Check if the user holds the line of this bingo file (src/lineOwner.ts)
+    if (!ownsLine(bingoFile.paymentHasPlaylist, userId)) {
       return { success: false, error: 'Unauthorized' };
     }
 
@@ -387,7 +390,11 @@ export default async function bingoRoutes(
       const bingoPdfFilename = `bingo_${hash}.pdf`;
       const hostCardsPdfFilename = `hostcards_${hash}.pdf`;
       const sanitizedPlaylistName = utils.generateFilename(playlistInfo.playlistName).substring(0, 50);
-      const zipFilename = `${paymentId}_${sanitizedPlaylistName}_bingo_${hash}.zip`;
+      // A given set's zip does not carry the buyer's order id
+      const zipPrefix = playlistInfo.ownerUserId
+        ? `g${playlistInfo.paymentHasPlaylistId}`
+        : paymentId;
+      const zipFilename = `${zipPrefix}_${sanitizedPlaylistName}_bingo_${hash}.zip`;
 
       const bingoPdfPath = path.join(bingoDir, bingoPdfFilename);
       const hostCardsPdfPath = path.join(bingoDir, hostCardsPdfFilename);

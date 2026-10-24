@@ -96,6 +96,21 @@ export async function deleteUserById(
   id: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // A set given as a gift (src/gift.ts) lives on the giver's order and is
+    // held by the recipient: deleting either would take it from the
+    // recipient (the giver's orders cascade away) or fail on the line's
+    // owner. Return the set to its buyer first (the dashboard can).
+    const givenOrHeld = await prisma.paymentHasPlaylist.count({
+      where: {
+        OR: [{ ownerUserId: id }, { ownerUserId: { not: null }, payment: { userId: id } }],
+      },
+    });
+    if (givenOrHeld > 0) {
+      return {
+        success: false,
+        error: 'This user gave or received a set as a gift; return it to its buyer first',
+      };
+    }
     await prisma.user.delete({
       where: { id },
     });

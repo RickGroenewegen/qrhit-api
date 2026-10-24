@@ -98,7 +98,10 @@ const systemPrompt = () =>
   'playlists and converts them into physical QR playing cards. ' +
   promptStyle +
   ' Try to keep each translation about as long as the original and not ' +
-  'much longer.';
+  'much longer. ' +
+  // The same rule as the site's translate.js: in Dutch, Swedish, Norwegian
+  // and Danish the model gave both products the gift card's word.
+  "QRSong! has two different gift products, and one word must never stand for both. A 'gift card' is credit the recipient spends on cards of their own choosing at checkout. A 'gift voucher' is a printed voucher that hands over a set of cards the giver already bought; it is redeemed at qrsong.io/redeem. The gift card is: Dutch 'cadeaubon', German 'Geschenkkarte', French 'carte cadeau', Spanish 'tarjeta regalo', Italian 'carta regalo', Portuguese 'cartão presente', Polish 'karta podarunkowa', Hungarian 'ajándékkártya', Swedish 'presentkort', Norwegian and Danish 'gavekort', Japanese 'ギフトカード', Chinese '礼品卡'. The gift voucher is: Dutch 'cadeauvoucher', German 'Geschenkgutschein', French 'bon cadeau', Spanish 'vale regalo', Italian 'buono regalo', Portuguese 'vale-presente', Polish 'bon podarunkowy', Hungarian 'ajándékutalvány', Swedish 'presentbevis', Norwegian and Danish 'gavebevis', Japanese 'ギフト券', Chinese '礼品券'. When a text says only 'voucher' in the gift context, it is the gift voucher.";
 
 // The answer, enforced by structured output: per text number, one string per
 // language code asked for. The shape the rest of the script reads.
@@ -270,7 +273,9 @@ const translateJson = async (
   languageFiles = {}
 ) => {
   const flatJson = flattenJson(json);
-  const batchSize = 10;
+  // The answer schema has one required string per text and language: 10 texts
+  // in 13 languages was refused as "compiled grammar is too large" (400).
+  const batchSize = 3;
   let batchTexts = [];
   let batchPaths = [];
 

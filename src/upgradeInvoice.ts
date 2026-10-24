@@ -98,6 +98,53 @@ export function customerFromOrder(order: any): UpgradeInvoiceCustomer {
   };
 }
 
+/**
+ * The paid order an account upgrade (QRGames, App Designer) is invoiced
+ * with, for its billing details and its country's VAT: `preferredPaymentId`
+ * (the order of the first playlist the upgrade covers) when the purchaser
+ * bought that order, else the purchaser's latest paid card order. A set
+ * received as a gift (src/gift.ts) sits on the giver's order, and an upgrade
+ * the recipient buys must never carry the giver's name and address. Null
+ * for an account without an order of its own; `customerFromUser` then
+ * fills the invoice from the account.
+ */
+export async function purchaserBillingOrder(
+  userId: number,
+  preferredPaymentId?: number | null
+): Promise<any | null> {
+  const prisma = PrismaInstance.getInstance();
+  if (preferredPaymentId) {
+    const preferred = await prisma.payment.findUnique({ where: { id: preferredPaymentId } });
+    if (preferred && preferred.userId === userId) return preferred;
+  }
+  return prisma.payment.findFirst({
+    where: {
+      userId,
+      status: 'paid',
+      PaymentHasPlaylist: { some: { playlist: { type: { not: 'giftcard' } } } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/** Invoice details for an account that has no order of its own. */
+export function customerFromUser(user: {
+  displayName?: string | null;
+  country?: string | null;
+}): UpgradeInvoiceCustomer {
+  return {
+    fullname: user.displayName || '',
+    companyName: null,
+    isBusinessOrder: false,
+    vatId: null,
+    address: '',
+    housenumber: '',
+    zipcode: '',
+    city: '',
+    countrycode: user.country || '',
+  };
+}
+
 class UpgradeInvoices {
   private static instance: UpgradeInvoices;
   private prisma = PrismaInstance.getInstance();

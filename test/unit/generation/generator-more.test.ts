@@ -651,10 +651,11 @@ describe('runSendToPrinterPass()', () => {
       await gen.runSendToPrinterPass();
 
       // Only the customer's own corrections count, and only on lines that
-      // are not already waiting for us
+      // are not already waiting for us or given away as a gift
       expect(h.prisma.paymentHasPlaylist.findMany.mock.calls[0][0].where).toEqual({
         paymentId: 12,
         suggestionsPending: false,
+        ownerUserId: null,
       });
       expect(h.prisma.userSuggestion.groupBy.mock.calls[0][0].where).toEqual({
         userId: 7,

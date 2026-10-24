@@ -69,7 +69,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     count: vi.fn(),
   },
-  user: { update: vi.fn() },
+  user: { update: vi.fn(), findUnique: vi.fn() },
   gamesPurchase: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
   appDesignPurchase: { groupBy: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
   companyList: { findMany: vi.fn() },
@@ -1690,14 +1690,14 @@ describe('processWebhook', () => {
       taxRate: 21,
       countrycode: 'NL',
     });
-    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({
-      payment: {
-        id: 400,
-        email: 'gamer@example.com',
-        locale: 'fr',
-        fullname: 'Claire',
-        countrycode: 'FR',
-      },
+    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({ paymentId: 400 });
+    prismaMock.payment.findUnique.mockResolvedValueOnce({
+      id: 400,
+      userId: 5,
+      email: 'gamer@example.com',
+      locale: 'fr',
+      fullname: 'Claire',
+      countrycode: 'FR',
     });
     mollieApi.liveClient.payments.get.mockResolvedValue(
       fakeMolliePayment({
@@ -1729,6 +1729,49 @@ describe('processWebhook', () => {
       locale: 'fr',
       taxRate: 21,
       items: [{ description: 'invoice.qrGames', quantity: 2, totalIncl: 9 }],
+    });
+  });
+
+  it('bingo_upgrade bills the purchaser, not the giver whose order holds a received set', async () => {
+    bingoMock.processBingoUpgradePayment.mockResolvedValueOnce({ success: true });
+    prismaMock.gamesPurchase.findFirst.mockResolvedValueOnce({
+      id: 4,
+      userId: 9,
+      totalPrice: 4.5,
+      playlistCount: 1,
+      pricePerPlaylist: 4.5,
+      taxRate: 21,
+      countrycode: 'NL',
+    });
+    // The set is on the giver's order (user 5); the recipient (9) has none
+    prismaMock.paymentHasPlaylist.findUnique.mockResolvedValueOnce({ paymentId: 400 });
+    prismaMock.payment.findUnique.mockResolvedValueOnce({ id: 400, userId: 5, email: 'giver@example.com' });
+    prismaMock.payment.findFirst.mockResolvedValueOnce(null);
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      email: 'anna@example.com',
+      locale: 'de',
+      displayName: 'Anna',
+      country: 'DE',
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      fakeMolliePayment({
+        id: 'tr_bingo',
+        status: 'paid',
+        metadata: { type: 'bingo_upgrade', paymentHasPlaylistIds: '12', userId: '9' },
+      })
+    );
+
+    await mollie.processWebhook({ id: 'tr_bingo' });
+
+    expect(prismaMock.payment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: 9, status: 'paid' }) })
+    );
+    expect(upgradeInvoicesMock.issue.mock.calls[0][0]).toMatchObject({
+      type: 'games',
+      userId: 9,
+      email: 'anna@example.com',
+      locale: 'de',
+      customer: expect.objectContaining({ fullname: 'Anna' }),
     });
   });
 

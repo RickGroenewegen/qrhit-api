@@ -17,6 +17,8 @@ import { CARD_DESIGN_SELECT, pickCardDesign } from '../cardDesigns';
 import Data from '../data';
 import Designer from '../designer';
 import Generator from '../generator';
+import GiftVouchers, { normalizeGiftCode } from '../gift';
+import { ownsLine } from '../lineOwner';
 
 const prisma = PrismaInstance.getInstance();
 const rateLimiter = LoginRateLimiter.getInstance();
@@ -32,6 +34,29 @@ function pincodeFailuresKey(email: string): string {
 /** A six-digit pincode from a cryptographic source. */
 function newPincode(): string {
   return crypto.randomInt(100000, 1000000).toString();
+}
+
+/**
+ * The account of someone redeeming a gift who has none yet, made the way an
+ * order makes one (data/users.ts storeUser): the e-mail as userId, a random
+ * hash for mailed links. Named after the voucher's "for", which the giver
+ * typed; they can change it in their account.
+ */
+async function createGiftRecipient(email: string, recipientName: string, locale: unknown) {
+  const data = {
+    email,
+    displayName: recipientName || email.split('@')[0],
+    locale: typeof locale === 'string' ? locale.slice(0, 5) : 'en',
+    hash: crypto.randomBytes(8).toString('hex'),
+    sync: true,
+  };
+  try {
+    return await prisma.user.create({ data: { ...data, userId: email } });
+  } catch (error: any) {
+    // A userId already taken by an account whose e-mail changed since
+    if (error?.code !== 'P2002' || !String(error?.meta?.target || '').includes('userId')) throw error;
+    return prisma.user.create({ data: { ...data, userId: crypto.randomUUID() } });
+  }
 }
 
 /** Replies 429 and returns true when the limiter refuses this attempt. */
@@ -177,9 +202,28 @@ export default async function accountRoutes(
           },
         });
 
+        // Someone redeeming a gift (src/gift.ts) may never have ordered: an
+        // open voucher's code stands in for the purchase. A wrong code gets
+        // the same answer as no code, so this never confirms a code.
+        let account = payment?.user ?? null;
+        let greetingName = payment?.fullname || payment?.user?.displayName || '';
+        const giftCode = normalizeGiftCode(request.body?.giftCode);
+        if (!account && giftCode) {
+          const voucher = await prisma.giftVoucher.findUnique({
+            where: { code: giftCode },
+            select: { status: true, recipientName: true },
+          });
+          if (voucher?.status === 'open') {
+            account =
+              (await prisma.user.findUnique({ where: { email: normalizedEmail } })) ??
+              (await createGiftRecipient(normalizedEmail, voucher.recipientName, locale));
+            greetingName = account.displayName;
+          }
+        }
+
         // No paid order for this email — tell the user explicitly so they
         // know a purchase is required before creating an account.
-        if (!payment || !payment.user) {
+        if (!account) {
           reply.status(404).send({
             success: false,
             error: 'noPurchaseFound',
@@ -188,7 +232,7 @@ export default async function accountRoutes(
         }
 
         // Check if user already has a password set (already registered)
-        if (payment.user.password && payment.user.salt && payment.user.verified) {
+        if (account.password && account.salt && account.verified) {
           reply.status(400).send({
             success: false,
             error: 'accountAlreadyExists',
@@ -203,7 +247,7 @@ export default async function accountRoutes(
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         await prisma.user.update({
-          where: { id: payment.user.id },
+          where: { id: account.id },
           data: {
             gamesActivationCode: pincode,
             gamesActivationCodeExpiry: expiresAt,
@@ -212,10 +256,10 @@ export default async function accountRoutes(
         await cache.del(pincodeFailuresKey(normalizedEmail));
 
         // Send pincode email
-        const userLocale = locale || payment.locale || 'en';
+        const userLocale = locale || payment?.locale || account.locale || 'en';
         await mail.sendCustomerRegistrationPincode(
           normalizedEmail,
-          payment.fullname || payment.user.displayName,
+          greetingName || account.displayName,
           pincode,
           userLocale
         );
@@ -885,6 +929,23 @@ export default async function accountRoutes(
           return;
         }
 
+        const lineInclude = {
+          playlist: {
+            select: {
+              playlistId: true,
+              name: true,
+              image: true,
+              type: true,
+            },
+          },
+          extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' as const } },
+          bingoFiles: {
+            orderBy: {
+              createdAt: 'desc' as const,
+            },
+          },
+        };
+
         // Get all paid orders for this user with their playlists
         const payments = await prisma.payment.findMany({
           where: {
@@ -893,22 +954,7 @@ export default async function accountRoutes(
           },
           include: {
             PaymentHasPlaylist: {
-              include: {
-                playlist: {
-                  select: {
-                    playlistId: true,
-                    name: true,
-                    image: true,
-                    type: true,
-                  },
-                },
-                extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' } },
-                bingoFiles: {
-                  orderBy: {
-                    createdAt: 'desc',
-                  },
-                },
-              },
+              include: lineInclude,
             },
           },
           orderBy: {
@@ -916,7 +962,23 @@ export default async function accountRoutes(
           },
         });
 
+        // Sets other people gave this user (src/gift.ts): theirs to use, on
+        // someone else's order, so nothing of that order is sent along
+        const receivedLines = await prisma.paymentHasPlaylist.findMany({
+          where: { ownerUserId: user.id, payment: { status: 'paid' } },
+          include: {
+            ...lineInclude,
+            payment: { select: { paymentId: true, finalized: true } },
+          },
+          orderBy: { id: 'desc' },
+        });
+
         const apiUri = process.env['API_URI'] || 'http://localhost:3004';
+        const gifts = GiftVouchers.getInstance();
+        const [giverState, receivedState] = await Promise.all([
+          gifts.giverState(payments.map((payment) => payment.id)),
+          gifts.receivedState(user.id),
+        ]);
 
         // App Designer is on the account: whether it is owned, and what each
         // playlist shows (its override mode, `default` when it has none).
@@ -924,14 +986,56 @@ export default async function accountRoutes(
           prisma.appDesignPurchase.count({ where: { userId: user.id } }),
           prisma.appDesign.findMany({
             where: { userId: user.id },
-            select: { paymentHasPlaylistId: true, mode: true },
+            select: { paymentHasPlaylistId: true, mode: true, keepActive: true },
           }),
         ]);
+        const lineAppDesigns = appDesignRows.filter((row) => row.paymentHasPlaylistId !== null);
         const appDesignModeByLine = new Map(
-          appDesignRows
-            .filter((row) => row.paymentHasPlaylistId !== null)
-            .map((row) => [row.paymentHasPlaylistId as number, row.mode])
+          lineAppDesigns.map((row) => [row.paymentHasPlaylistId as number, row.mode])
         );
+        // Designs that came along with a gift and stay on those cards
+        const keptAppDesigns = new Set(
+          lineAppDesigns.filter((row) => row.keepActive).map((row) => row.paymentHasPlaylistId as number)
+        );
+
+        // One set as the account page shows it. `finalized` is its order's.
+        const mapLine = (php: (typeof receivedLines)[number] | (typeof payments)[number]['PaymentHasPlaylist'][number], finalized: boolean) => ({
+          paymentHasPlaylistId: php.id, // Needed for bingo upgrade payment
+          playlistId: php.playlist.playlistId,
+          name: php.playlist.name,
+          image: php.playlist.image,
+          numberOfTracks: php.numberOfTracks,
+          type: php.type,
+          // What the customer chose: sheets are stored as physical + subType.
+          orderType: orderLineType(php),
+          // Gift cards cannot be ordered again from the account: they are
+          // not a card set built in the order flow.
+          canOrderAgain: php.playlist.type !== 'giftcard',
+          // Individual playlist download availability
+          canDownload: php.type === 'digital'
+            ? !!php.filenameDigital
+            : finalized && !!php.filenameDigital,
+          canChangeDesign: canChangeDesign(php),
+          // The card design, for the preview in the list. A gift card has none.
+          design: php.playlist.type === 'giftcard' ? null : pickCardDesign(php),
+          extraDesigns: php.extraDesigns.map(pickCardDesign),
+          eco: php.eco,
+          doubleSided: php.doubleSided,
+          // Whether bingo is enabled for this playlist
+          gamesEnabled: php.gamesEnabled,
+          boxEnabled: php.boxEnabled,
+          appDesignMode: appDesignModeByLine.get(php.id) || 'default',
+          appDesignKept: keptAppDesigns.has(php.id),
+          // Bingo files for this playlist
+          bingoFiles: php.bingoFiles.map((bf: any) => ({
+            filename: bf.filename,
+            contestants: bf.contestants,
+            rounds: bf.rounds,
+            trackCount: bf.trackCount,
+            createdAt: bf.createdAt,
+            downloadUrl: `${apiUri}/public/bingo/${bf.filename}`,
+          })),
+        });
 
         const purchases = payments.map((payment) => {
           // Determine if downloads are available
@@ -958,48 +1062,52 @@ export default async function accountRoutes(
             downloadAvailable: isPhysicalOrder
               ? payment.finalized === true
               : payment.PaymentHasPlaylist.some((php) => !!php.filenameDigital),
-            playlists: payment.PaymentHasPlaylist.map((php) => ({
-              paymentHasPlaylistId: php.id, // Needed for bingo upgrade payment
-              playlistId: php.playlist.playlistId,
-              name: php.playlist.name,
-              image: php.playlist.image,
-              numberOfTracks: php.numberOfTracks,
-              type: php.type,
-              // What the customer chose: sheets are stored as physical + subType.
-              orderType: orderLineType(php),
-              // Gift cards cannot be ordered again from the account: they are
-              // not a card set built in the order flow.
-              canOrderAgain: php.playlist.type !== 'giftcard',
-              // Individual playlist download availability
-              canDownload: php.type === 'digital'
-                ? !!php.filenameDigital
-                : payment.finalized === true && !!php.filenameDigital,
-              canChangeDesign: canChangeDesign(php),
-              // The card design, for the preview in the list. A gift card has none.
-              design: php.playlist.type === 'giftcard' ? null : pickCardDesign(php),
-              extraDesigns: php.extraDesigns.map(pickCardDesign),
-              eco: php.eco,
-              doubleSided: php.doubleSided,
-              // Whether bingo is enabled for this playlist
-              gamesEnabled: php.gamesEnabled,
-              boxEnabled: php.boxEnabled,
-              appDesignMode: appDesignModeByLine.get(php.id) || 'default',
-              // Bingo files for this playlist
-              bingoFiles: php.bingoFiles.map((bf: any) => ({
-                filename: bf.filename,
-                contestants: bf.contestants,
-                rounds: bf.rounds,
-                trackCount: bf.trackCount,
-                createdAt: bf.createdAt,
-                downloadUrl: `${apiUri}/public/bingo/${bf.filename}`,
-              })),
-            })),
+            playlists: payment.PaymentHasPlaylist.map((php) => {
+              const gift = giverState.get(php.id);
+              const line = {
+                ...mapLine(php, payment.finalized === true),
+                // Giving it away: whether it can go on a voucher now (and
+                // why not), the open voucher, or to whom it went
+                giftable: gift?.giftable ?? false,
+                giftBlockedReason: gift?.giftBlockedReason ?? null,
+                giftVoucher: gift?.voucher ?? null,
+                given: gift?.given ?? null,
+              };
+              // A set given away is the recipient's: the giver keeps the
+              // order and the invoice, nothing to download, design or play
+              if (line.given) {
+                return {
+                  ...line,
+                  canOrderAgain: false,
+                  canDownload: false,
+                  canChangeDesign: false,
+                  gamesEnabled: false,
+                  bingoFiles: [],
+                };
+              }
+              return line;
+            }),
+          };
+        });
+
+        // Received gifts: the holder's own links (paymentId + their hash),
+        // and no price, order number or invoice
+        const received = receivedLines.map((php) => {
+          const gift = receivedState.get(php.id);
+          return {
+            paymentId: php.payment.paymentId,
+            userHash: user.hash,
+            fromName: gift?.fromName ?? '',
+            message: gift?.message ?? null,
+            claimedAt: gift?.claimedAt ?? null,
+            playlist: mapLine(php, php.payment.finalized === true),
           };
         });
 
         reply.send({
           success: true,
           purchases,
+          received,
           appDesign: {
             entitled: appDesignPurchases > 0,
             price: APP_DESIGN_PRICE,
@@ -1044,7 +1152,9 @@ export default async function accountRoutes(
             extraDesigns: { select: CARD_DESIGN_SELECT, orderBy: { position: 'asc' } },
           },
         });
-        if (!user || !php || php.payment.userId !== user.id || php.payment.status !== 'paid') {
+        // Whoever holds the set (src/lineOwner.ts): a received gift can be
+        // ordered again in its design, a set given away no longer
+        if (!user || !php || !ownsLine(php, user.id) || php.payment.status !== 'paid') {
           reply.status(404).send({ success: false, error: 'orderNotFound' });
           return;
         }
@@ -1105,8 +1215,9 @@ export default async function accountRoutes(
   );
 
   /**
-   * The signed-in customer's paid card line `paymentHasPlaylistId` (not a gift
-   * card), with what the designer and the card previews need.
+   * The paid card line `paymentHasPlaylistId` (not a gift card) the signed-in
+   * customer holds (a set they bought or received as a gift), with what the
+   * designer and the card previews need.
    */
   async function ownCardLine(userId: string, paymentHasPlaylistId: unknown) {
     const phpId = parseInt(String(paymentHasPlaylistId), 10);
@@ -1126,7 +1237,7 @@ export default async function accountRoutes(
     if (
       !user ||
       !php ||
-      php.payment.userId !== user.id ||
+      !ownsLine(php, user.id) ||
       php.payment.status !== 'paid' ||
       php.playlist.type === 'giftcard'
     ) {

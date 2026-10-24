@@ -83,8 +83,10 @@ vi.mock('../../src/translation', () => ({
   },
 }));
 
-vi.mock('@prisma/client', () => ({
-  Prisma: {},
+// The real Prisma namespace: src/lineOwner.ts builds its SQL fragments with
+// Prisma.sql when it is imported.
+vi.mock('@prisma/client', async (importOriginal) => ({
+  Prisma: (await importOriginal<typeof import('@prisma/client')>()).Prisma,
   genre: {},
 }));
 

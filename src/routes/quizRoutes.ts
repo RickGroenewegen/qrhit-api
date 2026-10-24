@@ -13,6 +13,7 @@ import Quiz, { TrackRow, MAX_QUESTIONS } from '../quiz';
 import CacheInstance from '../cache';
 import { BASE64_IMAGE_BODY_LIMIT } from '../config/constants';
 import { Prisma } from '@prisma/client';
+import { lineOwnerSql } from '../lineOwner';
 
 interface PlaylistInfoRow {
   playlistName: string;
@@ -87,8 +88,8 @@ export default async function quizRoutes(
         pl.id as playlistDbId,
         php.id as paymentHasPlaylistId
       FROM payments p
-      JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       JOIN playlists pl ON pl.id = php.playlistId
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
@@ -169,9 +170,9 @@ export default async function quizRoutes(
   if (!getAuthHandler) return;
 
   /**
-   * Ownership helpers. A quiz belongs to the user whose paid payment created
-   * the playlist association it hangs off of:
-   *   quiz -> payment_has_playlist -> payment -> user
+   * Ownership helpers. A quiz belongs to whoever holds the order line it
+   * hangs off of (src/lineOwner.ts: the buyer, or the recipient of a gift):
+   *   quiz -> payment_has_playlist -> line owner
    * The JWT carries the user's string `userId` (request.user.userId).
    */
   async function userOwnsQuiz(
@@ -183,7 +184,7 @@ export default async function quizRoutes(
       SELECT q.id FROM quizzes q
       JOIN payment_has_playlist php ON php.id = q.paymentHasPlaylistId
       JOIN payments p ON p.id = php.paymentId
-      JOIN users u ON u.id = p.userId
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       WHERE q.id = ${quizId} AND u.userId = ${userId}
       LIMIT 1
     `;
@@ -198,7 +199,7 @@ export default async function quizRoutes(
     const rows = await prisma.$queryRaw<{ id: number }[]>`
       SELECT php.id FROM payment_has_playlist php
       JOIN payments p ON p.id = php.paymentId
-      JOIN users u ON u.id = p.userId
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       WHERE php.id = ${paymentHasPlaylistId} AND u.userId = ${userId}
       LIMIT 1
     `;

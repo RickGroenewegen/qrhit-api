@@ -46,7 +46,11 @@ import PrintEnBind from './printers/printenbind';
 import { extractPrintErrorMessage } from './printers/printErrorMessage';
 import Mail from './mail';
 import Fx from './services/fx';
-import UpgradeInvoices, { customerFromOrder } from './upgradeInvoice';
+import UpgradeInvoices, {
+  customerFromOrder,
+  customerFromUser,
+  purchaserBillingOrder,
+} from './upgradeInvoice';
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
   CARD_DESIGN_SELECT,
@@ -1875,6 +1879,18 @@ class Mollie {
             userConfirmedPrinting: true,
             // The "Played" pill: stamped by review.ts at the first card scan
             firstScannedAt: true,
+            // The "Gift" pill (src/gift.ts): the account holding a redeemed
+            // set, and the line's open or redeemed voucher
+            ownerUserId: true,
+            owner: { select: { email: true } },
+            giftVoucherLines: {
+              where: { voucher: { status: { in: ['open', 'claimed'] } } },
+              orderBy: { id: 'desc' },
+              take: 1,
+              select: {
+                voucher: { select: { id: true, status: true, recipientName: true, claimedAt: true } },
+              },
+            },
             suggestionsPending: true,
             playlistId: true,
             filenameDigital: true,
@@ -3813,7 +3829,7 @@ class Mollie {
   private async issueAppDesignInvoiceUnsafe(purchaseId: number, payment: any): Promise<void> {
     const purchase = await this.prisma.appDesignPurchase.findUnique({
       where: { id: purchaseId },
-      include: { user: { select: { id: true, email: true, locale: true } } },
+      include: { user: { select: { id: true, email: true, locale: true, displayName: true } } },
     });
     if (!purchase) return;
     const order = await this.prisma.payment.findFirst({
@@ -3834,8 +3850,10 @@ class Mollie {
       paymentId: null,
       email,
       locale,
+      // An account with only received gifts has no order: its own name
       customer: {
         ...customerFromOrder(order),
+        fullname: order?.fullname || purchase.user?.displayName || '',
         countrycode: order?.invoiceCountrycode || order?.countrycode || purchase.countrycode,
       },
       taxRate: purchase.taxRate,
@@ -4003,8 +4021,10 @@ class Mollie {
    * Invoice for a QRGames upgrade, in the U range, from the purchase row
    * the upgrade wrote (amount, playlist count and the rate it booked). It
    * is bought on the account and may cover playlists from several orders,
-   * so it is linked to no order; the billing details come from the order of
-   * the first playlist, whose country also set the rate.
+   * so it is linked to no order; the billing details come from the
+   * purchaser's order (purchaserBillingOrder: the first playlist's when they
+   * bought it), whose country also set the rate. A recipient of a gift
+   * without an order of their own is invoiced from their account.
    */
   private async issueGamesInvoice(payment: any): Promise<void> {
     await this.invoiceSafely('QRGames', payment, async () => {
@@ -4019,21 +4039,29 @@ class Mollie {
       const php = firstPhpId
         ? await this.prisma.paymentHasPlaylist.findUnique({
             where: { id: firstPhpId },
-            select: { payment: true },
+            select: { paymentId: true },
           })
         : null;
-      const order = php?.payment;
-      if (!order?.email) return;
-      const locale = order.locale || 'en';
+      const order = await purchaserBillingOrder(purchase.userId, php?.paymentId);
+      const purchaser = order
+        ? null
+        : await this.prisma.user.findUnique({
+            where: { id: purchase.userId },
+            select: { email: true, locale: true, displayName: true, country: true },
+          });
+      const email = order?.email || purchaser?.email;
+      if (!email) return;
+      const locale = order?.locale || purchaser?.locale || 'en';
+      const countrycode = order?.countrycode || purchaser?.country || 'NL';
       await UpgradeInvoices.getInstance().issue({
         type: 'games',
         molliePayment: payment,
         userId: purchase.userId,
         paymentId: null,
-        email: order.email,
+        email,
         locale,
-        customer: customerFromOrder(order),
-        taxRate: purchase.taxRate ?? ((await this.data.getTaxRate(order.countrycode || 'NL')) || 0),
+        customer: order ? customerFromOrder(order) : customerFromUser(purchaser!),
+        taxRate: purchase.taxRate ?? ((await this.data.getTaxRate(countrycode)) || 0),
         items: [
           {
             description: this.translation.translate('invoice.qrGames', locale),

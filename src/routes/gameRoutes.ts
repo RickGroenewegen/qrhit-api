@@ -11,6 +11,7 @@ import {
   MessageContext,
 } from '../game-plugins';
 import CacheInstance from '../cache';
+import { ownsLine } from '../lineOwner';
 import { QRGAMES_UPGRADE_PRICE, calculateGamesUpgradePrice } from '../game';
 import Mollie from '../mollie';
 import Fx from '../services/fx';
@@ -525,6 +526,25 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             });
           }
 
+          // A bingo room is hosted from a bingo file of a set this user holds
+          // (src/lineOwner.ts); before, any account could host any file
+          if (roomType === 'bingo' && hostFilename) {
+            const bingoFile = await prisma.bingoFile.findFirst({
+              where: { filename: String(hostFilename) },
+              select: {
+                paymentHasPlaylist: {
+                  select: { ownerUserId: true, payment: { select: { userId: true } } },
+                },
+              },
+            });
+            if (!bingoFile || !ownsLine(bingoFile.paymentHasPlaylist, user.id)) {
+              return reply.status(403).send({
+                success: false,
+                error: 'Not authorized',
+              });
+            }
+          }
+
           // Create room in database
           const uuid = randomUUID();
 
@@ -786,7 +806,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             return reply.status(404).send({ success: false, error: 'Playlist not found' });
           }
 
-          if (php.payment.userId !== user.id) {
+          if (!ownsLine(php, user.id)) {
             return reply.status(403).send({ success: false, error: 'Not authorized' });
           }
 
@@ -880,7 +900,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           }
 
           for (const php of playlists) {
-            if (php.payment.userId !== user.id) {
+            if (!ownsLine(php, user.id)) {
               return reply.status(403).send({
                 success: false,
                 error: 'Unauthorized access to one or more playlists',
@@ -984,7 +1004,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
           const playlistNames: string[] = [];
           for (const php of playlists) {
-            if (php.payment.userId !== user.id) {
+            if (!ownsLine(php, user.id)) {
               return reply.status(403).send({
                 success: false,
                 error: 'Unauthorized',

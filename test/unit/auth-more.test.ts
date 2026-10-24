@@ -17,6 +17,9 @@ const prismaMock = vi.hoisted(() => ({
     findFirst: vi.fn(),
     create: vi.fn(),
   },
+  paymentHasPlaylist: {
+    count: vi.fn(),
+  },
   $executeRaw: vi.fn(),
 }));
 
@@ -34,12 +37,18 @@ import {
 } from '../../src/auth';
 
 beforeEach(() => {
-  for (const group of [prismaMock.user, prismaMock.userGroup, prismaMock.userInGroup]) {
+  for (const group of [
+    prismaMock.user,
+    prismaMock.userGroup,
+    prismaMock.userInGroup,
+    prismaMock.paymentHasPlaylist,
+  ]) {
     for (const fn of Object.values(group)) {
       (fn as any).mockReset();
     }
   }
   prismaMock.$executeRaw.mockReset();
+  prismaMock.paymentHasPlaylist.count.mockResolvedValue(0);
 });
 
 function dbUser(overrides: any = {}) {
@@ -61,6 +70,19 @@ describe('deleteUserById', () => {
     prismaMock.user.delete.mockResolvedValue({});
     expect(await deleteUserById(42)).toEqual({ success: true });
     expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 42 } });
+  });
+
+  it('refuses a user who gave or holds a set given as a gift', async () => {
+    prismaMock.paymentHasPlaylist.count.mockResolvedValue(1);
+    const result = await deleteUserById(42);
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/gift/);
+    expect(prismaMock.user.delete).not.toHaveBeenCalled();
+    expect(prismaMock.paymentHasPlaylist.count).toHaveBeenCalledWith({
+      where: {
+        OR: [{ ownerUserId: 42 }, { ownerUserId: { not: null }, payment: { userId: 42 } }],
+      },
+    });
   });
 
   it('reports failure when the delete throws', async () => {

@@ -49,6 +49,7 @@ vi.mock('../../src/pdf', () => ({
 
 import Order, { addAppDesignFee } from '../../src/order';
 import { APP_DESIGN_PRICE } from '../../src/config/constants';
+import { isSignedRenderRequest } from '../../src/renderSignature';
 
 const order = Order.getInstance();
 const INVOICE_DIR = path.join(process.env['PRIVATE_DIR']!, 'invoice');
@@ -123,10 +124,24 @@ describe('getInvoice', () => {
     const result = await order.getInvoice('inv-2');
     expect(result).toBe(`${process.env['PRIVATE_DIR']}/invoice/inv-2.pdf`);
     expect(pdfGenerateFromUrl).toHaveBeenCalledWith(
-      `${process.env['API_URI']}/invoice/inv-2`,
+      expect.stringMatching(new RegExp(`^${process.env['API_URI']}/invoice/inv-2\\?`)),
       result,
       expect.objectContaining({ format: 'a4' })
     );
+    // Signed for this payment (renderSignature.ts): the route refuses anything else
+    const url = new URL(pdfGenerateFromUrl.mock.calls[0][0]);
+    const request = {
+      params: { paymentId: 'inv-2' },
+      query: Object.fromEntries(url.searchParams),
+    };
+    const environment = process.env['ENVIRONMENT'];
+    process.env['ENVIRONMENT'] = 'production';
+    try {
+      expect(isSignedRenderRequest('invoice', request)).toBe(true);
+      expect(isSignedRenderRequest('invoice', { ...request, params: { paymentId: 'inv-3' } })).toBe(false);
+    } finally {
+      process.env['ENVIRONMENT'] = environment;
+    }
     // A4 portrait resize
     expect(pdfResizePages).toHaveBeenCalledWith(result, 210, 297);
     // invoice dir was created

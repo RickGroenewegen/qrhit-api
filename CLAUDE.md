@@ -898,6 +898,137 @@ again; payment creation does the same lookup itself. `GET
 colour of a card background for the design the site derives. `chat.json`
 carries `{{appDesignPrice}}`, filled from the constant like the card limits.
 
+## Gifting a set: gift vouchers and per-set ownership
+
+A buyer gives one or more sets (order lines) of a paid order to someone else:
+in My account they make a printable gift voucher, the recipient redeems it at
+`qrsong.io/redeem/<code>` and the sets move into the recipient's account,
+with their card design, PDF, QRGames, quizzes and app design. The order, the
+invoice and the money stay the buyer's. Built 2026-10-24 (branch
+`gift-vouchers` in both repos) because QRGames and App Designer only work in
+the owner's account, which made a set bought for a friend useless to them.
+
+| what | where |
+|---|---|
+| who holds a line, every ownership check | `src/lineOwner.ts` |
+| vouchers, eligibility, redeem, admin return | `src/gift.ts` |
+| routes (`/api/gift/*`, signed view, admin) | `src/routes/giftRoutes.ts` |
+| the A5 voucher | `src/views/gift_voucher.ejs`, rendered by the PDF Lambda from the signed `/gift/voucher/view/:id`, kept under `PRIVATE_DIR/gift-vouchers/` |
+| mails | `gift_received` (recipient), `gift_redeemed` (giver), `Mail.sendGiftReceivedMail` / `sendGiftRedeemedMail` |
+| texts | `giftVoucher.*`, `gift_received.*`, `gift_redeemed.*`, `mail.giftHint` in `src/locales` |
+
+**Ownership moved from the order to the line.** `payment_has_playlist.ownerUserId`
+is null while the buyer (`payments.userId`) holds the set and is set once, by
+a redeemed voucher (relation `onDelete: Restrict`: Cascade would delete a set
+out of the giver's books, SetNull would hand it back). Every "may this user
+touch this set" check goes through `lineOwner.ts`: `ownsLine`,
+`ownedLinesWhere` (Prisma), `lineOwnerSql()` (`COALESCE(php.ownerUserId,
+pm.userId)` for raw joins), `findLineByHash` (a mailed link: Mollie id,
+playlist and the holder's hash) and `findOwnedLine`. Downloads, corrections,
+the card designer, QRGames and quizzes, customer-purchases, order again and
+the app designs all use it, so a giver's old links stop working at the
+redeem and the recipient's work.
+
+- `test/unit/line-owner-single-source.test.ts` greps for `p.userId = u.id`
+  and friends: a new check that reads `payments.userId` directly fails it
+  unless it is in the allowlist with a reason (order-wide things that stay
+  the buyer's: invoice, order mails, ledger). A stale entry fails too.
+- **What stays the order's**: the invoice, order confirmation, printing and
+  tracking mails, box instructions, the finalized mail and the review request
+  (scans of a given set do not count towards it, `review.ts`). Order-wide
+  actions are the buyer's only (`Suggestion.verifyBuyer`: the print deadline,
+  regenerate and mail). A given digital set is rebuilt on its own
+  (`queueDigitalRedesign`), never through `queueGenerate`, which rebuilds and
+  finalizes the whole order.
+- **Refused on a given set**: box and extra-card upgrades (booked and
+  invoiced on the giver's order, a box would ship to the giver) and giving it
+  on again (no re-gifting: the voucher is the whole history).
+- QRGames upgrades are billed to the purchaser (`purchaserBillingOrder` in
+  `upgradeInvoice.ts`): the first playlist's order when they bought it, else
+  their own latest, else their account. Otherwise a recipient's QRGames
+  invoice went to the giver.
+- The line mails (`digital`, the redesign mail) go to the holder
+  (`Mail.giftedLineHolder`) without the order number. Order mails carry
+  `mail.giftHint` ("give it as a gift from My account"), since checkout has
+  no entry.
+- `deleteUserById` refuses a user who gave or holds a given set: deleting
+  either side would take it from the recipient. The dashboard warns before
+  deleting or refunding an order with given sets.
+
+**When a set can be given** (`giftEligibility`, checked at making and again
+at redeeming): a digital set once its PDF exists, a printed one (and sheets)
+once the order went to the printer, because until then the print job,
+corrections, finalCheck and the deadline mails are the whole order's and
+addressed to the buyer. Never a gift card, a company-list order, a line with
+an admin theme, a refunded or blocked line, one with corrections pending, or
+one that changed hands. My account shows why ("as soon as it has gone to the
+printer").
+
+**Vouchers.** `gift_vouchers` (status open / claimed / cancelled / returned,
+names, message, locale, giver, recipient) and `gift_voucher_lines`, whose
+`openLineId` is the line id while the voucher is open and NULL after: a
+unique index, so a set sits on at most one open voucher without a partial
+index. Codes are `GIFT-XXXX-XXXX-XXXX`, 12 characters from
+`ABCDEFGHJKMNPQRSTUVWXYZ23456789` (no 0/O/1/I/L), stored without dashes;
+`normalizeGiftCode` accepts any case, spaces and dashes. A gift card code
+(`XXXX-XXXX-XXXX-XXXX`) on `/redeem` answers `giftCardCode`, and checkout's
+discount field sends a `GIFT-` code to `/redeem`. The public lookup
+(`GET /api/gift/redeem/:code`) is limited to 30 per IP per hour (429
+`tooManyAttempts`) and shows names, message and per set what it is, never a
+price or order number. The voucher's QR code is
+`<FRONTEND_URI>/<voucher locale>/redeem/<code>`. No expiry; the giver can
+cancel (a lost voucher: cancel, make a new one), and cannot redeem their own.
+
+**The redeem** (`claim`) is one transaction:
+
+1. Lock the voucher (`FOR UPDATE`). The same user again is a success (a
+   double click); claimed by someone else 409 `alreadyRedeemed`, cancelled
+   410 `noLongerValid`, the giver 400 `ownVoucher`.
+2. Lock the lines: each must still be the giver's and pass `giftEligibility`,
+   or 409 `setsChanged` and nothing is written.
+3. `ownerUserId = recipient`, checking the number of rows updated.
+4. The app design per line (`planAppDesignTransfer`, pure): the line's own
+   custom design moves to the recipient (same slug, nothing changes in the
+   app); a line that followed the giver's default gets a copy of it as its
+   own row with a new slug, so the giver's later edits never reach the
+   recipient's cards; a draft moves along unserved. Moved and copied rows get
+   `app_designs.keepActive`. Nothing is carried when the giver never owned
+   App Designer: the cards never showed it, and gifting must not unlock it.
+5. The giver's corrections for those playlists are copied to the recipient
+   (`INSERT IGNORE`), not moved: the giver may own the same playlist on
+   another set.
+6. The voucher becomes `claimed`; after the commit, best effort, the themes
+   reload and both mails go out.
+
+**App Designer is not transferred**, the design is. `resolveLineTheme`
+(`apptheme.ts`) serves a `keepActive` row whatever the holder owns, right
+after the admin-theme branch, unless the dashboard switch
+(`users.appDesignEnabled`) is explicitly off: the cards were printed for that
+look. Saving such a row answers 403 `keptDesignReadOnly` unless the holder
+owns App Designer, so for a recipient without it the design is read-only.
+
+**Registration without a purchase**: `customer-register-request` takes an
+optional `giftCode`. With no paid order but an open voucher, the user is found
+by e-mail or created (`createGiftRecipient`); a bad code answers
+`noPurchaseFound` like no code, so the endpoint never confirms codes. The
+pincode and password steps are unchanged; the site then calls the claim.
+
+**Secrecy.** The recipient's links carry the order's Mollie id, so two pages
+that showed the giver's details by that id alone were closed:
+`GET /invoice/:paymentId` (price, order number, address) is signed for the
+PDF Lambda (`renderSignature.ts`, view `invoice`), and
+`GET /progress/:playlistId/:paymentId` answers "Payment not found" once a set
+of the order was given away.
+
+**Admin**: `POST /admin/gift/vouchers/:id/cancel` and
+`POST /admin/playlist/:id/gift/return` (`returnToBuyer`: the line, its app
+design row back to the buyer, the voucher `returned` once none of its sets is
+given any more). The order list shows a "Gift voucher" / "Given to …" pill and
+both in the line's action menu.
+
+Deploy needs `prisma db push` (`ownerUserId`, `keepActive`, the two tables)
+and `prisma generate`, then a restart.
+
 ## Play rankings per order line (admin Analytics page)
 
 The frontend's admin Analytics page (`/dashboard/map`) ranks the most played

@@ -33,7 +33,9 @@
 
 {{ translations.orderInformation }}
 -------------------
+{{#unless giftedSet}}
 {{ translations.orderNumber }}: {{ orderId }}
+{{/unless}}
 {{#each playlists}}
 {{ ../translations.playlist }}: {{ this.name }}
 {{/each}}
@@ -56,6 +58,10 @@
 
 {{ translations.appDesignSectionCta }}: {{ appDesignUrl }}
 {{/if}}
+{{/if}}
+{{#if showGiftHint}}
+
+{{ translations.giftHint }}
 {{/if}}
 
 {{ translations.greetings }},

@@ -555,12 +555,51 @@
         {
             "slug": "gift-cards",
             "title": "What are gift cards?",
-            "description": "QRSong! gift cards are perfect for music lovers. You can buy digital or physical gift cards starting from 10 euros. The recipient can use the credit to create their own QR music cards from any playlist they choose.",
+            "description": "A QRSong! gift card is a digital gift card: you choose the amount on qrsong.io/giftcard, pay, and receive it by e-mail as a PDF to print or forward. There are no physical gift cards any more. The person who gets it uses the code at checkout to make their own QR music cards from any playlist they choose. A gift card code looks like XXXX-XXXX-XXXX-XXXX. If the customer wants to choose the music and the design themselves, a gift card is the wrong product: they should order the set and give it with a gift voucher instead (see 'gift-a-set').",
             "tags": [
                 "gift card",
+                "giftcard",
+                "cadeaukaart",
+                "Geschenkkarte",
+                "Gutschein",
                 "gift",
+                "present"
+            ]
+        },
+        {
+            "slug": "gift-a-set",
+            "title": "Can I give a set of QRSong! cards to someone as a gift?",
+            "description": "Yes. The giver orders the cards as usual, in their own name, with delivery to their own address. Afterwards, in My account, they choose 'Give as a gift' on the set and fill in who it is for, the 'from' name, an optional message and the voucher's language. QRSong! makes a printable gift voucher PDF with a QR code and a code like GIFT-XXXX-XXXX-XXXX. One voucher can hold several sets of the same order. The person who gets it redeems it at qrsong.io/redeem and the set moves to their own QRSong! account: the cards with the giver's card design, the PDF (for digital cards), QRGames and the quizzes if the giver added them, and the app design the giver made with App Designer, which stays active on those cards. App Designer itself is not transferred: the upgrade stays in the giver's account, but the design made for these cards goes along and the free QRSong! app keeps showing it. It is a secret: QRSong! never contacts the person before they redeem, and they never see the price, the invoice or the order number. The order and the invoice stay with the giver; after the redeem the giver's account shows 'Given to <name>'. When it is possible: digital sets as soon as the PDF is ready, printed sets once they have gone to the printer (until then corrections can still change the order). Gift cards, business orders and refunded sets cannot be given. A received set cannot be given on again. A lost voucher: cancel it in My account and make a new one, the old code stops working straight away. Explained on qrsong.io/gift.",
+            "tags": [
+                "gift a set",
+                "give as a gift",
+                "gift voucher",
                 "present",
-                "voucher"
+                "for a friend",
+                "transfer playlist",
+                "transfer to another account",
+                "cadeau",
+                "cadeaubon",
+                "Geschenk",
+                "verschenken",
+                "Sinterklaas",
+                "Christmas"
+            ]
+        },
+        {
+            "slug": "redeem-a-gift",
+            "title": "I got a QRSong! gift voucher, how do I redeem it?",
+            "description": "Scan the QR code on the voucher or go to qrsong.io/redeem and type the code (GIFT-XXXX-XXXX-XXXX). The page shows the gift and who it is from. Click 'Add to my account': log in if you already have a QRSong! account (the gift joins your own playlists), or make a free account with your e-mail address, a code we send you and a password. No order is needed for that. Printed cards already work before redeeming: scan one with the free QRSong! app. After redeeming you find the set in My account under 'Gifts for you', with the PDF download (digital cards), QRGames if the giver added them, and the app design. 'This gift has already been redeemed' means the code was used; 'no longer valid' means the giver cancelled it, so ask them for a new one. A code like XXXX-XXXX-XXXX-XXXX without GIFT is a gift card: use it at checkout when ordering your own cards.",
+            "tags": [
+                "redeem gift",
+                "gift voucher",
+                "gift code",
+                "GIFT-",
+                "I received a gift",
+                "claim",
+                "verzilveren",
+                "einlösen",
+                "qrsong.io/redeem"
             ]
         },
         {
@@ -884,7 +923,7 @@
         {
             "slug": "after-payment",
             "title": "What happens after I pay?",
-            "description": "You'll receive a confirmation email with order details and a link to review/correct your cards. For physical orders, we check release data and design, then you approve before printing. You'll receive tracking when shipped.",
+            "description": "You'll receive a confirmation email with order details and a link to review/correct your cards. For physical orders, we check release data and design, then you approve before printing. You'll receive tracking when shipped. Bought the cards for someone else? Once the PDF is ready (digital) or the cards have gone to the printer (printed), you can make a gift voucher for them in My account (see 'gift-a-set').",
             "tags": [
                 "after payment",
                 "process",
@@ -1250,7 +1289,7 @@
         {
             "slug": "account-after-purchase",
             "title": "Why can I only create an account after I've made a purchase?",
-            "description": "QRSong! does not offer a separate sign-up flow because an account is only useful once you have an order. After your first purchase you'll receive an email with a link to set a password, and from that moment on you can log in to view your orders, re-download digital cards, host games, manage your playlists, and place new orders more quickly. So the simplest way to get an account is to place an order — even a small digital one — and use the link in the confirmation email to activate it.",
+            "description": "QRSong! does not offer a separate sign-up flow because an account is only useful once you have an order. After your first purchase you'll receive an email with a link to set a password, and from that moment on you can log in to view your orders, re-download digital cards, host games, manage your playlists, and place new orders more quickly. So the simplest way to get an account is to place an order — even a small digital one — and use the link in the confirmation email to activate it. The one exception is a gift voucher: someone who received one makes an account while redeeming it at qrsong.io/redeem, without an order (see 'redeem-a-gift').",
             "tags": [
                 "account",
                 "register",
@@ -1357,7 +1396,7 @@
         {
             "slug": "account-features",
             "title": "What can I do with a QRSong! account?",
-            "description": "Once you have an account (created automatically after your first order) you can: view your full order history, re-download digital PDFs of all your card sets, re-download invoices, re-open the correction form for orders still in review, manage your saved playlists and designs, host QRGames (Music Quiz, Music Bingo, Music Timeline) for any playlist you've enabled them on, place new orders without re-entering your details, and update your password and email preferences.",
+            "description": "Once you have an account (created automatically after your first order) you can: view your full order history, re-download digital PDFs of all your card sets, re-download invoices, re-open the correction form for orders still in review, manage your saved playlists and designs, host QRGames (Music Quiz, Music Bingo, Music Timeline) for any playlist you've enabled them on, place new orders without re-entering your details, give a set to someone else with a gift voucher, and update your password and email preferences. Sets received as a gift show under 'Gifts for you'.",
             "tags": [
                 "account features",
                 "what can I do",

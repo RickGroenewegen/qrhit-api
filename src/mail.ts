@@ -43,6 +43,15 @@ interface Attachment {
   cid?: string;
 }
 
+/** A set in the gift mails (src/gift.ts). */
+export interface GiftMailSet {
+  name: string;
+  numberOfTracks: number;
+  type: 'digital' | 'physical' | 'sheets';
+  gamesEnabled: boolean;
+  appDesign: boolean;
+}
+
 class Mail {
   private static instance: Mail;
   private ses: SESClient | null = null;
@@ -362,6 +371,95 @@ class Mail {
             payment.email
           )}: ${error}`
         )
+      );
+    }
+  }
+
+  /**
+   * To the recipient of a gift (src/gift.ts), right after they redeemed it:
+   * what is in their account now. Nothing about the order or its price.
+   */
+  public async sendGiftReceivedMail(
+    to: { email: string; name: string; locale: string },
+    gift: { fromName: string; sets: GiftMailSet[] }
+  ): Promise<void> {
+    const frontend = process.env['FRONTEND_URI'];
+    await this.sendGiftMail('gift_received', to, {
+      fromName: gift.fromName,
+      sets: gift.sets,
+      hasGames: gift.sets.some((set) => set.gamesEnabled),
+      hasAppDesign: gift.sets.some((set) => set.appDesign),
+      accountLink: `${frontend}/${to.locale}/my-account`,
+      appLink: `${frontend}/${to.locale}/download-app`,
+    }, { from: gift.fromName });
+  }
+
+  /** To the giver, once their gift was redeemed. Their invoice stays theirs. */
+  public async sendGiftRedeemedMail(
+    to: { email: string; name: string; locale: string },
+    gift: { recipientName: string; sets: GiftMailSet[] }
+  ): Promise<void> {
+    await this.sendGiftMail('gift_redeemed', to, {
+      recipientName: gift.recipientName,
+      sets: gift.sets,
+      accountLink: `${process.env['FRONTEND_URI']}/${to.locale}/my-account`,
+    }, { name: gift.recipientName });
+  }
+
+  private async sendGiftMail(
+    template: 'gift_received' | 'gift_redeemed',
+    to: { email: string; name: string; locale: string },
+    params: Record<string, unknown>,
+    subjectParams: Record<string, string>
+  ): Promise<void> {
+    if (!this.ses || !to.email) return;
+    const locale = to.locale || 'en';
+    const translations = await this.translation.getTranslationsByPrefix(locale, template);
+    const mailParams = {
+      ...params,
+      fullname: to.name || to.email.split('@')[0],
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+      intro: this.translation.translate(`${template}.intro`, locale, subjectParams),
+      setLines: (params['sets'] as GiftMailSet[]).map((set) =>
+        this.translation.translate(`${template}.set`, locale, {
+          count: set.numberOfTracks,
+          playlist: set.name,
+        })
+      ),
+    };
+    try {
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const html = await this.templates.render(`mails/${template}_html`, mailParams);
+      const text = await this.templates.render(`mails/${template}_text`, mailParams);
+      const subject = decode(this.translation.translate(`${template}.subject`, locale, subjectParams));
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['INFO_EMAIL']}>`,
+          to: to.email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments: [
+            {
+              contentType: 'image/png',
+              filename: 'logo.png',
+              data: this.wrapBase64(logoBuffer.toString('base64')),
+              isInline: true,
+              cid: 'logo',
+            },
+          ],
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['INFO_EMAIL'],
+        },
+        false
+      );
+      await this.ses.send(new SendRawEmailCommand({ RawMessage: { Data: Buffer.from(rawEmail) } }));
+      this.logger.log(color.blue.bold(`${template} mail sent to ${white.bold(to.email)}`));
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Failed to send ${template} mail to ${white.bold(to.email)}: ${error}`)
       );
     }
   }
@@ -932,6 +1030,35 @@ class Mail {
       numberOfTracks += playlist.numberOfTracks;
     }
 
+    // A set given away (src/gift.ts) is mailed to whoever holds it now, in
+    // their name and language, with their own links and without anything of
+    // the order (number, address) that would tell them what it cost
+    if (orderType === 'digital' && playlists.length > 0) {
+      const holder = await this.giftedLineHolder(payment, playlists[0]);
+      if (holder) {
+        payment = {
+          ...payment,
+          email: holder.email,
+          fullname: holder.displayName,
+          locale: holder.locale || payment.locale,
+          userId: holder.id,
+          orderId: '',
+          address: null,
+          housenumber: null,
+          city: null,
+          zipcode: null,
+          countrycode: null,
+          invoiceAddress: null,
+          differentInvoiceAddress: false,
+          user: { ...(payment.user || {}), hash: holder.hash },
+          giftedSet: true,
+        };
+        if (bingoDownloadUrl) {
+          bingoDownloadUrl = `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`;
+        }
+      }
+    }
+
     const translations = this.replaceAmountPlaceholder(
       await this.translation.getTranslationsByPrefix(payment.locale, 'mail')
     );
@@ -945,6 +1072,7 @@ class Mail {
     const mailParams = {
       payment,
       playlists,
+      giftedSet: !!payment.giftedSet,
       orderId: payment.orderId,
       fullname: payment.fullname,
       email: payment.email,
@@ -964,7 +1092,10 @@ class Mail {
       downloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/printer`,
       promotionalSetupLink: `${process.env['FRONTEND_URI']}/${payment.locale}/promotional/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}`,
       sendPhysicalLink,
-      showPromotionalCta: !playlists[0]?.featured,
+      // The promotional reward goes to the order's buyer, not a gift's holder
+      showPromotionalCta: !playlists[0]?.featured && !payment.giftedSet,
+      // "Bought these for someone else?": a set can be given from My account
+      showGiftHint: orderType === 'digital' && !payment.giftedSet,
       numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
       translations,
@@ -1401,6 +1532,8 @@ class Mail {
       hasBingo: !!bingoDownloadUrl,
       hasBox: !!playlist.boxEnabled && (playlist.boxQuantity || 0) > 0,
       boxQuantity: playlist.boxQuantity || 0,
+      // From now on the set can be given as a gift (src/gift.ts)
+      showGiftHint: playlist.type !== 'giftcard',
       ...(await this.appDesignMailParams(payment, true)),
     };
 
@@ -1460,6 +1593,36 @@ class Mail {
       await this.ses.send(command);
     } catch (error) {
       console.error('Error while sending email with attachment', error);
+    }
+  }
+
+  /**
+   * The holder of a mailed order line when it has been given away
+   * (payment_has_playlist.ownerUserId), else null: the buyer gets the mail.
+   * `playlist` is a line from getPlaylistsByPaymentId (paymentHasPlaylistId)
+   * or a bare playlist (its database id).
+   */
+  private async giftedLineHolder(
+    payment: { id?: number },
+    playlist: any
+  ): Promise<{ id: number; email: string; displayName: string; locale: string | null; hash: string } | null> {
+    try {
+      const where = playlist?.paymentHasPlaylistId
+        ? { id: Number(playlist.paymentHasPlaylistId) }
+        : payment?.id && playlist?.id
+          ? { paymentId: payment.id, playlistId: Number(playlist.id), type: 'digital' }
+          : null;
+      if (!where) return null;
+      const line = await prisma.paymentHasPlaylist.findFirst({
+        where,
+        select: {
+          ownerUserId: true,
+          owner: { select: { id: true, email: true, displayName: true, locale: true, hash: true } },
+        },
+      });
+      return line?.ownerUserId && line.owner ? line.owner : null;
+    } catch {
+      return null;
     }
   }
 

@@ -21,5 +21,8 @@
 {{/if}}
 {{> games-section }}
 {{> app-design-section }}
+{{#if showGiftHint}}
+<p style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #3d6d74;">🎁 {{ translations.giftHint }}</p>
+{{/if}}
 {{> mail-closing }}
 {{/mail-layout}}

@@ -14,10 +14,10 @@ const h = vi.hoisted(() => ({
     playlist: { findFirst: vi.fn(), update: vi.fn() },
     paymentHasPlaylist: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
     },
-    user: { findFirst: vi.fn() },
     userSuggestion: {
       upsert: vi.fn(),
       count: vi.fn(),
@@ -29,6 +29,7 @@ const h = vi.hoisted(() => ({
     $executeRaw: vi.fn(),
   },
   queueGenerate: vi.fn(),
+  queueDigitalRedesign: vi.fn(),
   sendToPrinter: vi.fn(),
   finalizeOrder: vi.fn(),
   getProviderByString: vi.fn(),
@@ -54,6 +55,7 @@ vi.mock('../../../src/generator', () => ({
   default: {
     getInstance: () => ({
       queueGenerate: h.queueGenerate,
+      queueDigitalRedesign: h.queueDigitalRedesign,
       sendToPrinter: h.sendToPrinter,
       finalizeOrder: h.finalizeOrder,
     }),
@@ -98,14 +100,15 @@ import Suggestion from '../../../src/suggestion';
 const suggestion = Suggestion.getInstance();
 
 // --- raw SQL routing -------------------------------------------------------
-// Each distinct $queryRaw in suggestion.ts contains a unique marker string,
-// so a single dispatching implementation can serve any combination of them.
+// Each distinct $queryRaw in suggestion.ts (and the findLineByHash it calls in
+// src/lineOwner.ts) contains a unique marker string, so a single dispatching
+// implementation can serve any combination of them. Only the template's own
+// strings are searched: the Prisma.sql fragments it embeds are values.
 const SQL = {
-  ownership: "p.status = 'paid'", // verifyPaymentOwnership
-  trackCheck: 'AS playlistDBId', // saveUserSuggestion track-in-payment check
+  line: "pm.status = 'paid'", // findLineByHash (verifyLine)
+  trackCheck: 'AS playlistDBId', // saveUserSuggestion track-in-line check
   access: 'SELECT 1', // deleteUserSuggestion access check
   corrections: 'suggestionCount', // getCorrections
-  phpInfo: 'AS paymentHasPlaylistId', // processCorrections php lookup
   suggestions: 'as originalName', // processCorrections suggestion diff rows
   printerReady: 'eligableForPrinter = true', // checkIfReadyForPrinter counts
   paidTracks: 'as paidTracks', // validateTrackCountForReload
@@ -125,7 +128,37 @@ function routeRaw(routes: RawRoute[]) {
   );
 }
 
-const OWNED: RawRoute = [SQL.ownership, [{ id: 77, status: 'paid' }]];
+// One findLineByHash row, in OWNED_LINE_COLUMNS' aliases: line 30 (physical)
+// of payment 10, held by its buyer, user 5.
+function lineRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 30,
+    type: 'physical',
+    subType: null,
+    ownerUserId: null,
+    paymentDbId: 10,
+    paymentId: 'pay_1',
+    buyerId: 5,
+    playlistDbId: 20,
+    playlistId: 'pl_1',
+    ownerId: 5,
+    ownerHash: 'hash_1',
+    ownerEmail: 'rick@example.com',
+    ownerName: 'Rick G',
+    ownerLocale: 'nl',
+    ...overrides,
+  };
+}
+
+const ownedLine = (overrides: Record<string, unknown> = {}): RawRoute => [
+  SQL.line,
+  [lineRow(overrides)],
+];
+
+const OWNED = ownedLine();
+const NO_LINE: RawRoute = [SQL.line, []];
+// A redeemed gift: the line belongs to user 8 now, and hash_1 is theirs
+const GIFTED = { ownerUserId: 8, ownerId: 8, ownerName: 'Gift Recipient' };
 
 function rawQueryCalls(marker: string) {
   return h.prisma.$queryRaw.mock.calls.filter((c) =>
@@ -150,6 +183,7 @@ function allMockFns(): ReturnType<typeof vi.fn>[] {
   }
   fns.push(
     h.queueGenerate,
+    h.queueDigitalRedesign,
     h.sendToPrinter,
     h.finalizeOrder,
     h.getProviderByString,
@@ -168,6 +202,7 @@ beforeEach(() => {
   h.prisma.$queryRaw.mockResolvedValue([]);
   h.prisma.$executeRaw.mockResolvedValue(0);
   h.queueGenerate.mockResolvedValue(undefined);
+  h.queueDigitalRedesign.mockResolvedValue(undefined);
   h.sendToPrinter.mockResolvedValue(undefined);
   h.finalizeOrder.mockResolvedValue(undefined);
   h.clearPlaylistCache.mockResolvedValue(undefined);
@@ -193,7 +228,7 @@ describe('getUserSuggestions', () => {
       id: 20,
       serviceType: 'apple_music',
     });
-    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
       id: 30,
       type: 'physical',
       amount: 2,
@@ -203,7 +238,7 @@ describe('getUserSuggestions', () => {
     });
     // COUNT(*) comes back from MySQL as a BigInt
     const rows = [{ id: 1, name: 'Song', hasSuggestion: 'false', cardIndex: BigInt(4) }];
-    routeRaw([[SQL.userTracks, rows]]);
+    routeRaw([OWNED, [SQL.userTracks, rows]]);
 
     const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
 
@@ -226,23 +261,27 @@ describe('getUserSuggestions', () => {
       boxEnabled: true,
       boxQuantity: 3,
     });
-    // php is looked up scoped to the resolved payment + playlist ids
-    expect(h.prisma.paymentHasPlaylist.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { paymentId: 10, playlistId: 20 } })
+    // php is the line the hash holds, and the track rows are that line's
+    expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 30 } })
     );
+    expect(rawQueryCalls(SQL.userTracks)[0].slice(2)).toEqual(['pay_1', 30]);
   });
 
-  it('falls back to defaults and skips the php lookup when payment is missing', async () => {
+  it('falls back to defaults and skips the php lookup when the hash holds no line', async () => {
+    // e.g. the giver's old link after the gift was redeemed
     h.prisma.payment.findFirst.mockResolvedValue(null);
     h.prisma.playlist.findFirst.mockResolvedValue({
       id: 20,
       serviceType: null,
     });
-    routeRaw([[SQL.userTracks, []]]);
+    routeRaw([NO_LINE, [SQL.userTracks, []]]);
 
     const res = await suggestion.getUserSuggestions('pay_x', 'hash', 'pl');
 
-    expect(h.prisma.paymentHasPlaylist.findFirst).not.toHaveBeenCalled();
+    expect(h.prisma.paymentHasPlaylist.findUnique).not.toHaveBeenCalled();
+    // the track query is pinned to a line id no row has
+    expect(rawQueryCalls(SQL.userTracks)[0].slice(2)).toEqual(['pay_x', 0]);
     expect(res.metadata).toEqual({
       payment: {
         canBeSentToPrinterAt: null,
@@ -267,32 +306,39 @@ describe('saveUserSuggestion', () => {
   const args = ['pay_1', 'hash_1', 'pl_1', 42] as const;
   const body = { name: 'New', artist: 'Artist', year: 1999 };
 
-  it('rejects unowned payments without touching tracks', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line, without touching tracks', async () => {
+    routeRaw([NO_LINE]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
     expect(ok).toBe(false);
     expect(rawQueryCalls(SQL.trackCheck)).toHaveLength(0);
     expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 
-  it('rejects when the track does not belong to the payment/playlist', async () => {
+  it('rejects when the track does not belong to the line', async () => {
     routeRaw([OWNED, [SQL.trackCheck, []]]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
     expect(ok).toBe(false);
-    expect(h.prisma.user.findFirst).not.toHaveBeenCalled();
+    // the check is scoped to the line id, not to payment + playlist
+    expect(rawQueryCalls(SQL.trackCheck)[0].slice(1)).toEqual([30, 42]);
+    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 
-  it('rejects when the user hash resolves to no user', async () => {
-    routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue(null);
-    const ok = await suggestion.saveUserSuggestion(...args, body);
-    expect(ok).toBe(false);
-    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
+  it('saves as the holder of a given set, not as the buyer', async () => {
+    routeRaw([ownedLine(GIFTED), [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
+    h.prisma.userSuggestion.upsert.mockResolvedValue({ id: 333 });
+
+    expect(await suggestion.saveUserSuggestion(...args, body)).toBe(true);
+
+    expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_trackId: { userId: 8, trackId: 42 } },
+        create: expect.objectContaining({ userId: 8 }),
+      })
+    );
   });
 
   it('upserts on (user, track): updates the fields, creates bound to the playlist from the access check', async () => {
     routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
     h.prisma.userSuggestion.upsert.mockResolvedValue({ id: 333 });
 
     const ok = await suggestion.saveUserSuggestion(...args, {
@@ -318,7 +364,6 @@ describe('saveUserSuggestion', () => {
 
   it('retries once when a concurrent save created the row first', async () => {
     routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
     h.prisma.userSuggestion.upsert
       .mockRejectedValueOnce(Object.assign(new Error('unique'), { code: 'P2002' }))
       .mockResolvedValueOnce({ id: 333 });
@@ -331,7 +376,6 @@ describe('saveUserSuggestion', () => {
 
   it('does not retry other database errors', async () => {
     routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
     h.prisma.userSuggestion.upsert.mockRejectedValue(
       Object.assign(new Error('fk'), { code: 'P2003' })
     );
@@ -343,10 +387,18 @@ describe('saveUserSuggestion', () => {
   });
 
   it('swallows database errors and returns false', async () => {
-    routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
-    h.prisma.user.findFirst.mockRejectedValue(new Error('db down'));
+    routeRaw([
+      OWNED,
+      [
+        SQL.trackCheck,
+        () => {
+          throw new Error('db down');
+        },
+      ],
+    ]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
     expect(ok).toBe(false);
+    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 });
 
@@ -359,18 +411,18 @@ describe('submitUserSuggestions', () => {
     count: number;
     php: any;
     payment?: any;
+    line?: Record<string, unknown>;
   }) {
-    routeRaw([OWNED]);
+    routeRaw([ownedLine(opts.line)]);
     h.prisma.payment.findFirst.mockResolvedValue(
       opts.payment ?? { id: 10, userId: 5, fullname: 'Rick G' }
     );
-    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
-    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue(opts.php);
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue(opts.php);
     h.prisma.userSuggestion.count.mockResolvedValue(opts.count);
   }
 
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line', async () => {
+    routeRaw([NO_LINE]);
     expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
     expect(h.prisma.payment.findFirst).not.toHaveBeenCalled();
   });
@@ -381,6 +433,13 @@ describe('submitUserSuggestions', () => {
     const ok = await suggestion.submitUserSuggestions(...args);
 
     expect(ok).toBe(true);
+    // the line and its holder's suggestions, by id
+    expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith({
+      where: { id: 30 },
+    });
+    expect(h.prisma.userSuggestion.count).toHaveBeenCalledWith({
+      where: { playlistId: 20, userId: 5 },
+    });
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 30 },
       data: { suggestionsPending: true, userConfirmedPrinting: true },
@@ -434,7 +493,11 @@ describe('submitUserSuggestions', () => {
   });
 
   it('digital order without corrections: marks pending and queues regeneration with sendDigitalEmail callback', async () => {
-    arrange({ count: 0, php: { id: 31, type: 'digital' } });
+    arrange({
+      count: 0,
+      php: { id: 31, type: 'digital' },
+      line: { id: 31, type: 'digital' },
+    });
 
     const ok = await suggestion.submitUserSuggestions(...args);
 
@@ -478,6 +541,60 @@ describe('submitUserSuggestions', () => {
     h.prisma.payment.findFirst.mockRejectedValue(new Error('boom'));
     expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
   });
+
+  it('refuses a given physical set: it has been printed', async () => {
+    arrange({
+      count: 0,
+      php: { id: 30, type: 'physical' },
+      line: { ...GIFTED, type: 'physical' },
+    });
+
+    expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
+
+    expect(h.prisma.payment.findFirst).not.toHaveBeenCalled();
+    expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+    expect(h.queueDigitalRedesign).not.toHaveBeenCalled();
+  });
+
+  it('given digital set without corrections: rebuilds that line alone and leaves the buyer\'s consent alone', async () => {
+    arrange({
+      count: 0,
+      php: { id: 31, type: 'digital' },
+      line: { ...GIFTED, id: 31, type: 'digital' },
+    });
+
+    expect(await suggestion.submitUserSuggestions(...args)).toBe(true);
+
+    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 31 },
+      data: { suggestionsPending: true, userConfirmedPrinting: true },
+    });
+    expect(h.queueDigitalRedesign).toHaveBeenCalledWith('pay_1', 31);
+    // the order-wide rebuild would redo the buyer's lines and finalize the order
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('given digital set with corrections: pushover names the holder, not the buyer', async () => {
+    arrange({
+      count: 2,
+      php: { id: 31, type: 'digital' },
+      line: { ...GIFTED, id: 31, type: 'digital' },
+    });
+
+    expect(await suggestion.submitUserSuggestions(...args)).toBe(true);
+
+    expect(h.prisma.userSuggestion.count).toHaveBeenCalledWith({
+      where: { playlistId: 20, userId: 8 },
+    });
+    const pushes = outbound.calls('PushoverClient', 'sendMessage');
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].args[0].message).toBe(
+      '2 correcties doorgegeven door: Gift Recipient'
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -485,16 +602,15 @@ describe('submitUserSuggestions', () => {
 describe('applyDesignChanges', () => {
   const args = ['pay_1', 'hash_1', 'pl_1', '9.9.9.9'] as const;
 
-  function arrange(php: any) {
-    routeRaw([OWNED]);
-    h.prisma.payment.findFirst.mockResolvedValue({ id: 10 });
-    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
-    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue(php);
+  function arrange(php: any, line?: Record<string, unknown>) {
+    routeRaw([ownedLine(line)]);
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue(php);
   }
 
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line', async () => {
+    routeRaw([NO_LINE]);
     expect(await suggestion.applyDesignChanges(...args)).toBe(false);
+    expect(h.prisma.paymentHasPlaylist.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns false when the php row is missing', async () => {
@@ -509,6 +625,9 @@ describe('applyDesignChanges', () => {
     const ok = await suggestion.applyDesignChanges(...args);
 
     expect(ok).toBe(true);
+    expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith({
+      where: { id: 30 },
+    });
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 30 },
       data: { eligableForPrinter: false, userConfirmedPrinting: true },
@@ -538,7 +657,7 @@ describe('applyDesignChanges', () => {
   });
 
   it('digital: queues sendDigitalEmail regeneration without any pending state', async () => {
-    arrange({ id: 31, type: 'digital' });
+    arrange({ id: 31, type: 'digital' }, { id: 31, type: 'digital' });
 
     const ok = await suggestion.applyDesignChanges(...args);
 
@@ -561,6 +680,31 @@ describe('applyDesignChanges', () => {
       }
     );
   });
+
+  it('refuses a given physical set: it has been printed', async () => {
+    arrange({ id: 30, type: 'physical' }, { ...GIFTED, type: 'physical' });
+
+    expect(await suggestion.applyDesignChanges(...args)).toBe(false);
+
+    expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+    expect(h.queueDigitalRedesign).not.toHaveBeenCalled();
+  });
+
+  it('given digital set: queues the line\'s own rebuild instead of the order-wide one', async () => {
+    arrange(
+      { id: 31, type: 'digital' },
+      { ...GIFTED, id: 31, type: 'digital' }
+    );
+
+    expect(await suggestion.applyDesignChanges(...args)).toBe(true);
+
+    expect(h.queueDigitalRedesign).toHaveBeenCalledWith('pay_1', 31);
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -568,28 +712,30 @@ describe('applyDesignChanges', () => {
 describe('deleteUserSuggestion', () => {
   const args = ['pay_1', 'hash_1', 'pl_1', 42] as const;
 
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line', async () => {
+    routeRaw([NO_LINE]);
     expect(await suggestion.deleteUserSuggestion(...args)).toBe(false);
+    expect(rawQueryCalls(SQL.access)).toHaveLength(0);
     expect(h.prisma.userSuggestion.deleteMany).not.toHaveBeenCalled();
   });
 
-  it('rejects when the track is not part of the payment', async () => {
+  it('rejects when the track is not part of the line', async () => {
     routeRaw([OWNED, [SQL.access, []]]);
     expect(await suggestion.deleteUserSuggestion(...args)).toBe(false);
+    expect(rawQueryCalls(SQL.access)[0].slice(1)).toEqual([30, 42]);
     expect(h.prisma.userSuggestion.deleteMany).not.toHaveBeenCalled();
   });
 
-  it('rejects when the user does not exist', async () => {
-    routeRaw([OWNED, [SQL.access, [{ 1: 1 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue(null);
-    expect(await suggestion.deleteUserSuggestion(...args)).toBe(false);
-    expect(h.prisma.userSuggestion.deleteMany).not.toHaveBeenCalled();
+  it("deletes the holder's suggestion on a given set, not the buyer's", async () => {
+    routeRaw([ownedLine(GIFTED), [SQL.access, [{ 1: 1 }]]]);
+    expect(await suggestion.deleteUserSuggestion(...args)).toBe(true);
+    expect(h.prisma.userSuggestion.deleteMany).toHaveBeenCalledWith({
+      where: { trackId: 42, userId: 8 },
+    });
   });
 
   it('deletes all suggestions for this user and track', async () => {
     routeRaw([OWNED, [SQL.access, [{ 1: 1 }]]]);
-    h.prisma.user.findFirst.mockResolvedValue({ id: 5 });
     expect(await suggestion.deleteUserSuggestion(...args)).toBe(true);
     expect(h.prisma.userSuggestion.deleteMany).toHaveBeenCalledWith({
       where: { trackId: 42, userId: 5 },
@@ -612,12 +758,9 @@ describe('getCorrections', () => {
 // ---------------------------------------------------------------------------
 
 describe('processCorrections', () => {
-  const PHP_PHYSICAL = [
-    { paymentHasPlaylistId: 30, playlistType: 'physical', paymentDbId: 10 },
-  ];
-  const PHP_DIGITAL = [
-    { paymentHasPlaylistId: 31, playlistType: 'digital', paymentDbId: 10 },
-  ];
+  // The line's id, type and payment come from findLineByHash itself
+  const LINE_PHYSICAL = ownedLine({ id: 30, type: 'physical' });
+  const LINE_DIGITAL = ownedLine({ id: 31, type: 'digital' });
 
   const baseRow = {
     trackId: 42,
@@ -653,16 +796,30 @@ describe('processCorrections', () => {
     );
   }
 
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line, before reading or writing anything', async () => {
+    routeRaw([NO_LINE]);
     expect(await call()).toBe(false);
-    expect(rawQueryCalls(SQL.phpInfo)).toHaveLength(0);
+    expect(rawQueryCalls(SQL.suggestions)).toHaveLength(0);
+    expect(h.prisma.$executeRaw).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
   });
 
-  it('returns false when the paymentHasPlaylist row cannot be resolved', async () => {
-    routeRaw([OWNED, [SQL.phpInfo, []]]);
-    expect(await call()).toBe(false);
-    expect(h.prisma.$executeRaw).not.toHaveBeenCalled();
+  it('takes the line id, type and payment from the owned line, with no lookup of its own', async () => {
+    routeRaw([
+      ownedLine({ id: 31, type: 'digital', paymentDbId: 12 }),
+      [SQL.suggestions, []],
+    ]);
+
+    expect(await call()).toBe(true);
+
+    // findLineByHash and the suggestion rows, nothing else
+    expect(h.prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    // the holder's suggestions on this line
+    expect(rawQueryCalls(SQL.suggestions)[0].slice(1)).toEqual([5, 31]);
+    expect(h.prisma.payment.update).toHaveBeenCalledWith({
+      where: { id: 12 },
+      data: { userAgreedToPrinting: false },
+    });
   });
 
   it('applies global name/year corrections to the track and cleans up (physical, no send)', async () => {
@@ -671,8 +828,7 @@ describe('processCorrections', () => {
       .mockResolvedValue(undefined);
     try {
       routeRaw([
-        OWNED,
-        [SQL.phpInfo, PHP_PHYSICAL],
+        LINE_PHYSICAL,
         [
           SQL.suggestions,
           [
@@ -713,7 +869,8 @@ describe('processCorrections', () => {
         e.sql.includes('DELETE FROM usersuggestions')
       );
       expect(deletion).toBeTruthy();
-      expect(deletion!.values).toEqual(['hash_1', 'pl_1']);
+      // the line holder's suggestions, by user id
+      expect(deletion!.values).toEqual([5, 'pl_1']);
 
       expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1');
 
@@ -728,8 +885,7 @@ describe('processCorrections', () => {
 
   it('routes onlyForMe corrections to a trackExtraInfo upsert, still marking the global track manuallyCorrected', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_DIGITAL],
+      LINE_DIGITAL,
       [
         SQL.suggestions,
         [
@@ -772,8 +928,7 @@ describe('processCorrections', () => {
 
   it('creates a trackExtraInfo row when extra attributes are added and none exists', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_DIGITAL],
+      LINE_DIGITAL,
       [
         SQL.suggestions,
         [
@@ -808,7 +963,7 @@ describe('processCorrections', () => {
     // The 501-card order: the track came back twice, both lookups ran before
     // either create, and trackextrainfo got two rows for it.
     const row = { ...baseRow, suggestedYear: 2021 };
-    routeRaw([OWNED, [SQL.phpInfo, PHP_DIGITAL], [SQL.suggestions, [row, row]]]);
+    routeRaw([LINE_DIGITAL, [SQL.suggestions, [row, row]]]);
     h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
     let inFlight = 0;
     let maxInFlight = 0;
@@ -832,8 +987,7 @@ describe('processCorrections', () => {
 
   it('retries the trackExtraInfo upsert when a concurrent run created the row first', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_DIGITAL],
+      LINE_DIGITAL,
       [SQL.suggestions, [{ ...baseRow, suggestedYear: 2021 }]],
     ]);
     h.prisma.playlist.findFirst.mockResolvedValue({ id: 20 });
@@ -847,8 +1001,7 @@ describe('processCorrections', () => {
 
   it('clears an extra attribute to null when the suggestion empties it', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_DIGITAL],
+      LINE_DIGITAL,
       [
         SQL.suggestions,
         [
@@ -874,8 +1027,7 @@ describe('processCorrections', () => {
 
   it('digital with no text changes: clears flags, resets judged status and re-enables suggestions', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_DIGITAL],
+      LINE_DIGITAL,
       [SQL.suggestions, [{ ...baseRow }]],
     ]);
 
@@ -902,11 +1054,7 @@ describe('processCorrections', () => {
       .spyOn(Suggestion.prototype as any, 'checkIfReadyForPrinter')
       .mockResolvedValue(undefined);
     try {
-      routeRaw([
-        OWNED,
-        [SQL.phpInfo, PHP_PHYSICAL],
-        [SQL.suggestions, []],
-      ]);
+      routeRaw([LINE_PHYSICAL, [SQL.suggestions, []]]);
 
       expect(await call({ andSend: true })).toBe(true);
 
@@ -947,7 +1095,7 @@ describe('processCorrections', () => {
   });
 
   it('andSend on a digital order queues a sendDigitalEmail regeneration', async () => {
-    routeRaw([OWNED, [SQL.phpInfo, PHP_DIGITAL], [SQL.suggestions, []]]);
+    routeRaw([LINE_DIGITAL, [SQL.suggestions, []]]);
 
     expect(await call({ andSend: true })).toBe(true);
 
@@ -971,8 +1119,7 @@ describe('processCorrections', () => {
 
   it('returns false when the corrections transaction throws', async () => {
     routeRaw([
-      OWNED,
-      [SQL.phpInfo, PHP_PHYSICAL],
+      LINE_PHYSICAL,
       [
         SQL.suggestions,
         [{ ...baseRow, suggestedName: 'X' }],
@@ -981,29 +1128,92 @@ describe('processCorrections', () => {
     h.prisma.track.update.mockRejectedValue(new Error('deadlock'));
     expect(await call()).toBe(false);
   });
+
+  it("given digital set, andSend: rebuilds that line alone and leaves the buyer's consent alone", async () => {
+    routeRaw([
+      ownedLine({ ...GIFTED, id: 31, type: 'digital' }),
+      [SQL.suggestions, []],
+    ]);
+
+    expect(await call({ andSend: true })).toBe(true);
+
+    // the line's own judged status is still reset for new suggestions
+    const reset = execCalls().find((e) =>
+      e.sql.includes('userConfirmedPrinting = false')
+    );
+    expect(reset!.values).toEqual([31]);
+    // the holder's suggestions are the ones cleared
+    const deletion = execCalls().find((e) =>
+      e.sql.includes('DELETE FROM usersuggestions')
+    );
+    expect(deletion!.values).toEqual([8, 'pl_1']);
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.queueDigitalRedesign).toHaveBeenCalledWith('pay_1', 31);
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+  });
+
+  it('given physical set, andSend: nothing to rebuild or send to the printer', async () => {
+    const printerSpy = vi
+      .spyOn(Suggestion.prototype as any, 'checkIfReadyForPrinter')
+      .mockResolvedValue(undefined);
+    try {
+      routeRaw([
+        ownedLine({ ...GIFTED, type: 'physical' }),
+        [SQL.suggestions, []],
+      ]);
+
+      expect(await call({ andSend: true })).toBe(true);
+
+      // the corrections themselves are still applied and cleared
+      expect(
+        execCalls().some((e) => e.sql.includes('suggestionsPending = false'))
+      ).toBe(true);
+      expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1');
+      // no printer hold lifted, no eligibility reset, nothing queued
+      expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
+      expect(h.prisma.payment.update).not.toHaveBeenCalled();
+      expect(h.queueGenerate).not.toHaveBeenCalled();
+      expect(h.queueDigitalRedesign).not.toHaveBeenCalled();
+      expect(printerSpy).not.toHaveBeenCalled();
+    } finally {
+      printerSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
 
 describe('extendPrinterDeadline', () => {
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('refuses anyone but the buyer, the holder of a given set included', async () => {
+    // hash_1 holds a line of the order, but the deadline is the whole order's
+    routeRaw([ownedLine(GIFTED)]);
+    h.prisma.payment.findFirst.mockResolvedValue(null);
+
+    expect(
+      await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
+    ).toBe(false);
+
+    // verifyBuyer: a paid payment whose own user has this hash
+    expect(h.prisma.payment.findFirst).toHaveBeenCalledTimes(1);
+    expect(h.prisma.payment.findFirst).toHaveBeenCalledWith({
+      where: { paymentId: 'pay_1', status: 'paid', user: { hash: 'hash_1' } },
+      select: { id: true },
+    });
+    expect(rawQueryCalls(SQL.line)).toHaveLength(0);
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('returns false when the payment row is gone after the buyer check', async () => {
+    h.prisma.payment.findFirst
+      .mockResolvedValueOnce({ id: 4 })
+      .mockResolvedValueOnce(null);
     expect(
       await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
     ).toBe(false);
     expect(h.prisma.payment.update).not.toHaveBeenCalled();
   });
 
-  it('returns false when the payment row is gone', async () => {
-    routeRaw([OWNED]);
-    h.prisma.payment.findFirst.mockResolvedValue(null);
-    expect(
-      await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
-    ).toBe(false);
-  });
-
   it('extends an existing deadline by exactly 24 hours', async () => {
-    routeRaw([OWNED]);
     h.prisma.payment.findFirst.mockResolvedValue({
       id: 4,
       canBeSentToPrinterAt: new Date('2026-06-10T08:00:00Z'),
@@ -1019,7 +1229,6 @@ describe('extendPrinterDeadline', () => {
   });
 
   it('starts from now + 24h when no deadline was set', async () => {
-    routeRaw([OWNED]);
     h.prisma.payment.findFirst.mockResolvedValue({
       id: 4,
       canBeSentToPrinterAt: null,
@@ -1099,9 +1308,11 @@ describe('checkIfReadyForPrinter', () => {
 describe('reloadPlaylist', () => {
   const reload = () => suggestion.reloadPlaylist('pay_1', 'hash_1', 'pl_1');
 
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('rejects a hash that holds no line', async () => {
+    routeRaw([NO_LINE]);
     expect(await reload()).toEqual({ success: false, error: 'Unauthorized' });
+    expect(h.prisma.payment.findFirst).not.toHaveBeenCalled();
+    expect(h.getProviderByString).not.toHaveBeenCalled();
   });
 
   it('fails when the payment row is missing', async () => {
@@ -1380,6 +1591,8 @@ describe('reloadPlaylist', () => {
       paidTracks: 50,
       currentTracks: 42,
     });
+    // the paid track count is the line's own, found by its id
+    expect(rawQueryCalls(SQL.paidTracks)[0].slice(1)).toEqual([30]);
     expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
       cache: false,
       allowDuplicates: false,
@@ -1468,17 +1681,25 @@ describe('reloadPlaylist', () => {
 // ---------------------------------------------------------------------------
 
 describe('regenerateAndMail', () => {
-  it('rejects unowned payments', async () => {
-    routeRaw([[SQL.ownership, []]]);
+  it('refuses anyone but the buyer, the holder of a given set included', async () => {
+    // rebuilding every line of the order is the buyer's to ask for
+    routeRaw([ownedLine(GIFTED)]);
+    h.prisma.payment.findFirst.mockResolvedValue(null);
+
     expect(await suggestion.regenerateAndMail('pay_1', 'hash_1')).toEqual({
       success: false,
       error: 'Unauthorized',
+    });
+
+    expect(h.prisma.payment.findFirst).toHaveBeenCalledWith({
+      where: { paymentId: 'pay_1', status: 'paid', user: { hash: 'hash_1' } },
+      select: { id: true },
     });
     expect(h.finalizeOrder).not.toHaveBeenCalled();
   });
 
   it('fires finalizeOrder with the mollie client and resolves immediately', async () => {
-    routeRaw([OWNED]);
+    h.prisma.payment.findFirst.mockResolvedValue({ id: 10 });
     const res = await suggestion.regenerateAndMail('pay_1', 'hash_1');
     expect(res).toEqual({ success: true });
     expect(h.finalizeOrder).toHaveBeenCalledTimes(1);
@@ -1489,7 +1710,7 @@ describe('regenerateAndMail', () => {
   });
 
   it('maps synchronous failures to a generic error result', async () => {
-    h.prisma.$queryRaw.mockRejectedValue(new Error('connection lost'));
+    h.prisma.payment.findFirst.mockRejectedValue(new Error('connection lost'));
     expect(await suggestion.regenerateAndMail('pay_1', 'hash_1')).toEqual({
       success: false,
       error: 'Failed to regenerate PDFs',
@@ -1497,7 +1718,7 @@ describe('regenerateAndMail', () => {
   });
 
   it('still reports success when the fire-and-forget regeneration fails later', async () => {
-    routeRaw([OWNED]);
+    h.prisma.payment.findFirst.mockResolvedValue({ id: 10 });
     h.finalizeOrder.mockRejectedValue(new Error('pdf exploded'));
     const res = await suggestion.regenerateAndMail('pay_1', 'hash_1');
     expect(res).toEqual({ success: true });

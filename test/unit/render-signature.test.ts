@@ -69,6 +69,20 @@ describe('render URL signatures', () => {
     expect(isSignedRenderRequest('technical-instructions', request(params, query))).toBe(false);
   });
 
+  // The order invoice shows the buyer's address and what they paid, and the
+  // Mollie id travels in the links of a set given as a gift (src/gift.ts).
+  it('opens one payment\'s invoice and no other page', () => {
+    const params = { paymentId: 'tr_abc123' };
+    const query = signedRenderQuery('invoice', params, {});
+    expect(isSignedRenderRequest('invoice', request(params, query))).toBe(true);
+
+    expect(isSignedRenderRequest('invoice', request(params, ''))).toBe(false);
+    expect(isSignedRenderRequest('invoice', request({ paymentId: 'tr_other' }, query))).toBe(false);
+    expect(isSignedRenderRequest('gift-voucher', request(params, query))).toBe(false);
+    const quotation = signedRenderQuery('quotation', quotationParams, {});
+    expect(isSignedRenderRequest('invoice', request(params, quotation))).toBe(false);
+  });
+
   it('lets unsigned requests through in development only', () => {
     const unsigned = request({ companyId: '12' }, '');
     process.env['ENVIRONMENT'] = 'development';

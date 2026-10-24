@@ -284,6 +284,32 @@ describe('uploadLogoImage', () => {
   });
 });
 
+/** The plain values of the n-th raw query, without its SQL fragments. */
+function queryValues(n: number): unknown[] {
+  return holder.prisma.$queryRaw.mock.calls[n].slice(1).filter((v: unknown) => typeof v === 'string');
+}
+
+/** A line as findLineByHash (lineOwner.ts) selects it. */
+function ownedRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 12,
+    type: 'physical',
+    subType: 'none',
+    ownerUserId: null,
+    paymentDbId: 7,
+    paymentId: 'pay1',
+    buyerId: 3,
+    playlistDbId: 31,
+    playlistId: 'pl1',
+    ownerId: 3,
+    ownerHash: 'hash1',
+    ownerEmail: 'buyer@example.com',
+    ownerName: 'Buyer',
+    ownerLocale: 'nl',
+    ...overrides,
+  };
+}
+
 describe('getCardDesign', () => {
   const design = {
     background: 'bg.png',
@@ -310,18 +336,14 @@ describe('getCardDesign', () => {
       success: true,
       data: { ...design, extraDesigns: [], firstTrackId: 'track-123' },
     });
-    // Both queries are scoped by paymentId + userHash + playlistId.
+    // The design is scoped by paymentId + the hash of whoever holds the line
+    // now (lineOwner.ts) + playlistId; the first track by the line it found.
     expect(holder.prisma.$queryRaw).toHaveBeenCalledTimes(2);
-    expect(holder.prisma.$queryRaw.mock.calls[0].slice(1)).toEqual([
-      'pay1',
-      'hash1',
-      'pl1',
-    ]);
-    expect(holder.prisma.$queryRaw.mock.calls[1].slice(1)).toEqual([
-      'pay1',
-      'hash1',
-      'pl1',
-    ]);
+    expect(queryValues(0)).toEqual(['pay1', 'hash1', 'pl1']);
+    expect(String(holder.prisma.$queryRaw.mock.calls[0][1].sql)).toBe(
+      'COALESCE(php.ownerUserId, p.userId)'
+    );
+    expect(holder.prisma.$queryRaw.mock.calls[1].slice(1)).toEqual([7]);
   });
 
   it('returns the alternating designs 2..N of the line in position order', async () => {
@@ -384,7 +406,7 @@ describe('updateCardDesign', () => {
     frontOpacity: 80,
   } as any;
 
-  it('refuses when no paid payment matches the user hash', async () => {
+  it('refuses when no paid line of the playlist is held by the user hash', async () => {
     holder.prisma.$queryRaw.mockResolvedValueOnce([]);
 
     const ok = await designer.updateCardDesign(
@@ -397,38 +419,18 @@ describe('updateCardDesign', () => {
     );
 
     expect(ok).toBe(false);
-    expect(holder.prisma.$queryRaw.mock.calls[0].slice(1)).toEqual([
-      'pay1',
-      'hash1',
-    ]);
-    expect(holder.prisma.playlist.findFirst).not.toHaveBeenCalled();
+    // findLineByHash: payment, playlist and the holder's hash, narrowed to
+    // the line's type and subType
+    expect(queryValues(0)).toEqual(['pay1', 'pl1', 'hash1']);
+    const filters = holder.prisma.$queryRaw.mock.calls[0]
+      .slice(1)
+      .filter((v: any) => v && Array.isArray(v.values) && v.values.length);
+    expect(filters.map((f: any) => f.values)).toEqual([['physical'], ['none']]);
     expect(holder.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
   });
 
-  it('refuses when the playlist does not exist', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce(null);
-
-    const ok = await designer.updateCardDesign(
-      'pay1',
-      'hash1',
-      'missing',
-      'physical',
-      'none',
-      design
-    );
-
-    expect(ok).toBe(false);
-    expect(holder.prisma.playlist.findFirst).toHaveBeenCalledWith({
-      where: { playlistId: 'missing' },
-      select: { id: true },
-    });
-    expect(holder.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
-  });
-
-  it('updates the composite-keyed record with the mapped design payload', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+  it('updates the line it found by id with the mapped design payload', async () => {
+    holder.prisma.$queryRaw.mockResolvedValueOnce([ownedRow()]);
     holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({});
 
     const ok = await designer.updateCardDesign(
@@ -443,14 +445,7 @@ describe('updateCardDesign', () => {
     expect(ok).toBe(true);
     expect(holder.prisma.paymentHasPlaylist.update).toHaveBeenCalledTimes(1);
     const arg = holder.prisma.paymentHasPlaylist.update.mock.calls[0][0];
-    expect(arg.where).toEqual({
-      paymentId_playlistId_type_subType: {
-        paymentId: 7,
-        playlistId: 31,
-        type: 'digital',
-        subType: 'sheets',
-      },
-    });
+    expect(arg.where).toEqual({ id: 12 });
     expect(arg.data).toMatchObject({
       background: 'bg.png',
       qrColor: '#000000',
@@ -466,8 +461,7 @@ describe('updateCardDesign', () => {
   });
 
   it('leaves the alternating designs alone when the body has none', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.$queryRaw.mockResolvedValueOnce([ownedRow()]);
     holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
 
     const ok = await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', design);
@@ -477,8 +471,7 @@ describe('updateCardDesign', () => {
   });
 
   it('replaces the alternating designs, sanitised and numbered from 2', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.$queryRaw.mockResolvedValueOnce([ownedRow()]);
     holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
 
     const ok = await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', {
@@ -513,8 +506,7 @@ describe('updateCardDesign', () => {
   });
 
   it('goes back to one design on an empty list', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.$queryRaw.mockResolvedValueOnce([ownedRow()]);
     holder.prisma.paymentHasPlaylist.update.mockResolvedValueOnce({ id: 12 });
 
     await designer.updateCardDesign('pay1', 'hash1', 'pl1', 'physical', 'none', {
@@ -527,8 +519,7 @@ describe('updateCardDesign', () => {
   });
 
   it('returns false when the update throws', async () => {
-    holder.prisma.$queryRaw.mockResolvedValueOnce([{ id: 7, status: 'paid' }]);
-    holder.prisma.playlist.findFirst.mockResolvedValueOnce({ id: 31 });
+    holder.prisma.$queryRaw.mockResolvedValueOnce([ownedRow()]);
     holder.prisma.paymentHasPlaylist.update.mockRejectedValueOnce(
       new Error('row missing')
     );

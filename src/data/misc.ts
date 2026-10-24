@@ -16,6 +16,7 @@ import { isBusinessDeck } from '../trackMix';
 import { LOCALE_PRIMARY_COUNTRY, occasionSlug } from './giftOccasions';
 import { isProductPageIndexable } from './productPageLocales';
 import { DataDeps } from './types';
+import { lineOwnerSql } from '../lineOwner';
 
 export async function getPDFFilepath(
   deps: DataDeps,
@@ -33,6 +34,8 @@ export async function getPDFFilepath(
   // file (a playlist renamed on Spotify, eco, a redesign in the account) and
   // answered "PDF not found" for good; it also skipped the user hash check,
   // so any hash downloaded a PDF that someone had downloaded before.
+  // The hash is the line holder's (src/lineOwner.ts): a given set downloads
+  // with the recipient's links only.
   const result: any[] = await deps.prisma.$queryRaw`
     SELECT
       php.filename,
@@ -46,7 +49,7 @@ export async function getPDFFilepath(
     INNER JOIN
       playlists pl ON php.playlistId = pl.id
     INNER JOIN
-      users u ON pm.userid = u.id
+      users u ON u.id = ${lineOwnerSql()}
     WHERE
       pm.paymentId = ${paymentId}
     AND
@@ -647,6 +650,7 @@ export async function createSiteMap(
     '/user/reviews',
     '/blog',
     '/giftcard',
+    '/gift',
     '/gift-box',
     '/app-designer',
     '/music-match',

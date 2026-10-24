@@ -12,6 +12,7 @@ import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
 import boxRoutes from './routes/boxRoutes';
 import appDesignRoutes from './routes/appDesignRoutes';
+import giftRoutes from './routes/giftRoutes';
 import bingoRoutes from './routes/bingoRoutes';
 import quizRoutes from './routes/quizRoutes';
 import { verifyToken } from './auth';
@@ -163,6 +164,7 @@ class Server {
     await gameRoutes(this.fastify, getAuthHandler);
     await boxRoutes(this.fastify, getAuthHandler);
     await appDesignRoutes(this.fastify, getAuthHandler);
+    await giftRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
     await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await aiCostRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);

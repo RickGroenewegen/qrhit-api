@@ -3,6 +3,7 @@ import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import CacheInstance from './cache';
+import { purchaserBillingOrder } from './upgradeInvoice';
 
 
 export interface BingoTrack {
@@ -325,22 +326,25 @@ class Bingo {
         return { success: true };
       }
 
-      // Look up country/taxRate from the Payment linked to the first PaymentHasPlaylist
+      // Country/taxRate from the purchaser's order: the one of the first
+      // playlist when they bought it, else their own latest (a set received
+      // as a gift sits on the giver's order)
       let countrycode: string | null = null;
       let taxRate: number | null = null;
       const firstPhp = await this.prisma.paymentHasPlaylist.findUnique({
         where: { id: ids[0] },
         select: { paymentId: true },
       });
-      if (firstPhp) {
-        const linkedPayment = await this.prisma.payment.findUnique({
-          where: { id: firstPhp.paymentId },
-          select: { countrycode: true, taxRate: true },
+      const linkedPayment = await purchaserBillingOrder(userId, firstPhp?.paymentId);
+      if (linkedPayment) {
+        countrycode = linkedPayment.countrycode;
+        taxRate = linkedPayment.taxRate;
+      } else {
+        const purchaser = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { country: true },
         });
-        if (linkedPayment) {
-          countrycode = linkedPayment.countrycode;
-          taxRate = linkedPayment.taxRate;
-        }
+        countrycode = purchaser?.country ?? null;
       }
 
       // Log GamesPurchase for the upgrade

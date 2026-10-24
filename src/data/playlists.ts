@@ -142,6 +142,7 @@ export async function getPlaylistsByPaymentId(
       playlists.giftcardFrom,
       playlists.giftcardMessage,
       payment_has_playlist.id AS paymentHasPlaylistId,
+      payment_has_playlist.ownerUserId,
       payment_has_playlist.price,
       payment_has_playlist.priceWithoutVAT,
       payment_has_playlist.priceVAT,

@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Utils from './utils';
+import { lineOwnerSql } from './lineOwner';
 import cluster from 'cluster';
 
 class AppTheme {
@@ -109,6 +110,10 @@ class AppTheme {
    * Which theme a line gets, first match wins:
    *   1. `php.theme` set by an admin: a hand-made B2B theme (served as
    *      `<slug>--v<version>` once it is stored as data, src/storedThemes.ts).
+   *   1b. A design that went along with a gift (`keepActive`, src/gift.ts):
+   *      served whether or not the recipient owns the upgrade, because the
+   *      cards were printed for it. Only the dashboard's switch, set to
+   *      off, stops it.
    *   2. The line's own App Designer override, when the account owns the
    *      upgrade: `custom` serves its design, `standard` serves nothing (the
    *      app's built-in look), `default` falls through.
@@ -117,29 +122,34 @@ class AppTheme {
    */
   public async loadAppThemes(shouldLog: boolean = false): Promise<void> {
     try {
-      // entitledUserId: the owner when the account has App Designer, else
-      // NULL. The dashboard's switch (users.appDesignEnabled) wins over the
-      // purchases while it is set, the same rule as AppDesign.isEntitled.
+      // The owner is whoever holds the line (src/lineOwner.ts): the buyer,
+      // or the recipient of a redeemed gift. entitledUserId: the owner when
+      // the account has App Designer, else NULL. The dashboard's switch
+      // (users.appDesignEnabled) wins over the purchases while it is set,
+      // the same rule as AppDesign.isEntitled. ownerSwitch is that switch on
+      // its own, for a design that went along with a gift (ovKeepActive).
       const themes: any[] = await this.prisma.$queryRaw`
         SELECT php.id, php.theme, php.themeName, p.serviceType,
                CASE
-                 WHEN u.appDesignEnabled IS TRUE THEN pay.userId
+                 WHEN u.appDesignEnabled IS TRUE THEN u.id
                  WHEN u.appDesignEnabled IS FALSE THEN NULL
                  ELSE ent.userId
                END AS entitledUserId,
+               u.appDesignEnabled AS ownerSwitch,
                ov.mode AS ovMode, ov.slug AS ovSlug, ov.version AS ovVersion,
                ov.name AS ovName, (ov.theme IS NOT NULL) AS ovHasTheme,
+               ov.keepActive AS ovKeepActive,
                df.slug AS dfSlug, df.version AS dfVersion, df.name AS dfName,
                (df.theme IS NOT NULL) AS dfHasTheme
         FROM payment_has_playlist php
         JOIN playlists p ON php.playlistId = p.id
         JOIN payments pay ON pay.id = php.paymentId
-        LEFT JOIN users u ON u.id = pay.userId
+        LEFT JOIN users u ON u.id = ${lineOwnerSql('php', 'pay')}
         LEFT JOIN (SELECT DISTINCT userId FROM app_design_purchases) ent
-          ON ent.userId = pay.userId
+          ON ent.userId = u.id
         LEFT JOIN app_designs ov ON ov.paymentHasPlaylistId = php.id
         LEFT JOIN app_designs df
-          ON df.userId = pay.userId AND df.paymentHasPlaylistId IS NULL
+          ON df.userId = u.id AND df.paymentHasPlaylistId IS NULL
       `;
 
       const storedVersions = await this.storedThemeVersions();
@@ -347,6 +357,18 @@ export function resolveLineTheme(
       s: stored ? servedStoredSlug(row.theme, stored) : row.theme,
       n: row.themeName || row.theme,
     };
+  }
+  // MySQL returns booleans as 0/1; the switch is NULL while it follows the
+  // purchases
+  const switchedOff = row.ownerSwitch !== null && row.ownerSwitch !== undefined && !Number(row.ownerSwitch);
+  if (
+    Number(row.ovKeepActive) === 1 &&
+    !switchedOff &&
+    row.ovMode === 'custom' &&
+    row.ovSlug &&
+    Number(row.ovHasTheme) === 1
+  ) {
+    return { s: `${row.ovSlug}-${Number(row.ovVersion)}`, n: row.ovName || '' };
   }
   if (row.entitledUserId === null || row.entitledUserId === undefined) {
     return { s: '', n: '' };

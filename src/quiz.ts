@@ -1,6 +1,7 @@
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Translation from './translation';
+import { lineOwnerSql } from './lineOwner';
 import { color, white } from 'console-log-colors';
 
 export const MAX_AI_QUIZZES_PER_WEEK = 3;
@@ -402,7 +403,7 @@ class Quiz {
       FROM quizzes q
       JOIN payment_has_playlist php ON php.id = q.paymentHasPlaylistId
       JOIN payments p ON p.id = php.paymentId
-      JOIN users u ON u.id = p.userId
+      JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
       WHERE u.hash = ${userHash}
       AND q.useAi = 1
       AND q.createdAt >= ${weekAgo}

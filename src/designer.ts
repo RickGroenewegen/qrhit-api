@@ -11,6 +11,7 @@ import {
   replaceExtraDesigns,
   sanitizeExtraDesigns,
 } from './cardDesigns';
+import { findLineByHash, lineOwnerSql } from './lineOwner';
 
 class Designer {
   private static instance: Designer;
@@ -476,8 +477,8 @@ class Designer {
           pl.numberOfTracks,
           pl.playlistId
         FROM payments p
-        JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN users u ON u.id = ${lineOwnerSql('php', 'p')}
         JOIN playlists pl ON pl.id = php.playlistId
         WHERE p.paymentId = ${paymentId}
         AND u.hash = ${userHash}
@@ -489,15 +490,10 @@ class Designer {
         // Get first track ID for QR code preview
         const firstTrack = await this.prisma.$queryRaw<any[]>`
           SELECT t.trackId
-          FROM payments p
-          JOIN users u ON p.userId = u.id
-          JOIN payment_has_playlist php ON php.paymentId = p.id
-          JOIN playlists pl ON pl.id = php.playlistId
-          JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+          FROM payment_has_playlist php
+          JOIN playlist_has_tracks pht ON pht.playlistId = php.playlistId
           JOIN tracks t ON t.id = pht.trackId
-          WHERE p.paymentId = ${paymentId}
-          AND u.hash = ${userHash}
-          AND pl.playlistId = ${playlistId}
+          WHERE php.id = ${cardDesign[0].paymentHasPlaylistId}
           ORDER BY t.name ASC
           LIMIT 1
         `;
@@ -576,51 +572,22 @@ class Designer {
     }
   ): Promise<boolean> {
     try {
-      // Verify ownership by checking payment and user hash
-      const payment = await this.prisma.$queryRaw<any[]>`
-        SELECT p.id, p.status
-        FROM payments p
-        JOIN users u ON p.userId = u.id
-        WHERE p.paymentId = ${paymentId}
-        AND u.hash = ${userHash}
-        AND p.status = 'paid'
-        LIMIT 1
-      `;
+      // Verify ownership: the hash of whoever holds this line now
+      const owned = await findLineByHash(paymentId, userHash, playlistId, {
+        type,
+        subType,
+      });
 
-      if (payment.length === 0) {
+      if (!owned) {
         this.logger.log(
           color.red.bold(`Unauthorized access attempt for payment ${paymentId}`)
         );
         return false;
       }
 
-      const paymentDbId = payment[0].id;
-
-      // Get the playlist database ID
-      const playlist = await this.prisma.playlist.findFirst({
-        where: {
-          playlistId: playlistId,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!playlist) {
-        this.logger.log(color.red.bold(`Playlist not found: ${playlistId}`));
-        return false;
-      }
-
       // Update the specific PaymentHasPlaylist record with the new design
       const line = await this.prisma.paymentHasPlaylist.update({
-        where: {
-          paymentId_playlistId_type_subType: {
-            paymentId: paymentDbId,
-            playlistId: playlist.id,
-            type: type,
-            subType: subType,
-          },
-        },
+        where: { id: owned.id },
         data: {
           background: design.background,
           logo: design.logo,

@@ -167,6 +167,10 @@ class Upgrade {
       where: { paymentId: payment.id, playlistId: playlist.id },
     });
     if (!php) return null;
+    // A set given away (src/gift.ts) takes no upgrades: extra cards and boxes
+    // are booked and invoiced on the buyer's order and ship to the buyer, so
+    // neither the buyer nor the recipient can add them any more
+    if (php.ownerUserId !== null) return null;
 
     return { php, payment, playlist, user };
   }
