@@ -109,6 +109,21 @@
       "occasions": true
     },
     {
+      "code": "FI",
+      "name": "Finland",
+      "locales": ["fi", "sv", "en"],
+      "paymentMethods": ["klarna", "creditcard", "applepay", "paypal"],
+      "occasions": true
+    },
+    {
+      "code": "CZ",
+      "name": "Czechia",
+      "currency": "CZK",
+      "locales": ["cs", "en"],
+      "paymentMethods": ["creditcard", "applepay", "paypal"],
+      "occasions": true
+    },
+    {
       "code": "US",
       "name": "United States",
       "currency": "USD",
@@ -165,7 +180,6 @@
       "locales": ["en"],
       "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"]
     },
-    { "code": "CZ", "name": "Czechia", "currency": "CZK" },
     { "code": "LI", "name": "Liechtenstein", "locales": ["de", "en"] },
     { "code": "LU", "name": "Luxembourg", "locales": ["de", "fr", "en"] },
     { "code": "MC", "name": "Monaco", "locales": ["fr", "en"] },
@@ -177,7 +191,6 @@
     { "code": "PE", "name": "Peru", "locales": ["es", "en"] },
     { "code": "SM", "name": "San Marino", "locales": ["it", "en"] },
     { "code": "VA", "name": "Vatican City", "locales": ["it", "en"] },
-    { "code": "FI", "name": "Finland", "locales": ["sv", "en"] },
     { "code": "IS", "name": "Iceland", "locales": ["no", "sv", "en"] },
     { "code": "HK", "name": "Hong Kong", "locales": ["cn", "en"] },
     { "code": "TW", "name": "Taiwan", "locales": ["cn", "en"] },

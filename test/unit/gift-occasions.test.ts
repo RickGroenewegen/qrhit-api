@@ -91,6 +91,8 @@ describe('target countries', () => {
     expect(TARGET_COUNTRIES).toContain('US');
     expect(TARGET_COUNTRIES).toContain('DK');
     expect(TARGET_COUNTRIES).toContain('HU');
-    expect(TARGET_COUNTRIES.length).toBe(17);
+    expect(TARGET_COUNTRIES).toContain('FI');
+    expect(TARGET_COUNTRIES).toContain('CZ');
+    expect(TARGET_COUNTRIES.length).toBe(19);
   });
 });

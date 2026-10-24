@@ -220,6 +220,7 @@ const FATHERS_DAY: Record<string, (year: number) => Date> = {
   SE: (y) => nthWeekdayOfMonth(y, 11, 0, 2), // 2nd Sunday of November
   DK: (y) => utcDate(y, 6, 5), // Fars dag = Constitution Day
   HU: (y) => nthWeekdayOfMonth(y, 6, 0, 3), // Apák napja, 3rd Sunday of June
+  CZ: (y) => nthWeekdayOfMonth(y, 6, 0, 3), // Den otců, 3rd Sunday of June
   JP: (y) => nthWeekdayOfMonth(y, 6, 0, 3), // 3rd Sunday of June
   CN: (y) => nthWeekdayOfMonth(y, 6, 0, 3),
 };

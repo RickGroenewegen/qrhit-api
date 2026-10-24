@@ -1,5 +1,5 @@
 {
-  "gathered": "2026-10-05",
+  "gathered": "2026-10-24",
   "windowDays": 180,
   "briefs": {
     "en": {
@@ -7,203 +7,203 @@
       "terms": [
         {
           "query": "music qr code generator",
-          "impressions": 614,
-          "position": 10.2
-        },
-        {
-          "query": "music qr code",
-          "impressions": 552,
-          "position": 9
-        },
-        {
-          "query": "qr code for songs",
-          "impressions": 484,
-          "position": 8
-        },
-        {
-          "query": "qr code for a song",
-          "impressions": 339,
+          "impressions": 584,
           "position": 10
         },
         {
-          "query": "music qr codes",
-          "impressions": 313,
-          "position": 10.2
+          "query": "music qr code",
+          "impressions": 531,
+          "position": 9.7
         },
         {
-          "query": "qr code for music",
-          "impressions": 359,
+          "query": "qr code for songs",
+          "impressions": 494,
           "position": 8.6
         },
         {
+          "query": "qr code for a song",
+          "impressions": 360,
+          "position": 10.3
+        },
+        {
+          "query": "music qr codes",
+          "impressions": 316,
+          "position": 10.7
+        },
+        {
           "query": "qr codes for musicians",
-          "impressions": 217,
-          "position": 14.1
+          "impressions": 237,
+          "position": 14.3
+        },
+        {
+          "query": "qr code for music",
+          "impressions": 358,
+          "position": 9.3
         },
         {
           "query": "create qr code for song",
-          "impressions": 266,
+          "impressions": 292,
           "position": 11.3
         },
         {
           "query": "how to make a qr code play a song",
-          "impressions": 237,
-          "position": 12.7
-        },
-        {
-          "query": "how to get qr code for spotify song",
-          "impressions": 99,
-          "position": 30.6
-        },
-        {
-          "query": "how to make a scan code for a song",
-          "impressions": 241,
-          "position": 11.9
+          "impressions": 256,
+          "position": 12.6
         },
         {
           "query": "qr code for music playlist",
-          "impressions": 312,
-          "position": 9.1
-        },
-        {
-          "query": "how to get a qr code for a song",
-          "impressions": 213,
-          "position": 13.3
-        },
-        {
-          "query": "how to make qr code for music",
-          "impressions": 227,
-          "position": 12.3
-        },
-        {
-          "query": "how to get qr code for a song",
-          "impressions": 184,
-          "position": 15.2
+          "impressions": 329,
+          "position": 9.6
         },
         {
           "query": "how to get song qr code",
-          "impressions": 181,
-          "position": 15.3
+          "impressions": 200,
+          "position": 15.2
         },
         {
-          "query": "how to get qr code for song",
-          "impressions": 195,
-          "position": 14.1
+          "query": "how to get qr code for a song",
+          "impressions": 200,
+          "position": 15.1
         },
         {
-          "query": "how to make qr code for song",
-          "impressions": 229,
-          "position": 12
-        },
-        {
-          "query": "how to get a song qr code",
-          "impressions": 177,
-          "position": 15.3
-        },
-        {
-          "query": "how to make a qr code for a song",
-          "impressions": 232,
+          "query": "how to make a scan code for a song",
+          "impressions": 255,
           "position": 11.6
         },
         {
-          "query": "how to create qr code for music",
-          "impressions": 219,
-          "position": 12.2
-        },
-        {
-          "query": "qr code generator for songs",
-          "impressions": 241,
-          "position": 11
-        },
-        {
-          "query": "how to create qr code for song",
-          "impressions": 204,
-          "position": 12.8
-        },
-        {
-          "query": "how to make a qr code for music",
-          "impressions": 216,
-          "position": 12.1
-        },
-        {
-          "query": "how to make a song a qr code",
-          "impressions": 219,
-          "position": 12
-        },
-        {
-          "query": "apple music qr code",
-          "impressions": 134,
-          "position": 19.2
-        },
-        {
-          "query": "create qr code for music",
-          "impressions": 238,
-          "position": 10.8
-        },
-        {
-          "query": "how to make a music qr code",
-          "impressions": 220,
-          "position": 11.5
-        },
-        {
-          "query": "qr code for music artist",
-          "impressions": 251,
-          "position": 10
-        },
-        {
-          "query": "how to create a qr code for a song",
-          "impressions": 212,
+          "query": "how to make qr code for song",
+          "impressions": 248,
           "position": 11.7
         },
         {
+          "query": "how to get a qr code for a song",
+          "impressions": 218,
+          "position": 13.3
+        },
+        {
+          "query": "how to get qr code for song",
+          "impressions": 207,
+          "position": 14
+        },
+        {
+          "query": "how to make qr code for music",
+          "impressions": 232,
+          "position": 12.4
+        },
+        {
+          "query": "how to make a qr code for a song",
+          "impressions": 249,
+          "position": 11.4
+        },
+        {
+          "query": "qr code generator for songs",
+          "impressions": 248,
+          "position": 11.5
+        },
+        {
+          "query": "how to create a qr code for a song",
+          "impressions": 245,
+          "position": 11.5
+        },
+        {
+          "query": "how to make a song a qr code",
+          "impressions": 242,
+          "position": 11.6
+        },
+        {
+          "query": "how to create qr code for song",
+          "impressions": 218,
+          "position": 12.7
+        },
+        {
+          "query": "how to get a song qr code",
+          "impressions": 184,
+          "position": 15.1
+        },
+        {
+          "query": "qr code for music artist",
+          "impressions": 270,
+          "position": 10.3
+        },
+        {
+          "query": "create qr code for music",
+          "impressions": 254,
+          "position": 10.8
+        },
+        {
+          "query": "qr code to play music",
+          "impressions": 235,
+          "position": 11.6
+        },
+        {
           "query": "how do you create a qr code for a song",
-          "impressions": 208,
+          "impressions": 238,
+          "position": 11.5
+        },
+        {
+          "query": "how to make a qr code for music",
+          "impressions": 227,
+          "position": 11.8
+        },
+        {
+          "query": "qr code generator music",
+          "impressions": 218,
+          "position": 12.2
+        },
+        {
+          "query": "how to create qr code for music",
+          "impressions": 222,
           "position": 11.9
         },
         {
           "query": "music qr code generator free",
-          "impressions": 189,
-          "position": 12.9
+          "impressions": 202,
+          "position": 13.1
         },
         {
-          "query": "qr code to play music",
-          "impressions": 213,
-          "position": 11.3
-        },
-        {
-          "query": "qr code generator music",
-          "impressions": 200,
-          "position": 12
-        },
-        {
-          "query": "how do you get a qr code for a song",
-          "impressions": 199,
-          "position": 12.1
-        },
-        {
-          "query": "qr code that plays music",
+          "query": "how to make a music qr code",
           "impressions": 228,
-          "position": 10.4
+          "position": 11.5
         },
         {
           "query": "song bar code",
-          "impressions": 224,
-          "position": 10.5
+          "impressions": 243,
+          "position": 10.6
         },
         {
-          "query": "make qr code for music",
-          "impressions": 218,
+          "query": "qr code that plays music",
+          "impressions": 238,
           "position": 10.8
         },
         {
+          "query": "how do you get a qr code for a song",
+          "impressions": 210,
+          "position": 12.2
+        },
+        {
+          "query": "make qr code for music",
+          "impressions": 234,
+          "position": 10.7
+        },
+        {
+          "query": "apple music qr code",
+          "impressions": 131,
+          "position": 18.9
+        },
+        {
           "query": "how to make a song qr code",
-          "impressions": 186,
-          "position": 12.6
+          "impressions": 200,
+          "position": 12.4
+        },
+        {
+          "query": "how to get qr code for spotify song",
+          "impressions": 86,
+          "position": 28.7
         },
         {
           "query": "qr code of songs",
-          "impressions": 230,
-          "position": 9.6
+          "impressions": 248,
+          "position": 9.8
         }
       ]
     },
@@ -212,203 +212,203 @@
       "terms": [
         {
           "query": "muziekbingo maken spotify",
-          "impressions": 494,
-          "position": 27.2
+          "impressions": 570,
+          "position": 29.6
         },
         {
           "query": "muziek bingo maken",
-          "impressions": 328,
-          "position": 29.7
+          "impressions": 369,
+          "position": 31.7
         },
         {
           "query": "muziek quiz spel",
-          "impressions": 384,
-          "position": 19.1
+          "impressions": 426,
+          "position": 18.4
         },
         {
           "query": "muziekbingo kaarten maken",
-          "impressions": 243,
-          "position": 30.1
+          "impressions": 256,
+          "position": 31.3
         },
         {
           "query": "zelf hitster kaarten maken",
-          "impressions": 996,
-          "position": 6.4
-        },
-        {
-          "query": "qr music cards",
-          "impressions": 717,
-          "position": 8.1
+          "impressions": 932,
+          "position": 7.2
         },
         {
           "query": "online muziek bingo",
-          "impressions": 227,
-          "position": 25
-        },
-        {
-          "query": "muziek quiz online",
-          "impressions": 182,
-          "position": 29.4
+          "impressions": 242,
+          "position": 25.3
         },
         {
           "query": "eigen hitster maken",
-          "impressions": 580,
-          "position": 9
+          "impressions": 645,
+          "position": 9.2
         },
         {
-          "query": "digitale muziek bingo",
+          "query": "qr music cards",
+          "impressions": 697,
+          "position": 8.3
+        },
+        {
+          "query": "muziek quiz online",
           "impressions": 190,
-          "position": 22.5
+          "position": 28.3
         },
         {
           "query": "muziek bingo kaarten gratis",
-          "impressions": 271,
-          "position": 15.5
+          "impressions": 299,
+          "position": 16.8
         },
         {
-          "query": "online muziekbingo organiseren",
-          "impressions": 138,
-          "position": 35.9
+          "query": "digitale muziek bingo",
+          "impressions": 202,
+          "position": 24.3
         },
         {
           "query": "bingo met muziek",
-          "impressions": 139,
-          "position": 28.9
+          "impressions": 161,
+          "position": 32
         },
         {
-          "query": "muziek bingo kaarten",
-          "impressions": 172,
-          "position": 22.7
+          "query": "online muziekbingo organiseren",
+          "impressions": 154,
+          "position": 37.8
         },
         {
           "query": "muziek bingo organiseren",
-          "impressions": 122,
-          "position": 39.8
+          "impressions": 149,
+          "position": 44.5
+        },
+        {
+          "query": "muziek bingo kaarten",
+          "impressions": 188,
+          "position": 23.3
         },
         {
           "query": "muziek bingo gratis",
-          "impressions": 167,
-          "position": 20.9
-        },
-        {
-          "query": "muziek bingo online",
-          "impressions": 192,
-          "position": 17.4
+          "impressions": 185,
+          "position": 21.9
         },
         {
           "query": "bingo maken met liedjes",
-          "impressions": 144,
-          "position": 22.8
-        },
-        {
-          "query": "online muziek bingo gratis",
-          "impressions": 150,
-          "position": 21.6
-        },
-        {
-          "query": "gratis muziek bingo",
-          "impressions": 152,
-          "position": 20.8
-        },
-        {
-          "query": "music bingo online",
-          "impressions": 195,
-          "position": 15.3
+          "impressions": 158,
+          "position": 25.1
         },
         {
           "query": "muziekbingo maken gratis",
-          "impressions": 103,
-          "position": 28.2
+          "impressions": 123,
+          "position": 30.7
+        },
+        {
+          "query": "muziek bingo online",
+          "impressions": 204,
+          "position": 17.8
+        },
+        {
+          "query": "gratis muziek bingo",
+          "impressions": 165,
+          "position": 21.9
+        },
+        {
+          "query": "online muziek bingo gratis",
+          "impressions": 164,
+          "position": 22.1
         },
         {
           "query": "muziek bingo online gratis",
-          "impressions": 157,
-          "position": 17.2
-        },
-        {
-          "query": "swingo bingo maken",
-          "impressions": 90,
-          "position": 32.7
+          "impressions": 168,
+          "position": 17.6
         },
         {
           "query": "muziek bingo kaarten maken",
-          "impressions": 100,
-          "position": 26.7
-        },
-        {
-          "query": "muziek kaarten maken",
-          "impressions": 219,
-          "position": 11.2
-        },
-        {
-          "query": "muziekbingo zelf maken",
-          "impressions": 81,
-          "position": 35.7
-        },
-        {
-          "query": "muziekquiz met geluidsfragmenten",
-          "impressions": 106,
-          "position": 22.6
-        },
-        {
-          "query": "zelf muziek kaarten maken",
-          "impressions": 218,
-          "position": 10
-        },
-        {
-          "query": "spel met muziekfragmenten",
-          "impressions": 79,
-          "position": 26.8
-        },
-        {
-          "query": "online foute bingo",
-          "impressions": 75,
+          "impressions": 104,
           "position": 27.5
         },
         {
+          "query": "music bingo online",
+          "impressions": 194,
+          "position": 14.7
+        },
+        {
+          "query": "swingo bingo maken",
+          "impressions": 94,
+          "position": 34.2
+        },
+        {
+          "query": "muziekquiz met geluidsfragmenten",
+          "impressions": 124,
+          "position": 22.1
+        },
+        {
+          "query": "muziekbingo zelf maken",
+          "impressions": 91,
+          "position": 39.6
+        },
+        {
           "query": "muziek bingo spel",
-          "impressions": 82,
-          "position": 25
+          "impressions": 93,
+          "position": 28.3
+        },
+        {
+          "query": "muziek kaarten maken",
+          "impressions": 210,
+          "position": 12.2
+        },
+        {
+          "query": "muziek bingo kaarten downloaden",
+          "impressions": 105,
+          "position": 24.3
+        },
+        {
+          "query": "zelf hitster maken",
+          "impressions": 254,
+          "position": 9.3
+        },
+        {
+          "query": "zelf muziek kaarten maken",
+          "impressions": 204,
+          "position": 11.2
+        },
+        {
+          "query": "muziek bingo kaarten maken gratis",
+          "impressions": 103,
+          "position": 21.5
+        },
+        {
+          "query": "hitster zelf maken",
+          "impressions": 227,
+          "position": 9.5
+        },
+        {
+          "query": "muzikale bingo kaarten maken",
+          "impressions": 96,
+          "position": 22.1
+        },
+        {
+          "query": "online foute bingo",
+          "impressions": 76,
+          "position": 27.9
+        },
+        {
+          "query": "muziek bingo zelf maken",
+          "impressions": 70,
+          "position": 39.6
+        },
+        {
+          "query": "spel met muziekfragmenten",
+          "impressions": 77,
+          "position": 26.8
+        },
+        {
+          "query": "muziek kwis spel",
+          "impressions": 96,
+          "position": 21.4
         },
         {
           "query": "zelf muziek bingo kaarten maken",
           "impressions": 74,
           "position": 27.7
-        },
-        {
-          "query": "hoe maak je een muziekbingo",
-          "impressions": 83,
-          "position": 24.4
-        },
-        {
-          "query": "muziek bingo zelf maken",
-          "impressions": 65,
-          "position": 37.4
-        },
-        {
-          "query": "muziekspel qr code",
-          "impressions": 130,
-          "position": 14.9
-        },
-        {
-          "query": "muzikale bingo kaarten maken",
-          "impressions": 91,
-          "position": 20.8
-        },
-        {
-          "query": "muziek kwis spel",
-          "impressions": 84,
-          "position": 21.8
-        },
-        {
-          "query": "zelf hitster maken",
-          "impressions": 195,
-          "position": 9.1
-        },
-        {
-          "query": "kaart met muziek zelf maken",
-          "impressions": 94,
-          "position": 18.7
         }
       ]
     },
@@ -417,148 +417,138 @@
       "terms": [
         {
           "query": "hitster selber erstellen",
-          "impressions": 2063,
-          "position": 4.2
+          "impressions": 2156,
+          "position": 4.3
         },
         {
           "query": "hitster selbst erstellen",
-          "impressions": 1651,
-          "position": 3.8
-        },
-        {
-          "query": "apple music qr code",
-          "impressions": 594,
-          "position": 8.7
-        },
-        {
-          "query": "hitster karten selber machen",
-          "impressions": 1040,
-          "position": 4.2
-        },
-        {
-          "query": "spotify qr code erstellen",
-          "impressions": 285,
-          "position": 10
-        },
-        {
-          "query": "hitster qr codes",
-          "impressions": 469,
-          "position": 5.6
-        },
-        {
-          "query": "wdr 4 top 444",
-          "impressions": 258,
-          "position": 8.8
-        },
-        {
-          "query": "hitster selber machen",
-          "impressions": 403,
-          "position": 4.2
-        },
-        {
-          "query": "gibt es eine möglichkeit, e-cards mit musik zu erstellen?",
-          "impressions": 249,
-          "position": 6.8
-        },
-        {
-          "query": "hitster ohne karten",
-          "impressions": 273,
-          "position": 5.3
-        },
-        {
-          "query": "hitster eigene karten",
-          "impressions": 249,
-          "position": 5.7
-        },
-        {
-          "query": "hitster karten selber erstellen",
-          "impressions": 329,
-          "position": 4.1
-        },
-        {
-          "query": "eigenes hitster erstellen",
-          "impressions": 405,
-          "position": 3.1
-        },
-        {
-          "query": "musik bei fastnachtsumzügen",
-          "impressions": 138,
-          "position": 8.8
-        },
-        {
-          "query": "hitster qr codes download",
-          "impressions": 302,
-          "position": 4
-        },
-        {
-          "query": "hitster online ohne karten",
-          "impressions": 140,
-          "position": 8.4
-        },
-        {
-          "query": "hitster qr code",
-          "impressions": 137,
-          "position": 8.2
-        },
-        {
-          "query": "musik qr code erstellen",
-          "impressions": 146,
-          "position": 7.1
-        },
-        {
-          "query": "hitster karten selbst erstellen",
-          "impressions": 225,
-          "position": 4.2
-        },
-        {
-          "query": "hitster card generator",
-          "impressions": 120,
-          "position": 8
-        },
-        {
-          "query": "hitster karten pdf",
-          "impressions": 86,
-          "position": 10
-        },
-        {
-          "query": "spotify playlist qr code erstellen",
-          "impressions": 71,
-          "position": 12.1
-        },
-        {
-          "query": "hitster spiel selber machen",
-          "impressions": 210,
+          "impressions": 1425,
           "position": 3.9
         },
         {
-          "query": "hitster ohne karten spielen",
-          "impressions": 122,
-          "position": 6.5
+          "query": "apple music qr code",
+          "impressions": 490,
+          "position": 9.2
         },
         {
-          "query": "qr code erstellen spotify",
-          "impressions": 81,
-          "position": 9.5
+          "query": "hitster karten selber machen",
+          "impressions": 1059,
+          "position": 4.2
         },
         {
-          "query": "musik bingo spiel",
-          "impressions": 69,
-          "position": 10.3
+          "query": "hitster qr codes",
+          "impressions": 435,
+          "position": 5.5
+        },
+        {
+          "query": "hitster selber machen",
+          "impressions": 410,
+          "position": 4.3
+        },
+        {
+          "query": "wdr 4 top 444",
+          "impressions": 188,
+          "position": 9.1
+        },
+        {
+          "query": "gibt es eine möglichkeit, e-cards mit musik zu erstellen?",
+          "impressions": 215,
+          "position": 7.6
+        },
+        {
+          "query": "hitster eigene karten",
+          "impressions": 269,
+          "position": 5.5
+        },
+        {
+          "query": "hitster ohne karten",
+          "impressions": 220,
+          "position": 5.9
+        },
+        {
+          "query": "hitster karten selber erstellen",
+          "impressions": 289,
+          "position": 4.2
+        },
+        {
+          "query": "eigenes hitster erstellen",
+          "impressions": 396,
+          "position": 3
+        },
+        {
+          "query": "hitster karten selbst erstellen",
+          "impressions": 201,
+          "position": 5.9
+        },
+        {
+          "query": "spotify qr code erstellen",
+          "impressions": 136,
+          "position": 8.8
+        },
+        {
+          "query": "hitster online ohne karten",
+          "impressions": 119,
+          "position": 9.4
+        },
+        {
+          "query": "hitster qr code",
+          "impressions": 124,
+          "position": 8.2
+        },
+        {
+          "query": "hitster qr codes download",
+          "impressions": 264,
+          "position": 3.8
+        },
+        {
+          "query": "musik qr code erstellen",
+          "impressions": 139,
+          "position": 7.1
+        },
+        {
+          "query": "qr music game",
+          "impressions": 173,
+          "position": 5.1
+        },
+        {
+          "query": "hitster karten pdf",
+          "impressions": 87,
+          "position": 10.1
+        },
+        {
+          "query": "hitster card generator",
+          "impressions": 114,
+          "position": 7.7
+        },
+        {
+          "query": "hitster spiel selber machen",
+          "impressions": 205,
+          "position": 4.1
         },
         {
           "query": "hitster karten vorlage",
-          "impressions": 87,
-          "position": 8
+          "impressions": 98,
+          "position": 7.8
         },
         {
-          "query": "spotify musik scannen",
-          "impressions": 63,
-          "position": 10.4
+          "query": "musik bingo spiel",
+          "impressions": 70,
+          "position": 10.3
+        },
+        {
+          "query": "hitster ohne karten spielen",
+          "impressions": 92,
+          "position": 7.7
+        },
+        {
+          "query": "musik bingo selber machen",
+          "impressions": 152,
+          "position": 4.3
         },
         {
           "query": "qr code für spotify playlist erstellen",
-          "impressions": 57,
-          "position": 10.7
+          "impressions": 56,
+          "position": 10.8
         },
         {
           "query": "hitster eigene karten erstellen",
@@ -566,54 +556,64 @@
           "position": 3.5
         },
         {
-          "query": "musik bingo selber machen",
-          "impressions": 148,
-          "position": 4
-        },
-        {
-          "query": "qr code karten",
-          "impressions": 41,
-          "position": 13.7
-        },
-        {
-          "query": "hitster online spielen ohne karten",
-          "impressions": 78,
-          "position": 7.1
-        },
-        {
           "query": "eigene hitster karten erstellen",
-          "impressions": 187,
-          "position": 2.9
+          "impressions": 192,
+          "position": 3
         },
         {
-          "query": "hitster alternative kostenlos",
-          "impressions": 85,
-          "position": 6.3
+          "query": "spotify musik scannen",
+          "impressions": 57,
+          "position": 10.2
         },
         {
-          "query": "hitster karten download",
-          "impressions": 50,
-          "position": 10.7
-        },
-        {
-          "query": "wdr 4 playlist 444",
-          "impressions": 60,
-          "position": 8.9
-        },
-        {
-          "query": "hitster custom cards",
-          "impressions": 72,
-          "position": 7.4
+          "query": "spotify playlist qr code erstellen",
+          "impressions": 47,
+          "position": 12.3
         },
         {
           "query": "custom hitster cards",
-          "impressions": 78,
+          "impressions": 80,
           "position": 6.7
         },
         {
-          "query": "spiel musik erraten qr-code",
-          "impressions": 52,
-          "position": 9.9
+          "query": "hitster alternative kostenlos",
+          "impressions": 76,
+          "position": 7
+        },
+        {
+          "query": "hitster selbst erstellen kostenlos",
+          "impressions": 102,
+          "position": 5
+        },
+        {
+          "query": "hitster mit deezer spielen",
+          "impressions": 57,
+          "position": 9.1
+        },
+        {
+          "query": "hitster custom cards",
+          "impressions": 68,
+          "position": 7.5
+        },
+        {
+          "query": "hitster karten download",
+          "impressions": 39,
+          "position": 13
+        },
+        {
+          "query": "qr code erstellen spotify",
+          "impressions": 55,
+          "position": 8.9
+        },
+        {
+          "query": "hitster mit deezer",
+          "impressions": 65,
+          "position": 6.7
+        },
+        {
+          "query": "hitster app ohne karten",
+          "impressions": 65,
+          "position": 6.8
         }
       ]
     },
@@ -622,48 +622,53 @@
       "terms": [
         {
           "query": "qr code musique",
-          "impressions": 289,
-          "position": 12
+          "impressions": 316,
+          "position": 10.3
+        },
+        {
+          "query": "qr music game",
+          "impressions": 187,
+          "position": 5
         },
         {
           "query": "jeu musique qr code",
-          "impressions": 142,
-          "position": 6.7
+          "impressions": 132,
+          "position": 6.6
         },
         {
           "query": "bingo musical gratuit",
-          "impressions": 102,
-          "position": 8
+          "impressions": 106,
+          "position": 8.1
         },
         {
           "query": "music match jeu",
-          "impressions": 79,
-          "position": 7.7
+          "impressions": 73,
+          "position": 8.3
+        },
+        {
+          "query": "jeu carte musique qr code",
+          "impressions": 66,
+          "position": 7.9
         },
         {
           "query": "qr code music",
           "impressions": 66,
-          "position": 7.8
+          "position": 7.7
         },
         {
-          "query": "jeu carte musique qr code",
-          "impressions": 57,
-          "position": 8.4
+          "query": "qr music game action",
+          "impressions": 71,
+          "position": 6.1
         },
         {
-          "query": "qr music game",
-          "impressions": 93,
-          "position": 4.9
-        },
-        {
-          "query": "music qr code",
-          "impressions": 49,
-          "position": 6.3
+          "query": "jeu musical pour entreprise",
+          "impressions": 15,
+          "position": 27.4
         },
         {
           "query": "choose your playlist",
-          "impressions": 64,
-          "position": 3.9
+          "impressions": 60,
+          "position": 4
         },
         {
           "query": "créer un quiz musical gratuit",
@@ -671,9 +676,9 @@
           "position": 38
         },
         {
-          "query": "jeu musical pour entreprise",
-          "impressions": 8,
-          "position": 27.4
+          "query": "music qr code",
+          "impressions": 46,
+          "position": 4.8
         },
         {
           "query": "playlist musique du monde",
@@ -687,13 +692,8 @@
         },
         {
           "query": "qr code musique deezer",
-          "impressions": 26,
+          "impressions": 24,
           "position": 8
-        },
-        {
-          "query": "qr music game action",
-          "impressions": 36,
-          "position": 5.3
         },
         {
           "query": "meilleurs chansons de tous les temps",
@@ -701,19 +701,24 @@
           "position": 36.8
         },
         {
-          "query": "jeu de carte musique",
-          "impressions": 17,
-          "position": 9.8
-        },
-        {
           "query": "jeu qr code musique",
-          "impressions": 19,
-          "position": 8.8
+          "impressions": 18,
+          "position": 9
         },
         {
           "query": "kahoot music quiz",
           "impressions": 21,
           "position": 7.1
+        },
+        {
+          "query": "meilleur musique de tous les temps",
+          "impressions": 5,
+          "position": 31.6
+        },
+        {
+          "query": "meilleures chansons de tous les temps",
+          "impressions": 5,
+          "position": 29
         },
         {
           "query": "artiste song quiz",
@@ -727,18 +732,23 @@
         },
         {
           "query": "qr code playlist",
-          "impressions": 21,
+          "impressions": 22,
           "position": 6.5
-        },
-        {
-          "query": "playlist qr code",
-          "impressions": 16,
-          "position": 8.1
         },
         {
           "query": "quiz musical gratuit à imprimer",
           "impressions": 12,
           "position": 10.1
+        },
+        {
+          "query": "jeu de carte musique",
+          "impressions": 14,
+          "position": 8.8
+        },
+        {
+          "query": "playlist qr code",
+          "impressions": 15,
+          "position": 7.5
         },
         {
           "query": "bingo musical c'est quoi",
@@ -756,11 +766,6 @@
           "position": 9.8
         },
         {
-          "query": "jeu carte musique",
-          "impressions": 7,
-          "position": 10.3
-        },
-        {
           "query": "application pour créer un blind test spotify",
           "impressions": 9,
           "position": 6.7
@@ -776,6 +781,21 @@
           "position": 1.6
         },
         {
+          "query": "jeu blind test qr code",
+          "impressions": 5,
+          "position": 10
+        },
+        {
+          "query": "action qr music game",
+          "impressions": 7,
+          "position": 6
+        },
+        {
+          "query": "all taylor swift songs game",
+          "impressions": 5,
+          "position": 8.2
+        },
+        {
           "query": "kahoot guess the song",
           "impressions": 6,
           "position": 6.8
@@ -786,34 +806,19 @@
           "position": 6.3
         },
         {
+          "query": "qr music game grafix",
+          "impressions": 6,
+          "position": 7
+        },
+        {
           "query": "scan qr to add playlist",
           "impressions": 7,
           "position": 5.4
         },
         {
-          "query": "hitster selber erstellen",
-          "impressions": 8,
-          "position": 3.9
-        },
-        {
-          "query": "eigen hitster maken",
+          "query": "service de test de musique",
           "impressions": 5,
-          "position": 5.8
-        },
-        {
-          "query": "hitster selbst erstellen",
-          "impressions": 5,
-          "position": 3.2
-        },
-        {
-          "query": "qr music cards",
-          "impressions": 12,
-          "position": 1
-        },
-        {
-          "query": "qr code song",
-          "impressions": 9,
-          "position": 1.4
+          "position": 8.8
         }
       ]
     },
@@ -831,24 +836,24 @@
           "position": 7
         },
         {
+          "query": "qr music game",
+          "impressions": 73,
+          "position": 4.9
+        },
+        {
           "query": "quiz de musica",
-          "impressions": 34,
-          "position": 11.2
+          "impressions": 29,
+          "position": 11.6
         },
         {
           "query": "kahoot guess the song",
-          "impressions": 34,
-          "position": 8.1
+          "impressions": 31,
+          "position": 8
         },
         {
           "query": "trivia de musica",
-          "impressions": 16,
-          "position": 16.4
-        },
-        {
-          "query": "qr music game",
-          "impressions": 38,
-          "position": 4.9
+          "impressions": 15,
+          "position": 15.7
         },
         {
           "query": "kahoot de musica",
@@ -856,24 +861,14 @@
           "position": 13.2
         },
         {
-          "query": "trivias de musica",
-          "impressions": 10,
-          "position": 17.1
-        },
-        {
           "query": "trivial de musica",
           "impressions": 7,
           "position": 23.4
         },
         {
-          "query": "choose your playlist",
-          "impressions": 52,
-          "position": 2.8
-        },
-        {
-          "query": "quiz de musica online",
-          "impressions": 16,
-          "position": 8.5
+          "query": "trivias de musica",
+          "impressions": 9,
+          "position": 17
         },
         {
           "query": "kahoot de canciones",
@@ -881,24 +876,49 @@
           "position": 9.1
         },
         {
+          "query": "choose your playlist",
+          "impressions": 46,
+          "position": 2.8
+        },
+        {
           "query": "hitster qr codes pdf",
           "impressions": 7,
           "position": 18.6
         },
         {
-          "query": "guess the song kahoot",
-          "impressions": 16,
-          "position": 7.4
+          "query": "juego de mesa de musica con qr",
+          "impressions": 14,
+          "position": 8.4
         },
         {
           "query": "carta con musica",
-          "impressions": 16,
-          "position": 6.7
+          "impressions": 15,
+          "position": 6.9
         },
         {
-          "query": "kahoot music quiz",
-          "impressions": 12,
-          "position": 8.3
+          "query": "deutsche dance charts",
+          "impressions": 9,
+          "position": 10.6
+        },
+        {
+          "query": "guess the song kahoot",
+          "impressions": 14,
+          "position": 7.3
+        },
+        {
+          "query": "quiz de musica online",
+          "impressions": 10,
+          "position": 8.6
+        },
+        {
+          "query": "qr music game action",
+          "impressions": 11,
+          "position": 7.9
+        },
+        {
+          "query": "qr music game grafix",
+          "impressions": 11,
+          "position": 8.2
         },
         {
           "query": "quiz sulla musica",
@@ -908,42 +928,22 @@
         {
           "query": "juego de adivinar canciones con qr",
           "impressions": 10,
-          "position": 7.9
+          "position": 7.6
         },
         {
-          "query": "juego de canciones con qr",
-          "impressions": 11,
-          "position": 6.1
-        },
-        {
-          "query": "juego de mesa de musica con qr",
-          "impressions": 8,
-          "position": 8.6
-        },
-        {
-          "query": "quiz sobre música",
-          "impressions": 8,
-          "position": 8.9
-        },
-        {
-          "query": "eigen hitster maken",
-          "impressions": 10,
-          "position": 5.7
+          "query": "kahoot music quiz",
+          "impressions": 9,
+          "position": 8.7
         },
         {
           "query": "hitster qr code generator",
-          "impressions": 10,
+          "impressions": 11,
           "position": 6.2
         },
         {
-          "query": "qr music game grafix",
-          "impressions": 7,
-          "position": 7.9
-        },
-        {
-          "query": "quiz sobre musica",
-          "impressions": 6,
-          "position": 9.5
+          "query": "eigen hitster maken",
+          "impressions": 11,
+          "position": 5.3
         },
         {
           "query": "cartas con musica",
@@ -956,9 +956,34 @@
           "position": 9.8
         },
         {
+          "query": "hitster ohne karten",
+          "impressions": 7,
+          "position": 6.4
+        },
+        {
+          "query": "juego de canciones con qr",
+          "impressions": 8,
+          "position": 5.6
+        },
+        {
           "query": "kahoot canciones actuales",
           "impressions": 5,
           "position": 9
+        },
+        {
+          "query": "music game with qr code",
+          "impressions": 7,
+          "position": 7.6
+        },
+        {
+          "query": "quiz sobre música",
+          "impressions": 6,
+          "position": 7.8
+        },
+        {
+          "query": "hitster kaartjes maken",
+          "impressions": 5,
+          "position": 7
         },
         {
           "query": "kahoot songs quiz",
@@ -976,9 +1001,9 @@
           "position": 6
         },
         {
-          "query": "qr music game action",
+          "query": "quiz sobre musica",
           "impressions": 5,
-          "position": 7.2
+          "position": 8.6
         },
         {
           "query": "quiz sobre musicas",
@@ -987,23 +1012,8 @@
         },
         {
           "query": "hitster selber erstellen",
-          "impressions": 7,
-          "position": 3.7
-        },
-        {
-          "query": "apple music code generator",
-          "impressions": 5,
-          "position": 6.8
-        },
-        {
-          "query": "guess the song.io",
-          "impressions": 6,
-          "position": 5.8
-        },
-        {
-          "query": "hitster ohne karten",
-          "impressions": 6,
-          "position": 5.5
+          "impressions": 8,
+          "position": 3.6
         },
         {
           "query": "kahoot song quiz",
@@ -1011,14 +1021,9 @@
           "position": 5.4
         },
         {
-          "query": "hitster karten selber machen",
-          "impressions": 6,
-          "position": 3.8
-        },
-        {
-          "query": "hitster selbst erstellen",
+          "query": "music match game",
           "impressions": 5,
-          "position": 4
+          "position": 3.6
         }
       ]
     },
@@ -1031,14 +1036,14 @@
           "position": 7.6
         },
         {
-          "query": "quiz di musica",
-          "impressions": 51,
-          "position": 10
+          "query": "quiz sulla musica",
+          "impressions": 35,
+          "position": 15.5
         },
         {
-          "query": "quiz sulla musica",
-          "impressions": 34,
-          "position": 14.6
+          "query": "quiz di musica",
+          "impressions": 50,
+          "position": 10
         },
         {
           "query": "qr code canzoni",
@@ -1046,9 +1051,29 @@
           "position": 8.7
         },
         {
-          "query": "choose your playlist",
-          "impressions": 99,
+          "query": "qr music game",
+          "impressions": 105,
           "position": 3.8
+        },
+        {
+          "query": "giochi di cantanti",
+          "impressions": 12,
+          "position": 34.1
+        },
+        {
+          "query": "choose your playlist",
+          "impressions": 87,
+          "position": 3.9
+        },
+        {
+          "query": "qr music game action",
+          "impressions": 40,
+          "position": 6.8
+        },
+        {
+          "query": "domande di musica",
+          "impressions": 19,
+          "position": 13.1
         },
         {
           "query": "domande sulla musica",
@@ -1061,24 +1086,14 @@
           "position": 13.2
         },
         {
-          "query": "giochi di cantanti",
-          "impressions": 8,
-          "position": 32.6
-        },
-        {
-          "query": "domande di musica",
-          "impressions": 18,
-          "position": 12.5
-        },
-        {
-          "query": "qr music game",
-          "impressions": 56,
-          "position": 3.3
-        },
-        {
           "query": "qr code musica",
-          "impressions": 23,
-          "position": 8
+          "impressions": 27,
+          "position": 7.3
+        },
+        {
+          "query": "qr music game grafix",
+          "impressions": 26,
+          "position": 6.8
         },
         {
           "query": "quiz musicali gratis",
@@ -1091,6 +1106,11 @@
           "position": 9.9
         },
         {
+          "query": "1000 canzoni più belle di sempre",
+          "impressions": 20,
+          "position": 7.2
+        },
+        {
           "query": "quiz cultura musicale",
           "impressions": 6,
           "position": 23.8
@@ -1101,19 +1121,9 @@
           "position": 7.8
         },
         {
-          "query": "qr music game grafix",
-          "impressions": 19,
-          "position": 6.8
-        },
-        {
           "query": "hitster trademark registered party game cards jumbo",
           "impressions": 11,
           "position": 11.8
-        },
-        {
-          "query": "qr music game action",
-          "impressions": 17,
-          "position": 6.8
         },
         {
           "query": "test di musica",
@@ -1129,6 +1139,11 @@
           "query": "100 domande sulla musica",
           "impressions": 8,
           "position": 11.5
+        },
+        {
+          "query": "apple music code generator",
+          "impressions": 8,
+          "position": 10.8
         },
         {
           "query": "song quiz io",
@@ -1156,14 +1171,19 @@
           "position": 7.4
         },
         {
-          "query": "kahoot guess the song",
-          "impressions": 5,
-          "position": 9
+          "query": "german dance chart",
+          "impressions": 7,
+          "position": 8.4
         },
         {
-          "query": "playlist qr code",
-          "impressions": 7,
-          "position": 7.1
+          "query": "grafix qr music game",
+          "impressions": 9,
+          "position": 6.1
+        },
+        {
+          "query": "music timeline game",
+          "impressions": 8,
+          "position": 5.8
         },
         {
           "query": "qr code canzoni youtube",
@@ -1186,19 +1206,14 @@
           "position": 10.6
         },
         {
-          "query": "qr code song",
-          "impressions": 13,
-          "position": 2.8
-        },
-        {
           "query": "trivial music quiz",
           "impressions": 6,
           "position": 7.3
         },
         {
-          "query": "german dance chart",
-          "impressions": 5,
-          "position": 8
+          "query": "hitster ohne karten",
+          "impressions": 6,
+          "position": 6.2
         },
         {
           "query": "hitster qr codes free",
@@ -1211,19 +1226,9 @@
           "position": 8.8
         },
         {
-          "query": "qr code playlist",
+          "query": "playlist qr code",
           "impressions": 6,
-          "position": 7.3
-        },
-        {
-          "query": "quiz sulla musica con risposte",
-          "impressions": 5,
-          "position": 8.2
-        },
-        {
-          "query": "hitster selber erstellen",
-          "impressions": 7,
-          "position": 4.1
+          "position": 6.8
         }
       ]
     },
@@ -1236,19 +1241,29 @@
           "position": 9
         },
         {
+          "query": "qr code musica",
+          "impressions": 5,
+          "position": 9.6
+        },
+        {
           "query": "songless musicas brasileiras",
           "impressions": 12,
           "position": 2.9
         },
         {
-          "query": "quiz de musicas",
-          "impressions": 6,
-          "position": 4.7
+          "query": "grafix qr music game",
+          "impressions": 5,
+          "position": 8
         },
         {
           "query": "qr music game",
-          "impressions": 7,
-          "position": 2.6
+          "impressions": 11,
+          "position": 2.5
+        },
+        {
+          "query": "quiz de musicas",
+          "impressions": 6,
+          "position": 4.7
         }
       ]
     },
@@ -1261,9 +1276,14 @@
           "position": 8.3
         },
         {
+          "query": "qr music game",
+          "impressions": 176,
+          "position": 3.9
+        },
+        {
           "query": "kod qr do piosenki",
-          "impressions": 117,
-          "position": 6
+          "impressions": 100,
+          "position": 6.4
         },
         {
           "query": "co to za muzyka gra",
@@ -1271,19 +1291,14 @@
           "position": 10.1
         },
         {
-          "query": "qr music game",
-          "impressions": 98,
-          "position": 3.9
+          "query": "qr music game action",
+          "impressions": 51,
+          "position": 8
         },
         {
           "query": "quiz muzyczny online",
           "impressions": 30,
           "position": 11.6
-        },
-        {
-          "query": "song quiz io",
-          "impressions": 40,
-          "position": 7.4
         },
         {
           "query": "quizy o muzyce",
@@ -1296,14 +1311,14 @@
           "position": 7.2
         },
         {
-          "query": "qr music game action",
-          "impressions": 25,
-          "position": 7.6
+          "query": "song quiz io",
+          "impressions": 29,
+          "position": 7.8
         },
         {
           "query": "kahoot guess the song",
-          "impressions": 16,
-          "position": 7.8
+          "impressions": 15,
+          "position": 7.7
         },
         {
           "query": "jak zrobic kod qr do playlisty na spotify",
@@ -1316,19 +1331,19 @@
           "position": 20.2
         },
         {
+          "query": "hitster qr code generator",
+          "impressions": 12,
+          "position": 7.2
+        },
+        {
           "query": "kod qr piosenki",
-          "impressions": 20,
-          "position": 4.7
+          "impressions": 18,
+          "position": 4.9
         },
         {
           "query": "podaruj piosenki za darmo",
           "impressions": 9,
           "position": 10.2
-        },
-        {
-          "query": "hitster qr code generator",
-          "impressions": 11,
-          "position": 7.3
         },
         {
           "query": "personalizowane piosenki za darmo",
@@ -1341,9 +1356,9 @@
           "position": 7.5
         },
         {
-          "query": "guess the song io",
+          "query": "qr music game grafix",
           "impressions": 6,
-          "position": 6.7
+          "position": 7
         },
         {
           "query": "song trivia 2",
@@ -1351,14 +1366,9 @@
           "position": 8.4
         },
         {
-          "query": "music qr code",
+          "query": "guess the song io",
           "impressions": 5,
-          "position": 6
-        },
-        {
-          "query": "qr music game grafix",
-          "impressions": 5,
-          "position": 6.4
+          "position": 6.8
         },
         {
           "query": "choose your playlist",
@@ -1372,7 +1382,7 @@
         },
         {
           "query": "qr music cards",
-          "impressions": 7,
+          "impressions": 9,
           "position": 1
         }
       ]
@@ -1382,8 +1392,8 @@
       "terms": [
         {
           "query": "プレイ リスト 名前 センス",
-          "impressions": 328,
-          "position": 7.1
+          "impressions": 269,
+          "position": 7.7
         },
         {
           "query": "apple music qrコード",
@@ -1392,23 +1402,23 @@
         },
         {
           "query": "音楽イベント 企画 ゲーム 人気",
-          "impressions": 35,
-          "position": 27.6
+          "impressions": 36,
+          "position": 27.2
         },
         {
           "query": "プレイリスト 名前 センス",
-          "impressions": 105,
-          "position": 8.1
+          "impressions": 100,
+          "position": 8.3
+        },
+        {
+          "query": "apple music qrコード 作り方",
+          "impressions": 56,
+          "position": 7.6
         },
         {
           "query": "音楽イベント 企画 ゲーム",
           "impressions": 25,
           "position": 17
-        },
-        {
-          "query": "apple music qrコード 作り方",
-          "impressions": 57,
-          "position": 7.1
         },
         {
           "query": "apple music qrコード 読み取り 方",
@@ -1422,18 +1432,18 @@
         },
         {
           "query": "apple music プレイリスト qrコード",
-          "impressions": 52,
-          "position": 5
-        },
-        {
-          "query": "spotify プレイリスト 名前",
-          "impressions": 23,
-          "position": 9.4
+          "impressions": 39,
+          "position": 5.6
         },
         {
           "query": "spotify プレイリスト qrコード",
-          "impressions": 16,
-          "position": 11
+          "impressions": 15,
+          "position": 11.1
+        },
+        {
+          "query": "spotify プレイリスト 名前",
+          "impressions": 17,
+          "position": 9.9
         },
         {
           "query": "apple music シェア プレイ qrコード",
@@ -1451,14 +1461,24 @@
           "position": 8.2
         },
         {
+          "query": "音楽イベント 企画 ゲーム 注意",
+          "impressions": 9,
+          "position": 10.3
+        },
+        {
+          "query": "音楽イベント 企画 ゲーム 特徴",
+          "impressions": 18,
+          "position": 4.9
+        },
+        {
           "query": "efteling de magische klok \"by the sleepy lagoon\"",
           "impressions": 8,
           "position": 9.4
         },
         {
           "query": "プレイリスト 名前 例",
-          "impressions": 13,
-          "position": 6.1
+          "impressions": 10,
+          "position": 6.5
         },
         {
           "query": "音楽 プレイリスト 名前",
@@ -1469,11 +1489,6 @@
           "query": "apple music qr",
           "impressions": 5,
           "position": 7.4
-        },
-        {
-          "query": "音楽イベント 企画 ゲーム 特徴",
-          "impressions": 7,
-          "position": 4.4
         }
       ]
     },
@@ -1486,53 +1501,43 @@
       "terms": [
         {
           "query": "snabb leverans låt",
-          "impressions": 190,
-          "position": 10.6
-        },
-        {
-          "query": "musik quiz frågor",
-          "impressions": 141,
-          "position": 9.2
-        },
-        {
-          "query": "musikquiz frågor och svar",
-          "impressions": 164,
-          "position": 7.4
+          "impressions": 155,
+          "position": 11.3
         },
         {
           "query": "qr kod spotify",
-          "impressions": 108,
-          "position": 9.1
+          "impressions": 121,
+          "position": 9.2
         },
         {
           "query": "musik quiz spel",
-          "impressions": 100,
+          "impressions": 92,
           "position": 9.3
         },
         {
-          "query": "musik quiz frågor och svar",
-          "impressions": 45,
-          "position": 9.7
+          "query": "musik quiz frågor",
+          "impressions": 68,
+          "position": 9.3
+        },
+        {
+          "query": "musikquiz frågor och svar",
+          "impressions": 61,
+          "position": 9.2
         },
         {
           "query": "music quiz spel",
-          "impressions": 57,
+          "impressions": 55,
           "position": 7.1
         },
         {
+          "query": "gissa låten app",
+          "impressions": 41,
+          "position": 8.1
+        },
+        {
           "query": "skapa qr kod spotify",
-          "impressions": 57,
-          "position": 6.9
-        },
-        {
-          "query": "frågor till musikquiz",
-          "impressions": 31,
-          "position": 11.4
-        },
-        {
-          "query": "personlig låt med snabb leverans",
-          "impressions": 31,
-          "position": 10.7
+          "impressions": 48,
+          "position": 6.7
         },
         {
           "query": "skanna spotify kod",
@@ -1540,39 +1545,24 @@
           "position": 11
         },
         {
-          "query": "gissa låten app",
-          "impressions": 38,
-          "position": 7.9
-        },
-        {
-          "query": "personlig låt skräddarsydd",
-          "impressions": 10,
-          "position": 29.9
+          "query": "musik quiz frågor och svar",
+          "impressions": 27,
+          "position": 11
         },
         {
           "query": "gissa låten spel",
-          "impressions": 30,
-          "position": 9.7
-        },
-        {
-          "query": "musik quiz app",
           "impressions": 28,
-          "position": 8.9
-        },
-        {
-          "query": "quiz frågor musik",
-          "impressions": 23,
-          "position": 9.7
+          "position": 9.9
         },
         {
           "query": "samma spel låt",
-          "impressions": 24,
+          "impressions": 26,
           "position": 9.3
         },
         {
-          "query": "beställ personlig låt",
-          "impressions": 16,
-          "position": 12.4
+          "query": "gissa låten quiz",
+          "impressions": 19,
+          "position": 10.4
         },
         {
           "query": "kahoot music quiz",
@@ -1585,19 +1575,29 @@
           "position": 20.7
         },
         {
-          "query": "gissa låten quiz",
-          "impressions": 19,
-          "position": 9.6
+          "query": "musik quiz app",
+          "impressions": 22,
+          "position": 8.3
         },
         {
-          "query": "musik frågor och svar",
-          "impressions": 19,
-          "position": 9.5
+          "query": "frågor till musikquiz",
+          "impressions": 15,
+          "position": 12
         },
         {
-          "query": "music quiz svenska",
-          "impressions": 7,
-          "position": 24.6
+          "query": "personlig låt med snabb leverans",
+          "impressions": 18,
+          "position": 9.9
+        },
+        {
+          "query": "beställ personlig låt",
+          "impressions": 12,
+          "position": 13.3
+        },
+        {
+          "query": "quiz frågor musik",
+          "impressions": 14,
+          "position": 10.6
         },
         {
           "query": "spotify qr kod",
@@ -1605,19 +1605,14 @@
           "position": 9.9
         },
         {
-          "query": "frågor om musik",
-          "impressions": 11,
-          "position": 11.1
+          "query": "hitster utan kort",
+          "impressions": 21,
+          "position": 5.1
         },
         {
-          "query": "quiz musik frågor",
-          "impressions": 12,
-          "position": 10.2
-        },
-        {
-          "query": "personlig låt beställning online",
-          "impressions": 9,
-          "position": 12.6
+          "query": "musik frågor och svar",
+          "impressions": 10,
+          "position": 11.3
         },
         {
           "query": "kahoot musikquiz svenska",
@@ -1630,23 +1625,8 @@
           "position": 8.9
         },
         {
-          "query": "musikfrågor till quiz",
-          "impressions": 9,
-          "position": 11
-        },
-        {
-          "query": "personlig låt online beställning",
-          "impressions": 9,
-          "position": 11.2
-        },
-        {
-          "query": "song qr code",
-          "impressions": 22,
-          "position": 4.4
-        },
-        {
           "query": "hitster online utan kort",
-          "impressions": 15,
+          "impressions": 16,
           "position": 5.8
         },
         {
@@ -1655,13 +1635,28 @@
           "position": 7.3
         },
         {
-          "query": "hitster utan kort",
-          "impressions": 16,
-          "position": 4.9
+          "query": "song qr code",
+          "impressions": 19,
+          "position": 4.8
+        },
+        {
+          "query": "företagsgåvor med logga",
+          "impressions": 8,
+          "position": 10
+        },
+        {
+          "query": "quiz musik frågor",
+          "impressions": 7,
+          "position": 10.6
         },
         {
           "query": "kahoot musik quiz",
           "impressions": 7,
+          "position": 7.9
+        },
+        {
+          "query": "kort för eurovision",
+          "impressions": 8,
           "position": 7.9
         },
         {
@@ -1670,19 +1665,34 @@
           "position": 8.4
         },
         {
-          "query": "musik quiz kahoot",
-          "impressions": 8,
-          "position": 7.5
+          "query": "musikfrågor till quiz",
+          "impressions": 6,
+          "position": 10.7
         },
         {
-          "query": "original german cast \"les miserables\" les misérables: ich hab geträumt vor langer zeit",
-          "impressions": 7,
-          "position": 8.7
-        },
-        {
-          "query": "qr kod spotify låt",
-          "impressions": 8,
+          "query": "music timeline game",
+          "impressions": 6,
           "position": 7
+        },
+        {
+          "query": "musik quiz kahoot",
+          "impressions": 6,
+          "position": 7
+        },
+        {
+          "query": "music game with qr code",
+          "impressions": 5,
+          "position": 5
+        },
+        {
+          "query": "music match kpop",
+          "impressions": 6,
+          "position": 5.8
+        },
+        {
+          "query": "qr music cards",
+          "impressions": 6,
+          "position": 1
         }
       ]
     },
@@ -1692,42 +1702,47 @@
         {
           "query": "gjett sangen musikk quiz",
           "impressions": 507,
-          "position": 8.7
+          "position": 8.9
         },
         {
           "query": "musikk quiz med svar",
-          "impressions": 427,
+          "impressions": 334,
           "position": 7.7
         },
         {
           "query": "musikk quiz spill",
-          "impressions": 221,
+          "impressions": 223,
           "position": 7.2
         },
         {
           "query": "musikk quiz spørsmål",
-          "impressions": 121,
-          "position": 7.5
-        },
-        {
-          "query": "musikkspill med spotify",
-          "impressions": 72,
-          "position": 10
+          "impressions": 100,
+          "position": 7.2
         },
         {
           "query": "musikk bingo spill",
-          "impressions": 75,
-          "position": 5.7
-        },
-        {
-          "query": "musikk quiz med lyd",
-          "impressions": 73,
-          "position": 5.2
+          "impressions": 87,
+          "position": 6.1
         },
         {
           "query": "hvordan lage musikkbingo",
-          "impressions": 82,
-          "position": 3.4
+          "impressions": 113,
+          "position": 4.4
+        },
+        {
+          "query": "musikkspill med spotify",
+          "impressions": 52,
+          "position": 9.2
+        },
+        {
+          "query": "musikk quiz med lyd",
+          "impressions": 76,
+          "position": 5.2
+        },
+        {
+          "query": "musikk quiz for barn 12 år",
+          "impressions": 14,
+          "position": 15.9
         },
         {
           "query": "quiz om musikk",
@@ -1740,49 +1755,54 @@
           "position": 19
         },
         {
-          "query": "quiz spørsmål musikk",
-          "impressions": 31,
-          "position": 6.8
-        },
-        {
-          "query": "spill musikk quiz",
-          "impressions": 27,
-          "position": 7.7
-        },
-        {
-          "query": "musikk quiz for barn 12 år",
-          "impressions": 13,
-          "position": 15.6
-        },
-        {
           "query": "musikkquiz med lyd",
           "impressions": 46,
           "position": 4.2
         },
         {
+          "query": "quiz spørsmål musikk",
+          "impressions": 28,
+          "position": 6.8
+        },
+        {
+          "query": "spill musikk quiz",
+          "impressions": 23,
+          "position": 7.3
+        },
+        {
           "query": "kahoot music quiz",
-          "impressions": 18,
-          "position": 8.8
-        },
-        {
-          "query": "norsk musikk quiz",
-          "impressions": 5,
-          "position": 22.4
-        },
-        {
-          "query": "musikk bingo gratis",
-          "impressions": 11,
-          "position": 9
-        },
-        {
-          "query": "musikk quiz app",
-          "impressions": 7,
+          "impressions": 17,
           "position": 8.6
         },
         {
-          "query": "spill musikk tidslinje",
+          "query": "norsk musikk quiz",
+          "impressions": 6,
+          "position": 22.5
+        },
+        {
+          "query": "hva er musikkbingo",
           "impressions": 14,
-          "position": 4.6
+          "position": 8.7
+        },
+        {
+          "query": "hva er musikk bingo",
+          "impressions": 14,
+          "position": 7.1
+        },
+        {
+          "query": "hvordan fungerer musikkbingo",
+          "impressions": 15,
+          "position": 6.7
+        },
+        {
+          "query": "musikkbingo brett gratis",
+          "impressions": 10,
+          "position": 10.2
+        },
+        {
+          "query": "musikk bingo gratis",
+          "impressions": 10,
+          "position": 8.8
         },
         {
           "query": "make your own hitster cards",
@@ -1790,14 +1810,19 @@
           "position": 7.7
         },
         {
-          "query": "musikk spill app",
-          "impressions": 7,
-          "position": 5.9
+          "query": "ekstra kort til hitster",
+          "impressions": 5,
+          "position": 7
         },
         {
           "query": "kahoot guess the song",
           "impressions": 5,
           "position": 5.6
+        },
+        {
+          "query": "musikk spill app",
+          "impressions": 5,
+          "position": 6.4
         },
         {
           "query": "qr music cards",
@@ -1810,14 +1835,34 @@
       "locale": "da",
       "terms": [
         {
+          "query": "musik bingo lav selv",
+          "impressions": 64,
+          "position": 7.7
+        },
+        {
           "query": "kahoot music quiz",
-          "impressions": 28,
-          "position": 8.8
+          "impressions": 27,
+          "position": 8.6
+        },
+        {
+          "query": "hvad er musik bingo",
+          "impressions": 15,
+          "position": 9.2
+        },
+        {
+          "query": "musikbingo lav selv",
+          "impressions": 15,
+          "position": 8.9
         },
         {
           "query": "kahoot musik quiz",
-          "impressions": 7,
-          "position": 12.3
+          "impressions": 10,
+          "position": 11.4
+        },
+        {
+          "query": "music quiz kahoot",
+          "impressions": 9,
+          "position": 10.1
         },
         {
           "query": "kahoot guess the song",
@@ -1825,29 +1870,44 @@
           "position": 8.4
         },
         {
-          "query": "music quiz kahoot",
-          "impressions": 8,
-          "position": 10.1
+          "query": "musik bingo lav selv gratis",
+          "impressions": 9,
+          "position": 9.2
         },
         {
           "query": "song quiz io",
-          "impressions": 8,
-          "position": 7.5
+          "impressions": 7,
+          "position": 7.7
         },
         {
-          "query": "guess the song kahoot",
-          "impressions": 6,
-          "position": 7.7
+          "query": "ekstra kort til hitster",
+          "impressions": 9,
+          "position": 5.1
         },
         {
           "query": "hitster qr code generator",
           "impressions": 6,
-          "position": 8
+          "position": 8.5
+        },
+        {
+          "query": "lav din egen musikquiz",
+          "impressions": 6,
+          "position": 8.2
+        },
+        {
+          "query": "make your own hitster cards",
+          "impressions": 8,
+          "position": 5.9
         },
         {
           "query": "music timeline game",
           "impressions": 9,
-          "position": 5.2
+          "position": 5.4
+        },
+        {
+          "query": "guess the song kahoot",
+          "impressions": 5,
+          "position": 7.8
         },
         {
           "query": "hitster qr code",
@@ -1856,13 +1916,8 @@
         },
         {
           "query": "hitster selber erstellen",
-          "impressions": 7,
-          "position": 3.7
-        },
-        {
-          "query": "make your own hitster cards",
-          "impressions": 5,
-          "position": 6.2
+          "impressions": 9,
+          "position": 3.3
         },
         {
           "query": "hitster karten selber machen",
@@ -1875,14 +1930,59 @@
       "locale": "hu",
       "terms": [
         {
+          "query": "egyedi céges ajándékok",
+          "impressions": 10,
+          "position": 45
+        },
+        {
           "query": "hitster qr code generator",
           "impressions": 14,
           "position": 6.6
         },
         {
-          "query": "spotify music scanner",
-          "impressions": 5,
-          "position": 7
+          "query": "hitster qr codes free",
+          "impressions": 6,
+          "position": 5.8
+        },
+        {
+          "query": "music qr code",
+          "impressions": 6,
+          "position": 5.3
+        }
+      ]
+    },
+    "fi": {
+      "locale": "fi",
+      "terms": [
+        {
+          "query": "samma spel låt",
+          "impressions": 10,
+          "position": 7.8
+        }
+      ]
+    },
+    "cs": {
+      "locale": "cs",
+      "terms": [
+        {
+          "query": "qr music game",
+          "impressions": 36,
+          "position": 3.8
+        },
+        {
+          "query": "kahoot guess the song",
+          "impressions": 17,
+          "position": 7.7
+        },
+        {
+          "query": "qr music game action",
+          "impressions": 12,
+          "position": 5
+        },
+        {
+          "query": "qr code song",
+          "impressions": 7,
+          "position": 2.6
         }
       ]
     }

@@ -226,6 +226,14 @@
         "hu": {
           "title": "iPad-verzió",
           "text": "kérlek, tegyétek jobbá az iPad-verziót, például legyen fekvő mód"
+        },
+        "fi": {
+          "title": "iPad-versio",
+          "text": "tehkää iPad-versiosta parempi, esimerkiksi lisäämällä vaakatila"
+        },
+        "cs": {
+          "title": "verze pro iPad",
+          "text": "prosím vylepšete verzi pro iPad, třeba přidejte režim na šířku"
         }
       },
       "translatedFrom": "1f7bd487fef6cc7d25d7152832c191da1a39cc8b",
@@ -309,6 +317,14 @@
         "hu": {
           "title": "Egyszerű folyamat és remek kommunikáció",
           "text": "Szuper egyszerű megrendelni. Gyors szállítás és remek kommunikáció az egész folyamat során. Nagyon ajánlom, ha egy nagyszerű, személyes ajándékot keresel."
+        },
+        "fi": {
+          "title": "Helppo prosessi ja loistava viestintä",
+          "text": "Todella helppo tilata. Nopea toimitus ja loistava viestintä koko prosessin ajan. Suosittelen lämpimästi hienoksi, henkilökohtaiseksi lahjaksi."
+        },
+        "cs": {
+          "title": "Snadný proces a skvělá komunikace",
+          "text": "Objednání bylo opravdu snadné. Rychlé doručení a skvělá komunikace po celou dobu. Vřele doporučuji jako skvělý, osobní dárek."
         }
       },
       "translatedFrom": "34ee2b277fa4497a23073177a16c50b78bf33f46",
@@ -392,6 +408,14 @@
         "hu": {
           "title": "A szolgáltatás abszolút szuper volt",
           "text": "A szolgáltatás abszolút szuper volt. A kártyákat nagyon gyorsan elküldték, és nagyon jól is néztek ki. A zenekártyák elkészítésével kapcsolatos információk is nagyon átláthatóak voltak. Remek szolgáltatás, nagyon ajánlom. Bármikor szívesen rendelek újra."
+        },
+        "fi": {
+          "title": "Palvelu oli aivan loistavaa",
+          "text": "Palvelu oli aivan loistavaa. Kortit lähetettiin todella nopeasti, ja ne näyttivät myös upeilta. Myös musiikkikorttien tekemiseen liittyvät tiedot olivat hyvin selkeitä. Loistavaa palvelua, voin lämpimästi suositella. Tilaisin mielelläni milloin tahansa uudelleen."
+        },
+        "cs": {
+          "title": "Servis byl naprosto skvělý",
+          "text": "Servis byl naprosto skvělý. Karty byly odeslány velmi rychle a také vypadaly skvěle. Také informace ohledně tvorby hudebních karet byly velmi transparentní. Skvělý servis, vřele doporučuji. Kdykoli znovu rád objednám."
         }
       },
       "translatedFrom": "2443ec004d0848226a795f7470ae22478ed55f8f",
@@ -475,6 +499,14 @@
         "hu": {
           "title": "",
           "text": "Az app szuper! hibátlanul és stabilan működik. Nagyon szórakoztató"
+        },
+        "fi": {
+          "title": "",
+          "text": "Sovellus on mahtava! Toimii virheettömästi ja vakaasti. Todella hauska"
+        },
+        "cs": {
+          "title": "",
+          "text": "Aplikace je skvělá! Funguje bezchybně a stabilně. Je to fakt zábava"
         }
       },
       "translatedFrom": "ff77aea2d214227f10ee461ab0e7b334d0a18ef6",
@@ -558,6 +590,14 @@
         "hu": {
           "title": "Egyszerűen működik",
           "text": "Én magam akartam készíteni egy olyan alkalmazást, mint a QRSong, hogy beolvashassam a saját QR-kódos kártyáimat. Ez az alkalmazás pontosan ezt tudja, és nincsenek idegesítő reklámok! Köszönöm!"
+        },
+        "fi": {
+          "title": "Se vain toimii",
+          "text": "Halusin tehdä itse QRSongin kaltaisen sovelluksen omien QR-koodikorttien skannaamiseen. Tämä sovellus tekee juuri sen, eikä siinä ole ärsyttäviä mainoksia! Kiitos!"
+        },
+        "cs": {
+          "title": "Prostě to funguje",
+          "text": "Chtěl jsem si sám vytvořit aplikaci jako QRSong na skenování vlastních kartiček s QR kódy. Tahle aplikace dělá přesně to a nemá žádné otravné reklamy! Díky!"
         }
       },
       "translatedFrom": "cc2a19e7274d1021ab762d8caf871bdf7d533da8",
@@ -641,6 +681,14 @@
         "hu": {
           "title": "Végre egy megbízható szolgáltató, csúcsminőség!",
           "text": "300 kártyát adtunk ajándékba 2 ajándékdobozzal együtt egy 50. születésnapra, és óriási sikere volt! ✨ Sajnos majdnem bedőltünk egy másik kétes szolgáltatónak, és nagyon örültünk, hogy a QR Song!-nál minden zökkenőmentesen ment. 🫶🏻 Az ár-érték arány rendben van, a kártyák minősége pedig szuper… érezni lehet, hogy szívvel-lélekkel készültek."
+        },
+        "fi": {
+          "title": "Vihdoinkin luotettava palveluntarjoaja, huippulaatua!",
+          "text": "Annoimme 50-vuotislahjaksi 300 korttia ja 2 lahjarasiaa, ja se oli ihan huikea! ✨ Valitettavasti olimme vähällä langeta toiseen epäilyttävään palveluntarjoajaan ja olimme todella iloisia, että QR Song!:in kanssa kaikki sujui ongelmitta. 🫶🏻 Hinta-laatusuhde on kohdallaan ja korttien laatu on loistava… huomaa, että ne on tehty suurella sydämellä."
+        },
+        "cs": {
+          "title": "Konečně seriózní dodavatel, špičková kvalita!",
+          "text": "Darovali jsme k 50. narozeninám 300 karet včetně 2 dárkových krabiček a byla to pecka! ✨ Bohužel jsme málem naletěli jinému pochybnému dodavateli a byli jsme moc rádi, že s QR Song! všechno proběhlo bez problémů. 🫶🏻 Poměr ceny a výkonu sedí a kvalita karet je skvělá… je poznat, že do toho dávají srdce."
         }
       },
       "translatedFrom": "5d396cdf923561a6e1a37cb77ce3f2f3c31bb947",
@@ -724,6 +772,14 @@
         "hu": {
           "title": "",
           "text": "Tulajdonképpen egy jó app. De most játék közben hirtelen nem tudtunk továbbmenni. Azóta mindent megtettem és megpróbáltam. De az app ugyan még felismeri a dalt, viszont a beolvasási oldalon marad, és többé nem játszik le egyetlen dalt sem. Ezért most már használhatatlan. Kár"
+        },
+        "fi": {
+          "title": "",
+          "text": "Oikeastaan hyvä sovellus. Mutta nyt emme yhtäkkiä pystyneet enää jatkamaan pelaamista. Sen jälkeen olen tehnyt ja kokeillut kaikkea. Sovellus kyllä tunnistaa kappaleen edelleen, mutta jää skannaussivulle eikä enää toista kappaletta. Siksi se on nyt hyödytön. Harmi."
+        },
+        "cs": {
+          "title": "",
+          "text": "Vlastně dobrá aplikace. Ale teď jsme najednou během hraní nemohli pokračovat. Od té doby jsem udělal a vyzkoušel všechno. Aplikace sice skladbu pořád rozpozná, ale zůstane na stránce skenování a už žádnou skladbu nepřehraje. Takže je teď k ničemu. Škoda."
         }
       },
       "translatedFrom": "a04f474d4e2f6f6d1b8700ef4d448e81810827c1",
@@ -808,6 +864,14 @@
         "hu": {
           "title": "Szuper nyári estékhez a családdal",
           "text": "A családi nyári estéink sokkal szórakoztatóbbak lettek a személyre szabott Hitster játékunknak köszönhetően. Ugyanolyan könnyű játszani. A nyomtatás és a szállítás nagyon gördülékenyen ment. Nagyon elégedett vagyok ezzel az élménnyel;"
+        },
+        "fi": {
+          "title": "Täydellisiin kesäiltoihin perheen kanssa",
+          "text": "Kesäilloistamme perheen kanssa tuli paljon hauskempia oman henkilökohtaisen Hitster-pelimme ansiosta. Yhtä helppo pelata. Painatus ja toimitus sujuivat todella nopeasti. Erittäin tyytyväinen tähän kokemukseen;"
+        },
+        "cs": {
+          "title": "Pro skvělé letní večery s rodinou",
+          "text": "Naše letní večery s rodinou byly díky naší osobní hře Hitster mnohem zábavnější. Stejně snadno se hraje. Tisk a doručení proběhly velmi hladce. S touto zkušeností jsem velmi spokojený;"
         }
       },
       "translatedFrom": "be76a40cefc9e6b1f65e3ebfd3de122364dbb6eb",
@@ -891,6 +955,14 @@
         "hu": {
           "title": "",
           "text": "Alternatívaként ajánlják, hogy lehessen Tidal szolgáltatással játszani a Hitster játékot. Bár az adott szám elérhető volt, nem ismerte fel. Ezért sajnos használhatatlan."
+        },
+        "fi": {
+          "title": "",
+          "text": "Suositellaan vaihtoehdoksi, jotta Hitsteriä voisi pelata Tidalilla. Vaikka kyseinen kappale oli saatavilla, sitä ei tunnistettu. Siksi valitettavasti käyttökelvoton."
+        },
+        "cs": {
+          "title": "",
+          "text": "Doporučuje se jako alternativa, aby bylo možné hrát Hitster s Tidal. Přestože byla příslušná skladba dostupná, nebyla rozpoznána. Proto bohužel nepoužitelné."
         }
       },
       "translatedFrom": "6e22ff23605d9ee4fd7e1da4af26adde0c08e6a2",
@@ -975,6 +1047,14 @@
         "hu": {
           "title": "Tényleg szuper!",
           "text": "Tényleg nagyon jó játék, őszintén szólva csak ajánlani tudom! Még a gyerekek is összeállíthatják a saját listájukat, nyaralásra is jó! Most már szinte minden hétvégén játszom vele, tényleg nagyon jó ötlet!"
+        },
+        "fi": {
+          "title": "Ihan huippu hei!",
+          "text": "Todella kiva peli, ihan oikeasti vahva suositus! Lapsetkin voivat tehdä oman listansa, kivaa myös lomalla! Pelaan sitä nykyään melkein joka viikonloppu, todella kivasti keksitty!"
+        },
+        "cs": {
+          "title": "Fakt super!",
+          "text": "Opravdu moc zábavná hra, fakt upřímně doporučuju! I děti si můžou vytvořit vlastní seznam, super i na dovolenou! Teď to hraju skoro každý víkend, opravdu skvělý nápad!"
         }
       },
       "translatedFrom": "fde68263ac87344bc23b5c089d04168a9d603e76",
@@ -1059,6 +1139,14 @@
         "hu": {
           "title": "",
           "text": "Egyáltalán nem működik hitster kártyákkal és deezerrel. Egyetlen dalt sem talál."
+        },
+        "fi": {
+          "title": "",
+          "text": "Ei toimi lainkaan Hitster-korttien ja Deezerin kanssa. Yhtään kappaletta ei löydy."
+        },
+        "cs": {
+          "title": "",
+          "text": "S kartami Hitster a Deezerem to vůbec nefunguje. Nenajde se žádná skladba."
         }
       },
       "translatedFrom": "35745c9c6a9de20f85937bd961cf193d04046844",
@@ -1143,6 +1231,14 @@
         "hu": {
           "title": "Nagyon ajánlom",
           "text": "Elkészítettem a saját játékomat a saját lejátszási listámmal. Nagyon jól működik, mert saját app is jár hozzá, amellyel be lehet olvasni a kártyákat."
+        },
+        "fi": {
+          "title": "Suosittelen lämpimästi",
+          "text": "Tein oman pelini omalla soittolistallani. Se toimii todella hyvin, koska mukana tulee oma sovellus, jolla kortit voi skannata."
+        },
+        "cs": {
+          "title": "Vřele doporučuji",
+          "text": "Vytvořil jsem si vlastní hru s vlastním playlistem. Funguje opravdu dobře, protože k ní patří vlastní aplikace, pomocí které můžete karty skenovat."
         }
       },
       "translatedFrom": "68e24080ddae788e398ded49a169c92289898c4f",
@@ -1226,6 +1322,14 @@
         "hu": {
           "title": "Tökéletes minőség és gyors!",
           "text": "Tökéletes élmény! Ideális megoldás arra, hogy egyszerűen H!tster-játékká alakítsd a saját playlistedet. 3 napon belül a postaládámban voltak a kártyák, és pontosan úgy néznek ki, ahogy vártam. Mindenképpen ajánlom!\n\nAz egyetlen dolog, ami még hiányzik, az a H!tster-zsetonok és egy méretre készített doboz. Úgy tudom, hogy a QRSong! által jelenleg kínált dobozba csak 200/250 kártya fér. Ha tehát több kártyát szeretnél nyomtatni, több dobozt kapsz."
+        },
+        "fi": {
+          "title": "Täydellinen laatu ja nopea toimitus!",
+          "text": "Täydellinen kokemus! Ihanteellinen ratkaisu oman soittolistan muuttamiseen helposti H!tster-peliksi. Kortit olivat postilaatikossani 3 päivän sisällä, ja ne näyttävät täsmälleen siltä kuin odotin. Ehdottomasti suosittelen!\n\nAinoa, mitä vielä kaipaan, ovat H!tster-pelimerkit ja mittatilaustyönä tehty laatikko. Luulen, että QRSong!in tällä hetkellä tarjoamaan laatikkoon mahtuu vain 200/250 korttia. Jos siis haluat painattaa enemmän kortteja, saat useita laatikoita."
+        },
+        "cs": {
+          "title": "Perfektní kvalita a rychlé dodání!",
+          "text": "Perfektní zkušenost! Ideální řešení, jak snadno převést vlastní playlist na hru H!tster. Kartičky jsem měl do 3 dnů ve schránce a vypadají přesně tak, jak jsem očekával. Rozhodně doporučuji!\n\nJediné, co mi ještě chybí, jsou žetony H!tster a krabice vyrobená na míru. Myslím, že do krabice, kterou QRSong! momentálně nabízí, se vejde jen 200/250 kartiček. Pokud si tedy chcete nechat vytisknout více kartiček, dostanete několik krabiček."
         }
       },
       "translatedFrom": "3a76f12da0b1365b83e21bbb60af389459610af8",
@@ -1310,6 +1414,14 @@
         "hu": {
           "title": "Nagyszerű nászajándék",
           "text": "Nászajándékba adtuk. Nagyon jól fogadták. Az ár-érték arány is nagyon jó. Kár, hogy nem lehet minden kártyát egyedileg megtervezni. Akkor öt csillagot adtam volna. De egyébként minden szuper volt!"
+        },
+        "fi": {
+          "title": "Mahtava häälahja",
+          "text": "Annoimme sen häälahjaksi. Se oli todella mieluinen. Myös hinta-laatusuhde on erittäin hyvä. Harmi, ettei jokaista korttia voi suunnitella yksilöllisesti. Silloin olisin antanut viisi tähteä. Mutta muuten kaikki oli loistavaa!"
+        },
+        "cs": {
+          "title": "Skvělý svatební dárek",
+          "text": "Dali jsme to jako svatební dárek. Mělo to opravdu velký úspěch. Také velmi dobrý poměr ceny a kvality. Škoda, že nejde každou kartu navrhnout individuálně. Pak bych dal pět hvězdiček. Ale jinak bylo všechno super!"
         }
       },
       "translatedFrom": "186fb267b6ff4501c49f25cecb01fb81f0af71a8",
@@ -1393,6 +1505,14 @@
         "hu": {
           "title": "Mindig jó móka, és nagyon…",
           "text": "Mindig jó móka, és nagyon örülünk a saját lejátszási listánknak.👍🏼\nMég egy nappal korábban is kézbesítették, mint ahogy a csomagkövetésben meg volt adva😊👍🏼"
+        },
+        "fi": {
+          "title": "Se on aina hauskaa ja olemme tosi…",
+          "text": "Se on aina hauskaa ja olemme tosi iloisia omasta soittolistastamme.👍🏼\nToimitettiin jopa päivää aikaisemmin kuin lähetysten seurannassa ilmoitettiin😊👍🏼"
+        },
+        "cs": {
+          "title": "Je to vždycky zábava a jsme mega…",
+          "text": "Je to vždycky zábava a jsme mega šťastní z našeho vlastního playlistu.👍🏼\nDokonce to bylo doručeno o den dřív, než bylo uvedeno ve sledování zásilky😊👍🏼"
         }
       },
       "translatedFrom": "0b64d12357f5f76f382e6449916b43dbb21cca89",
@@ -1476,6 +1596,14 @@
         "hu": {
           "title": "Nagyon jó app",
           "text": "Szuper app! Mindenféle zenés QR-kártyát lejátszik, például a Hitster, a Hungarian Song Hunter (Dalvadász) és így tovább... 😊😀"
+        },
+        "fi": {
+          "title": "Todella kiva sovellus",
+          "text": "Loistava sovellus! Se toistaa kaikenlaisia musiikki-QR-kortteja, kuten Hitster, unkarilainen Song Hunter (Dalvadász) ja niin edelleen... 😊😀"
+        },
+        "cs": {
+          "title": "Moc pěkná aplikace",
+          "text": "Skvělá aplikace! Přehrává všechny možné hudební QR karty, jako Hitster, maďarský Song Hunter (Dalvadász) a tak dále... 😊😀"
         }
       },
       "translatedFrom": "88e39f2fcb5453cf0476a22844607124e8993624",
@@ -1559,6 +1687,14 @@
         "hu": {
           "title": "Kiválasztottam egy lejátszási listát a Spotifyon",
           "text": "Kiválasztottam egy lejátszási listát a Spotifyon, és a folyamat egyszerű volt. Néhány héttel később megkaptuk a kártyát, Kanadában vagyunk, és az App Store-ból letöltött alkalmazással játszottunk. Imádjuk!"
+        },
+        "fi": {
+          "title": "Valitsin soittolistan Spotifysta",
+          "text": "Valitsin soittolistan Spotifysta, ja prosessi oli helppo. Saimme kortin muutamaa viikkoa myöhemmin, olemme Kanadassa, ja pelasimme App Storesta ladatulla sovelluksella. Rakastamme sitä!"
+        },
+        "cs": {
+          "title": "Vybral jsem playlist na Spotify",
+          "text": "Vybral jsem playlist na Spotify a celý proces byl snadný. Kartu jsme dostali o několik týdnů později, jsme v Kanadě, a hráli jsme pomocí aplikace z App Storu. Milujeme to!"
         }
       },
       "translatedFrom": "7441925c10a792ad5ea6ecf1015afb3a39439420",
@@ -1642,6 +1778,14 @@
         "hu": {
           "title": "Szuper ajándékötlet",
           "text": "Nagyon jó, hogy most elkészítheted a saját \"hitseredet\".\nAjándéknak mindenképpen ajánlom, mert nagyon személyessé lehet tenni.\nÁtlátható weboldal és pontos szállítás.\nAz egyetlen kis hátrány, hogy nem minden dalt találtam meg a Spotifyon"
+        },
+        "fi": {
+          "title": "Loistava lahjaidea",
+          "text": "On todella kivaa, että nyt voi tehdä oman \"hitserin\".\nEhdottomasti suositeltava lahjaksi, koska siitä voi tehdä hyvin henkilökohtaisen.\nSelkeät verkkosivut ja toimitus ajallaan.\nAinoa pieni miinus on, etten löytänyt jokaista kappaletta Spotifysta"
+        },
+        "cs": {
+          "title": "Skvělý nápad na dárek",
+          "text": "Je moc fajn, že si teď můžete vytvořit vlastní „hitser“.\nRozhodně doporučuji jako dárek, protože ho můžete udělat velmi osobní.\nPřehledný web a doručení včas.\nJediné malé mínus je, že jsem na Spotify nemohl najít každou písničku"
         }
       },
       "translatedFrom": "614001645b8603c2492c4cdb0a3a237979ec8b8d",
@@ -1725,6 +1869,14 @@
         "hu": {
           "title": "Nagyon jó",
           "text": "Nagyon jó! Remek alternatíva, pontosan olyan zenei stílussal, amilyet az ember szeretne!"
+        },
+        "fi": {
+          "title": "Todella hyvä",
+          "text": "Todella hyvä! Mahtava vaihtoehto, jossa on juuri sellaista musiikkia kuin itse haluaa!"
+        },
+        "cs": {
+          "title": "Opravdu dobré",
+          "text": "Opravdu dobré! Je to skvělá alternativa s přesně takovým hudebním stylem, jaký si člověk přeje!"
         }
       },
       "translatedFrom": "87b9a9da0134602e5921420f0267d7f69f7e68f8",
@@ -1808,6 +1960,14 @@
         "hu": {
           "title": "Csúcsminőség, szórakozás az egész családnak",
           "text": "Szupergyorsan megkaptuk a nyomtatható sablonokat tartalmazó fájlt.\nA rendszer felismeri a lejátszási listában szereplő duplikált számokat is, és kihagyja őket.\nKülön olyan számokat is hozzáadtunk, hogy a gyerekeink is tudjanak játszani. Az egész családdal jól szórakozunk"
+        },
+        "fi": {
+          "title": "Huippulaatua, hauskaa koko perheen kanssa",
+          "text": "Saimme tulostettavat mallipohjat sisältävän tiedoston supernopeasti.\nJärjestelmä tunnistaa myös soittolistan kaksoiskappaleet ja jättää ne pois.\nLisäsimme tarkoituksella kappaleita, jotta myös lapsemme voivat pelata mukana. Meillä on hauskaa koko perheen kanssa"
+        },
+        "cs": {
+          "title": "Špičková kvalita, zábava pro celou rodinu",
+          "text": "Soubor se šablonami k vytištění jsme dostali super rychle.\nSystém také rozpozná duplicitní skladby v playlistu a vynechá je.\nSchválně jsme přidali skladby, aby mohly hrát i naše děti. Bavíme se s celou rodinou"
         }
       },
       "translatedFrom": "b46ca2461055300935a290d170c1265db0be4bc7",
@@ -1891,6 +2051,14 @@
         "hu": {
           "title": "Folyamatosan tájékoztattak a rendelés állapotáról…",
           "text": "Folyamatosan tájékoztattak a rendelés állapotáról, a kiszállítás pedig gyorsabb volt a vártnál. A kártyák minősége nagyon jó."
+        },
+        "fi": {
+          "title": "Minut pidettiin ajan tasalla tilauksen tilanteesta…",
+          "text": "Minut pidettiin koko ajan ajan tasalla tilauksen tilanteesta, ja toimitus oli odotettua nopeampi. Korttien laatu on erittäin hyvä."
+        },
+        "cs": {
+          "title": "Byl/a jsem průběžně informován/a o stavu objednávky…",
+          "text": "Po celou dobu jsem byl/a informován/a o stavu objednávky a doručení bylo rychlejší, než jsem očekával/a. Kvalita karet je velmi dobrá."
         }
       },
       "translatedFrom": "79a22fc8d8276cead3c227eb45597403480d592b",
@@ -1974,6 +2142,14 @@
         "hu": {
           "title": "Abszolút ajánlom",
           "text": "Tényleg szuper elégedett vagyok a kártyákkal és az ügyfélszolgálatukkal!! A címeket, előadókat + extra infókat a fizetés után még teljesen személyre lehetett szabni. Még a Spotify lejátszási listán szereplő számokat is lehetett utólag módosítani, amíg az összes szám ugyanannyi maradt, mint amennyiért fizettél.\n\nNálam sajnos valami félrement a módosítások végrehajtásakor, ezért nem megfelelően dolgozták fel őket. De e-mailben hihetetlenül segítőkészen reagáltak, és végül kézzel módosították.\n\nHa szeretnéd elkészíteni a saját Hitsteredet, abszolút ajánlom, hogy innen rendelj. Az ár/minőség/szolgáltatás aránya tényleg szuper!"
+        },
+        "fi": {
+          "title": "Ehdoton suositus",
+          "text": "Olen todella superonnellinen korteista ja heidän asiakaspalvelustaan!! Kappaleiden nimet, artistit + lisätiedot pystyi maksamisen jälkeen vielä muokkaamaan kokonaan itse. Jopa Spotify-soittolistan kappaleita pystyi vielä jälkikäteen vaihtamaan, kunhan kokonaismäärä pysyi samana kuin mistä oli maksanut.\n\nValitettavasti minulla meni jokin pieleen muutosten tallentamisessa, minkä vuoksi ne eivät käsitelleet oikein. Mutta sähköpostitse asiaan reagoitiin todella avuliaasti ja muutokset tehtiin vielä manuaalisesti.\n\nJos haluat tehdä oman Hitsterisi, suosittelen ehdottomasti tilaamaan täältä. Hinta-laatu-palvelusuhde on todellakin huippu!"
+        },
+        "cs": {
+          "title": "Rozhodně doporučuji",
+          "text": "Z karet a jejich zákaznického servisu mám opravdu obrovskou radost!! Názvy skladeb, interprety + další informace bylo možné po zaplacení ještě kompletně upravit podle sebe. Dokonce i skladby v playlistu na Spotify šlo ještě dodatečně změnit, pokud celkový počet zůstal stejný jako ten, za který jste zaplatili.\n\nPři ukládání změn se mi bohužel něco pokazilo, takže se správně nezpracovaly. Ale přes e-mail reagovali neuvěřitelně ochotně a nakonec je ještě upravili ručně.\n\nPokud si chcete vytvořit vlastní Hitster, rozhodně doporučuji objednat tady. Poměr ceny/kvality/služeb je opravdu skvělý!"
         }
       },
       "translatedFrom": "1be3eeb4c73f65d086a8ae2ecee5b06641f4b7c6",
@@ -2057,6 +2233,14 @@
         "hu": {
           "title": "",
           "text": "szuper alternatíva a Hitster helyett, ha az ember a saját játékait szeretné játszani"
+        },
+        "fi": {
+          "title": "",
+          "text": "loistava vaihtoehto Hitsterille, kun haluaa pelata omia pelejään"
+        },
+        "cs": {
+          "title": "",
+          "text": "skvělá alternativa k Hitsteru, když si chcete zahrát vlastní hry"
         }
       },
       "translatedFrom": "143d6b236e8d87b2737b76ebedd03cdd06354b66",
@@ -2140,6 +2324,14 @@
         "hu": {
           "title": "Remek üzleti ötlet",
           "text": "Remek üzleti ötlet. Könnyen használható, és remek a végeredmény. Szórakozás mindenkinek és bármilyen zenével. Egyértelműen ajánlom."
+        },
+        "fi": {
+          "title": "Loistava liikeidea",
+          "text": "Loistava liikeidea. Helppo käyttää ja loistava lopputulos. Hauskaa kaikille ja kaikenlaisen musiikin parissa. Ehdottomasti suosittelen."
+        },
+        "cs": {
+          "title": "Skvělý podnikatelský nápad",
+          "text": "Skvělý podnikatelský nápad. Snadné použití a skvělý výsledek. Zábava pro všechny a pro jakoukoli hudbu. Rozhodně doporučuji."
         }
       },
       "translatedFrom": "7fc9a79994b39cbacd09b8273f7a2789fb4bba57",
@@ -2223,6 +2415,14 @@
         "hu": {
           "title": "",
           "text": "imádom az appot, amikor működik. mostanában folyton fél képernyőre vált. le kell törölnöm, aztán újra kell telepítenem"
+        },
+        "fi": {
+          "title": "",
+          "text": "Tykkään sovelluksesta, kun se toimii. Viime aikoina se jää koko ajan puolelle näytölle. Pitää poistaa sovellus ja asentaa se sitten uudelleen"
+        },
+        "cs": {
+          "title": "",
+          "text": "Miluju tu aplikaci, když funguje. Poslední dobou se pořád zobrazuje jen na půlce obrazovky. Musím ji odinstalovat a pak znovu nainstalovat"
         }
       },
       "translatedFrom": "eca58d4e4d3797f29a273edfe1e77c5c26bd476b",
@@ -2307,6 +2507,14 @@
         "hu": {
           "title": "Nagyszerű kis cég, a szíve is a helyén van",
           "text": "A dalkártyák elkészítése során minden a várakozásoknak megfelelően működött. Rengeteg testreszabási lehetőség van. Nyomtatás előtt a kártyákon lévő összes információt szerkesztheted. Feltettem egy kérdést a kapcsolatfelvételi űrlapon keresztül, és a tulajdonos 10 percen belül válaszolt! Még e-mailben is jelentkezett, miután frissítették az appot, és megoldódott a kérdésem."
+        },
+        "fi": {
+          "title": "Mahtava pieni yritys, jolla on sydän paikallaan",
+          "text": "Kaikki toimi odotetusti biisikortteja luodessa. Mukautusmahdollisuuksia on paljon. Voit muokata kaikkia korttien tietoja ennen niiden tulostamista. Lähetin kysymyksen yhteydenottolomakkeella, ja omistaja vastasi 10 minuutissa! Hän lähetti vielä sähköpostia sovelluksen päivityksen jälkeen, kun kysymykseni oli ratkaistu."
+        },
+        "cs": {
+          "title": "Skvělá malá firma se srdcem na správném místě",
+          "text": "Při vytváření karet s písničkami všechno fungovalo podle očekávání. Je tu spousta možností přizpůsobení. Před vytištěním můžete upravit všechny informace na kartách. Měl jsem dotaz přes kontaktní formulář a majitel odpověděl do 10 minut! Po aktualizaci aplikace a vyřešení mého dotazu se mi dokonce ještě ozval e-mailem."
         }
       },
       "translatedFrom": "76c9ec01ebd565e2f66d51ba4ec80d26d40775a3",
@@ -2390,6 +2598,14 @@
         "hu": {
           "title": "Fantasztikus!",
           "text": "Fantasztikus, hogy személyre szabhatod a saját listádat!"
+        },
+        "fi": {
+          "title": "Mahtavaa!",
+          "text": "Mahtavaa, että voi personoida oman listan!"
+        },
+        "cs": {
+          "title": "Skvělé!",
+          "text": "Skvělé, že si můžete přizpůsobit vlastní seznam!"
         }
       },
       "translatedFrom": "cc9e46a11a4217cb1dcf584b9e365c23e7435674",
@@ -2474,6 +2690,14 @@
         "hu": {
           "title": "Remek dolog.",
           "text": "Az alkalmazás remekül működik, és a saját QR-kódos kártyák készítése is remek dolog. Az ügyfélszolgálat is barátságos és gyors."
+        },
+        "fi": {
+          "title": "Mahtava juttu.",
+          "text": "Sovellus toimii loistavasti, ja myös omien QR-koodikorttien tekeminen on mahtava juttu. Myös asiakaspalvelu on ystävällistä ja nopeaa."
+        },
+        "cs": {
+          "title": "Skvělá věc.",
+          "text": "Aplikace funguje skvěle a vytváření vlastních karet s QR kódy je také skvělá věc. Také podpora je vstřícná a rychlá."
         }
       },
       "translatedFrom": "b301d9bf0c6671e3a1072145f5e4065ff147916d",
@@ -2557,6 +2781,14 @@
         "hu": {
           "title": "",
           "text": "Szuper! Hitster saját kártyákkal!"
+        },
+        "fi": {
+          "title": "",
+          "text": "Mahtavaa! Hitster omilla korteilla!"
+        },
+        "cs": {
+          "title": "",
+          "text": "Paráda! Hitster s vlastními kartami!"
         }
       },
       "translatedFrom": "02505795bb0c38c811ba345f0df1f5d0349b9491",
@@ -2640,6 +2872,14 @@
         "hu": {
           "title": "Szuper",
           "text": "Remek, nagyon gyors!\nMindenképp ajánlom, csúcsminőség"
+        },
+        "fi": {
+          "title": "Super",
+          "text": "Huippua, todella nopeaa!\nEhdottomasti suositeltava, huippulaatua"
+        },
+        "cs": {
+          "title": "Super",
+          "text": "Paráda, opravdu rychlé!\nRozhodně doporučuji, špičková kvalita"
         }
       },
       "translatedFrom": "0ad2768d64ae23a834ae000e1b3a244d092092aa",
@@ -2723,6 +2963,14 @@
         "hu": {
           "title": "Remek szolgáltatás saját dalos játékhoz!",
           "text": "Olyan szolgáltatást kerestem, amellyel saját dalos játékot készíthetek. Itt minden zökkenőmentesen működött, és sok egyéni beállításra van lehetőség. Ráadásul a megrendelés leadása után még lehet módosításokat végezni, és csak akkor elindítani a gyártást, amikor már minden rendben van és ellenőrizve lett. A kiszállítás is elég gyors volt, 10 napon belül már a kezemben volt a játék. A kártyák minősége és működése: nagyon jó. Máskor is szívesen :)"
+        },
+        "fi": {
+          "title": "Loistava palvelu oman biisipelin tekemiseen!",
+          "text": "Etsin palvelua oman biisipelin tekemiseen. Täällä kaikki sujui ongelmitta, ja yksilöllisiä asetuksia voi tehdä paljon. Lisäksi tilauksen tekemisen jälkeen voi vielä tehdä muutoksia ja käynnistää tuotannon vasta, kun kaikki on kunnossa ja tarkistettu. Toimituskin oli melko nopea, sain pelin käsiini 10 päivässä. Korttien laatu ja toimivuus: erittäin hyvät. Mielelläni uudestaan :)"
+        },
+        "cs": {
+          "title": "Skvělá služba pro vytvoření vlastní hudební hry!",
+          "text": "Hledal jsem službu, pomocí které bych si mohl vytvořit vlastní hudební hru. Tady všechno fungovalo bez problémů a lze si nastavit spoustu věcí podle sebe. Navíc je možné po zadání objednávky ještě provést úpravy a výrobu spustit až ve chvíli, kdy všechno sedí a je zkontrolované. Také doručení bylo poměrně rychlé, hru jsem měl v ruce do 10 dnů. Kvalita a funkčnost karet: velmi dobrá. Rád objednám znovu :)"
         }
       },
       "translatedFrom": "ddda9ac2d6a4314820de6b1c00c20128cb51c914",
@@ -2806,6 +3054,14 @@
         "hu": {
           "title": "Szuper",
           "text": "Szuper! Nagyon, nagyon elégedett vagyok. Ennél jobban nem is lehetne csinálni! Minden egyedileg testre szabható, és az app is tökéletesen működik. Nagyon szépen köszönöm"
+        },
+        "fi": {
+          "title": "Mahtava",
+          "text": "Mahtava! Olen todella, todella tyytyväinen. Mitään ei voisi tehdä paremmin! Kaikkea voi muokata yksilöllisesti & sovelluskin toimii täydellisesti. Suuret kiitokset"
+        },
+        "cs": {
+          "title": "Mega",
+          "text": "Mega! Jsem opravdu, opravdu spokojený. Nic by nešlo udělat lépe! Všechno se dá individuálně přizpůsobit & aplikace taky funguje perfektně. Moc děkuju"
         }
       },
       "translatedFrom": "dc3a8aad87ca2b4fafce6886d708d3a4862c673b",
@@ -2889,6 +3145,14 @@
         "hu": {
           "title": "",
           "text": "szuper app"
+        },
+        "fi": {
+          "title": "",
+          "text": "superhyvä sovellus"
+        },
+        "cs": {
+          "title": "",
+          "text": "super aplikace"
         }
       },
       "translatedFrom": "a5db43d298f18821a7d27635bca19c2e6c46c6d8",
@@ -2975,6 +3239,14 @@
         "hu": {
           "title": "",
           "text": "Drága kártyákat csináltattam a QR Songnál, aztán az egész app nem működik... Szóval teljesen használhatatlan."
+        },
+        "fi": {
+          "title": "",
+          "text": "Teetätin kalliit kortit QR Songilla, ja sitten koko sovellus ei toimi ollenkaan... Aivan surkea siis."
+        },
+        "cs": {
+          "title": "",
+          "text": "Necháte si vyrobit drahé kartičky u QR Song a pak celá aplikace vůbec nefunguje... Takže úplně na nic."
         }
       },
       "translatedFrom": "8357c20e5a3ce7aef3e7a91403f7c7995b365f74",
@@ -3062,6 +3334,14 @@
         "hu": {
           "title": "",
           "text": "nem indul el"
+        },
+        "fi": {
+          "title": "",
+          "text": "ei käynnisty"
+        },
+        "cs": {
+          "title": "",
+          "text": "nespustí se"
         }
       },
       "translatedFrom": "273da0fe817c0e82fd5d47719200ae20b910ba86",
@@ -3146,6 +3426,14 @@
         "hu": {
           "title": "Szép munka",
           "text": "Nagyon klassz szolgáltatás! Gyönyörű dizájnok és egyedi tervezési lehetőségek.\nNyomtatva rendeltem meg a kártyákat. Sajnos volt rajtuk egy kis szám, amitől egy kicsit csúnyábbak lettek, és ez vásárlás előtt nem látszott online. Amikor ezt jeleztem az ügyfélszolgálatnak, kedves magyarázatot kaptam, valamint több lehetőséget is arra, hogyan tovább, és mindegyik nagyon korrekt volt.\nNagyszerű ügyfélszolgálat!\nViszont a nyomtatási tételszámot fel kellene tüntetniük a kártyák online előnézetében, hogy az emberek tudják, valójában hogyan fognak kinézni a kártyák, ha nem maguk nyomtatják ki őket."
+        },
+        "fi": {
+          "title": "Hyvää työtä",
+          "text": "Todella siisti palvelu! Kauniita malleja ja yksilöllisiä suunnitteluvaihtoehtoja.\nTilasin kortit painettuina. Valitettavasti korteissa oli pieni numero, joka teki niistä hieman rumempia ja jota ei näytetty verkossa ennen ostamista. Kun otin tämän esille asiakaspalvelun kanssa, sain ystävällisen selityksen ja useita vaihtoehtoja asian ratkaisemiseksi, ja kaikissa tultiin todella hyvin vastaan.\nLoistavaa asiakaspalvelua!\nPainoerän numero pitäisi kuitenkin lisätä korttien verkkokatseluun, jotta ihmiset tietävät, miltä kortit oikeasti näyttävät, jos he eivät tulosta niitä itse."
+        },
+        "cs": {
+          "title": "Skvělá práce",
+          "text": "Opravdu super služba! Krásné designy a možnosti individuálního návrhu.\nObjednal jsem si vytištěné karty. Bohužel na nich bylo malé číslo, kvůli kterému vypadaly o něco hůř a které před nákupem nebylo na webu vidět. Když jsem to zmínil zákaznické podpoře, dostalo se mi milého vysvětlení a několika možností, jak dál postupovat, přičemž všechny byly velmi vstřícné.\nSkvělá zákaznická podpora!\nMěli by ale do online náhledu karet přidat číslo tiskové série, aby lidé věděli, jak budou karty skutečně vypadat, pokud si je netisknou sami."
         }
       },
       "translatedFrom": "ed68ac18138a613a23eab15ec16e652f1756a620",
@@ -3229,6 +3517,14 @@
         "hu": {
           "title": "Szuper! Csak kár, hogy nem minden QR-kódot ismer fel",
           "text": "Nagyszerű app: egyszerű használni, és még jól is néz ki. Csak kár, hogy egyes QR-kódokkal jóval nehezebben boldogul, mint a Kamera app beépített olvasója. A középen képet tartalmazó és sötét hátterű kódokat egyáltalán nem vagy alig ismeri fel."
+        },
+        "fi": {
+          "title": "Loistava! Harmi vain, ettei kaikkia QR-koodeja tunnisteta",
+          "text": "Loistava sovellus: helppokäyttöinen ja vielä hyvännäköinenkin. Harmi vain, että sillä on selvästi enemmän vaikeuksia joidenkin QR-koodien kanssa kuin Kamera-sovelluksen sisäänrakennetulla lukijalla. Koodeja, joissa on kuva keskellä ja tumma tausta, ei tunnisteta lainkaan tai juuri lainkaan."
+        },
+        "cs": {
+          "title": "Super! Jen škoda, že nerozpozná všechny QR kódy",
+          "text": "Skvělá aplikace: snadno se používá a navíc i dobře vypadá. Jen škoda, že má s některými QR kódy výrazně větší potíže než vestavěná čtečka v aplikaci Fotoaparát. Kódy s obrázkem uprostřed a na tmavém pozadí nerozpozná vůbec nebo jen stěží."
         }
       },
       "translatedFrom": "0bdde290270da7ffb476df148e74b82c1735f957",
@@ -3312,6 +3608,14 @@
         "hu": {
           "title": "Majdnem minden szuper volt",
           "text": "Minden szuper volt, az is, hogy te magad tervezheted meg. Az egyetlen probléma nálam az volt, hogy az évszám nem stimmelt, egy dalnál 1981 volt feltüntetve, pedig 2018-ban jelent meg:/ egyébként minden szuper volt"
+        },
+        "fi": {
+          "title": "Melkein kaikki oli mahtavaa",
+          "text": "Kaikki oli mahtavaa, myös se, että sen voi suunnitella itse. Ainoa juttu minulla oli, että vuosiluku ei pitänyt paikkaansa, yhdessä kappaleessa luki 1981, vaikka se julkaistiin vuonna 2018:/ muuten kaikki oli mahtavaa"
+        },
+        "cs": {
+          "title": "Skoro všechno bylo super",
+          "text": "Všechno bylo super, i to, že si to můžete sami navrhnout. Jediné, co u mě nesedělo, byl rok, u jedné písničky bylo uvedeno 1981, i když vyšla v roce 2018:/ jinak všechno super"
         }
       },
       "translatedFrom": "19fb64cd3a60b9ec420f9356ecf6d3054802d05c",
@@ -3395,6 +3699,14 @@
         "hu": {
           "title": "Szuper játék",
           "text": "Szuper játék, amit te magad állíthatsz össze."
+        },
+        "fi": {
+          "title": "Mahtava peli",
+          "text": "Mahtava peli, jonka voi suunnitella itse."
+        },
+        "cs": {
+          "title": "Skvělá hra",
+          "text": "Skvělá hra, kterou si můžete sami vytvořit."
         }
       },
       "translatedFrom": "9c6a372f0371892675b5671919dcc45adbb910c5",
@@ -3478,6 +3790,14 @@
         "hu": {
           "title": "Nagyon jó",
           "text": "Nagyon jó! Hibátlanul működik."
+        },
+        "fi": {
+          "title": "Tosi hyvä",
+          "text": "Tosi hyvä! Toimii moitteettomasti."
+        },
+        "cs": {
+          "title": "Opravdu dobré",
+          "text": "Opravdu dobré! Funguje bez problémů."
         }
       },
       "translatedFrom": "181d9d77dac2dec5ee61b42eb4d031ea34b39b31",
@@ -3561,6 +3881,14 @@
         "hu": {
           "title": "Fantasztikus!",
           "text": "A cégünknek készítettünk egy Hitstert az összes kolléga kedvenc számaiból. Gyorsan elkészült, a játék a QRSong saját appjával remekül működik, és igazi buli. Szuper szolgáltatás!"
+        },
+        "fi": {
+          "title": "Fantastista!",
+          "text": "Teimme yrityksellemme Hitsterin kaikkien kollegoiden suosikkikappaleista. Tekeminen sujui nopeasti, pelaaminen QRSongin omalla sovelluksella toimii kuin rasvattu ja on yhtä juhlaa. Aivan loistavaa palvelua!"
+        },
+        "cs": {
+          "title": "Fantastické!",
+          "text": "Pro naši firmu jsme vytvořili Hitster s oblíbenými písničkami všech kolegů. Vytvoření šlo rychle, hraní s vlastní aplikací QRSong funguje jako po másle a je to paráda. Super služba!"
         }
       },
       "translatedFrom": "c6584ac9db60584fe2adbc0c804ea6cc4b6ea6f7",
@@ -3644,6 +3972,14 @@
         "hu": {
           "title": "",
           "text": "jó app. közvetlenül működik a Spotify-linkkel. így könnyen elkészítheted a saját kártyáidat"
+        },
+        "fi": {
+          "title": "",
+          "text": "Kiva sovellus. Toimii suoraan Spotify-linkillä. Voit siis tehdä helposti omat korttisi."
+        },
+        "cs": {
+          "title": "",
+          "text": "Fajn aplikace. Funguje přímo s odkazem na Spotify. Takže si můžete snadno vytvořit vlastní karty."
         }
       },
       "translatedFrom": "f3d5f92102a1deaf881c5273ca96c19fb3002eec",
@@ -3727,6 +4063,14 @@
         "hu": {
           "title": "Annyira, de annyira boldog vagyok!!",
           "text": "Annyira, de annyira boldog vagyok!!! Pontosan ezt kerestem; annyira örülök, hogy rábukkantam erre az oldalra, miközben teljesen megszenvedtem azzal, hogy minden kártyát kézzel készítsek el. Rendkívül gyorsak (nagyon kedvesen válaszoltak az e-mailemre 24 órán belül, a kártyákat pedig tökéletesen nyomtatva és kivágva kézbesítették a rendelésemtől számított 3 munkanapon belül!), a termék nagyon jó minőségű, és imádom, hogy app is van hozzá, így a QR-kód beolvasása közben nem látszik a dal címe. Nem is lehetnék boldogabb, 1000%-ig ajánlom!"
+        },
+        "fi": {
+          "title": "Niin äärimmäisen tyytyväinen!!",
+          "text": "Niin äärimmäisen tyytyväinen!!! Tämä oli täsmälleen sitä, mitä etsin. Olen niin iloinen, että törmäsin tähän sivustoon, kun tuskailin ihan täysin kaikkien korttien tekemisen kanssa käsin. He ovat äärimmäisen nopeita (he vastasivat sähköpostiini todella ystävällisesti 24 tunnin sisällä, ja kortit toimitettiin täydellisesti painettuina ja leikattuina 3 arkipäivän sisällä tilauksestani!), tuote on todella laadukas ja ihanaa, että tarjolla on myös sovellus, joten kappaleen nimi ei näy QR-koodia skannatessa. En voisi olla tyytyväisempi, suosittelen 1000-prosenttisesti!"
+        },
+        "cs": {
+          "title": "Tak strašně spokojená!!",
+          "text": "Tak strašně spokojená!!! Tohle bylo přesně to, co jsem hledala. Jsem tak ráda, že jsem narazila na tento web, když jsem se úplně trápila s ruční výrobou všech kartiček. Jsou extrémně rychlí (na můj e-mail odpověděli velmi mile do 24 hodin a kartičky byly doručeny dokonale vytištěné a ořezané do 3 pracovních dnů od objednávky!), produkt je velmi kvalitní a moc se mi líbí, že existuje i aplikace, takže při skenování QR nevidíte název písničky. Nemohla bych být spokojenější, doporučuji na 1000 %!"
         }
       },
       "translatedFrom": "43d14fc665f5620f2fa855ebf241e8e424141c1d",
@@ -3810,6 +4154,14 @@
         "hu": {
           "title": "Nagyon jó",
           "text": "Gyors kiszállítás. Minden a várakozásoknak megfelelő. Szép és jó minőségű. Az alkalmazás és a kártyák jól működnek."
+        },
+        "fi": {
+          "title": "Todella hyvä",
+          "text": "Nopea toimitus. Kaikki odotusten mukaisesti. Hieno ja hyvälaatuinen. Sovellus ja kortit toimivat hyvin."
+        },
+        "cs": {
+          "title": "Opravdu dobré",
+          "text": "Rychlé doručení. Všechno podle očekávání. Pěkné a kvalitní. Aplikace i karty fungují dobře."
         }
       },
       "translatedFrom": "bde0e2f99f43bc8fa40280f0b0aefeeaa38301fc",
@@ -3893,6 +4245,14 @@
         "hu": {
           "title": "Jó móka svéd dalokkal",
           "text": "Beszereztem a Mello-top-3 lejátszási listát. Pontosan úgy működik, ahogy szerettem volna.\nKarácsony estére is készítettem egy saját zenei kvízt.\nA saját kártyák megtervezése és elkészítése jól működött. Nagyszerű, hogy az oldal és az app most már svédül is elérhető."
+        },
+        "fi": {
+          "title": "Hauskaa ruotsalaisten kappaleiden parissa",
+          "text": "Hankin Mello-top-3-soittolistan. Toimii juuri niin kuin toivoin.\nTein myös oman musiikkivisan jouluaatoksi.\nOmien korttien suunnittelu ja luominen sujui hyvin. Ihanaa, että sivusto ja sovellus ovat nyt ruotsiksi."
+        },
+        "cs": {
+          "title": "Zábava se švédskými písničkami",
+          "text": "Pořídil jsem si playlist Mello-top-3. Funguje přesně tak, jak jsem si přál.\nVytvořil jsem si také vlastní hudební kvíz na Štědrý večer.\nNavrhování a vytváření vlastních kartiček fungovalo dobře. Je skvělé, že web a aplikace jsou teď ve švédštině."
         }
       },
       "translatedFrom": "9107a900f9e7dd1fe9921e04aca1ddf6a8f9375f",
@@ -3976,6 +4336,14 @@
         "hu": {
           "title": "Hűha",
           "text": "Hűha, micsoda jó és gyors kiszolgálás! Rengeteg munkát levesznek az ember válláról, feltöltheted a saját Spotify-listádat, ők pedig Hitster/QR-kártyákat készítenek belőle. Az évszámokat ellenőrzik, és rengeteg lehetőséged van arra, hogy személyes jelleget adj a dizájnnak. Le a kalappal! Szívből ajánlom!"
+        },
+        "fi": {
+          "title": "Vau",
+          "text": "Vau, miten hyvä ja nopea palvelu! Se säästää niin paljon vaivaa, voit ladata itse tekemäsi Spotify-listan, ja he tekevät siitä Hitster/QR-kortteja. Vuosiluvut tarkistetaan, ja ulkoasuun voi lisätä persoonallisen silauksen monella tavalla. Hattua nostan! Suosittelen ehdottomasti!"
+        },
+        "cs": {
+          "title": "Páni",
+          "text": "Páni, jak skvělá a rychlá služba! Ušetří vám to tolik práce, můžete nahrát vlastní seznam ze Spotify a oni z něj udělají Hitster/QR kartičky. Roky jsou ověřené a máte spoustu možností, jak dát designu osobní nádech. Klobouk dolů! Rozhodně doporučuji!"
         }
       },
       "translatedFrom": "7b7f514b2cc2262e36c232d7010f258dd694c1e7",
@@ -4059,6 +4427,14 @@
         "hu": {
           "title": "1 évvel ezelőtt egy ilyen szolgáltatást kerestem…",
           "text": "1 évvel ezelőtt egy ilyen szolgáltatást kerestem, de nem létezett.\nMost már van, és gyors és megfizethető!\nKöszi!"
+        },
+        "fi": {
+          "title": "Vuosi sitten etsin tällaista palvelua…",
+          "text": "Vuosi sitten etsin tällaista palvelua, eikä sitä ollut olemassa.\nNyt on, ja se on nopea ja edullinen!\nKiitos!"
+        },
+        "cs": {
+          "title": "Před rokem jsem hledal takovou službu…",
+          "text": "Před rokem jsem hledal takovou službu a neexistovala.\nTeď už existuje a je rychlá a cenově dostupná!\nDíky!"
         }
       },
       "translatedFrom": "f2900a35a54790e2b1c64a50308e341535390ba4",
@@ -4142,6 +4518,14 @@
         "hu": {
           "title": "Jó weboldal, pontosan azt teszi, amit kell.",
           "text": "Jó weboldal, pontosan azt teszi, amit kell! Gyorsan válaszoltak a munkatársak a chaten. Miután hibát vétettem a rendelésemben, nagyon korrekten segítettek a javításban."
+        },
+        "fi": {
+          "title": "Hyvä verkkosivusto, tekee juuri sen mitä pitääkin.",
+          "text": "Hyvä verkkosivusto, tekee juuri sen mitä pitääkin! Työntekijät vastasivat nopeasti chatissa. Kun tilauksessani oli virhe, sain todella asiallista apua sen viimeistelyssä."
+        },
+        "cs": {
+          "title": "Příjemný web, dělá přesně to, co má.",
+          "text": "Příjemný web, dělá přesně to, co má! Rychlá komunikace se zaměstnanci přes chat. Po chybě v mé objednávce mi velmi ochotně pomohli s dokončením."
         }
       },
       "translatedFrom": "4247439994502e3a563436f7eb6ec8e5016fc28e",
@@ -4225,6 +4609,14 @@
         "hu": {
           "title": "Szuper élmény",
           "text": "Szuper élmény.\nSzuper kiszolgálás.\nGyors ügyfélszolgálat.\nSzívesen rendelek innen újra."
+        },
+        "fi": {
+          "title": "Loistava kokemus",
+          "text": "Loistava kokemus.\nLoistavaa palvelua.\nNopea asiakaspalvelu.\nTilaan täältä mielelläni uudestaan."
+        },
+        "cs": {
+          "title": "Super zkušenost",
+          "text": "Super zkušenost.\nSuper servis.\nRychlá zákaznická podpora.\nRád si tu objednám znovu."
         }
       },
       "translatedFrom": "3bf14550dd36c06e3a1cc52d06881b38cab6ac75",
@@ -4311,6 +4703,14 @@
         "hu": {
           "title": "",
           "text": "A játékélmény garantált, az egyetlen dolog, ami még igazán nice lenne, ha a dal valahol a közepén kezdődne."
+        },
+        "fi": {
+          "title": "",
+          "text": "Pelissä riittää hauskuutta, ainoa mikä olisi vielä tosi kiva olisi se, että kappale alkaisi jostain keskeltä."
+        },
+        "cs": {
+          "title": "",
+          "text": "Zábava při hře je zaručena, jediné, co by ještě bylo fakt super, by bylo, kdyby písnička začínala někde uprostřed."
         }
       },
       "translatedFrom": "55384ab8df55dc7f67f49f0163bc3f3d63ce8e6c",
@@ -4394,6 +4794,14 @@
         "hu": {
           "title": "Könnyű kártyákat vásárolni",
           "text": "Könnyű kártyákat vásárolni, bármilyen lejátszási listával, amit csak szeretnél. Fotópapírra nyomtatom a kártyákat, és csodálatosan működik. Nagyon jó app, 100%-osan működik még a Spotify ingyenes verziójával is."
+        },
+        "fi": {
+          "title": "Kortteja on helppo ostaa",
+          "text": "Kortteja on helppo ostaa millä tahansa haluamallasi soittolistalla. Tulostan kortit valokuvapaperille, ja se toimii loistavasti. Erittäin hyvä sovellus, toimii 100-prosenttisesti jopa Spotifyn ilmaisversiolla."
+        },
+        "cs": {
+          "title": "Karty se snadno kupují",
+          "text": "Karty se snadno kupují, s jakýmkoli playlistem, který chcete. Tisknu karty na fotografický papír a funguje to skvěle. Velmi příjemná aplikace, funguje na 100 % i s bezplatnou verzí Spotify."
         }
       },
       "translatedFrom": "f0fe60bbda39ff2b73fa852b0790a6a8bf5ef1e1",
@@ -4477,6 +4885,14 @@
         "hu": {
           "title": "",
           "text": "Szuper játék! Óriási élmény elkészíteni a kártyákat, és játszani is velük!"
+        },
+        "fi": {
+          "title": "",
+          "text": "Huippupeli! Korttien tekeminen ja niillä pelaaminen on valtavan hauskaa!"
+        },
+        "cs": {
+          "title": "",
+          "text": "Skvělá hra! Vytváření kartiček a stejně tak i hraní je ohromná zábava!"
         }
       },
       "translatedFrom": "bf2dd87927c8116b5efd2454c65f324ce9a19fb3",
@@ -4560,6 +4976,14 @@
         "hu": {
           "title": "Szuper",
           "text": "Szuper, a saját zenei játékod. És.... itt tényleg együtt gondolkodnak veled. Nagyon sok minden megoldható, akkor is, ha frissíteni szeretnél."
+        },
+        "fi": {
+          "title": "Mahtava",
+          "text": "Mahtava, oma musiikkipelisi. Ja.... täällä todella mietitään kanssasi. Paljon on mahdollista, myös silloin, kun haluat päivittää."
+        },
+        "cs": {
+          "title": "Super",
+          "text": "Super, vaše vlastní hudební hra. A.... tady s vámi opravdu hledají řešení. Je toho možné opravdu hodně, i když chcete něco aktualizovat."
         }
       },
       "translatedFrom": "a60ac710a30b5459889573b7b546431c57600305",
@@ -4643,6 +5067,14 @@
         "hu": {
           "title": "Kellemes zenehallgatást",
           "text": "Körülbelül 1800 kártyát rendeltem. Gyorsan kiszállították, jó minőség. Az app is jól működik. Csak az a kár, hogy a kártyák jobb alsó sarkában van egy tételszám, amit nem lehet eltávolítani."
+        },
+        "fi": {
+          "title": "Mukavia kuunteluhetkiä",
+          "text": "Tilasin noin 1800 korttia. Nopea toimitus, hyvä laatu. Sovelluskin toimii hyvin. Ainoa harmi on, että korttien oikeassa alakulmassa on eränumero, jota ei voi poistaa."
+        },
+        "cs": {
+          "title": "Příjemný poslech",
+          "text": "Objednal jsem asi 1800 kartiček. Rychlé dodání, dobrá kvalita. Aplikace také funguje dobře. Jen je škoda, že vpravo dole je na kartičkách číslo šarže, které nejde odstranit."
         }
       },
       "translatedFrom": "ea1da92d9003555bc902064e5b9d985ef3221192",
@@ -4726,6 +5158,14 @@
         "hu": {
           "title": "",
           "text": "Kiváló alkalmazás, megbízható cég. Rendszeresen adnak hozzá új funkciókat"
+        },
+        "fi": {
+          "title": "",
+          "text": "Erinomainen sovellus, luotettava yritys. Lisäävät säännöllisesti uusia ominaisuuksia"
+        },
+        "cs": {
+          "title": "",
+          "text": "Skvělá aplikace, seriózní firma. Pravidelně přidávají nové funkce"
         }
       },
       "translatedFrom": "b7ab054236cf5163f39e9ee6a3c2d2dc615fef7e",
@@ -4809,6 +5249,14 @@
         "hu": {
           "title": "",
           "text": "Fantasztikus szolgáltatás, és a legújabb frissítéssel az app is hatalmasat lépett előre."
+        },
+        "fi": {
+          "title": "",
+          "text": "Loistavaa palvelua, ja uusimman päivityksen myötä sovelluskin otti valtavan harppauksen eteenpäin."
+        },
+        "cs": {
+          "title": "",
+          "text": "Úžasné služby a s nejnovější aktualizací udělala obrovský krok vpřed i aplikace."
         }
       },
       "translatedFrom": "16934e200e11c05480a5a9de9d177dafb7040e69",
@@ -4892,6 +5340,14 @@
         "hu": {
           "title": "Ajánlanám!",
           "text": "Nagyszerű volt a kommunikáció a céggel! Szuper menő, hogy a kedvenc dalaid is benne vannak a kvízben, és jól működött, ajánlanám. Szuper ajándék a zene szerelmeseinek ☺️"
+        },
+        "fi": {
+          "title": "Suosittelisin sitä!",
+          "text": "Viestintä yrityksen kanssa oli loistavaa! On tosi siistiä, että visassa on omat lempikappaleet, ja kaikki onnistui hyvin, suosittelisin sitä. Se on mahtava lahja musiikin ystäville ☺️"
+        },
+        "cs": {
+          "title": "Doporučil/a bych to!",
+          "text": "Komunikace s firmou byla skvělá! Je fakt super mít v kvízu svoje oblíbené písničky a všechno dobře dopadlo, doporučil/a bych to. Je to skvělý dárek pro milovníky hudby ☺️"
         }
       },
       "translatedFrom": "367807cda9b647d6fad52510c1357a5882e93f21",
@@ -4975,6 +5431,14 @@
         "hu": {
           "title": "Kiemelkedő kiszolgálás!!!",
           "text": "Amellett, hogy ez egyszerűen A VILÁG LEGJOBB AJÁNDÉKA, ennek a cégnek a kiszolgálása kiemelkedő volt. Ez az ajándék valakit nagyon különlegesnek éreztetett. Biztosan fogok még rendelni!!!"
+        },
+        "fi": {
+          "title": "Loistavaa palvelua!!!",
+          "text": "Sen lisäksi, että tämä on yksinkertaisesti PARAS LAHJA IKINÄ, tämän yrityksen palvelu oli loistavaa. Tämä lahja sai jonkun tuntemaan itsensä todella erityiseksi. Tilaan ehdottomasti uudelleen!!!"
+        },
+        "cs": {
+          "title": "Vynikající služby!!!",
+          "text": "Kromě toho, že je to prostě NEJLEPŠÍ DÁREK VŠECH DOB, byly služby této společnosti vynikající. Díky tomuto dárku se někdo cítil opravdu výjimečně. Rozhodně objednám znovu!!!"
         }
       },
       "translatedFrom": "4d3a336774dfe016680cdeba079ef681f95944e2",
@@ -5058,6 +5522,14 @@
         "hu": {
           "title": "Kiváló szolgáltatás",
           "text": "Kiváló szolgáltatás, a lejátszási listáik nagyon jók, és nagyon könnyű kinyomtatni őket és több kártyát szerezni."
+        },
+        "fi": {
+          "title": "Erinomaista palvelua",
+          "text": "Erinomaista palvelua, heidän soittolistansa ovat todella hyviä, ja on tosi helppoa tulostaa ja saada lisää kortteja."
+        },
+        "cs": {
+          "title": "Vynikající služba",
+          "text": "Vynikající služba, jejich playlisty jsou opravdu skvělé a je velmi snadné vytisknout a získat další karty."
         }
       },
       "translatedFrom": "8de98fad6b827597f5346218eea35d9c5b115329",
@@ -5141,6 +5613,14 @@
         "hu": {
           "title": "jó ügyfélszolgálat",
           "text": "Megkaptuk a kártyákat, és kiderült, hogy nem minden működött megfelelően. Felvettem a kapcsolatot a Qr songgal, és megpróbálták kideríteni, hol volt a probléma. Nálunk volt, mert nem volt Spotify Premium előfizetésünk.\nVisszakapjuk a pénzünket, és a kártyákat is megtarthatjuk.\nSzóval nagyon jó tapasztalatunk volt a QR Songgal, amit köszönünk."
+        },
+        "fi": {
+          "title": "hyvä asiakaspalvelu",
+          "text": "Saimme kortit, mutta kävi ilmi, etteivät ne kaikki toimineet oikein. Otin yhteyttä Qr songiin, ja he yrittivät selvittää, missä ongelma oli. Ongelma oli meillä, koska meillä ei ollut Spotify Premiumia.\nSaamme rahamme takaisin ja saamme silti pitää kortit.\nEli meillä oli erittäin hyvä kokemus QR Songista, siitä kiitos."
+        },
+        "cs": {
+          "title": "dobrý zákaznický servis",
+          "text": "Dostali jsme kartičky a ukázalo se, že ne všechny fungují správně. Kontaktoval jsem Qr song a pokusili se zjistit, v čem je problém. Problém byl na naší straně, protože jsme neměli Spotify Premium.\nDostaneme peníze zpět a kartičky si přesto můžeme nechat.\nTakže jsme měli s QR Song velmi dobrou zkušenost, za což děkujeme."
         }
       },
       "translatedFrom": "eb90faa86ba8ae6115c2e39dee4cc9236382988f",
@@ -5224,6 +5704,14 @@
         "hu": {
           "title": "Szuper jó, egyedi játék",
           "text": "Szuper jó, egyedi játék! Tetszik, hogy játszhatok vele a barátaimmal, és akkorára bővíthetem a játékot, amekkorára csak akarom. A qrsong ennek az ötletnek a legjobb megvalósítása, mert létrehozhatod a saját ötletedet. A qrsonggal gyakorlatilag a saját termékedet készíted el."
+        },
+        "fi": {
+          "title": "Supertosi siisti ja ainutlaatuinen peli",
+          "text": "Supertosi siisti ja ainutlaatuinen peli! Tykkään siitä, että voin pelata sitä ystävieni kanssa ja tehdä pelistä niin ison kuin haluan, qrsong on paras versio tästä ideasta, koska voit toteuttaa oman ideasi. qrsongin avulla teet käytännössä oman tuotteesi."
+        },
+        "cs": {
+          "title": "Super skvělá jedinečná hra",
+          "text": "Super skvělá jedinečná hra! Líbí se mi, že ji můžu hrát s přáteli a udělat si hru tak velkou, jak chci, qrsong je nejlepší zpracování tohoto nápadu, protože si můžete vytvořit vlastní nápad. S qrsong si v podstatě vytvoříte vlastní produkt."
         }
       },
       "translatedFrom": "c497171b95a804710099ee36d9d7eb539a24240c",
@@ -5307,6 +5795,14 @@
         "hu": {
           "title": "",
           "text": "Nem működik. Amint beolvasok egy kártyát (csak lefotóztam a weboldalatokon lévő mintakártyát), összeomlik. Nos, nem vettem kártyákat (még szerencse), de ez átverés. Ha valakit érdekel, milyen telefont használok, ha ez továbbra is folyton megtörténik, egy Samsung galaxy A51-et. ÁTVERÉS"
+        },
+        "fi": {
+          "title": "",
+          "text": "Se ei toimi. Heti kun skannaan kortin (otin vain kuvan verkkosivuillanne olevasta esimerkkikortista), sovellus kaatuu. En ostanut yhtään korttia (onneksi), mutta tämä on huijaus. Jos joku miettii, mitä puhelinta käytän, jos tätä tapahtuu edelleen, se on Samsung galaxy A51. HUIJAUS"
+        },
+        "cs": {
+          "title": "",
+          "text": "Nefunguje to. Jakmile naskenuju kartu (jen jsem vyfotil/a ukázkovou kartu, kterou máte na svých webových stránkách), aplikace spadne. Žádné karty jsem si nekoupil/a (ještě že tak), ale tohle je podvod. Pokud by někoho zajímalo, jaký telefon používám, jestli se to pořád děje, je to Samsung galaxy A51. PODVOD"
         }
       },
       "translatedFrom": "6796e979226dd6402b67a65357521b4453d767a6",
@@ -5391,6 +5887,14 @@
         "hu": {
           "title": "",
           "text": "Nem működik az oldalatokon található mintakódokkal, nem olvassa be a QR-kódot."
+        },
+        "fi": {
+          "title": "",
+          "text": "Se ei toimi sivustonne esimerkkikoodien kanssa, se ei skannaa QR-koodia."
+        },
+        "cs": {
+          "title": "",
+          "text": "Nefunguje to s ukázkovými kódy na vašem webu, QR kód se nenačte."
         }
       },
       "translatedFrom": "8eb648ca0240fd2e33e7098ec57b8698face30eb",
@@ -5475,6 +5979,14 @@
         "hu": {
           "title": "Nagyon egyszerű és ideális a saját…",
           "text": "Nagyon egyszerű és ideális a saját, akár 500 kártyás lista elkészítéséhez. Utána még volt néhány kérdésem, és még az ünnepek alatt és vasárnap is azonnal segítettek!\nRemélhetőleg hamarosan arra is lesz lehetőség, hogy pdf helyett magukat a kártyákat is meg lehessen rendelni, így nem kell majd vagdosni."
+        },
+        "fi": {
+          "title": "Todella helppoa ja ihanteellista oman…",
+          "text": "Todella helppoa ja ihanteellista tehdä oma lista, jopa 500 korttia. Minulla oli lopuksi vielä muutama kysymys, ja sain apua heti jopa pyhien aikana ja sunnuntaina!\nToivottavasti pian on myös mahdollista tilata kortit pdf:n sijaan, niin säästyy leikkaamiselta."
+        },
+        "cs": {
+          "title": "Velmi snadné a ideální pro vytvoření vlastního…",
+          "text": "Velmi snadné a ideální pro vytvoření vlastního seznamu až s 500 kartičkami. Nakonec jsem měl ještě pár otázek a dostal jsem okamžitou pomoc dokonce i během svátků a v neděli!\nDoufám, že brzy bude možné objednat si kartičky místo pdf, ušetří to práci se stříháním."
         }
       },
       "translatedFrom": "3fe1195d0e89cc3711758d7c8e8cceafe7bdfb05",
@@ -5558,6 +6070,14 @@
         "hu": {
           "title": "Az Eco-verzió (a lehető legkevesebb tinta használata) nagy előny.",
           "text": "Karácsonyra vettem egy HITster Music Bingót.\nÉs véletlenül felfedeztem a QRsongot, amivel saját QR-kódos kártyákat lehet készíteni Spotify-lejátszási listá(k)ból.\n(Akár saját összeállítású, akár nem).\n.\nA QRsong szolgáltatása szuper, mert amikor e-mailben megkérdeztem, hogy lehetséges-e egy úgynevezett \"Eco-Opció\", azonnal válaszoltak.\n(Szerettem volna a lehető legkevesebb tintát (a LaserPrinteremmel) elpazarolni. Az előlapon a QR-kódnak kellett lennie, és semmi másnak.\n.\nSzóval nagyon elégedett vagyok az Eco-verzióval.\nA \"Kétoldalas\" nyomtatást is választottam. Mivel volt még otthon vastagabb papírom, az így kinyomtatott kártyáim ugyanolyan professzionálisak, mint a HITster Music Bingo dobozában lévők."
+        },
+        "fi": {
+          "title": "Eco-versio (mahdollisimman vähän mustetta) on iso etu.",
+          "text": "Ostin jouluksi HITster Music Bingon.\nJa löysin sattumalta QRsongin, jolla voi tehdä omia QR-koodikortteja Spotify-soittolistasta tai -listoista.\n(Itse koottuja tai ei.)\n.\nQRsongin palvelu on loistavaa, sillä sähköpostitse esittämääni kysymykseen, olisiko myös niin sanottu ”Eco-vaihtoehto” mahdollinen, vastattiin heti.\n(Halusin tuhlata mahdollisimman vähän mustetta LaserPrinterilläni. Etupuolella piti olla QR-koodi eikä mitään muuta.\n.\nOlen siis erittäin tyytyväinen Eco-versioon.\nValitsin myös ”kaksipuolisen” tulostuksen. Koska minulla oli kotona vielä paksumpaa paperia, näin tulostamani kortit ovat yhtä ammattimaisia kuin HITster Music Bingo -laatikossa olevat."
+        },
+        "cs": {
+          "title": "Eco verze (použít co nejméně inkoustu) je velká výhoda.",
+          "text": "K Vánocům jsem koupil/a HITster Music Bingo.\nA náhodou jsem objevil/a QRsong, kde si můžete vytvořit vlastní kartičky s QR kódem z playlistu nebo playlistů na Spotify.\n(Ať už sestavených mnou, nebo ne.)\n.\nServis QRsong je super, protože na můj dotaz e-mailem, zda by byla možná také takzvaná „Eco varianta“, odpověděli okamžitě.\n(Chtěl/a jsem vyplýtvat co nejméně inkoustu přes svou LaserPrinter. Na přední straně měl být QR kód a nic dalšího.\n.\nS Eco verzí jsem tedy velmi spokojený/á.\nTaké jsem zvolil/a „oboustranný“ tisk. Protože jsem doma měl/a ještě silnější papír, jsou moje takto vytištěné kartičky stejně profesionální jako ty z krabice HITster Music Bingo."
         }
       },
       "translatedFrom": "21513b418007e08be225fac4af6d9259757068b7",
@@ -5642,6 +6162,14 @@
         "hu": {
           "title": "A saját, személyes 'Hitster' verziód!",
           "text": "Szuper jó, hogy elkészítheted a Hitster saját változatát. Én magam állítottam össze egy lejátszási listát Spotifyon karácsonyi zenékkel, après-ski zenékkel és a top 2000 első 100 dalával. Ezután elküldtem, és egy PDF-dokumentumban praktikus kártyákat kaptunk, amelyeket mi magunk nyomtattunk ki. Így az ünnepek alatt egy személyre szabottabb változatot játszhattunk! A QRsong alkalmazása is nagyon egyszerűen és praktikusan használható. Mindenkinek csak ajánlani tudom!"
+        },
+        "fi": {
+          "title": "Oma henkilökohtainen versiosi 'Hitsteristä'!",
+          "text": "Tosi kivaa, että Hitsteristä voi tehdä oman version. Teimme itse Spotify-soittolistan, jossa oli joulumusiikkia, après-ski-musiikkia ja top 2000:n top 100. Sitten lähetimme sen, ja saimme PDF-tiedostona kätevät kortit, jotka tulostimme itse. Näin pystyimme pelaamaan joulunpyhinä henkilökohtaisempaa versiota! Myös QRsong-sovellus on todella helppo ja kätevä käyttää. Voin suositella sitä kaikille!"
+        },
+        "cs": {
+          "title": "Vaše vlastní osobní verze hry 'Hitster'!",
+          "text": "Je super, že si můžete vytvořit vlastní verzi hry Hitster. Sami jsme si na Spotify vytvořili playlist s vánoční hudbou, après-ski hudbou a top 100 z top 2000. Pak jsme ho poslali a dostali jsme praktické kartičky v PDF dokumentu, které jsme si sami vytiskli. Takže jsme si během svátků mohli zahrát osobnější variantu! Také aplikace QRsong se ovládá velmi snadno a prakticky. Můžu ji všem doporučit!"
         }
       },
       "translatedFrom": "05a253e1bfc1017a0f10bed36db2a9a0de0b9bf5",
@@ -5726,6 +6254,14 @@
         "hu": {
           "title": "",
           "text": "Jó app, viszont rendszertelen időközönként átugrik egy dalt."
+        },
+        "fi": {
+          "title": "",
+          "text": "Hyvä sovellus, mutta epäsäännöllisin väliajoin se hyppää yhden kappaleen eteenpäin."
+        },
+        "cs": {
+          "title": "",
+          "text": "Dobrá aplikace, ale v nepravidelných intervalech přeskočí o jednu skladbu dál."
         }
       },
       "translatedFrom": "c443b3ef7172ee579043358a5c367564d853cbcd",
@@ -5809,6 +6345,14 @@
         "hu": {
           "title": "",
           "text": "Kiváló szolgáltatás, nagyon gyorsan megérkeztek a dalok, és a játék nagyon szórakoztató, nincs mit mondani.!!!"
+        },
+        "fi": {
+          "title": "",
+          "text": "Erinomainen palvelu, kappaleet toimitettiin todella nopeasti ja peli on todella viihdyttävä, ei mitään valittamista.!!!"
+        },
+        "cs": {
+          "title": "",
+          "text": "Vynikající služby, velmi rychlé dodání písniček a hra je velmi zábavná, není co dodat.!!!"
         }
       },
       "translatedFrom": "abd69cd48c2c304a96801eca6bb0275adee089ab",
