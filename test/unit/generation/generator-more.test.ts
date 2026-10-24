@@ -842,6 +842,40 @@ describe('setupForPrinter()', () => {
   });
 });
 
+describe('sendToPrinterFromAdmin()', () => {
+  it('refuses an order without a Print&Bind line before resetting its status', async () => {
+    h.prisma.paymentHasPlaylist.count.mockResolvedValue(0);
+
+    const res = await gen.sendToPrinterFromAdmin('pay_1', '1.1.1.1', false);
+
+    expect(res).toEqual({ success: false, reason: 'No Print&Bind playlists' });
+    expect(h.prisma.paymentHasPlaylist.count).toHaveBeenCalledWith({
+      where: {
+        payment: { paymentId: 'pay_1' },
+        type: 'physical',
+        printerType: 'printnbind',
+      },
+    });
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.cache.acquireLock).not.toHaveBeenCalled();
+  });
+
+  it('resets the status, then sends without the final check', async () => {
+    h.prisma.paymentHasPlaylist.count.mockResolvedValue(1);
+    arrangePrinter();
+
+    const res = await gen.sendToPrinterFromAdmin('pay_1', '1.1.1.1', false);
+
+    expect(res.success).toBe(true);
+    expect(h.prisma.payment.update.mock.calls[0][0]).toEqual({
+      where: { paymentId: 'pay_1' },
+      data: { printApiStatus: 'Submitted', printApiTrackingLink: null },
+    });
+    expect(h.finalCheck.runCheck).not.toHaveBeenCalled();
+    expect(h.order.createOrder).toHaveBeenCalled();
+  });
+});
+
 describe('generateBoxInsertPdf()', () => {
   it('renders the box URL, adds bleed and stores the filename', async () => {
     const result = await gen.generateBoxInsertPdf(31, 'pay_1');

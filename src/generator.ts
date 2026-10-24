@@ -38,6 +38,13 @@ import { computePrintFingerprint } from './printFingerprint';
 import { deckDesigns, designIndexForCard, getExtraDesigns } from './cardDesigns';
 import { isBusinessDeck } from './trackMix';
 
+// The only lines sendToPrinter sends to Print&Bind. Schneiders, Tromp,
+// reseller and MusicMatch decks are printed elsewhere.
+const PRINTNBIND_PHYSICAL_LINE = {
+  type: 'physical',
+  printerType: PRINTER_TYPE.PRINTNBIND,
+};
+
 class Generator {
   private static instance: Generator;
   private logger = new Logger();
@@ -143,10 +150,7 @@ class Generator {
             none: {
               printerType: PRINTER_TYPE.RESELLER,
             },
-            some: {
-              type: 'physical',
-              printerType: PRINTER_TYPE.PRINTNBIND,
-            },
+            some: PRINTNBIND_PHYSICAL_LINE,
           },
           OR: [
             {
@@ -1713,6 +1717,28 @@ class Generator {
       isValid: validationErrors.length === 0,
       errors: validationErrors,
     };
+  }
+
+  /**
+   * The dashboard's "Send to printer": reset the print status, then send,
+   * skipping the final check. An order with nothing for Print&Bind (Schneiders,
+   * Tromp) is refused first: sendToPrinter refuses it too, but only after
+   * setupForPrinter has cleared its status and tracking link.
+   */
+  public async sendToPrinterFromAdmin(
+    paymentId: string,
+    clientIp: string,
+    inlayOnly: boolean
+  ): Promise<{ success: boolean; reason?: string }> {
+    const printnbindLines = await this.prisma.paymentHasPlaylist.count({
+      where: { payment: { paymentId }, ...PRINTNBIND_PHYSICAL_LINE },
+    });
+    if (printnbindLines === 0) {
+      return { success: false, reason: 'No Print&Bind playlists' };
+    }
+
+    await this.setupForPrinter(paymentId);
+    return this.sendToPrinter(paymentId, clientIp, true, true, inlayOnly);
   }
 
   public async setupForPrinter(paymentId: string): Promise<void> {

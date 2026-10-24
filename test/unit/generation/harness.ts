@@ -28,6 +28,7 @@ export const h = {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
+      count: vi.fn(),
     },
     paymentHasPlaylistItem: {
       findMany: vi.fn(),

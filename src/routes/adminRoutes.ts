@@ -91,14 +91,9 @@ export default async function adminRoutes(
     '/create_order',
     getAuthHandler(['admin']),
     async (request: any, reply) => {
-      // Setup the payment for printer submission (reset status and clear tracking)
-      await generator.setupForPrinter(request.body.paymentId);
-
-      const result = await generator.sendToPrinter(
+      const result = await generator.sendToPrinterFromAdmin(
         request.body.paymentId,
         request.clientIp,
-        true,
-        true, // Admin manual send — skip the GPT content checks
         request.body.inlayOnly === true
       );
 

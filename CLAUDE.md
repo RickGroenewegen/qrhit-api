@@ -1495,6 +1495,11 @@ only counts them. Until 2026-10-07 nothing looked at the printer type:
 Schneiders orders 8194 and 8237 went to Print&Bind once their 36-hour timer
 ran out, and toolkit orders were created on printer hold to keep them out.
 That hold is no longer set.
+- The dashboard's "Send to printer" (`POST /create_order`,
+  `Generator.sendToPrinterFromAdmin`) refuses such a payment before
+  `setupForPrinter`, which would otherwise set its status to `Submitted` and
+  clear its tracking link first (2026-10-24; the menu offers the action on
+  every physical order).
 - Finishing the year check (`POST /yearcheck`) still finalizes the order with
   the "finalized" mail to the order's address, as for any order; toolkit
   orders are booked on Rick's account.
