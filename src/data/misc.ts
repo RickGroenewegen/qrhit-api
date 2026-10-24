@@ -677,6 +677,9 @@ export async function createSiteMap(
     '/hitster-alternative',
     '/make-hitster-cards',
     '/compare',
+    '/qrsong-vs-hitify',
+    '/qrsong-vs-bopster',
+    '/qrsong-vs-hitmaestro',
     '/hitster-without-spotify',
     '/qr-code-for-a-song'
   ];
