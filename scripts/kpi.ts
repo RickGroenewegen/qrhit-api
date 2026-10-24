@@ -11,7 +11,8 @@
  * and the same rules as the 28-day object: revenue ex-VAT, App Designer
  * included in revenue but not in purchases. Days are UTC dates.
  *
- * Reads paid, non-test orders straight from the payments table, plus the App
+ * Reads paid, non-test orders straight from the payments table (without the
+ * toolkit's own business orders, see NOT_TOOLKIT), plus the App
  * Designer ledger (app_design_purchases: an account upgrade paid through its
  * own Mollie payment, with no payments row). App Designer counts towards
  * revenue and profit (it costs nothing to deliver), not towards purchases or
@@ -34,6 +35,10 @@ import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
 
 const WINDOW_DAYS = 28;
+
+// Our own business orders made by the qrsong toolkit (paymentId toolkit_…):
+// paid at EUR 0 here and invoiced outside Mollie, so they are not web sales.
+const NOT_TOOLKIT = `(paymentId IS NULL OR paymentId NOT LIKE 'toolkit\\_%')`;
 
 interface Row {
   orders: number;
@@ -81,6 +86,7 @@ async function daily(days: number): Promise<void> {
     SELECT DATE(createdAt) AS day, COUNT(*) AS orders, COALESCE(SUM(totalPriceWithoutTax),0) AS revenue_exvat
     FROM payments
     WHERE status = 'paid'
+      AND ${NOT_TOOLKIT}
       AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days - 1} DAY)
     GROUP BY DATE(createdAt)
   `);
@@ -130,6 +136,7 @@ async function main(): Promise<void> {
       COALESCE(SUM(discount),0)             AS discount
     FROM payments
     WHERE status = 'paid'
+      AND ${NOT_TOOLKIT}
       AND createdAt >= DATE_SUB(NOW(), INTERVAL ${WINDOW_DAYS} DAY)
   `);
 
