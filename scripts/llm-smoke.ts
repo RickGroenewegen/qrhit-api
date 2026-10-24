@@ -7,7 +7,8 @@
  *   npx tsx scripts/llm-smoke.ts --compare       # release years: primary vs fallback route
  *   npx tsx scripts/llm-smoke.ts --compare --routes=anthropic/claude-opus-5-5:low,openai/gpt-5.6-terra:low
  *   npx tsx scripts/llm-smoke.ts --sources --routes=...   # the same, with production-style source data
- *   npx tsx scripts/llm-smoke.ts --web           # the year lookup as production runs it: one real web search (~$0.20)
+ *   npx tsx scripts/llm-smoke.ts --live          # the year lookup as production runs it: real Serper + Wikipedia (~$0.02)
+ *   npx tsx scripts/llm-smoke.ts --web           # the same with one Anthropic web search instead (2026-10-12 to 10-24, ~$0.20)
  *
  * Each task runs a real call site where one exists without a database
  * (AiTasks methods), otherwise a small request with the same kind of schema.
@@ -26,6 +27,7 @@ import { LLM_TASKS, taskConfig } from '../src/llm/tasks';
 import { getProvider } from '../src/llm/providers';
 import { priceCall } from '../src/llm/models';
 import { yearLookupPrompt } from '../src/music';
+import { gatherYearEvidence } from '../src/yearEvidence';
 
 type Check = () => Promise<{ sample: unknown; result?: LlmResult<unknown> }>;
 
@@ -437,11 +439,11 @@ async function compareSources(routeArg?: string): Promise<void> {
 }
 
 /**
- * The release-year cases the way production asks them since 2026-10-12: the
- * case's MusicBrainz and Discogs years, music.ts's prompt and one real web
- * search instead of the canned Google and Wikipedia data, through the layer
- * (fallback and ledger included). The truth years were written for that
- * canned data, so read a miss before believing it.
+ * The release-year cases the way production asked them from 2026-10-12 to
+ * 2026-10-24: the case's MusicBrainz and Discogs years, music.ts's prompt and
+ * one real Anthropic web search instead of the canned Google and Wikipedia
+ * data, through the layer (fallback and ledger included). The truth years were
+ * written for that canned data, so read a miss before believing it.
  */
 async function compareWeb(): Promise<void> {
   let right = 0;
@@ -450,7 +452,7 @@ async function compareWeb(): Promise<void> {
   let searched = 0;
   for (const c of SOURCE_CASES) {
     const t0 = Date.now();
-    const answer = await gpt.ask(yearLookupPrompt(c.artist, c.title, c.mb, c.discogs, true), {
+    const answer = await gpt.ask(yearLookupPrompt(c.artist, c.title, c.mb, c.discogs, null, true), {
       webSearches: 1,
     });
     ms += Date.now() - t0;
@@ -470,6 +472,40 @@ async function compareWeb(): Promise<void> {
   console.log(
     color.white.bold('yearLookup with web search: ') +
       `${right}/${SOURCE_CASES.length} right, ${searched} searched, $${cost.toFixed(4)} ($${(cost / SOURCE_CASES.length).toFixed(4)} per track), ${(ms / SOURCE_CASES.length / 1000).toFixed(1)}s per track`
+  );
+}
+
+/**
+ * The release-year cases the way production asks them since 2026-10-24: the
+ * case's MusicBrainz and Discogs years plus a real Serper search and the real
+ * Wikipedia and Wikidata pages (src/yearEvidence.ts) in music.ts's prompt,
+ * through the layer. Same caveat as --web about the truth years.
+ */
+async function compareLive(): Promise<void> {
+  let right = 0;
+  let cost = 0;
+  let ms = 0;
+  let withWiki = 0;
+  for (const c of SOURCE_CASES) {
+    const t0 = Date.now();
+    const evidence = await gatherYearEvidence(c.artist, c.title);
+    const answer = await gpt.ask(yearLookupPrompt(c.artist, c.title, c.mb, c.discogs, evidence));
+    ms += Date.now() - t0;
+    const year = answer?.year ?? 0;
+    const ok = Array.isArray(c.year) ? year >= c.year[0] && year <= c.year[1] : year === c.year;
+    right += ok ? 1 : 0;
+    cost += answer?.costUsd ?? 0;
+    if (evidence.wikipedia.length) withWiki++;
+    const truth = Array.isArray(c.year) ? `${c.year[0]}-${c.year[1]}` : String(c.year);
+    const found = `google ${evidence.google.length}${evidence.knowledgeGraph ? '+panel' : ''}, wiki ${evidence.wikipedia.map((p) => p.lang).join(',') || '-'}`;
+    console.log(
+      `${truth.padEnd(10)} ${`${c.artist} - ${c.title}`.slice(0, 46).padEnd(47)} ${`${year}${ok ? '' : ' ✗'}`.padEnd(7)} $${(answer?.costUsd ?? 0).toFixed(4)}  ${found}`
+    );
+    if (!ok) console.log(color.yellow(`           ${String(answer?.reasoning ?? '').slice(0, 300)}`));
+  }
+  console.log(
+    color.white.bold('yearLookup with Serper + Wikipedia: ') +
+      `${right}/${SOURCE_CASES.length} right, ${withWiki} with a Wikipedia page, $${cost.toFixed(4)} model ($${(cost / SOURCE_CASES.length).toFixed(5)} per track) + ${process.env['SERPER_API_KEY'] ? SOURCE_CASES.length : 0} Serper searches, ${(ms / SOURCE_CASES.length / 1000).toFixed(1)}s per track`
   );
 }
 
@@ -540,6 +576,11 @@ async function compareYears(routeArg?: string): Promise<void> {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+  if (args.includes('--live')) {
+    await compareLive();
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // the last ledger writes
+    return;
+  }
   if (args.includes('--web')) {
     await compareWeb();
     await new Promise((resolve) => setTimeout(resolve, 2000)); // the last ledger writes

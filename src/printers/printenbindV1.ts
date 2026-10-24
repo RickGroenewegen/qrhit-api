@@ -20,6 +20,7 @@ import { OrderTypePrice } from '../interfaces/OrderTypePrice';
 import Discount from '../discount';
 import Shipping from '../shipping';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
+import { paymentTaxRate } from './paymentTaxRate';
 
 interface PriceResult {
   totalPrice: number;
@@ -2070,10 +2071,10 @@ class PrintEnBindV1 {
     newStatus: string = 'Submitted'
   ): Promise<void> {
     const authToken = await this.getAuthToken();
-    const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
+    const taxRate = await paymentTaxRate(payment, this.data);
 
     const totalPriceWithoutTax = parseFloat(
-      (payment.totalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+      (payment.totalPrice / (1 + taxRate / 100)).toFixed(2)
     );
 
     let printApiPrice = 0;

@@ -23,6 +23,7 @@ import Shipping from '../shipping';
 import { postnlTrackingUrl } from '../postnl';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { createHash } from 'crypto';
+import { paymentTaxRate } from './paymentTaxRate';
 
 interface PriceResult {
   totalPrice: number;
@@ -1749,10 +1750,10 @@ class PrintEnBindV2 {
     payment: any,
     newStatus: string = 'Submitted'
   ): Promise<void> {
-    const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
+    const taxRate = await paymentTaxRate(payment, this.data);
 
     const totalPriceWithoutTax = parseFloat(
-      (payment.totalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+      (payment.totalPrice / (1 + taxRate / 100)).toFixed(2)
     );
 
     let printApiPrice = 0;

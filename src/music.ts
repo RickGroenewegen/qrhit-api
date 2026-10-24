@@ -4,19 +4,24 @@ import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
 import { AiTasks } from './aiTasks';
 import { formatCostUsd } from './llm';
-import type { LlmWebSource } from './llm';
 import Cache from './cache';
+import { evidenceForReview, gatherYearEvidence } from './yearEvidence';
+import type { YearEvidence } from './yearEvidence';
 
-/** Web searches the year lookup may run for a track whose sources disagree. */
-const YEAR_LOOKUP_WEB_SEARCHES = 1;
-
-/** The year lookup's question (task yearLookup); scripts/llm-smoke.ts --web asks it too. */
+/**
+ * The year lookup's question (task yearLookup); scripts/llm-smoke.ts asks it
+ * too. `evidence` is what Serper's Google search and Wikipedia gave
+ * (src/yearEvidence.ts); null when MusicBrainz, Discogs and Spotify agree and
+ * nothing was looked up. `webSearch` is the Anthropic web search the lookup
+ * used from 2026-10-12 to 2026-10-24, kept for llm-smoke.ts --web.
+ */
 export function yearLookupPrompt(
   artist: string,
   title: string,
   mbYear: number,
   discogsYear: number,
-  webSearch: boolean
+  evidence: YearEvidence | null,
+  webSearch = false
 ): string {
   const search = webSearch
     ? 'Search the web once to check the year. Wikipedia and the Discogs page of the original single or album are the best sources. Streaming services often show the year of a remaster, reissue or compilation instead of the original release.\n\n'
@@ -26,10 +31,43 @@ export function yearLookupPrompt(
     'My goal is to find the release year of this song: the year this recording was first released, on a single, an album or a soundtrack, not a later single, remaster, reissue or compilation. Use your own knowledge and the information below.\n\n' +
     `MusicBrainz thinks the release year is ${mbYear}\n` +
     `Discogs thinks the release year is ${discogsYear}\n\n` +
+    (evidence ? evidenceText(evidence) : '') +
     search +
     'When evaluating a classical song, we are looking for the year of original composition, not the year of release.\n\n' +
     'What is the release year of this song? Also explain on which information you based your answer.'
   );
+}
+
+/** The Google results, Google's panel and the Wikipedia pages, as prompt text. */
+function evidenceText(evidence: YearEvidence): string {
+  let text = '';
+  if (evidence.google.length) {
+    text +=
+      'What a Google search for the song returned:\n' +
+      evidence.google
+        .map((r) => `- ${r.title}${r.snippet ? `: ${r.snippet}` : ''} (${r.url})`)
+        .join('\n') +
+      '\n\n';
+  }
+  if (evidence.knowledgeGraph) {
+    text +=
+      "Google's information panel:\n" +
+      Object.entries(evidence.knowledgeGraph)
+        .map(([key, value]) => `- ${key}: ${value}`)
+        .join('\n') +
+      '\n\n';
+  }
+  for (const page of evidence.wikipedia) {
+    text += `Wikipedia (${page.lang}), "${page.title}":\n${page.extract}\n`;
+    if (page.published.length) text += `Wikidata publication date: ${page.published.join(', ')}\n`;
+    if (page.composed.length) text += `Wikidata inception (composed): ${page.composed.join(', ')}\n`;
+    text += '\n';
+  }
+  if (text) {
+    text +=
+      'Wikipedia and the Discogs page of the original single or album are the best sources. Streaming services often show the year of a remaster, reissue or compilation instead of the original release, and a song can chart years after it first came out.\n\n';
+  }
+  return text;
 }
 
 export class Music {
@@ -66,19 +104,19 @@ export class Music {
       this.searchDiscogs(artist, title),
     ]);
 
-    // The model checks the year with one web search (Anthropic's, $0.01 a
-    // search, src/llm/models.ts) unless MusicBrainz, Discogs and Spotify
-    // already agree, as they do for about a quarter of new tracks.
+    // The model reads a Google search (Serper, ~$0.001) and the song's
+    // Wikipedia pages (free) unless MusicBrainz, Discogs and Spotify already
+    // agree, as they do for about a third of new tracks.
     const sourcesAgree =
       mbResult.year > 0 &&
       mbResult.year === discogsResult.year &&
       discogsResult.year === spotifyReleaseYear;
-    const webSearches = sourcesAgree ? 0 : YEAR_LOOKUP_WEB_SEARCHES;
-    const prompt = yearLookupPrompt(artist, title, mbResult.year, discogsResult.year, webSearches > 0);
+    const evidence = sourcesAgree ? null : await gatherYearEvidence(artist, title);
+    const prompt = yearLookupPrompt(artist, title, mbResult.year, discogsResult.year, evidence);
 
     // No usable answer (refused, cut off, empty) counts as no year.
-    const aiResult = (await this.aiTasks.ask(prompt, { webSearches })) ?? { year: 0 };
-    const searchResults = this.searchResultsForReview(aiResult.sources ?? []);
+    const aiResult = (await this.aiTasks.ask(prompt)) ?? { year: 0 };
+    const searchResults = evidence ? evidenceForReview(evidence) : [];
 
     const weights = {
       ai: 0.5,
@@ -255,7 +293,12 @@ export class Music {
           fullResult.standardDeviation
         )}] Final year: ${color.white.bold(finalYear)} [AI cost: ${color.white.bold(
           formatCostUsd(aiResult?.costUsd ?? 0)
-        )}]`
+        )}]` +
+          (evidence
+            ? ` [Google: ${color.white.bold(evidence.google.length)}] [Wiki: ${color.white.bold(
+                evidence.wikipedia.map((p) => p.lang).join(',') || '-'
+              )}]`
+            : '')
       )
     );
 
@@ -360,28 +403,6 @@ export class Music {
       }
     }
     return { year: 0, source: '' };
-  }
-
-  /**
-   * The pages the year lookup's web search read, in the shape the admin
-   * year-check page lists (tracks.googleResults, named after the Google
-   * search it replaced).
-   */
-  private searchResultsForReview(
-    sources: LlmWebSource[]
-  ): Array<{ title: string; url: string; snippet: string; domain: string }> {
-    return sources.map((source) => {
-      let domain = '';
-      try {
-        domain = new URL(source.url).hostname;
-      } catch {}
-      return {
-        title: source.title,
-        url: source.url,
-        snippet: source.citedText ?? '',
-        domain,
-      };
-    });
   }
 
   private async searchDiscogs(

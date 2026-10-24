@@ -326,7 +326,8 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 
 #### 3. Track Metadata Enhancement
 - **Multi-source year detection** - Spotify, MusicBrainz, Discogs, and Claude
-  (task `yearLookup`) with one Anthropic web search when the three disagree
+  (task `yearLookup`), which reads a Google search (Serper) and Wikipedia when
+  the three disagree (see "Release-year lookup" under the LLM layer)
 - **YouTube link association** - Automatic YouTube link finding
 - **Manual verification system** - Admin interface for data quality
 
@@ -406,7 +407,9 @@ is a standalone dev script and stays outside it.
 - **Live check**: `npx tsx scripts/llm-smoke.ts [task...]` runs every text task
   once on its primary route (about $0.05) and lists the ledger rows;
   `--compare [--routes=provider/model:effort,...]` compares release years;
-  `--web` runs the release-year cases with a real web search (about $0.19).
+  `--live` runs the release-year cases as production does, with a real Serper
+  search and real Wikipedia pages (about $0.01 plus 16 Serper searches);
+  `--web` runs them with one Anthropic web search instead (about $0.19).
 - **Web search** (2026-10-12): a request with `webSearch: { maxUses }` gets
   Anthropic's basic `web_search_20250305` tool. Each search is $0.01
   (`webSearchPer1k` in `models.ts`, priced into `costUsd`) and the pages read
@@ -414,14 +417,35 @@ is a standalone dev script and stays outside it.
   `webSearchRequests` and the ledger's `webSearches` column, shown on the AI
   costs page. The answer is the text after the last search, the pages come
   back as `result.sources`, and a `pause_turn` is resumed up to three times.
-  An OpenAI fallback answers without searching. The only user is
-  `yearLookup` (`music.ts`): one search per new track, none when MusicBrainz,
-  Discogs and Spotify agree (about a quarter of tracks). It replaced
-  RapidAPI's real-time-web-search and wikipedia-api2, which the lookup called
-  for every track. At ~9,200 lookups a month that is ~$80 a month, inside the
-  €200 Anthropic credit; measured 15/16 on the `--web` cases at $0.0117 a
-  track. The pages found go to `tracks.googleResults` (named after the old
-  Google search) for the admin year-check page.
+  An OpenAI fallback answers without searching. Nothing in production uses
+  it any more: `yearLookup` did from 2026-10-12 to 2026-10-24, see the next
+  point. `llm-smoke.ts --web` still does, as the comparison.
+- **Release-year lookup** (`music.ts` → `src/yearEvidence.ts`, 2026-10-24).
+  When MusicBrainz, Discogs and Spotify disagree (about two thirds of new
+  tracks), the lookup searches Google through Serper (`SERPER_API_KEY`, one
+  10-result search, about $0.001), reads the Wikipedia pages Google found (one
+  per language, at most two; Wikipedia's own English search when Google found
+  none) with their Wikidata publication (P577) and inception (P571) dates, and
+  pastes all of it into the Haiku prompt. Wikipedia and Wikidata are free but
+  **refuse a generic User-Agent with a 403**: every call sends the `QRHit/1.0
+  (…)` agent, as MusicBrainz and Discogs get. That 403 is probably why the
+  free `wikipedia` package was swapped for RapidAPI's wikipedia-api2 in
+  November 2025. Without a Serper key, or when Serper fails, it reads
+  Wikipedia only. Google's results plus any Wikipedia page Google did not list
+  go to `tracks.googleResults` for the admin year-check page.
+  - Why: the Anthropic web search the lookup used from 2026-10-12 cost $0.0117
+    a track ($0.01 of it the search fee). The production ledger for 13-24
+    October showed ~12,300 lookups a month at ~$97, $82 of it search fees. On
+    the 16 `--live` cases (2026-10-24) Serper + Wikipedia scored 15/16 at
+    $0.00041 a track plus one Serper search, Wikipedia alone 15/16 at
+    $0.00033, and the web search 14/16 at $0.0117. Every miss is a debatable
+    truth year in the cases: "Het is een nacht" came out as a single in July
+    1995 by Wikipedia and the Top 40, the case says 1994.
+  - Serper costs are not in the `llm_calls` ledger or on the AI costs page;
+    Serper's own dashboard shows the usage. Paid credits expire after six
+    months.
+  - Before 2026-10-12 the same design ran on RapidAPI (real-time-web-search
+    and wikipedia-api2, every track).
 
 **Anthropic rules the adapter follows** (all a 400 otherwise; Claude 5.5 models):
 
@@ -1118,7 +1142,16 @@ wholesale cost into `profit`, at the rate the upgrade was sold at (extra
 cards) or the order's (boxes). They used to bump `totalPrice` only, so the
 tax report and the profit missed them until a "Calculate profit" pass. That
 pass (`setPaymentInfo`) recomputes from `totalPrice`, the printer's price and
-the box count and lands on the same figures; a box shipped on its own is a
+the box count and lands on the same figures. It backs the VAT out at the rate
+the payment was charged (`payments.taxRate`, `src/printers/paymentTaxRate.ts`),
+never the country's standard rate: until 2026-10-24 it took the country rate,
+so a reverse-charge order (0%, an EU business with a valid VAT ID) lost the
+country's VAT from its turnover (order 100009253: €42.02 booked as €35.31 on
+the tax report and the MoneyBird invoice). Note that checkout's own
+`totalPrice − totalVATPrice` is not the better figure for consumer orders:
+`totalVATPrice` often leaves out part of the charge (33 consumer orders in
+October 2026 alone), and this recompute is what corrects their turnover when
+they go to the printer; a box shipped on its own is a
 separate printer order whose ex-VAT price `createBoxUpgradeOrder` books as
 `payments.extraPrintCost` (off the profit at once, and again in every
 recompute).
@@ -1876,7 +1909,8 @@ pause in between, which is what made startup take minutes. Nothing review
 related runs at boot or on a cron any more. `RAPID_API_KEY` is still needed: the
 Spotify RapidAPI clients and scraper (`spotify_rapidapi*.ts`, `spotify_scraper.ts`)
 use it. The year lookup's Google and Wikipedia searches went through RapidAPI
-too until 2026-10-12 (see "Web search" under the LLM layer).
+too until 2026-10-12; they now go to Serper and Wikipedia directly (see
+"Release-year lookup" under the LLM layer).
 
 - Like the blog, the file reaches production through `ncp ./src ./build` at the
   end of `npm run build`, and `CONTENT_FILES` in `reviews.ts` has the same
