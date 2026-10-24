@@ -1,33 +1,33 @@
 {
   "version": 2,
   "trustpilot": {
-    "fetchedAt": "2026-09-29T14:23:46.859Z",
+    "fetchedAt": "2026-10-24T11:53:54.114Z",
     "profileUrl": "https://www.trustpilot.com/review/qrsong.io",
     "trustScore": 4.7,
     "stars": 4.5,
-    "reviewCount": 41,
-    "reviewsLast12Months": 29,
+    "reviewCount": 43,
+    "reviewsLast12Months": 31,
     "distribution": {
       "1": 0,
       "2": 0,
       "3": 0,
       "4": 2,
-      "5": 39
+      "5": 41
     },
     "languages": {
-      "de": 12,
-      "en": 11,
+      "de": 13,
+      "en": 12,
       "es": 1,
       "nl": 16,
       "sv": 1
     }
   },
   "appstore": {
-    "fetchedAt": "2026-09-29T14:25:51.185Z",
+    "fetchedAt": "2026-10-24T12:00:04.307Z",
     "appId": "6727011939",
     "url": "https://apps.apple.com/app/id6727011939",
-    "average": 4.664179701492538,
-    "count": 134,
+    "average": 4.6275833793103445,
+    "count": 145,
     "storefronts": {
       "ar": {
         "average": 3,
@@ -39,35 +39,35 @@
       },
       "be": {
         "average": 5,
-        "count": 3
+        "count": 4
       },
       "br": {
         "average": 5,
-        "count": 2
+        "count": 3
       },
       "ca": {
         "average": 5,
-        "count": 3
+        "count": 4
       },
       "ch": {
-        "average": 3.25,
-        "count": 4
+        "average": 2.8,
+        "count": 5
       },
       "cl": {
         "average": 5,
-        "count": 1
+        "count": 2
       },
       "co": {
         "average": 5,
         "count": 7
       },
       "de": {
-        "average": 4.65,
-        "count": 40
+        "average": 4.60975,
+        "count": 41
       },
       "dk": {
         "average": 5,
-        "count": 1
+        "count": 2
       },
       "ec": {
         "average": 5,
@@ -86,8 +86,8 @@
         "count": 2
       },
       "nl": {
-        "average": 4.68182,
-        "count": 44
+        "average": 4.64583,
+        "count": 48
       },
       "no": {
         "average": 5,
@@ -124,31 +124,446 @@
     }
   },
   "googleplay": {
-    "fetchedAt": "2026-09-29T14:23:46.859Z",
+    "fetchedAt": "2026-10-24T11:53:54.114Z",
     "packageName": "nl.rickgroenewegen.qrsong",
     "url": "https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong",
     "country": "nl",
-    "average": 4.428571,
-    "count": 61,
+    "average": 4.4,
+    "count": 66,
     "distribution": {
       "1": 8,
       "2": 0,
       "3": 0,
-      "4": 0,
+      "4": 4,
       "5": 52
     },
     "countries": {
       "nl": {
-        "average": 4.428571,
-        "count": 61
+        "average": 4.4,
+        "count": 66
       },
       "de": {
-        "average": 4.2083335,
-        "count": 61
+        "average": 4.2222223,
+        "count": 66
       }
     }
   },
   "reviews": [
+    {
+      "id": "appstore:14699265058",
+      "source": "appstore",
+      "rating": 5,
+      "language": "en",
+      "locale": "en",
+      "author": "muskeetu",
+      "country": "BR",
+      "authorImage": null,
+      "authorReviewCount": 1,
+      "verified": false,
+      "appVersion": "2.0.1",
+      "publishedAt": "2026-10-23T00:40:57.000Z",
+      "experiencedAt": null,
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "ipad version",
+        "text": "please make de iPad version better like landscape mode"
+      },
+      "sourceHash": "1f7bd487fef6cc7d25d7152832c191da1a39cc8b",
+      "translations": {
+        "en": {
+          "title": "ipad version",
+          "text": "please make de iPad version better like landscape mode"
+        },
+        "nl": {
+          "title": "iPad-versie",
+          "text": "maak de iPad-versie alsjeblieft beter, bijvoorbeeld met een liggende modus"
+        },
+        "de": {
+          "title": "iPad-Version",
+          "text": "bitte macht die iPad-Version besser, zum Beispiel mit einem Querformatmodus"
+        },
+        "fr": {
+          "title": "version iPad",
+          "text": "merci d’améliorer la version iPad, par exemple avec un mode paysage"
+        },
+        "es": {
+          "title": "versión para iPad",
+          "text": "por favor, mejoren la versión para iPad, por ejemplo con el modo horizontal"
+        },
+        "it": {
+          "title": "versione per iPad",
+          "text": "per favore migliorate la versione per iPad, ad esempio con la modalità orizzontale"
+        },
+        "pt": {
+          "title": "versão para iPad",
+          "text": "por favor, melhorem a versão para iPad, por exemplo com o modo horizontal"
+        },
+        "pl": {
+          "title": "wersja na iPada",
+          "text": "proszę, ulepszcie wersję na iPada, na przykład dodając tryb poziomy"
+        },
+        "jp": {
+          "title": "iPad版",
+          "text": "iPad版をもっと良くしてください。横向きモードなど"
+        },
+        "cn": {
+          "title": "iPad 版本",
+          "text": "请把 iPad 版本做得更好一些，比如支持横屏模式"
+        },
+        "sv": {
+          "title": "iPad-version",
+          "text": "snälla gör iPad-versionen bättre, till exempel med liggande läge"
+        },
+        "no": {
+          "title": "iPad-versjon",
+          "text": "vær så snill å gjøre iPad-versjonen bedre, for eksempel med liggende modus"
+        },
+        "da": {
+          "title": "iPad-version",
+          "text": "gør venligst iPad-versionen bedre, for eksempel med liggende tilstand"
+        },
+        "hu": {
+          "title": "iPad-verzió",
+          "text": "kérlek, tegyétek jobbá az iPad-verziót, például legyen fekvő mód"
+        }
+      },
+      "translatedFrom": "1f7bd487fef6cc7d25d7152832c191da1a39cc8b",
+      "hidden": false,
+      "landingPage": false
+    },
+    {
+      "id": "trustpilot:6ad59c9b24d029abaa0c9c87",
+      "source": "trustpilot",
+      "rating": 5,
+      "language": "en",
+      "locale": "en",
+      "author": "Andrea S",
+      "country": "NL",
+      "authorImage": "https://user-images.trustpilot.com/67fdffeda8b3e6ccdc9a8205/73x73.png",
+      "authorReviewCount": 2,
+      "verified": false,
+      "appVersion": null,
+      "publishedAt": "2026-10-19T06:29:15.000Z",
+      "experiencedAt": "2026-09-17T00:00:00.000Z",
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "Easy process & great communication",
+        "text": "Super easy to order. Fast delivery and great communication along the way. Highly recommend for a great, personal gift."
+      },
+      "sourceHash": "34ee2b277fa4497a23073177a16c50b78bf33f46",
+      "translations": {
+        "en": {
+          "title": "Easy process & great communication",
+          "text": "Super easy to order. Fast delivery and great communication along the way. Highly recommend for a great, personal gift."
+        },
+        "nl": {
+          "title": "Eenvoudig proces & goede communicatie",
+          "text": "Supermakkelijk om te bestellen. Snelle levering en goede communicatie tijdens het hele proces. Echt een aanrader voor een geweldig, persoonlijk cadeau."
+        },
+        "de": {
+          "title": "Einfacher Ablauf & tolle Kommunikation",
+          "text": "Super einfach zu bestellen. Schnelle Lieferung und tolle Kommunikation während des gesamten Ablaufs. Sehr zu empfehlen für ein tolles, persönliches Geschenk."
+        },
+        "fr": {
+          "title": "Processus simple & excellente communication",
+          "text": "Super facile à commander. Livraison rapide et excellente communication tout au long du processus. Je recommande vivement pour un super cadeau personnalisé."
+        },
+        "es": {
+          "title": "Proceso fácil y excelente comunicación",
+          "text": "Súper fácil de pedir. Entrega rápida y excelente comunicación durante todo el proceso. Muy recomendable para hacer un regalo genial y personal."
+        },
+        "it": {
+          "title": "Procedura facile e ottima comunicazione",
+          "text": "Super facile da ordinare. Consegna veloce e ottima comunicazione durante tutto il processo. Consigliatissimo per un regalo fantastico e personale."
+        },
+        "pt": {
+          "title": "Processo fácil e ótima comunicação",
+          "text": "Super fácil de encomendar. Entrega rápida e ótima comunicação durante todo o processo. Recomendo vivamente para um presente fantástico e pessoal."
+        },
+        "pl": {
+          "title": "Łatwy proces i świetna komunikacja",
+          "text": "Bardzo łatwo złożyć zamówienie. Szybka dostawa i świetna komunikacja na każdym etapie. Zdecydowanie polecam jako świetny, osobisty prezent."
+        },
+        "jp": {
+          "title": "簡単な手続き＆素晴らしいコミュニケーション",
+          "text": "注文はとても簡単。配送も早く、途中の連絡も素晴らしかったです。素敵なパーソナルギフトとしてとてもおすすめです。"
+        },
+        "cn": {
+          "title": "流程简单，沟通顺畅",
+          "text": "下单超级简单。发货快，整个过程中沟通也很顺畅。非常推荐作为一份很棒的个性化礼物。"
+        },
+        "sv": {
+          "title": "Enkel process och bra kommunikation",
+          "text": "Superenkelt att beställa. Snabb leverans och bra kommunikation längs vägen. Rekommenderas varmt som en fantastisk, personlig present."
+        },
+        "no": {
+          "title": "Enkel prosess og god kommunikasjon",
+          "text": "Superenkelt å bestille. Rask levering og god kommunikasjon underveis. Anbefales på det sterkeste som en flott, personlig gave."
+        },
+        "da": {
+          "title": "Nem proces og god kommunikation",
+          "text": "Supernemt at bestille. Hurtig levering og god kommunikation undervejs. Kan varmt anbefales som en fantastisk, personlig gave."
+        },
+        "hu": {
+          "title": "Egyszerű folyamat és remek kommunikáció",
+          "text": "Szuper egyszerű megrendelni. Gyors szállítás és remek kommunikáció az egész folyamat során. Nagyon ajánlom, ha egy nagyszerű, személyes ajándékot keresel."
+        }
+      },
+      "translatedFrom": "34ee2b277fa4497a23073177a16c50b78bf33f46",
+      "hidden": false,
+      "landingPage": false
+    },
+    {
+      "id": "trustpilot:6ad531bf7de63aaecbe2e889",
+      "source": "trustpilot",
+      "rating": 5,
+      "language": "de",
+      "locale": "de",
+      "author": "Anja K.-L.",
+      "country": "DE",
+      "authorImage": null,
+      "authorReviewCount": 6,
+      "verified": false,
+      "appVersion": null,
+      "publishedAt": "2026-10-18T22:53:19.000Z",
+      "experiencedAt": "2026-10-18T00:00:00.000Z",
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "Der Service war absolut super",
+        "text": "Der Service war absolut super. Die Karten wurden sehr schnell gesendet und sahen auch prima aus. Auch die Informationen rund um die Erstellung der Musikkarten war sehr transparent. Toller Service und sehr zu empfehlen. Gerne jederzeit wieder."
+      },
+      "sourceHash": "2443ec004d0848226a795f7470ae22478ed55f8f",
+      "translations": {
+        "de": {
+          "title": "Der Service war absolut super",
+          "text": "Der Service war absolut super. Die Karten wurden sehr schnell gesendet und sahen auch prima aus. Auch die Informationen rund um die Erstellung der Musikkarten war sehr transparent. Toller Service und sehr zu empfehlen. Gerne jederzeit wieder."
+        },
+        "en": {
+          "title": "The service was absolutely great",
+          "text": "The service was absolutely great. The cards were sent very quickly and looked great too. The information about creating the music cards was also very transparent. Great service and highly recommended. I'd gladly order again anytime."
+        },
+        "nl": {
+          "title": "De service was absoluut geweldig",
+          "text": "De service was absoluut geweldig. De kaarten werden heel snel verstuurd en zagen er ook prima uit. Ook de informatie over het maken van de muziekkaarten was heel transparant. Geweldige service en zeker een aanrader. Graag altijd weer."
+        },
+        "fr": {
+          "title": "Le service était vraiment excellent",
+          "text": "Le service était vraiment excellent. Les cartes ont été envoyées très rapidement et étaient aussi très belles. Les informations concernant la création des cartes musicales étaient également très transparentes. Excellent service, à recommander vivement. J'y reviendrai volontiers à tout moment."
+        },
+        "es": {
+          "title": "El servicio fue absolutamente genial",
+          "text": "El servicio fue absolutamente genial. Las tarjetas se enviaron muy rápido y también se veían estupendas. La información sobre la creación de las tarjetas musicales también fue muy transparente. Un servicio estupendo y muy recomendable. Volvería a repetir encantado en cualquier momento."
+        },
+        "it": {
+          "title": "Il servizio è stato davvero eccellente",
+          "text": "Il servizio è stato davvero eccellente. Le carte sono state spedite molto velocemente ed erano anche molto belle. Anche le informazioni sulla creazione delle carte musicali erano molto trasparenti. Ottimo servizio e vivamente consigliato. Lo rifarei volentieri in qualsiasi momento."
+        },
+        "pt": {
+          "title": "O serviço foi absolutamente excelente",
+          "text": "O serviço foi absolutamente excelente. Os cartões foram enviados muito rapidamente e também ficaram muito bonitos. As informações sobre a criação dos cartões musicais também foram muito transparentes. Um ótimo serviço e altamente recomendável. Voltaria a encomendar a qualquer momento."
+        },
+        "pl": {
+          "title": "Obsługa była naprawdę świetna",
+          "text": "Obsługa była naprawdę świetna. Karty zostały wysłane bardzo szybko i również świetnie wyglądały. Informacje dotyczące tworzenia kart muzycznych także były bardzo przejrzyste. Świetna obsługa i zdecydowanie godna polecenia. Chętnie skorzystam ponownie w każdej chwili."
+        },
+        "jp": {
+          "title": "サービスは本当に最高でした",
+          "text": "サービスは本当に最高でした。カードはとても早く発送され、見た目も素晴らしかったです。音楽カードの作成に関する情報もとても分かりやすかったです。素晴らしいサービスで、とてもおすすめです。ぜひまたいつでも利用したいです。"
+        },
+        "cn": {
+          "title": "服务真的非常棒",
+          "text": "服务真的非常棒。卡片发货很快，外观也很漂亮。有关音乐卡片制作的信息也非常透明。服务很棒，非常值得推荐。以后随时都愿意再来。"
+        },
+        "sv": {
+          "title": "Servicen var helt fantastisk",
+          "text": "Servicen var helt fantastisk. Korten skickades väldigt snabbt och såg också jättefina ut. Informationen om hur musikkorten skapades var också väldigt tydlig. Fantastisk service och rekommenderas varmt. Jag beställer gärna igen när som helst."
+        },
+        "no": {
+          "title": "Servicen var helt fantastisk",
+          "text": "Servicen var helt fantastisk. Kortene ble sendt veldig raskt og så også kjempefine ut. Informasjonen om hvordan musikkortene ble laget, var også veldig tydelig. Fantastisk service og anbefales på det sterkeste. Jeg bestiller gjerne igjen når som helst."
+        },
+        "da": {
+          "title": "Servicen var helt fantastisk",
+          "text": "Servicen var helt fantastisk. Kortene blev sendt meget hurtigt og så også rigtig flotte ud. Informationen om, hvordan musikkortene blev lavet, var også meget tydelig. Fantastisk service og kan varmt anbefales. Jeg bestiller gerne igen når som helst."
+        },
+        "hu": {
+          "title": "A szolgáltatás abszolút szuper volt",
+          "text": "A szolgáltatás abszolút szuper volt. A kártyákat nagyon gyorsan elküldték, és nagyon jól is néztek ki. A zenekártyák elkészítésével kapcsolatos információk is nagyon átláthatóak voltak. Remek szolgáltatás, nagyon ajánlom. Bármikor szívesen rendelek újra."
+        }
+      },
+      "translatedFrom": "2443ec004d0848226a795f7470ae22478ed55f8f",
+      "hidden": false,
+      "landingPage": false
+    },
+    {
+      "id": "googleplay:dc31bc25-43cd-4a12-a0ec-cb92f1b30c02",
+      "source": "googleplay",
+      "rating": 5,
+      "language": "de",
+      "locale": "de",
+      "author": "Torsten Vogel",
+      "country": "",
+      "authorImage": null,
+      "authorReviewCount": 1,
+      "verified": false,
+      "appVersion": "2.0.1",
+      "publishedAt": "2026-10-15T21:11:49.000Z",
+      "experiencedAt": null,
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "",
+        "text": "Die App ist klasse! läuft fehlerfrei und stabil. Macht echt Spaß"
+      },
+      "sourceHash": "ff77aea2d214227f10ee461ab0e7b334d0a18ef6",
+      "translations": {
+        "en": {
+          "title": "",
+          "text": "The app is great! runs flawlessly and is stable. Really fun"
+        },
+        "nl": {
+          "title": "",
+          "text": "De app is geweldig! werkt foutloos en stabiel. Echt leuk"
+        },
+        "de": {
+          "title": "",
+          "text": "Die App ist klasse! läuft fehlerfrei und stabil. Macht echt Spaß"
+        },
+        "fr": {
+          "title": "",
+          "text": "L'appli est géniale ! fonctionne parfaitement et de manière stable. C'est vraiment amusant"
+        },
+        "es": {
+          "title": "",
+          "text": "¡La app es genial! funciona sin fallos y de forma estable. Es muy divertida"
+        },
+        "it": {
+          "title": "",
+          "text": "L'app è fantastica! funziona senza errori ed è stabile. È davvero divertente"
+        },
+        "pt": {
+          "title": "",
+          "text": "A app é ótima! funciona sem falhas e é estável. É mesmo divertido"
+        },
+        "pl": {
+          "title": "",
+          "text": "Aplikacja jest świetna! działa bezbłędnie i stabilnie. Naprawdę fajna zabawa"
+        },
+        "jp": {
+          "title": "",
+          "text": "アプリは最高！不具合なく安定して動きます。本当に楽しいです"
+        },
+        "cn": {
+          "title": "",
+          "text": "这个应用太棒了！运行无故障而且很稳定。真的很好玩"
+        },
+        "sv": {
+          "title": "",
+          "text": "Appen är toppen! fungerar felfritt och stabilt. Riktigt kul"
+        },
+        "no": {
+          "title": "",
+          "text": "Appen er kjempebra! fungerer feilfritt og stabilt. Skikkelig gøy"
+        },
+        "da": {
+          "title": "",
+          "text": "Appen er fantastisk! fungerer fejlfrit og stabilt. Virkelig sjovt"
+        },
+        "hu": {
+          "title": "",
+          "text": "Az app szuper! hibátlanul és stabilan működik. Nagyon szórakoztató"
+        }
+      },
+      "translatedFrom": "ff77aea2d214227f10ee461ab0e7b334d0a18ef6",
+      "hidden": false,
+      "landingPage": false
+    },
+    {
+      "id": "appstore:14643173885",
+      "source": "appstore",
+      "rating": 5,
+      "language": "nl",
+      "locale": "nl",
+      "author": "BaldIOScoder",
+      "country": "NL",
+      "authorImage": null,
+      "authorReviewCount": 1,
+      "verified": false,
+      "appVersion": "2.0.1",
+      "publishedAt": "2026-10-08T19:26:04.000Z",
+      "experiencedAt": null,
+      "editedAt": null,
+      "reply": null,
+      "original": {
+        "title": "Het werkt gewoon",
+        "text": "Ik wilde zelf een app maken zoals QRSong, om eigen QR code kaartjes te scannen. Deze app doet precies dat en geen vervelende advertenties! Bedankt!"
+      },
+      "sourceHash": "cc2a19e7274d1021ab762d8caf871bdf7d533da8",
+      "translations": {
+        "en": {
+          "title": "It just works",
+          "text": "I wanted to make an app like QRSong myself, to scan my own QR code cards. This app does exactly that and no annoying ads! Thanks!"
+        },
+        "nl": {
+          "title": "Het werkt gewoon",
+          "text": "Ik wilde zelf een app maken zoals QRSong, om eigen QR code kaartjes te scannen. Deze app doet precies dat en geen vervelende advertenties! Bedankt!"
+        },
+        "de": {
+          "title": "Es funktioniert einfach",
+          "text": "Ich wollte selbst eine App wie QRSong entwickeln, um eigene QR-Code-Kärtchen zu scannen. Diese App macht genau das und keine nervige Werbung! Danke!"
+        },
+        "fr": {
+          "title": "Ça marche, tout simplement",
+          "text": "Je voulais créer moi-même une appli comme QRSong, pour scanner mes propres cartes avec un QR code. Cette appli fait exactement ça et pas de pubs agaçantes ! Merci !"
+        },
+        "es": {
+          "title": "Simplemente funciona",
+          "text": "Quería crear yo mismo una app como QRSong, para escanear mis propias tarjetas con código QR. Esta app hace exactamente eso y no tiene anuncios molestos. ¡Gracias!"
+        },
+        "it": {
+          "title": "Funziona e basta",
+          "text": "Volevo creare io stesso un'app come QRSong, per scansionare le mie carte con codice QR. Questa app fa esattamente questo e niente pubblicità fastidiose! Grazie!"
+        },
+        "pt": {
+          "title": "Simplesmente funciona",
+          "text": "Eu queria criar uma app como a QRSong, para digitalizar os meus próprios cartões com código QR. Esta app faz exatamente isso e sem anúncios irritantes! Obrigado!"
+        },
+        "pl": {
+          "title": "Po prostu działa",
+          "text": "Chciałem sam stworzyć aplikację taką jak QRSong, żeby skanować własne karty z kodami QR. Ta aplikacja robi dokładnie to i nie ma irytujących reklam! Dzięki!"
+        },
+        "jp": {
+          "title": "ちゃんと使える",
+          "text": "自分でQRSongのようなアプリを作って、自作のQRコードカードをスキャンしたいと思っていました。このアプリはまさにそれができて、うっとうしい広告もありません！ありがとう！"
+        },
+        "cn": {
+          "title": "就是好用",
+          "text": "我本来想自己做一个像QRSong这样的应用，用来扫描自己的二维码卡片。这个应用正好能做到，而且没有烦人的广告！谢谢！"
+        },
+        "sv": {
+          "title": "Det funkar helt enkelt",
+          "text": "Jag ville själv skapa en app som QRSong, för att skanna mina egna QR-kodskort. Den här appen gör precis det och inga irriterande annonser! Tack!"
+        },
+        "no": {
+          "title": "Det bare fungerer",
+          "text": "Jeg ville lage en app som QRSong selv, for å skanne mine egne QR-kodekort. Denne appen gjør akkurat det og ingen irriterende annonser! Takk!"
+        },
+        "da": {
+          "title": "Det virker bare",
+          "text": "Jeg ville selv lave en app som QRSong, til at scanne mine egne QR-kodekort. Denne app gør præcis det og ingen irriterende reklamer! Tak!"
+        },
+        "hu": {
+          "title": "Egyszerűen működik",
+          "text": "Én magam akartam készíteni egy olyan alkalmazást, mint a QRSong, hogy beolvashassam a saját QR-kódos kártyáimat. Ez az alkalmazás pontosan ezt tudja, és nincsenek idegesítő reklámok! Köszönöm!"
+        }
+      },
+      "translatedFrom": "cc2a19e7274d1021ab762d8caf871bdf7d533da8",
+      "hidden": false,
+      "landingPage": false
+    },
     {
       "id": "trustpilot:6abb6772ba18ed2da005ef0d",
       "source": "trustpilot",
