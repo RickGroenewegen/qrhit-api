@@ -722,9 +722,11 @@ Description: ${description ? description.replace(/\s+/g, ' ').trim() : '(none)'}
   }
 
   /**
-   * The release year of a song from the prompt music.ts builds. With
-   * `webSearches` the model may search the web that many times (each search
-   * is billed, see src/llm/models.ts); the pages it got back are `sources`.
+   * The release year of a song from the prompt music.ts builds, with the
+   * Google and Wikipedia text already in it. With `webSearches` the model may
+   * search the web that many times (each search is billed, see
+   * src/llm/models.ts); the pages it got back are `sources`. Production stopped
+   * using that on 2026-10-24; only llm-smoke.ts --web still does.
    */
   public async ask(prompt: string, options: { webSearches?: number } = {}): Promise<any> {
     const webSearches = options.webSearches ?? 0;
