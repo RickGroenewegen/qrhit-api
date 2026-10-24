@@ -45,6 +45,97 @@ export function pickAutoModeYear(
   return null;
 }
 
+interface StoredYearSources {
+  id: number;
+  isrc: string | null;
+  name: string;
+  artist: string;
+  spotifyYear: number | null;
+  aiYear: number | null;
+  musicBrainzYear: number | null;
+  discogsYear: number | null;
+  openPerplexYear: number | null;
+}
+
+/**
+ * Auto-mode for tracks that were looked up before (before auto-mode existed,
+ * or while it was off) and never checked. They keep that year, so the lookup
+ * in updateTrackYear skips them, and every order that contains them sent them
+ * to the year-check queue. A checked twin (same ISRC, or same artist and
+ * title) decides first, then the sources that earlier lookup stored; nothing
+ * is looked up again. Returns how many tracks were resolved.
+ */
+export async function autoResolveStoredYears(
+  deps: DataDeps,
+  trackIds: string[]
+): Promise<number> {
+  if (trackIds.length === 0) return 0;
+
+  const uncheckedTracks = await deps.prisma.$queryRaw<StoredYearSources[]>`
+    SELECT id, isrc, name, artist, spotifyYear, aiYear, musicBrainzYear,
+           discogsYear, openPerplexYear
+    FROM tracks
+    WHERE manuallyChecked = false
+    AND year IS NOT NULL
+    AND trackId IN (${Prisma.join(trackIds)})
+  `;
+
+  let resolvedCount = 0;
+
+  for (const track of uncheckedTracks) {
+    const { wasUpdated } = await findAndUpdateTrackByISRC(
+      deps,
+      track.isrc ?? '',
+      track.id
+    );
+
+    if (wasUpdated) {
+      resolvedCount++;
+      deps.logger.log(
+        color.green.bold(
+          `Auto-mode: took the year of a checked twin for earlier looked-up '${color.white.bold(
+            track.artist
+          )} - ${color.white.bold(track.name)}'`
+        )
+      );
+      continue;
+    }
+
+    const autoPick = pickAutoModeYear({
+      ai: track.aiYear ?? 0,
+      spotify: track.spotifyYear ?? 0,
+      mb: track.musicBrainzYear ?? 0,
+      discogs: track.discogsYear ?? 0,
+      openPerplex: track.openPerplexYear ?? 0,
+    });
+
+    if (!autoPick) continue;
+
+    await deps.prisma.$executeRaw`
+        UPDATE  tracks
+        SET     year = ${autoPick.year},
+                manuallyChecked = true,
+                updatedAt = ${new Date()}
+        WHERE   id = ${track.id}
+      `;
+
+    resolvedCount++;
+    deps.logger.log(
+      color.green.bold(
+        `Auto-mode: picked year ${color.white.bold(
+          autoPick.year
+        )} (${color.white.bold(
+          autoPick.source
+        )}) from the earlier lookup of '${color.white.bold(
+          track.artist
+        )} - ${color.white.bold(track.name)}'`
+      )
+    );
+  }
+
+  return resolvedCount;
+}
+
 export async function updateTrackYear(
   deps: DataDeps,
   trackIds: string[],
@@ -68,6 +159,12 @@ export async function updateTrackYear(
   // gets the best available year instead of going to the year-check queue.
   const autoMode = await Settings.getInstance().isAutoMode();
   let autoResolvedCount = 0;
+
+  // The lookup below only sees tracks without a year; an unchecked track that
+  // already has one is settled from its earlier lookup instead.
+  if (autoMode) {
+    autoResolvedCount += await autoResolveStoredYears(deps, trackIds);
+  }
 
   // Helper to process a single track
   const processTrack = async (track: TrackNeedingYearUpdate) => {
