@@ -44,10 +44,10 @@
     <div class="page">
         <div class="band"></div>
         <div class="top">
-            <img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="QRSong!" class="logo">
+            <img src="<%= process.env['API_URI'] %>/assets/images/logo_white.png" alt="QRSong!" class="logo">
             <div class="tagline"><%= translations.tagline %></div>
-            <h1 class="title"><%= t('title', { name: voucher.recipientName }) %></h1>
-            <div class="from"><%= t('from', { from: voucher.giverName }) %></div>
+            <h1 class="title"><%- t('title', { name: voucher.recipientName }) %></h1>
+            <div class="from"><%- t('from', { from: voucher.giverName }) %></div>
         </div>
         <div class="cards">
             <% const shown = sets.slice(0, 3); %>
@@ -62,7 +62,7 @@
         <div class="body">
             <ul class="sets">
                 <% sets.forEach(function (set) { %>
-                    <li><%= t('set', { count: set.numberOfTracks, playlist: set.name }) %></li>
+                    <li><%- t('set', { count: set.numberOfTracks, playlist: set.name }) %></li>
                 <% }) %>
             </ul>
             <% if (voucher.message) { %>
@@ -75,7 +75,7 @@
             <div class="steps">
                 <h3><%= translations.stepsTitle %></h3>
                 <ol>
-                    <li><%= t('step1', { url: redeemHost }) %></li>
+                    <li><%- t('step1', { url: redeemHost }) %></li>
                     <li><%= translations.step2 %></li>
                     <li><%= translations.step3 %></li>
                 </ol>

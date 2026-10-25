@@ -644,6 +644,9 @@ class GiftVouchers {
       qr: qrSvg(redeemUrl),
       redeemHost: 'qrsong.io/redeem',
       translations: await this.translation.getTranslationsByPrefix(voucher.locale, 'giftVoucher'),
+      // HTML: the i18n package's Mustache escapes every param already, so the
+      // view prints this with <%- %>. Escaped again, the redeem address read
+      // "qrsong.io&#x2F;redeem" and a "Rock & Roll" set "Rock &amp; Roll".
       t: (key: string, params: Record<string, unknown> = {}) =>
         this.translation.translate(`giftVoucher.${key}`, voucher.locale, params),
     };
