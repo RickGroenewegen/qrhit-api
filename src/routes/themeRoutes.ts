@@ -10,6 +10,44 @@ import StoredThemes, { servedStoredTheme, themeAssetPath } from '../storedThemes
 import fs from 'fs/promises';
 import path from 'path';
 
+export interface PickerTheme {
+  slug: string;
+  name: string;
+  source: ThemeSource;
+}
+
+/**
+ * The dev-mode theme picker's list: every theme once, the hand-made B2B
+ * themes first, then the customer designs on the order lines, each group by
+ * name. The first B2B entry of a slug wins (pass the stored themes before the
+ * folders, as GET /theme/:slug serves them). `default` is the app's own theme,
+ * which the picker lists itself. Other line slugs (`<slug>--v<n>`) are older
+ * versions of a B2B theme and are left out.
+ */
+export function themePickerEntries(
+  business: Iterable<{ slug: string; name: string }>,
+  lineThemes: Iterable<{ s: string; n: string }>,
+  includeCustomer: boolean
+): PickerTheme[] {
+  const bySlug = new Map<string, PickerTheme>();
+  for (const { slug, name } of business) {
+    if (slug === 'default' || bySlug.has(slug)) continue;
+    bySlug.set(slug, { slug, name: name || slug, source: 'business' });
+  }
+  const customer = new Map<string, PickerTheme>();
+  if (includeCustomer) {
+    for (const { s, n } of lineThemes) {
+      if (!s || customer.has(s) || !parseCustomerSlug(s)) continue;
+      customer.set(s, { slug: s, name: n || s, source: 'customer' });
+    }
+  }
+  const byName = (a: PickerTheme, b: PickerTheme) => a.name.localeCompare(b.name);
+  return [
+    ...[...bySlug.values()].sort(byName),
+    ...[...customer.values()].sort(byName),
+  ];
+}
+
 /**
  * Themes for the scan app, tried in this order:
  *
@@ -132,25 +170,38 @@ export default async function themeRoutes(
     }
   );
 
-  // Every theme in use, for the app's dev-mode theme picker. Customer slugs
-  // are random so nobody can walk through other people's photos; outside
-  // development they are left out of this public list.
+  // Every theme there is, once each, for the app's dev-mode theme picker.
+  // Customer slugs are random so nobody can walk through other people's
+  // photos; outside development they are left out of this public list.
   fastify.get('/theme/debug/all', async (_request: any, _reply) => {
     const includeCustomer = process.env['ENVIRONMENT'] === 'development';
-    const allThemes = appTheme.getAllThemes();
-    const themesArray = Array.from(allThemes.entries())
-      .filter(([, theme]) => includeCustomer || !parseCustomerSlug(theme.s))
-      .map(([id, theme]) => ({
-        paymentHasPlaylistId: id,
-        slug: theme.s,
-        name: theme.n,
-      }));
+    let stored: Array<{ slug: string; name: string }> = [];
+    let folders: string[] = [];
+    try {
+      ({ stored, folders } = await storedThemes.list());
+    } catch (error: any) {
+      logger.log(`Theme picker: stored themes unavailable: ${error.message}`);
+    }
+    const folderThemes = await Promise.all(
+      folders.map(async (slug) => {
+        try {
+          const json = await fs.readFile(
+            path.join(businessThemeDir(slug), `${slug}.json`),
+            'utf-8'
+          );
+          return { slug, name: JSON.parse(json).name || slug };
+        } catch {
+          return { slug, name: slug };
+        }
+      })
+    );
+    const themes = themePickerEntries(
+      [...stored, ...folderThemes],
+      appTheme.getAllThemes().values(),
+      includeCustomer
+    );
 
-    return {
-      success: true,
-      count: themesArray.length,
-      themes: themesArray,
-    };
+    return { success: true, count: themes.length, themes };
   });
 
   /**
