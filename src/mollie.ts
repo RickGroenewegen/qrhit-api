@@ -1920,6 +1920,9 @@ class Mollie {
         currency: true,
         totalPricePresentment: true,
         refundReason: true,
+        // Mollie's method id, stored by the webhook; null for free_,
+        // toolkit_ and reseller_ orders, which never went through Mollie
+        paymentMethod: true,
         user: {
           select: {
             hash: true,
