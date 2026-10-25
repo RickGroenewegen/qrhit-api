@@ -915,11 +915,20 @@ export async function generatePlaylistExcel(
   }
 }
 
+/**
+ * Clears a playlist's cached data. `tracks: false` keeps the track list and
+ * track count, which are the same in every language: a change that only
+ * touches texts (a description translated into a new language) does not
+ * need the tracks fetched from the music service again.
+ */
 export async function clearPlaylistCache(
   deps: DataDeps,
   playlistId: string,
-  oldSlug?: string
+  oldSlug?: string,
+  options: { tracks?: boolean } = {}
 ): Promise<{ success: boolean; error?: string }> {
+  const { tracks = true } = options;
+
   try {
     // Get playlist to find the current slug
     const playlist = await deps.prisma.playlist.findUnique({
@@ -932,8 +941,10 @@ export async function clearPlaylistCache(
     await deps.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
     await deps.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
     // Clear tracks and track count caches (use pattern since they include track count in key)
-    await deps.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
-    await deps.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
+    if (tracks) {
+      await deps.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
+      await deps.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
+    }
     if (playlist?.slug) {
       await deps.cache.del(`${CACHE_KEY_PLAYLIST}${playlist.slug}`);
       await deps.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlist.slug}`);

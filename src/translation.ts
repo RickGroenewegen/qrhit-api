@@ -303,9 +303,12 @@ class Translation {
         translate: (record, missing) =>
           this.translatePlaylistDescription(aiTasks, record, missing),
         extraData: { markedForMerchantCenter: true },
+        // Only the texts changed: the tracks stay cached.
         afterUpdate: async (record) => {
           const Data = (await import('./data')).default;
-          await Data.getInstance().clearPlaylistCache(record.playlistId);
+          await Data.getInstance().clearPlaylistCache(record.playlistId, undefined, {
+            tracks: false,
+          });
         },
       },
       {

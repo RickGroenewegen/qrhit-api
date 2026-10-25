@@ -225,7 +225,7 @@ describe('translateEmptyFields', () => {
         markedForMerchantCenter: true,
       },
     });
-    expect(clearPlaylistCacheMock).toHaveBeenCalledWith('p1');
+    expect(clearPlaylistCacheMock).toHaveBeenCalledWith('p1', undefined, { tracks: false });
   });
 
   it('translates an SEO-written playlist description with the SEO translator', async () => {

@@ -645,8 +645,12 @@ class Data {
     return miscModule.generatePlaylistExcel(this.deps, paymentId, paymentHasPlaylistId);
   }
 
-  public async clearPlaylistCache(playlistId: string, oldSlug?: string) {
-    return miscModule.clearPlaylistCache(this.deps, playlistId, oldSlug);
+  public async clearPlaylistCache(
+    playlistId: string,
+    oldSlug?: string,
+    options?: { tracks?: boolean }
+  ) {
+    return miscModule.clearPlaylistCache(this.deps, playlistId, oldSlug, options);
   }
 
   public async clearNonFeaturedPlaylistCaches() {

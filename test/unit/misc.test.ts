@@ -757,6 +757,38 @@ describe('clearPlaylistCache', () => {
     expect(sameSlugHits).toHaveLength(2);
   });
 
+  it('clears the tracks and track count by default', async () => {
+    const delPatternFn = vi.fn(async () => undefined);
+    const deps = makeDeps({
+      prisma: { playlist: { findUnique: vi.fn(async () => ({ slug: null })) } },
+      cache: { get: vi.fn(), set: vi.fn(), del: vi.fn(), delPattern: delPatternFn, executeCommand: vi.fn() },
+    });
+
+    await clearPlaylistCache(deps, 'PL123');
+
+    expect(delPatternFn).toHaveBeenCalledWith(`${h.CACHE_KEY_TRACKS}PL123*`);
+    expect(delPatternFn).toHaveBeenCalledWith(`${h.CACHE_KEY_TRACK_COUNT}PL123*`);
+  });
+
+  it('keeps the tracks and track count with tracks: false', async () => {
+    const delPatternFn = vi.fn(async () => undefined);
+    const delFn = vi.fn(async () => undefined);
+    const deps = makeDeps({
+      prisma: { playlist: { findUnique: vi.fn(async () => ({ slug: 'my-slug' })) } },
+      cache: { get: vi.fn(), set: vi.fn(), del: delFn, delPattern: delPatternFn, executeCommand: vi.fn() },
+    });
+
+    await clearPlaylistCache(deps, 'PL123', undefined, { tracks: false });
+
+    expect(delPatternFn).not.toHaveBeenCalledWith(`${h.CACHE_KEY_TRACKS}PL123*`);
+    expect(delPatternFn).not.toHaveBeenCalledWith(`${h.CACHE_KEY_TRACK_COUNT}PL123*`);
+    // The playlist itself is still cleared.
+    expect(delPatternFn).toHaveBeenCalledWith(`${h.CACHE_KEY_FEATURED_PLAYLISTS}*`);
+    const deletedKeys: string[] = delFn.mock.calls.map((c) => c[0]);
+    expect(deletedKeys).toContain(`${h.CACHE_KEY_PLAYLIST}PL123`);
+    expect(deletedKeys).toContain(`${h.CACHE_KEY_PLAYLIST_DB}my-slug`);
+  });
+
   it('returns {success:true} on success', async () => {
     const deps = makeDeps({
       prisma: { playlist: { findUnique: vi.fn(async () => ({ slug: 'sl' })) } },

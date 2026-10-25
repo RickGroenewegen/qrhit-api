@@ -677,15 +677,16 @@ describe('delegation wrappers', () => {
     expect(h.scoring.updateFeaturedPlaylistStats).toHaveBeenCalledWith(data);
   });
 
-  it('clearPlaylistCache forwards the optional old slug', async () => {
+  it('clearPlaylistCache forwards the optional old slug and options', async () => {
     const { data } = await makeData();
     h.misc.clearPlaylistCache.mockResolvedValueOnce(undefined);
 
-    await data.clearPlaylistCache('pl_1', 'old-slug');
+    await data.clearPlaylistCache('pl_1', 'old-slug', { tracks: false });
     expect(h.misc.clearPlaylistCache).toHaveBeenCalledWith(
       data,
       'pl_1',
-      'old-slug'
+      'old-slug',
+      { tracks: false }
     );
   });
 
