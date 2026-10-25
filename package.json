@@ -18,7 +18,7 @@
     "test:int": "vitest run test/integration test/ws",
     "test:coverage": "vitest run --coverage",
     "test:db:push": "node test/db-push.js",
-    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:live": "vitest run --config vitest.live.config.mts",
     "deps:update": "bash ./_scripts/update-deps.sh",
     "deps:check": "node ./_scripts/check-lockfile-age.mjs .",
     "kpi": "tsx scripts/kpi.ts",

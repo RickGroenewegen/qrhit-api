@@ -113,6 +113,7 @@
     // You can add more directories or specific files here
     "**/*.spec.ts",
     "test",
-    "vitest.config.ts"
+    "vitest.config.mts",
+    "vitest.live.config.mts"
   ]
 }

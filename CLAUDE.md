@@ -2309,4 +2309,4 @@ See [TESTING.md](TESTING.md) for the full guide. Quick reference:
 - Integration tests: `buildTestApp()` + helpers in `test/helpers/` — never hit dev/prod DB (harness rewrites DATABASE_URL to qrhit_test)
 - Mail/pushover/push/printer are globally mocked; assert via `outbound.calls()`
 - When you change or add backend logic, add/update the matching tests (or run `/write-tests`)
-- Coverage thresholds in vitest.config.ts only ever go up
+- Coverage thresholds in vitest.config.mts only ever go up

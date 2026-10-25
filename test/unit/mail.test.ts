@@ -548,7 +548,7 @@ describe('sendEmail (order confirmation)', () => {
       'voucher-digital.pdf'
     );
     const raw = lastRaw();
-    expect(raw).toContain('Subject: Here is your gift voucher!');
+    expect(raw).toContain('Subject: Here is your gift card!');
     expect(raw).toContain('filename="voucher.pdf"');
     expect(raw).not.toContain('filename="voucher_printer.pdf"');
   });
@@ -563,7 +563,7 @@ describe('sendEmail (order confirmation)', () => {
       'voucher-digital.pdf'
     );
     const raw = lastRaw();
-    expect(raw).toContain('Subject: Thank you for ordering a gift voucher!');
+    expect(raw).toContain('Subject: Thank you for ordering a gift card!');
     expect(raw).toContain('filename="voucher.pdf"');
     expect(raw).toContain('filename="voucher_printer.pdf"');
   });

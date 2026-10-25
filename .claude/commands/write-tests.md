@@ -32,6 +32,6 @@ this repo (qrhit-api). Follow TESTING.md conventions strictly.
    green, then run the full `npm test`.
 7. **Report**: coverage delta (`npm run test:coverage`), and if coverage
    rose meaningfully, propose bumping `coverage.thresholds` in
-   vitest.config.ts (ratchet: up only).
+   vitest.config.mts (ratchet: up only).
 8. **Update the marker**: write the current HEAD hash to
    `.claude/last-tested-commit`.

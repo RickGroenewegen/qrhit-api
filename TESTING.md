@@ -83,5 +83,5 @@ misconfiguration can never truncate dev data).
 
 ## Coverage ratchet
 
-`vitest.config.ts` `coverage.thresholds` are a one-way ratchet: set just
+`vitest.config.mts` `coverage.thresholds` are a one-way ratchet: set just
 below achieved coverage, never lowered. After meaningful gains, raise them.
