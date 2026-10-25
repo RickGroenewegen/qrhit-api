@@ -22,7 +22,7 @@ import Logger from './logger';
  *
  * Enforcement (runs on EVERY request, see ipPlugin):
  *  - Banned IPs are rejected with 403 across the entire API, not just the
- *    qrlink endpoints. Bans are persisted in a Redis sorted set keyed by
+ *    qrlink endpoints. A decoyed address never is (see `decoyIps`). Bans are persisted in a Redis sorted set keyed by
  *    expiry timestamp (so they are self-healing after `QRLINK_BAN_SECONDS`)
  *    and shared across all cluster workers. Each worker keeps an in-memory
  *    mirror so the per-request check costs nothing (no Redis round-trip).
@@ -142,7 +142,10 @@ class AbuseGuard {
     //
     // A decoy beats a 403 here: a block tells a scraper it has been spotted
     // and it returns adapted, as this one already did once after the
-    // user-agent layer caught it. Wrong data that looks right does not.
+    // user-agent layer caught it. Wrong data that looks right does not. So a
+    // decoyed address skips the detectors and is never banned: it may ingest
+    // as many decoys as it asks for (it used to be banned after 25 ascending
+    // ids, which ended the decoys).
     const decoyDefaults = ['2a06:98c0:3600::103'];
     const decoyFromEnv = (process.env['QRLINK_DECOY_IPS'] || '')
       .split(',')
@@ -341,6 +344,11 @@ class AbuseGuard {
       this.logBlockedOnce(clientIp, 'denylist', userAgent, null);
       return true;
     }
+    // A decoyed address is never refused, also when Redis still holds a ban
+    // from before decoys were exempt: it is served wrong data instead.
+    if (this.decoyIps.has(clientIp.toLowerCase())) {
+      return false;
+    }
     if (!this.mirrorLoaded) {
       return false;
     }
@@ -437,7 +445,7 @@ class AbuseGuard {
     code: string = 'ban',
     context?: { userAgent?: string; php?: number | null; trackId?: number | null }
   ): Promise<void> {
-    if (!clientIp || this.isAllowed(clientIp)) {
+    if (!clientIp || this.isAllowed(clientIp) || this.isDecoy(clientIp)) {
       return;
     }
     const expiry = Date.now() + this.banSeconds * 1000;
@@ -666,6 +674,12 @@ class AbuseGuard {
     if (clientIp && this.deniedIps.has(clientIp.toLowerCase())) {
       this.logBlockedOnce(clientIp, 'denylist', userAgent);
       return { allowed: false, reason: 'denylist' };
+    }
+
+    // Decoyed address -> the route serves it wrong data, as much as it asks
+    // for, so none of the detectors below apply.
+    if (this.isDecoy(clientIp)) {
+      return { allowed: true };
     }
 
     // Layer 2: known scraper user-agent -> ban on sight.

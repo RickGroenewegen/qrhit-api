@@ -304,18 +304,57 @@ describe('decoy', () => {
     expect(guard.isDecoy(WORKERS_IP)).toBe(false);
   });
 
-  it('still counts and bans a decoyed caller, so the dashboard sees them', async () => {
-    process.env['QRLINK_RATE_MAX'] = '2';
+  it('never bans a decoyed caller, however fast it walks the ids', async () => {
+    const clock = withClock();
     const guard = freshGuard();
     await flush();
-    cacheMock.increment.mockResolvedValue(3);
+    withSequenceStore();
+    cacheMock.increment.mockResolvedValue(1000); // far over the rate limit
 
-    // The route serves the decoy regardless of this verdict; what matters is
-    // that the detectors still ran and recorded it.
-    const result = await guard.check(WORKERS_IP, 'Mozilla/5.0 Chrome/120', 42);
+    // Past the 25 ascending ids that ban anyone else, at scraper speed.
+    for (let id = 392322; id < 392422; id++) {
+      expect(await guard.check(WORKERS_IP, 'Mozilla/5.0 Chrome/120', id)).toEqual({
+        allowed: true,
+      });
+      clock.tick(1000);
+    }
 
-    expect(result).toEqual({ allowed: false, reason: 'rate-limit' });
-    expect(blockedIpMock.logBlock).toHaveBeenCalled();
+    expect(guard.isBanned(WORKERS_IP)).toBe(false);
+    expect(cacheMock.increment).not.toHaveBeenCalled();
+    expect(cacheMock.addToSortedSet).not.toHaveBeenCalled();
+    expect(blockedIpMock.logBlock).not.toHaveBeenCalled();
+  });
+
+  it('ignores an explicit ban call for a decoyed address', async () => {
+    const guard = freshGuard();
+    await flush();
+
+    await guard.ban(WORKERS_IP, 'rate limit', 'rate-limit');
+
+    expect(guard.isBanned(WORKERS_IP)).toBe(false);
+    expect(cacheMock.addToSortedSet).not.toHaveBeenCalled();
+  });
+
+  it('lets a decoyed address through that Redis still holds a ban for', async () => {
+    cacheMock.getSortedSetWithScores.mockResolvedValue([
+      { member: WORKERS_IP, score: Date.now() + 60_000 },
+    ]);
+    const guard = freshGuard();
+    await flush();
+
+    expect(guard.isBanned(WORKERS_IP)).toBe(false);
+  });
+
+  it('loses to the permanent denylist', async () => {
+    process.env['QRLINK_DENY_IPS'] = WORKERS_IP;
+    const guard = freshGuard();
+    await flush();
+
+    expect(guard.isBanned(WORKERS_IP)).toBe(true);
+    expect(await guard.check(WORKERS_IP, 'Mozilla/5.0 Chrome/120', 42)).toEqual({
+      allowed: false,
+      reason: 'denylist',
+    });
   });
 });
 

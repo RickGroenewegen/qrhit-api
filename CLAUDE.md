@@ -2101,11 +2101,15 @@ Things here that cost something to learn:
   `musicRoutes.ts`). Every link there was resolved through our own MusicFetch
   pipeline from the Spotify URL, so the id formats match a genuinely enriched
   track; `yt` is a bare video id because that is what the column stores, and a
-  full URL there would give the game away. The detectors still run for a
-  decoyed caller, so the rate limit, the sequential-id check and the dashboard
-  record all still happen, and the decoy is served in place of the verdict.
-  The serve is logged at most once a minute per address, since the whole point
-  is that the caller keeps going.
+  full URL there would give the game away. **A decoyed caller is never banned**
+  (2026-10-24, Rick: let it ingest all the decoys). The routes serve the decoy
+  before the guard runs, `check()` skips the detectors for it, `ban()` ignores
+  it, and `isBanned()` lets it through even while Redis still holds a ban for
+  it. Before this the detectors ran for it too, and the sequential-id check
+  banned it after 25 ascending ids, after which `ipPlugin` answered it 403 and
+  the decoys stopped. The permanent denylist still beats a decoy. The serve is
+  logged at most once a minute per address, since the whole point is that the
+  caller keeps going; the Blocked IPs page no longer shows it.
 - **Sequential-id detection is what catches a patient scraper.** A rate limit
   alone is a speed limit: 29 requests a minute is invisible forever and still
   drains the database. The detector is safe because `Track.trackId` is unique,

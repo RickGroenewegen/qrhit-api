@@ -420,20 +420,18 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
-    // Run the guard first either way, so the counters, bans and dashboard
-    // records still build up for a decoyed caller. Its verdict is then
-    // ignored for them: they get wrong data rather than a 403 that would
-    // tell them they have been spotted.
+    // A decoyed caller gets wrong data rather than a 403 that would tell it
+    // it has been spotted, and is never banned, so it keeps ingesting decoys.
+    if (abuseGuard.isDecoy(request.clientIp)) {
+      logDecoy(request.clientIp, request.params.trackId, userAgent);
+      return { ...DECOY_LINKS, r: true, st: null };
+    }
+
     const guard = await abuseGuard.check(
       request.clientIp,
       userAgent,
       request.params.trackId
     );
-
-    if (abuseGuard.isDecoy(request.clientIp)) {
-      logDecoy(request.clientIp, request.params.trackId, userAgent);
-      return { ...DECOY_LINKS, r: true, st: null };
-    }
 
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
@@ -476,18 +474,18 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
+    // See the note on the decoy in /qrlink above.
+    if (abuseGuard.isDecoy(request.clientIp)) {
+      logDecoy(request.clientIp, request.params.trackId, userAgent);
+      return { ...DECOY_LINKS, r: true, t: null, st: null, b: false };
+    }
+
     const guard = await abuseGuard.check(
       request.clientIp,
       userAgent,
       request.params.trackId,
       request.params.php
     );
-
-    // See the note on the decoy in /qrlink above.
-    if (abuseGuard.isDecoy(request.clientIp)) {
-      logDecoy(request.clientIp, request.params.trackId, userAgent);
-      return { ...DECOY_LINKS, r: true, t: null, st: null, b: false };
-    }
 
     if (!guard.allowed) {
       return reply.status(403).send({ error: 'Forbidden' });
