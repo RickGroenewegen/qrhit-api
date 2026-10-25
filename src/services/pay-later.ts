@@ -1,6 +1,6 @@
 /**
- * Order lines and addresses for Mollie's pay-later methods (Klarna, in3,
- * Riverty). Pure, no I/O, so it is unit-testable.
+ * Order lines and addresses for Mollie's pay-later methods (Klarna, in3).
+ * Pure, no I/O, so it is unit-testable.
  *
  * Mollie only offers those methods when the payment carries `lines` that add
  * up to its amount and a billing address with a given and family name,

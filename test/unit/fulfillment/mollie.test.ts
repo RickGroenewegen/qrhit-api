@@ -34,7 +34,6 @@ const mollieApi = vi.hoisted(() => {
     },
     paymentLinks: { create: vi.fn() },
     refunds: { create: vi.fn() },
-    captures: { create: vi.fn() },
   });
   const liveClient = makeClient();
   const testClient = makeClient();
@@ -416,8 +415,6 @@ function applyDefaults(): void {
     id: 're_1',
     status: 'pending',
   });
-  mollieApi.liveClient.captures.create.mockResolvedValue({ id: 'cpt_1' });
-  mollieApi.testClient.captures.create.mockResolvedValue({ id: 'cpt_1' });
 }
 
 function makeItem(over: Record<string, any> = {}): any {
@@ -534,7 +531,6 @@ describe('resolveMollieMethods', () => {
       'creditcard',
       'paypal',
       'klarna',
-      'riverty',
       'in3',
     ]);
   });
@@ -551,8 +547,8 @@ describe('resolveMollieMethods', () => {
     expect(result.countrySource).toBe('viewer');
     expect(result.locale).toBe('sv_SE');
     // DE list first, then SE list (deduped), then fallback (deduped),
-    // finally filtered to SEK-capable methods (Riverty and Pay by Bank are
-    // not taken in SEK and drop out).
+    // finally filtered to SEK-capable methods (Pay by Bank is not taken in
+    // SEK and drops out).
     expect(result.methods).toEqual([
       'paypal',
       'klarna',
@@ -678,7 +674,7 @@ describe('getPaymentUri', () => {
       paymentRequest: {
         amount: { currency: 'EUR', value: '25.00' },
         metadata: { clientIp: IP, refreshPlaylists: '' },
-        method: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'riverty', 'in3'],
+        method: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'in3'],
         description: 'Playlist : Best Hits',
         redirectUrl: 'http://localhost:4200/nl/generate/check_payment',
         webhookUrl: 'http://localhost:3004/mollie/webhook',
@@ -861,11 +857,11 @@ describe('getPaymentUri', () => {
       });
     });
 
-    it('sends lines and addresses for a physical order, with manual capture where Riverty is on offer', async () => {
+    it('sends lines and addresses for a physical order, and never holds the payment', async () => {
       await mollie.getPaymentUri(physicalParams(), IP);
 
       const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
-      expect(request.captureMode).toBe('manual');
+      expect(request).not.toHaveProperty('captureMode');
       expect(
         request.lines.map((l: any) => [l.type, l.description, l.totalAmount.value, l.vatAmount.value])
       ).toEqual([
@@ -911,7 +907,20 @@ describe('getPaymentUri', () => {
       expect(calls[0][0].paymentRequest).toHaveProperty('lines');
       expect(calls[1][0].paymentRequest).not.toHaveProperty('lines');
       expect(calls[1][0].paymentRequest).not.toHaveProperty('billingAddress');
-      expect(calls[1][0].paymentRequest).not.toHaveProperty('captureMode');
+    });
+
+    it('creates the payment as before when building the lines throws', async () => {
+      translationMock.getTranslationsByPrefix.mockImplementation(async (_locale: string, prefix: string) => {
+        if (prefix === 'invoice') throw new Error('no catalogue');
+        return TRANSLATIONS;
+      });
+
+      const result = await mollie.getPaymentUri(physicalParams(), IP);
+
+      expect(result.success).toBe(true);
+      const calls = mollieApi.liveClient.payments.create.mock.calls;
+      expect(calls).toHaveLength(1);
+      expect(calls[0][0].paymentRequest).not.toHaveProperty('lines');
     });
 
     it('does not retry when Mollie fails for another reason', async () => {
@@ -1622,7 +1631,7 @@ describe('processWebhook', () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.payment.updateMany).toHaveBeenCalledWith({
-      where: { paymentId: 'tr_x', status: { not: 'paid' } },
+      where: { paymentId: 'tr_x', status: { notIn: ['paid'] } },
       data: {
         status: 'paid',
         paymentMethod: 'ideal',
@@ -1649,127 +1658,30 @@ describe('processWebhook', () => {
     );
   });
 
-  describe('manual capture', () => {
-    const authorized = (over: Record<string, any> = {}) =>
+  it('never moves a paid row back to an earlier status', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({
+      id: 10,
+      paymentId: 'tr_x',
+      status: 'paid',
+      user: { hash: 'uhash' },
+    });
+    mollieApi.liveClient.payments.get.mockResolvedValue(
       fakeMolliePayment({
         id: 'tr_x',
         status: 'authorized',
-        method: 'creditcard',
-        captureMode: 'manual',
+        method: 'klarna',
         metadata: { clientIp: '9.9.9.9', refreshPlaylists: '' },
-        ...over,
-      });
+      })
+    );
 
-    beforeEach(() => {
-      prismaMock.payment.findUnique.mockResolvedValue({
-        id: 10,
-        paymentId: 'tr_x',
-        status: 'open',
-        user: { hash: 'uhash' },
-      });
-    });
+    await mollie.processWebhook({ id: 'tr_x' });
 
-    it('captures an authorized payment at once and leaves the order to the paid webhook', async () => {
-      mollieApi.liveClient.payments.get.mockResolvedValue(authorized());
-
-      const result = await mollie.processWebhook({ id: 'tr_x' });
-
-      expect(result).toEqual({ success: true });
-      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledWith({
-        paymentId: 'tr_x',
-        idempotencyKey: 'capture-tr_x',
-      });
-      expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
-      expect(discountMock.confirmDiscountUsesByPaymentId).not.toHaveBeenCalled();
-    });
-
-    it('captures on a replay too, but never twice, nor a payment that is not held', async () => {
-      prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
-      mollieApi.liveClient.payments.get.mockResolvedValueOnce(authorized());
-      await mollie.processWebhook({ id: 'tr_x' });
-      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledTimes(1);
-
-      for (const over of [
-        { amountCaptured: { currency: 'EUR', value: '54.95' } },
-        { captureMode: 'automatic' },
-        { status: 'paid' },
-      ]) {
-        mollieApi.liveClient.payments.get.mockResolvedValueOnce(authorized(over));
-        await mollie.processWebhook({ id: 'tr_x' });
-      }
-      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledTimes(1);
-    });
-
-    it('captures with the test account for a test payment', async () => {
-      mollieApi.testClient.payments.get.mockResolvedValue(authorized());
-
-      await mollie.processWebhook({ id: 'tr_x' });
-
-      expect(mollieApi.testClient.captures.create).toHaveBeenCalledTimes(1);
-      expect(mollieApi.liveClient.captures.create).not.toHaveBeenCalled();
-    });
-
-    it('throws when the capture fails, so the webhook answers 500 and Mollie retries', async () => {
-      mollieApi.liveClient.payments.get.mockResolvedValue(authorized());
-      mollieApi.liveClient.captures.create.mockRejectedValue(
-        Object.assign(new Error('Unprocessable'), {
-          statusCode: 422,
-          detail: 'The payment cannot be captured',
-        })
-      );
-
-      await expect(mollie.processWebhook({ id: 'tr_x' })).rejects.toThrow(
-        'Capturing authorized payment tr_x failed: The payment cannot be captured'
-      );
-      // The thrown error carries no 4xx status of its own.
-      await expect(mollie.processWebhook({ id: 'tr_x' })).rejects.not.toHaveProperty(
-        'statusCode'
-      );
-    });
-
-    it('the nightly run captures what is still authorized after an hour, past a failure', async () => {
-      prismaMock.payment.findMany.mockResolvedValueOnce([
-        { paymentId: 'tr_a' },
-        { paymentId: 'tr_b' },
-      ]);
-      mollieApi.liveClient.payments.get.mockImplementation(async ({ paymentId }: any) =>
-        authorized({ id: paymentId })
-      );
-      mollieApi.liveClient.captures.create
-        .mockRejectedValueOnce(new Error('boom'))
-        .mockResolvedValueOnce({ id: 'cpt_2' });
-
-      await (mollie as any).captureStaleAuthorizations();
-
-      expect(prismaMock.payment.findMany).toHaveBeenCalledWith({
-        where: { status: 'authorized', createdAt: { lt: expect.any(Date) } },
-        select: { paymentId: true },
-      });
-      const cutoff = prismaMock.payment.findMany.mock.calls[0][0].where.createdAt.lt;
-      expect(Date.now() - cutoff.getTime()).toBeGreaterThanOrEqual(60 * 60 * 1000);
-      expect(mollieApi.liveClient.captures.create.mock.calls.map((c: any) => c[0].paymentId)).toEqual([
-        'tr_a',
-        'tr_b',
-      ]);
-    });
-
-    it('the nightly run also runs an order whose paid webhook never arrived', async () => {
-      prismaMock.payment.findMany.mockResolvedValueOnce([{ paymentId: 'tr_x' }]);
-      prismaMock.payment.findUnique.mockResolvedValue({
-        id: 10,
-        paymentId: 'tr_x',
-        status: 'authorized',
-        user: { hash: 'uhash' },
-      });
-      mollieApi.liveClient.payments.get.mockResolvedValue(
-        authorized({ status: 'paid', amountCaptured: { currency: 'EUR', value: '54.95' } })
-      );
-
-      await (mollie as any).captureStaleAuthorizations();
-
-      expect(mollieApi.liveClient.captures.create).not.toHaveBeenCalled();
-      expect(generatorMock.queueGenerate).toHaveBeenCalledWith('tr_x', '9.9.9.9', '', false, false, false);
-    });
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { paymentId: 'tr_x', status: { notIn: ['authorized', 'paid'] } },
+      })
+    );
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
   });
 
   it('replayed paid webhook (no status flip) skips all side effects', async () => {

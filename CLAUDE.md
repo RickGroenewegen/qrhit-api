@@ -1974,16 +1974,16 @@ Two things `channable.ts` deliberately does NOT do:
   retired, its image-generation half has to move into `channable.ts` or a
   shared module, or the feed will slowly lose images.**
 
-## Mollie payment methods: pay later, held payments and the dead ones
+## Mollie payment methods: pay later, Riverty and the dead ones
 
 Which methods a customer sees comes from `src/data/shared/markets.json` (per
 country, checkout order) filtered by `currencies.json` (what each currency
 takes), in `resolveMollieMethods`. Mollie then silently hides any method in
 that list whose requirements the payment does not meet. Reworked on
-2026-10-24 after two years of 0 Klarna, in3 and Riverty payments.
+2026-10-24 after two years of 0 Klarna and in3 payments.
 
-- **Klarna, in3 and Riverty only show with order lines and a billing
-  address.** Without them Klarna answers 422 "A billing address is required"
+- **Klarna and in3 only show with order lines and a billing address.**
+  Without them Klarna answers 422 "A billing address is required"
   when asked alone and is left out without a word in a method list.
   `payLaterDetails` (`src/services/pay-later.ts`) builds both from the cart
   and `/order/calculate`'s sums: a line per playlist (products split
@@ -1994,33 +1994,43 @@ that list whose requirements the payment does not meet. Reworked on
   gift card, an order without a complete postal address (every digital
   order), a one-word name or no e-mail, or when the products would have to
   absorb more than rounding. A 4xx on the create with lines creates the
-  payment again without them: pay later must never cost a sale.
-- **Riverty only takes `captureMode: manual`** (422 otherwise). Whenever
-  Riverty is in the list and lines are attached, the payment is created
-  held, which holds the other methods that support it too (card, Apple Pay,
-  Klarna, PayPal); iDEAL, Bancontact, EPS and in3 are paid at once anyway.
-  The webhook captures an `authorized` payment straight away
-  (`captureAuthorized`, idempotency key `capture-<id>`, no body = the full
-  amount), Mollie turns it paid within seconds and calls the webhook again,
-  which runs the order. So the customer's Klarna or Riverty term starts at
-  the order, as before. A failed capture throws, so the route answers 500
-  and Mollie retries; the nightly `cleanPayments` first runs the webhook
-  again for every payment still `authorized` after an hour (Visa holds for
-  7 days), which covers a capture that never landed and a paid webhook that
-  never arrived. Checked end to end in test mode on 2026-10-24.
+  payment again without them, and an error while building them sends it
+  without them: pay later must never cost a sale. Both go to PostHog, since
+  a refusal on every payment would hide pay later again without a sound.
+- **Riverty is not offered, although it is activated.** Mollie only takes it
+  on a held payment (`captureMode: manual`, 422 otherwise, and in a method
+  list it is just left out), and a held payment holds every method in it
+  that can be held: cards, Apple Pay, Klarna and PayPal are then only
+  `authorized`, and the order waits for our capture. With Riverty in the
+  NL/BE/DE/AT lists that is every physical order there. It was built on
+  2026-10-24 (787dbb9a: capture in the webhook, a nightly backstop) and
+  worked in test mode, and taken out on 2026-10-25 at Rick's request: a
+  missed capture leaves the money untaken until the hold lapses (Visa 7
+  days), card and Apple Pay could not be tried in test mode, and Mollie
+  calls manual capture for PayPal beta. Klarna and in3 cover pay later
+  there. Adding `riverty` to a market's list changes nothing (Mollie drops
+  it from an unheld payment); bringing it back means that commit.
+- **The claim never moves a paid row back** (`processWebhook`): a webhook
+  still holding an earlier status, handled next to the paid one, would
+  otherwise write it over `paid`, and the order job checks the stored status.
 - **Not offered, on purpose:** SEPA direct debit (rejected for the account),
   Trustly (withdrawn by Mollie, last payment 2026-04-24), paysafecard (off in
   the website profile), Vipps and MobilePay (need a Norwegian or Danish /
   Finnish business), Bizum (needs a Spanish bank). `GET /v2/methods/all`
   shows the account's state per method.
 - **Local currency unlocks the local method.** BLIK only takes PLN and TWINT
-  only CHF, so Poland pays in PLN (`/pl` pins it) and a Swiss visitor on
-  `/de`, `/fr` or `/it` in francs (`getCurrencyForPage` in the site's
-  `currency-map.ts`: a country that reads the page's language gets its own
-  currency, everyone else the language's pin, so Googlebot from the US still
-  sees euros on `/de`).
-- Riverty and Pay by Bank are in `notOnBadges`: the homepage strip leaves
-  them out.
+  only CHF, so visitors in Poland pay in PLN (the market's currency) and a
+  Swiss visitor on `/de`, `/fr` or `/it` in francs (`getCurrencyForPage` in
+  the site's `currency-map.ts`: a euro page gives way to a country that reads
+  its language, a language pinned to its own currency keeps it everywhere,
+  so Googlebot from the US still sees euros on `/de`). **A currency decides
+  methods**, since most local ones are EUR-only: a PLN pin on `/pl` took
+  iDEAL, Bancontact and EPS from Poles living in NL, BE and AT, and the
+  country rule applied to `/sv` took Swish from Swedes in Norway, so `/pl` has
+  no pin and non-euro pins stay put (both caught by an old-against-new
+  checkout comparison in Mollie test mode, 2026-10-25, before any deploy).
+- Pay by Bank is in `notOnBadges`: the homepage strip leaves it out (no
+  brand anyone looks for).
 
 ## Error tracking (PostHog)
 

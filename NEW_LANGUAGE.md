@@ -60,9 +60,13 @@ entry and check every field; the generated interface documents them. Notes:
   key there (`"danish": "Danish"`).
 - `currency` pins the currency of the language's pages whoever crawls them
   (Googlebot fetches from US IPs). Give one when the language has one market;
-  leave it null for English (GB/US/AU/CA). A visitor from a market that lists
-  the language in its `locales` pays in that market's currency instead (a
-  Swiss visitor on /de in francs, which is what makes TWINT appear).
+  leave it null for English (GB/US/AU/CA) and Polish (Poland pays in PLN
+  through its market; a pin would charge Poles abroad in zloty and take their
+  iDEAL, Bancontact or EPS, which only take euros). Only a euro pin gives way:
+  a visitor from a non-euro market that lists the language in its `locales`
+  pays in that market's currency (a Swiss visitor on /de in francs, which is
+  what makes TWINT appear); a language pinned to its own currency keeps it
+  everywhere.
 - `country` drives the payment methods a speaker sees; `occasionCountry` only
   when the occasion pages should follow another market (English → US for
   Thanksgiving).
@@ -76,10 +80,9 @@ entry and check every field; the generated interface documents them. Notes:
   methods activated in our Mollie account and accepted in the market's
   currency (check with `GET /v2/methods?amount[currency]=…&billingCountry=…`),
   and `notOnBadges` for ones the homepage strip leaves out (Pay by Bank is no
-  brand anyone looks for; Riverty only shows for an order with a postal
-  address). Klarna, in3 and Riverty need order lines and an address, and
-  Riverty also a held payment that the webhook captures: see "Mollie payment
-  methods" in CLAUDE.md before adding one of those; `occasions` for
+  brand anyone looks for). Klarna and in3 need order lines and an address,
+  and Riverty is left out on purpose: see "Mollie payment methods" in
+  CLAUDE.md before adding one of those; `occasions` for
   an occasion-calendar market (its Father's Day may need a rule in
   `src/data/giftOccasions.ts` `FATHERS_DAY` when `date-holidays` has none:
   check with `new Holidays('DK', { languages: ['en'] }).getHolidays(2026)`);

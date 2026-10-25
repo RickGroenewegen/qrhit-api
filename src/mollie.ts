@@ -1261,12 +1261,6 @@ class Mollie {
     }
 
     try {
-      await this.captureStaleAuthorizations();
-    } catch (error: any) {
-      this.logger.log(color.red.bold('Error capturing authorized payments!'));
-    }
-
-    try {
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
           status: {
@@ -1380,10 +1374,12 @@ class Mollie {
    * Methods Mollie cannot offer us are left out, since a badge for them
    * promises what checkout never shows: SEPA direct debit was rejected for
    * the account, Trustly was withdrawn by Mollie (last payment 2026-04-24)
-   * and paysafecard is off in the profile. Klarna, in3 and Riverty only show
-   * when the payment carries order lines and a billing address
-   * (`payLaterDetails`); Riverty also needs `captureMode: manual`, see
-   * `captureAuthorized`.
+   * and paysafecard is off in the profile. Klarna and in3 only show when the
+   * payment carries order lines and a billing address (`payLaterDetails`).
+   * Riverty is left out on purpose: Mollie only takes it on a held payment
+   * (`captureMode: manual`), which would hold every card, Apple Pay and
+   * PayPal payment made with it on offer, see CLAUDE.md "Mollie payment
+   * methods".
    */
   private static readonly METHODS_BY_COUNTRY: Record<string, MollieMethod[]> =
     Object.fromEntries(
@@ -1553,15 +1549,12 @@ class Mollie {
   }
 
   /** Methods Mollie only shows when the payment carries lines and addresses. */
-  private static readonly PAY_LATER_METHODS: MollieMethod[] = ['klarna', 'in3', 'riverty'];
+  private static readonly PAY_LATER_METHODS: MollieMethod[] = ['klarna', 'in3'];
 
   /**
-   * The order lines and addresses that make Klarna, in3 and Riverty appear
-   * at Mollie's checkout (src/services/pay-later.ts), or null when none of
-   * them is on offer or the order cannot carry them. With Riverty on offer
-   * the payment is created with `captureMode: manual`, the only mode Riverty
-   * accepts; the webhook then captures every authorized payment at once
-   * (`captureAuthorized`).
+   * The order lines and addresses that make Klarna and in3 appear at
+   * Mollie's checkout (src/services/pay-later.ts), or null when neither is
+   * on offer or the order cannot carry them.
    */
   private async payLaterRequest(input: {
     methods: MollieMethod[];
@@ -1574,11 +1567,10 @@ class Mollie {
     amount: number;
     rate: number;
     order: any;
-  }): Promise<(PayLaterDetails & { captureMode?: 'manual' }) | null> {
-    const offered = input.methods.filter((m) =>
-      Mollie.PAY_LATER_METHODS.includes(m)
-    );
-    if (offered.length === 0) return null;
+  }): Promise<PayLaterDetails | null> {
+    if (!input.methods.some((m) => Mollie.PAY_LATER_METHODS.includes(m))) {
+      return null;
+    }
 
     const invoice =
       (await this.translation.getTranslationsByPrefix(input.locale, 'invoice')) ?? {};
@@ -1611,97 +1603,7 @@ class Mollie {
         discount: invoice['discount'] || 'Discount',
       },
     });
-    if (!details) return null;
-    return offered.includes('riverty')
-      ? { ...details, captureMode: 'manual' }
-      : details;
-  }
-
-  /**
-   * Captures a payment Mollie only authorized. A payment that may be paid
-   * with Riverty is created with `captureMode: manual`, and that mode holds
-   * every method that supports it too (card, Apple Pay, Klarna, PayPal).
-   * Capturing at once keeps those orders on the usual path: the payment
-   * turns paid and Mollie calls the webhook again. Methods without manual
-   * capture (iDEAL, Bancontact, EPS, in3) are paid straight away.
-   *
-   * Throws when the capture fails, so the webhook answers 500 and Mollie
-   * retries it; the nightly `captureStaleAuthorizations` is the backstop
-   * before the authorization lapses (7 days for Visa). Returns whether it
-   * captured.
-   */
-  private async captureAuthorized(
-    payment: any,
-    client: Client
-  ): Promise<boolean> {
-    if (payment?.status !== 'authorized' || payment.captureMode !== 'manual') {
-      return false;
-    }
-    if (Number(payment.amountCaptured?.value ?? 0) > 0) return false;
-    try {
-      await client.captures.create({
-        paymentId: payment.id,
-        idempotencyKey: `capture-${payment.id}`,
-      });
-    } catch (e: any) {
-      throw new Error(
-        `Capturing authorized payment ${payment.id} failed: ${e?.detail ?? e?.message ?? e}`
-      );
-    }
-    this.logger.log(
-      color.green.bold('Captured authorized payment ') +
-        color.white.bold(payment.id) +
-        color.green.bold(' (') +
-        color.white.bold(payment.method || '-') +
-        color.green.bold(')')
-    );
-    return true;
-  }
-
-  /** A payment from the live account, or the test account when live has none. */
-  private async fetchMolliePayment(
-    paymentId: string
-  ): Promise<{ payment: any; client: Client }> {
-    try {
-      return {
-        payment: await this.mollieClient.payments.get({ paymentId }),
-        client: this.mollieClient,
-      };
-    } catch (e) {
-      return {
-        payment: await this.mollieClientTest.payments.get({ paymentId }),
-        client: this.mollieClientTest,
-      };
-    }
-  }
-
-  /**
-   * Backstop for `captureAuthorized`: a payment still authorized here an
-   * hour after it was made either failed every capture attempt or was
-   * captured without its paid webhook reaching us. Without this its
-   * authorization lapses, the payment expires and the cleanup below deletes
-   * it, while the customer believes they paid. The webhook handles both: it
-   * captures what is still held and runs the order for what is paid.
-   */
-  private async captureStaleAuthorizations(): Promise<void> {
-    const stale = await this.prisma.payment.findMany({
-      where: {
-        status: 'authorized',
-        createdAt: { lt: new Date(Date.now() - 60 * 60 * 1000) },
-      },
-      select: { paymentId: true },
-    });
-    for (const { paymentId } of stale) {
-      try {
-        await this.processWebhook({ id: paymentId });
-      } catch (e: any) {
-        this.logger.log(
-          color.red.bold('Nightly capture failed for ') +
-            color.white.bold(paymentId) +
-            color.red.bold(`: ${e?.message ?? e}`)
-        );
-      }
-    }
+    return details;
   }
 
   public async clearPDFs(paymentId: string) {
@@ -2619,18 +2521,25 @@ class Mollie {
         });
         const paymentMethods = resolved.methods;
 
-        const payLater = await this.payLaterRequest({
-          methods: paymentMethods,
-          locale: params.locale,
-          cart: params.cart,
-          calc: calculateResult.data,
-          base: discountBase,
-          allocation,
-          currency: presentmentCurrency,
-          amount: presentmentAmount,
-          rate: presentmentRate,
-          order: params.extraOrderData,
-        });
+        // Pay later is extra: whatever goes wrong building it, the payment
+        // goes out as it did before.
+        let payLater: PayLaterDetails | null = null;
+        try {
+          payLater = await this.payLaterRequest({
+            methods: paymentMethods,
+            locale: params.locale,
+            cart: params.cart,
+            calc: calculateResult.data,
+            base: discountBase,
+            allocation,
+            currency: presentmentCurrency,
+            amount: presentmentAmount,
+            rate: presentmentRate,
+            order: params.extraOrderData,
+          });
+        } catch (e) {
+          console.error('Building the pay-later lines failed, paying without them', e);
+        }
 
         this.logger.log(
           color.blue.bold(
@@ -2641,9 +2550,7 @@ class Mollie {
             )} currency=${color.white.bold(presentmentCurrency)} → ${color.white.bold(
               paymentMethods.join(',')
             )} pay-later=${color.white.bold(
-              payLater
-                ? `${payLater.lines.length} lines${payLater.captureMode ? ', manual capture' : ''}`
-                : 'no'
+              payLater ? `${payLater.lines.length} lines` : 'no'
             )}`
           )
         );
@@ -2681,6 +2588,9 @@ class Mollie {
               color.white.bold(`${e?.detail ?? e?.message}${e?.field ? ` (${e.field})` : ''}`) +
               color.yellow.bold(', creating the payment without them')
           );
+          // To PostHog too: a refusal on every payment would otherwise hide
+          // pay later for good without anyone noticing, as it did for two years.
+          console.error('Mollie refused the pay-later lines', e);
           payment = await paymentClient.payments.create({ paymentRequest });
         }
 
@@ -3301,10 +3211,18 @@ class Mollie {
         };
       }
 
+      let payment;
+
       // Try the live client first, with a fallback to test
-      const { payment, client: paymentClient } = await this.fetchMolliePayment(
-        params.id
-      );
+      try {
+        payment = await this.mollieClient.payments.get({
+          paymentId: params.id,
+        });
+      } catch (e) {
+        payment = await this.mollieClientTest.payments.get({
+          paymentId: params.id,
+        });
+      }
 
       // Check if this is a bingo upgrade payment (special handling - not a regular order)
       const metadata = payment.metadata as any;
@@ -3677,14 +3595,19 @@ class Mollie {
 
       // Atomic state-transition claim: only the webhook that flips the status
       // proceeds with side effects. Concurrent or replayed webhooks see count=0
-      // and return without re-firing downstream work.
+      // and return without re-firing downstream work. A paid row never moves
+      // back: a webhook still holding an earlier status (a retry handled next
+      // to the paid one, Klarna's `authorized`) must not undo the paid claim,
+      // because the order job checks the stored status.
       let statusChanged = false;
       const settlementAmountEur = this.takeSettlementAmountEur(payment.id);
       try {
         const claim = await this.prisma.payment.updateMany({
           where: {
             paymentId: payment.id,
-            status: { not: payment.status },
+            status: {
+              notIn: payment.status === 'paid' ? ['paid'] : [payment.status, 'paid'],
+            },
           },
           data: {
             status: payment.status,
@@ -3711,10 +3634,6 @@ class Mollie {
           color.bold.white(payment.status) +
           (statusChanged ? '' : color.yellow.bold(' (replay — side effects skipped)'))
       );
-
-      // Created with manual capture (Riverty on offer): capture at once, on a
-      // replay too, and the paid webhook that follows runs the order.
-      await this.captureAuthorized(payment, paymentClient);
 
       // Discount reservations follow the payment status on EVERY webhook,
       // replay or not. Both calls are idempotent, and a replayed failure
