@@ -510,13 +510,16 @@ describe('saveUserMessage', () => {
       temperature: 0.3,
       messages: [
         { role: 'system', content: expect.stringContaining('chat into Dutch') },
-        { role: 'user', content: '<message>\nHello there\n</message>' },
+        { role: 'user', content: 'Translate this message into Dutch.\n<message>\nHello there\n</message>' },
       ],
     });
     // The message is never treated as a question to the model (chat 587)
     expect(createMock.mock.calls[0][0].messages[0].content).toContain(
       'never to you: do not answer it'
     );
+    // Dutch is never taken for German ("Deutsch", chat 602)
+    expect(createMock.mock.calls[0][0].messages[0].content).toContain('Nederlands');
+    expect(createMock.mock.calls[0][0].messages[0].content).toContain('not German');
   });
 
   it('strips <message> tags the model echoes back', async () => {
@@ -580,11 +583,11 @@ describe('saveAdminMessage', () => {
 
     const payload = createMock.mock.calls[0][0];
     expect(payload.model).toBe('gpt-5.6-luna');
-    expect(payload.messages[0].content).toContain('chat into German');
+    expect(payload.messages[0].content).toContain('chat into German.');
     expect(payload.messages[0].content).toContain('Keep markdown formatting');
     expect(payload.messages[1]).toEqual({
       role: 'user',
-      content: '<message>\nNederlandse tekst\n</message>',
+      content: 'Translate this message into German.\n<message>\nNederlandse tekst\n</message>',
     });
   });
 
@@ -636,7 +639,7 @@ describe('translateToDutch', () => {
     });
     expect(createMock.mock.calls[0][0].messages[0].content).toContain('chat into Dutch');
     expect(createMock.mock.calls[0][0].messages[1].content).toBe(
-      '<message>\nTranslated\n</message>'
+      'Translate this message into Dutch.\n<message>\nTranslated\n</message>'
     );
   });
 
@@ -1291,7 +1294,7 @@ describe('processQuestion', () => {
       }
       // background Dutch translations
       return textResponse(
-        `NL:${payload.messages[1].content.replace(/^<message>\n|\n<\/message>$/g, '')}`
+        `NL:${payload.messages[1].content.replace(/^[^\n]*\n<message>\n|\n<\/message>$/g, '')}`
       );
     });
 

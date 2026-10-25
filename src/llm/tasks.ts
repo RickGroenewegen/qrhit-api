@@ -127,7 +127,12 @@ export const LLM_TASKS = {
     kind: 'text',
     label: 'Chat translation',
     description: 'Dutch copies of chat messages and admin replies in the customer\'s language.',
-    primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'none' },
+    // 2026-10-25: on Haiku half of chat 602 reached the dashboard untranslated
+    // (it took German for Dutch; 16 of 33 non-Dutch messages since 10-13). The
+    // current prompt passed on both models (12 messages x 16 runs, both ways),
+    // but Haiku had prefixed notes ("already Dutch, so unchanged:") under the
+    // wording before it and Sonnet never did. About $0.005 a message.
+    primary: { provider: 'anthropic', model: 'claude-sonnet-5-5', effort: 'none' },
     fallback: { provider: 'openai', model: 'gpt-5.6-luna', effort: 'none' },
     timeoutMs: 30_000,
   },
