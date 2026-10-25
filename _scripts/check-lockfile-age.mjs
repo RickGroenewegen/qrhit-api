@@ -22,7 +22,7 @@ const lock = JSON.parse(readFileSync(path.join(repo, 'package-lock.json'), 'utf8
 // name -> Set(version); links, local files and bundled deps are not registry installs
 const wanted = new Map();
 for (const [key, entry] of Object.entries(lock.packages ?? {})) {
-  if (!key || entry.link || entry.inBundle || !entry.version) continue;
+  if (!key.includes('node_modules/') || entry.link || entry.inBundle || !entry.version) continue;
   if (entry.resolved && !entry.resolved.startsWith(REGISTRY)) continue;
   const name = entry.name ?? key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length);
   if (!wanted.has(name)) wanted.set(name, new Set());
