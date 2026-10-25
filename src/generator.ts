@@ -1304,14 +1304,16 @@ class Generator {
 
         // TODO: Implement API
         if (physicalPlaylists.length > 0) {
-          let sendToPrinterAt = new Date().setHours(new Date().getHours() + 36);
+          // 36 real hours: setHours() counts the local clock, which made the
+          // window 35 or 37 hours around a daylight saving change
+          const sendToPrinterAt = new Date(Date.now() + 36 * 3600 * 1000);
           await this.prisma.payment.update({
             where: {
               id: payment.id,
             },
             data: {
               canBeSentToPrinter: true,
-              canBeSentToPrinterAt: new Date(sendToPrinterAt),
+              canBeSentToPrinterAt: sendToPrinterAt,
             },
           });
 
