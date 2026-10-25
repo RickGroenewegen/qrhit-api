@@ -49,6 +49,11 @@ import Settings from '../settings';
 import SeoDescriptions from '../seoDescriptions';
 import { parseSalesSegment } from '../businessSales';
 import {
+  getCustomerReport,
+  parseCustomerReportPeriod,
+  parseCustomerReportSort,
+} from '../customerReport';
+import {
   PRINTER_TYPES,
   SPOTIFY_REFRESH_TOKEN_TTL_DAYS,
   TIDAL_REFRESH_TOKEN_TTL_DAYS,
@@ -2478,6 +2483,22 @@ export default async function adminRoutes(
         'month',
         filter,
         parseSalesSegment(request.query?.segment)
+      );
+      reply.send({
+        success: true,
+        data: report,
+      });
+    }
+  );
+
+  // Customer report: the top customers of the site, consumer orders only
+  fastify.get(
+    '/customer_report',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const report = await getCustomerReport(
+        parseCustomerReportPeriod(request.query?.period),
+        parseCustomerReportSort(request.query?.sort)
       );
       reply.send({
         success: true,

@@ -1923,6 +1923,18 @@ class Mollie {
         // Mollie's method id, stored by the webhook; null for free_,
         // toolkit_ and reseller_ orders, which never went through Mollie
         paymentMethod: true,
+        // The discount codes on the order, with what each took off (incl.
+        // VAT). A released use belongs to a checkout that was never paid.
+        discount: true,
+        discountCodes: true,
+        DiscountCodedUses: {
+          where: { status: { not: 'released' } },
+          orderBy: { id: 'asc' },
+          select: {
+            amount: true,
+            discountCode: { select: { code: true, description: true } },
+          },
+        },
         user: {
           select: {
             hash: true,
