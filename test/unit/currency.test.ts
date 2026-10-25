@@ -22,8 +22,8 @@ describe('getCurrencyForCountry', () => {
     expect(getCurrencyForCountry(undefined)).toBe('EUR');
   });
 
-  it('deliberately does NOT auto-map Poland to PLN (Mollie card support)', () => {
-    expect(getCurrencyForCountry('PL')).toBe('EUR');
+  it('maps Poland to PLN, the only currency BLIK is taken in', () => {
+    expect(getCurrencyForCountry('PL')).toBe('PLN');
   });
 });
 

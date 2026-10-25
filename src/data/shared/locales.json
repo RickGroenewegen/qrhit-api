@@ -134,7 +134,7 @@
       "greeting": "Cześć",
       "storefront": "pl",
       "country": "PL",
-      "currency": null,
+      "currency": "PLN",
       "shippingCountries": ["PL"],
       "mollieLocale": "pl_PL",
       "hyphenation": "hyphenation.pl",

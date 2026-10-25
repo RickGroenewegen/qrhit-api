@@ -8,7 +8,8 @@
       "code": "NL",
       "name": "Netherlands",
       "locales": ["nl", "en"],
-      "paymentMethods": ["ideal", "applepay", "creditcard", "paypal", "klarna", "in3"],
+      "paymentMethods": ["ideal", "applepay", "creditcard", "paypal", "klarna", "riverty", "in3"],
+      "notOnBadges": ["riverty"],
       "occasions": true,
       "feed": "nl"
     },
@@ -16,7 +17,8 @@
       "code": "BE",
       "name": "Belgium",
       "locales": ["nl", "fr", "en"],
-      "paymentMethods": ["bancontact", "applepay", "creditcard", "paypal", "klarna", "belfius"],
+      "paymentMethods": ["bancontact", "applepay", "creditcard", "paypal", "klarna", "riverty", "kbc", "belfius"],
+      "notOnBadges": ["riverty"],
       "occasions": true,
       "feed": "nl"
     },
@@ -24,8 +26,8 @@
       "code": "DE",
       "name": "Germany",
       "locales": ["de", "en"],
-      "paymentMethods": ["paypal", "directdebit", "klarna", "creditcard", "applepay", "riverty", "trustly", "paysafecard"],
-      "notOnBadges": ["riverty", "trustly", "paysafecard"],
+      "paymentMethods": ["paypal", "klarna", "creditcard", "applepay", "riverty", "paybybank"],
+      "notOnBadges": ["riverty", "paybybank"],
       "occasions": true,
       "feed": "de"
     },
@@ -33,8 +35,8 @@
       "code": "AT",
       "name": "Austria",
       "locales": ["de", "en"],
-      "paymentMethods": ["eps", "klarna", "paypal", "creditcard", "applepay", "directdebit", "trustly", "paysafecard"],
-      "notOnBadges": ["directdebit", "trustly", "paysafecard"],
+      "paymentMethods": ["eps", "klarna", "paypal", "creditcard", "applepay", "riverty", "paybybank"],
+      "notOnBadges": ["riverty", "paybybank"],
       "occasions": true,
       "feed": "de"
     },
@@ -42,14 +44,16 @@
       "code": "FR",
       "name": "France",
       "locales": ["fr", "en"],
-      "paymentMethods": ["creditcard", "paypal", "applepay", "klarna"],
+      "paymentMethods": ["creditcard", "paypal", "applepay", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true
     },
     {
       "code": "ES",
       "name": "Spain",
       "locales": ["es", "en"],
-      "paymentMethods": ["creditcard", "paypal", "applepay", "satispay", "klarna"],
+      "paymentMethods": ["creditcard", "paypal", "applepay", "satispay", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true,
       "feed": "es"
     },
@@ -57,19 +61,22 @@
       "code": "IT",
       "name": "Italy",
       "locales": ["it", "en"],
-      "paymentMethods": ["creditcard", "paypal", "satispay", "bancomatpay", "applepay", "klarna"],
+      "paymentMethods": ["creditcard", "paypal", "satispay", "bancomatpay", "applepay", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true
     },
     {
       "code": "PT",
       "name": "Portugal",
       "locales": ["pt", "en"],
-      "paymentMethods": ["multibanco", "mbway", "creditcard", "paypal", "applepay"],
+      "paymentMethods": ["multibanco", "mbway", "creditcard", "paypal", "applepay", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true
     },
     {
       "code": "PL",
       "name": "Poland",
+      "currency": "PLN",
       "locales": ["pl", "en"],
       "paymentMethods": ["blik", "creditcard", "applepay", "paypal", "klarna"],
       "occasions": true
@@ -105,14 +112,15 @@
       "name": "Hungary",
       "currency": "HUF",
       "locales": ["hu", "en"],
-      "paymentMethods": ["creditcard", "applepay", "paypal"],
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"],
       "occasions": true
     },
     {
       "code": "FI",
       "name": "Finland",
       "locales": ["fi", "sv", "en"],
-      "paymentMethods": ["klarna", "creditcard", "applepay", "paypal"],
+      "paymentMethods": ["klarna", "creditcard", "applepay", "paypal", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true
     },
     {
@@ -120,7 +128,7 @@
       "name": "Czechia",
       "currency": "CZK",
       "locales": ["cs", "en"],
-      "paymentMethods": ["creditcard", "applepay", "paypal"],
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"],
       "occasions": true
     },
     {
@@ -136,7 +144,8 @@
       "name": "United Kingdom",
       "currency": "GBP",
       "locales": ["en"],
-      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"],
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"],
       "occasions": true,
       "feed": "en"
     },
@@ -178,7 +187,8 @@
       "code": "IE",
       "name": "Ireland",
       "locales": ["en"],
-      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna"]
+      "paymentMethods": ["creditcard", "applepay", "paypal", "klarna", "paybybank"],
+      "notOnBadges": ["paybybank"]
     },
     { "code": "LI", "name": "Liechtenstein", "locales": ["de", "en"] },
     { "code": "LU", "name": "Luxembourg", "locales": ["de", "fr", "en"] },

@@ -34,6 +34,7 @@ const mollieApi = vi.hoisted(() => {
     },
     paymentLinks: { create: vi.fn() },
     refunds: { create: vi.fn() },
+    captures: { create: vi.fn() },
   });
   const liveClient = makeClient();
   const testClient = makeClient();
@@ -415,6 +416,8 @@ function applyDefaults(): void {
     id: 're_1',
     status: 'pending',
   });
+  mollieApi.liveClient.captures.create.mockResolvedValue({ id: 'cpt_1' });
+  mollieApi.testClient.captures.create.mockResolvedValue({ id: 'cpt_1' });
 }
 
 function makeItem(over: Record<string, any> = {}): any {
@@ -480,13 +483,23 @@ describe('filterMethodsByCurrency', () => {
     ]);
   });
 
-  it('keeps only card, Apple Pay and PayPal for HUF', () => {
+  it('keeps only card, Apple Pay, PayPal and Klarna for HUF', () => {
     expect(
       mollie.filterMethodsByCurrency(
-        ['creditcard', 'applepay', 'paypal', 'klarna', 'directdebit', 'trustly'],
+        ['creditcard', 'applepay', 'paypal', 'klarna', 'directdebit', 'riverty'],
         'HUF'
       )
-    ).toEqual(['creditcard', 'applepay', 'paypal']);
+    ).toEqual(['creditcard', 'applepay', 'paypal', 'klarna']);
+  });
+
+  it('keeps BLIK for PLN only', () => {
+    expect(mollie.filterMethodsByCurrency(['blik', 'creditcard'], 'PLN')).toEqual([
+      'blik',
+      'creditcard',
+    ]);
+    expect(mollie.filterMethodsByCurrency(['blik', 'creditcard'], 'EUR')).toEqual([
+      'creditcard',
+    ]);
   });
 
   it('treats unmapped methods as EUR-only', () => {
@@ -521,6 +534,7 @@ describe('resolveMollieMethods', () => {
       'creditcard',
       'paypal',
       'klarna',
+      'riverty',
       'in3',
     ]);
   });
@@ -537,15 +551,13 @@ describe('resolveMollieMethods', () => {
     expect(result.countrySource).toBe('viewer');
     expect(result.locale).toBe('sv_SE');
     // DE list first, then SE list (deduped), then fallback (deduped),
-    // finally filtered to SEK-capable methods (directdebit/paysafecard are
-    // EUR-only and drop out).
+    // finally filtered to SEK-capable methods (Riverty and Pay by Bank are
+    // not taken in SEK and drop out).
     expect(result.methods).toEqual([
       'paypal',
       'klarna',
       'creditcard',
       'applepay',
-      'riverty',
-      'trustly',
       'swish',
     ]);
   });
@@ -605,7 +617,16 @@ describe('resolveMollieMethods', () => {
     });
     expect(result.country).toBe('HU');
     expect(result.locale).toBe('hu_HU');
-    expect(result.methods).toEqual(['creditcard', 'applepay', 'paypal']);
+    expect(result.methods).toEqual(['creditcard', 'applepay', 'paypal', 'klarna']);
+  });
+
+  it('gives a Polish visitor paying in PLN BLIK first', () => {
+    const result = mollie.resolveMollieMethods({
+      language: 'pl',
+      viewerCountry: 'PL',
+      currency: 'PLN',
+    });
+    expect(result.methods).toEqual(['blik', 'creditcard', 'applepay', 'paypal', 'klarna']);
   });
 
   it('gives a Danish visitor the Danish checkout', () => {
@@ -628,7 +649,9 @@ describe('resolveMollieMethods', () => {
     });
     expect(result.country).toBe('PL');
     expect(result.countrySource).toBe('ip');
-    expect(result.methods[0]).toBe('blik');
+    // BLIK is PLN-only, so a Polish visitor paying in euros never sees it.
+    expect(result.methods[0]).toBe('creditcard');
+    expect(result.methods).not.toContain('blik');
   });
 });
 
@@ -655,7 +678,7 @@ describe('getPaymentUri', () => {
       paymentRequest: {
         amount: { currency: 'EUR', value: '25.00' },
         metadata: { clientIp: IP, refreshPlaylists: '' },
-        method: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'in3'],
+        method: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'riverty', 'in3'],
         description: 'Playlist : Best Hits',
         redirectUrl: 'http://localhost:4200/nl/generate/check_payment',
         webhookUrl: 'http://localhost:3004/mollie/webhook',
@@ -805,6 +828,101 @@ describe('getPaymentUri', () => {
       priceWithoutVAT: 41.32,
       priceVAT: 8.68,
       printApiPrice: 30, // 15 * 2
+    });
+  });
+
+  describe('pay-later lines', () => {
+    const physicalParams = (item: Record<string, any> = {}) =>
+      makeParams({
+        orderType: 'physical',
+        extraOrderData: {
+          ...makeParams().extraOrderData,
+          address: 'Kerkstraat',
+          housenumber: '12',
+          zipcode: '1012AB',
+          city: 'Amsterdam',
+        },
+        cart: { items: [makeItem({ type: 'physical', amount: 2, price: 25, ...item })] },
+      });
+
+    beforeEach(() => {
+      orderMock.calculateOrder.mockResolvedValue({
+        success: true,
+        data: {
+          total: 54.95,
+          price: '41.32',
+          payment: '4.95',
+          taxRate: 21,
+          taxRateShipping: 21,
+          boxFee: 0,
+          reverseCharge: false,
+          vatIdChecked: null,
+        },
+      });
+    });
+
+    it('sends lines and addresses for a physical order, with manual capture where Riverty is on offer', async () => {
+      await mollie.getPaymentUri(physicalParams(), IP);
+
+      const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+      expect(request.captureMode).toBe('manual');
+      expect(
+        request.lines.map((l: any) => [l.type, l.description, l.totalAmount.value, l.vatAmount.value])
+      ).toEqual([
+        ['physical', '2× Playlist: Best Hits', '50.00', '8.68'],
+        ['shipping_fee', 'Shipping', '4.95', '0.86'],
+      ]);
+      expect(request.billingAddress).toEqual({
+        givenName: 'Buyer',
+        familyName: 'One',
+        streetAndNumber: 'Kerkstraat 12',
+        postalCode: '1012AB',
+        city: 'Amsterdam',
+        country: 'NL',
+        email: 'buyer@example.com',
+      });
+      expect(request.shippingAddress).toEqual(request.billingAddress);
+    });
+
+    it('sends no lines for a gift card', async () => {
+      await mollie.getPaymentUri(physicalParams({ productType: 'giftcard' }), IP);
+
+      const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+      expect(request).not.toHaveProperty('lines');
+      expect(request).not.toHaveProperty('captureMode');
+    });
+
+    it('creates the payment without lines when Mollie refuses them', async () => {
+      mollieApi.liveClient.payments.create
+        .mockRejectedValueOnce(
+          Object.assign(new Error('Unprocessable'), {
+            statusCode: 422,
+            detail: 'The amount of the lines does not match',
+            field: 'lines',
+          })
+        )
+        .mockResolvedValueOnce(fakeMolliePayment());
+
+      const result = await mollie.getPaymentUri(physicalParams(), IP);
+
+      expect(result.success).toBe(true);
+      const calls = mollieApi.liveClient.payments.create.mock.calls;
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0].paymentRequest).toHaveProperty('lines');
+      expect(calls[1][0].paymentRequest).not.toHaveProperty('lines');
+      expect(calls[1][0].paymentRequest).not.toHaveProperty('billingAddress');
+      expect(calls[1][0].paymentRequest).not.toHaveProperty('captureMode');
+    });
+
+    it('does not retry when Mollie fails for another reason', async () => {
+      mollieApi.liveClient.payments.create.mockRejectedValueOnce(
+        Object.assign(new Error('Service unavailable'), { statusCode: 503 })
+      );
+
+      const result = await mollie.getPaymentUri(physicalParams(), IP);
+
+      expect(result.success).toBe(false);
+      expect(mollieApi.liveClient.payments.create).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1529,6 +1647,129 @@ describe('processWebhook', () => {
       false,
       false
     );
+  });
+
+  describe('manual capture', () => {
+    const authorized = (over: Record<string, any> = {}) =>
+      fakeMolliePayment({
+        id: 'tr_x',
+        status: 'authorized',
+        method: 'creditcard',
+        captureMode: 'manual',
+        metadata: { clientIp: '9.9.9.9', refreshPlaylists: '' },
+        ...over,
+      });
+
+    beforeEach(() => {
+      prismaMock.payment.findUnique.mockResolvedValue({
+        id: 10,
+        paymentId: 'tr_x',
+        status: 'open',
+        user: { hash: 'uhash' },
+      });
+    });
+
+    it('captures an authorized payment at once and leaves the order to the paid webhook', async () => {
+      mollieApi.liveClient.payments.get.mockResolvedValue(authorized());
+
+      const result = await mollie.processWebhook({ id: 'tr_x' });
+
+      expect(result).toEqual({ success: true });
+      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledWith({
+        paymentId: 'tr_x',
+        idempotencyKey: 'capture-tr_x',
+      });
+      expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+      expect(discountMock.confirmDiscountUsesByPaymentId).not.toHaveBeenCalled();
+    });
+
+    it('captures on a replay too, but never twice, nor a payment that is not held', async () => {
+      prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
+      mollieApi.liveClient.payments.get.mockResolvedValueOnce(authorized());
+      await mollie.processWebhook({ id: 'tr_x' });
+      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledTimes(1);
+
+      for (const over of [
+        { amountCaptured: { currency: 'EUR', value: '54.95' } },
+        { captureMode: 'automatic' },
+        { status: 'paid' },
+      ]) {
+        mollieApi.liveClient.payments.get.mockResolvedValueOnce(authorized(over));
+        await mollie.processWebhook({ id: 'tr_x' });
+      }
+      expect(mollieApi.liveClient.captures.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('captures with the test account for a test payment', async () => {
+      mollieApi.testClient.payments.get.mockResolvedValue(authorized());
+
+      await mollie.processWebhook({ id: 'tr_x' });
+
+      expect(mollieApi.testClient.captures.create).toHaveBeenCalledTimes(1);
+      expect(mollieApi.liveClient.captures.create).not.toHaveBeenCalled();
+    });
+
+    it('throws when the capture fails, so the webhook answers 500 and Mollie retries', async () => {
+      mollieApi.liveClient.payments.get.mockResolvedValue(authorized());
+      mollieApi.liveClient.captures.create.mockRejectedValue(
+        Object.assign(new Error('Unprocessable'), {
+          statusCode: 422,
+          detail: 'The payment cannot be captured',
+        })
+      );
+
+      await expect(mollie.processWebhook({ id: 'tr_x' })).rejects.toThrow(
+        'Capturing authorized payment tr_x failed: The payment cannot be captured'
+      );
+      // The thrown error carries no 4xx status of its own.
+      await expect(mollie.processWebhook({ id: 'tr_x' })).rejects.not.toHaveProperty(
+        'statusCode'
+      );
+    });
+
+    it('the nightly run captures what is still authorized after an hour, past a failure', async () => {
+      prismaMock.payment.findMany.mockResolvedValueOnce([
+        { paymentId: 'tr_a' },
+        { paymentId: 'tr_b' },
+      ]);
+      mollieApi.liveClient.payments.get.mockImplementation(async ({ paymentId }: any) =>
+        authorized({ id: paymentId })
+      );
+      mollieApi.liveClient.captures.create
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce({ id: 'cpt_2' });
+
+      await (mollie as any).captureStaleAuthorizations();
+
+      expect(prismaMock.payment.findMany).toHaveBeenCalledWith({
+        where: { status: 'authorized', createdAt: { lt: expect.any(Date) } },
+        select: { paymentId: true },
+      });
+      const cutoff = prismaMock.payment.findMany.mock.calls[0][0].where.createdAt.lt;
+      expect(Date.now() - cutoff.getTime()).toBeGreaterThanOrEqual(60 * 60 * 1000);
+      expect(mollieApi.liveClient.captures.create.mock.calls.map((c: any) => c[0].paymentId)).toEqual([
+        'tr_a',
+        'tr_b',
+      ]);
+    });
+
+    it('the nightly run also runs an order whose paid webhook never arrived', async () => {
+      prismaMock.payment.findMany.mockResolvedValueOnce([{ paymentId: 'tr_x' }]);
+      prismaMock.payment.findUnique.mockResolvedValue({
+        id: 10,
+        paymentId: 'tr_x',
+        status: 'authorized',
+        user: { hash: 'uhash' },
+      });
+      mollieApi.liveClient.payments.get.mockResolvedValue(
+        authorized({ status: 'paid', amountCaptured: { currency: 'EUR', value: '54.95' } })
+      );
+
+      await (mollie as any).captureStaleAuthorizations();
+
+      expect(mollieApi.liveClient.captures.create).not.toHaveBeenCalled();
+      expect(generatorMock.queueGenerate).toHaveBeenCalledWith('tr_x', '9.9.9.9', '', false, false, false);
+    });
   });
 
   it('replayed paid webhook (no status flip) skips all side effects', async () => {
