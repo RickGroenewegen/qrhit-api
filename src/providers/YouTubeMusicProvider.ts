@@ -14,6 +14,7 @@ import {
   UrlValidationResult,
 } from '../interfaces/IMusicProvider';
 import { applyDuplicateFilter } from './trackDedupe';
+import { resolveYouTubeTitleAndArtist } from './youtubeTitle';
 import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
@@ -231,37 +232,20 @@ class YouTubeMusicProvider implements IMusicProvider {
   }
 
   /**
-   * Decide whether to trust YT Music's artist field or fall back to the
-   * "Artist - Title" split. MUSIC_VIDEO_TYPE_ATV / _OMV / _OFFICIAL_SOURCE_MUSIC
-   * are real catalog entries; anything else (notably _UGC, or a missing type)
-   * means the artist is probably just the uploading channel name.
+   * A catalogue song keeps YT Music's title and artist; a video (official or
+   * an upload) is titled "Artist - Title (Official Video)", see youtubeTitle.ts.
    */
   private resolveTitleAndArtist(
     rawTitle: string,
     rawArtist: string,
     videoType: string | null
   ): { name: string; artist: string } {
-    const isCatalogTrack =
-      videoType === 'MUSIC_VIDEO_TYPE_ATV' ||
-      videoType === 'MUSIC_VIDEO_TYPE_OMV' ||
-      videoType === 'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC';
-
-    if (!isCatalogTrack && rawTitle.includes(' - ')) {
-      const [left, ...rest] = rawTitle.split(' - ');
-      const right = rest.join(' - ').trim();
-      const leftTrim = left.trim();
-      if (leftTrim && right) {
-        return {
-          name: this.utils.cleanTrackName(right),
-          artist: leftTrim,
-        };
-      }
-    }
-
-    return {
-      name: this.utils.cleanTrackName(rawTitle),
-      artist: rawArtist,
-    };
+    const { name, artist } = resolveYouTubeTitleAndArtist(
+      rawTitle,
+      rawArtist,
+      videoType
+    );
+    return { name: this.utils.cleanTrackName(name), artist };
   }
 
   /**

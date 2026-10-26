@@ -188,7 +188,8 @@ describe('findAndUpdateTrackByISRC', () => {
     expect(res).toEqual({ wasUpdated: true, method: 'isrc' });
     expect(prisma.track.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { isrc: 'ISRC1', year: { not: null }, manuallyChecked: true },
+        // a sibling with year 0 has no year to give
+        where: { isrc: 'ISRC1', year: { gt: 0 }, manuallyChecked: true },
       })
     );
     const data = prisma.track.update.mock.calls[0][0].data;
@@ -240,6 +241,7 @@ describe('findAndUpdateTrackByISRC', () => {
     const { sql, values } = flatten(prisma.$queryRaw.mock.calls[0]);
     expect(sql).toContain('LOWER(TRIM(artist)) = ?');
     expect(sql).toContain('manuallyChecked = true');
+    expect(sql).toContain('year > 0');
     expect(values).toEqual(['the beatles', 'help', 7]);
     expect(prisma.track.update.mock.calls[0][0].data.yearSource).toBe(
       'otherTrack_metadata_discogs'

@@ -408,6 +408,13 @@ describe('YouTubeMusicProvider.getTracks', () => {
             artist: 'Real Artist',
             videoType: 'MUSIC_VIDEO_TYPE_ATV',
           }),
+          // Official video: the title, not the artist twice
+          videoItem({
+            videoId: 'omv1',
+            title: 'Menelaos - Magda (Official Video)',
+            artist: 'Menelaos',
+            videoType: 'MUSIC_VIDEO_TYPE_OMV',
+          }),
         ],
       }),
     });
@@ -420,6 +427,11 @@ describe('YouTubeMusicProvider.getTracks', () => {
     expect(result.data?.tracks[1]).toMatchObject({
       name: 'Song - Live Version',
       artist: 'Real Artist',
+    });
+    expect(result.data?.tracks[2]).toMatchObject({
+      name: 'Magda',
+      artist: 'Menelaos',
+      artistsList: ['Menelaos'],
     });
   });
 

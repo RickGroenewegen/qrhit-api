@@ -145,13 +145,16 @@ export async function findAndUpdateTrackByISRC(
   isrc: string,
   trackId: number
 ): Promise<{ wasUpdated: boolean; method: string }> {
-  // First try finding a track with matching ISRC (only if ISRC is provided)
+  // First try finding a track with matching ISRC (only if ISRC is provided).
+  // Year 0 means no source found one: copying it would skip this track's own
+  // lookup, as it did for every official video of one YouTube artist while
+  // their titles came out as "Artist - Artist".
   if (isrc) {
     const existingTrackByISRC = await deps.prisma.track.findFirst({
       where: {
         isrc: isrc,
         year: {
-          not: null,
+          gt: 0,
         },
         manuallyChecked: true,
       },
@@ -216,7 +219,7 @@ export async function findAndUpdateTrackByISRC(
       FROM tracks
       WHERE LOWER(TRIM(artist)) = ${artistLower}
         AND LOWER(TRIM(name)) = ${nameLower}
-        AND year IS NOT NULL
+        AND year > 0
         AND manuallyChecked = true
         AND id != ${trackId}
     `;
