@@ -1711,6 +1711,36 @@ describe('resumeAbandonedPayment (the help mail link)', () => {
     expect(prismaMock.payment.update).not.toHaveBeenCalled();
   });
 
+  it('never replaces a payment Mollie has not closed: paid, pending or authorized before its webhook', async () => {
+    for (const status of ['paid', 'pending', 'authorized', 'open']) {
+      vi.clearAllMocks();
+      cacheMock.acquireLock.mockResolvedValue(true);
+      cacheMock.releaseLock.mockResolvedValue(undefined);
+      prismaMock.payment.findFirst.mockResolvedValue(row({ status: 'open' }));
+      prismaMock.payment.findUnique.mockResolvedValue({ paymentId: 'tr_old', status: 'open' });
+      mollieApi.liveClient.payments.get.mockResolvedValue(oldPayment({ status, links: {} }));
+      const url = await mollie.resumeAbandonedPayment('100009439', 'en');
+      expect(url).toBe(`${FRONTEND}/de/generate/check_payment?paymentId=tr_old`);
+      expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+      expect(prismaMock.payment.update).not.toHaveBeenCalled();
+      expect(discountMock.reserveReleasedUsesAgain).not.toHaveBeenCalled();
+    }
+  });
+
+  it('makes nothing when Mollie cannot say what became of the payment', async () => {
+    mollieApi.liveClient.payments.get.mockRejectedValue(new Error('timeout'));
+    expect(await mollie.resumeAbandonedPayment('100009439', 'en')).toBe(`${FRONTEND}/de/contact`);
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('pays again an order whose row still says open but Mollie expired', async () => {
+    prismaMock.payment.findFirst.mockResolvedValue(row({ status: 'open' }));
+    prismaMock.payment.findUnique.mockResolvedValue({ paymentId: 'tr_old', status: 'open' });
+    mollieApi.liveClient.payments.get.mockResolvedValue(oldPayment({ status: 'expired' }));
+    expect(await mollie.resumeAbandonedPayment('100009439', 'en')).toBe('https://pay.mollie.test/tr_new');
+  });
+
   it('follows a resume that another click made while this one waited', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({ paymentId: 'tr_other', status: 'open' });
     mollieApi.liveClient.payments.get.mockImplementation(async ({ paymentId }: any) =>

@@ -37,6 +37,9 @@ export const HELP_MAIL_DELAY_MINUTES = 60;
 const HELP_MAIL_WINDOW_HOURS = 48;
 // One help mail per customer in this many days
 const HELP_MAIL_QUIET_DAYS = 30;
+// And one per checkout IP: anyone can type someone else's address at
+// checkout and cancel, so this caps how many strangers one sender reaches
+const HELP_MAIL_IP_QUIET_DAYS = 7;
 // How long the mail's link pays the order again (the cleanup keeps it longer)
 export const RESUME_LINK_DAYS = 7;
 const LOCK = 'abandoned-payment-mails';
@@ -47,6 +50,7 @@ export type HelpMailDecision =
   | 'skipped_paid'
   | 'skipped_newer'
   | 'skipped_recent'
+  | 'skipped_ip'
   | 'skipped_test'
   | 'skipped_nocards';
 
@@ -56,6 +60,20 @@ export interface HelpMailCandidate {
   hasCards: boolean;
   // the payment was made from a trusted IP: a test-mode order
   trustedIp: boolean;
+  // another payment from the same checkout IP got a help mail lately
+  ipMailedRecently: boolean;
+}
+
+/**
+ * A name or playlist name as the mail may show it: none when it looks like
+ * a link or an address, or is longer than a name. Both are typed by whoever
+ * checks out, and the mail goes to the address they typed, from info@.
+ */
+export function mailSafeText(text: string | null | undefined, maxLength: number): string {
+  const value = (text || '').trim();
+  if (!value || value.length > maxLength) return '';
+  if (/https?:|www\.|@|:\/\/|[a-z0-9-]\.[a-z]{2,}/i.test(value)) return '';
+  return value;
 }
 
 /** The customer's other payments, any status. */
@@ -94,6 +112,7 @@ export function helpMailDecision(
   ) {
     return 'skipped_recent';
   }
+  if (candidate.ipMailedRecently) return 'skipped_ip';
   if (candidate.trustedIp) return 'skipped_test';
   if (!candidate.hasCards) return 'skipped_nocards';
   return 'send';
@@ -183,12 +202,23 @@ class AbandonedPayments {
         const cardLines = await this.prisma.paymentHasPlaylist.count({
           where: { paymentId: candidate.id, playlist: { type: { not: 'giftcard' } } },
         });
+        const ipMailed = candidate.clientIp
+          ? await this.prisma.payment.count({
+              where: {
+                id: { not: candidate.id },
+                clientIp: candidate.clientIp,
+                helpMailStatus: { in: ['sending', 'sent'] },
+                helpMailAt: { gte: new Date(now.getTime() - HELP_MAIL_IP_QUIET_DAYS * 24 * 60 * 60 * 1000) },
+              },
+            })
+          : 0;
         const decision = helpMailDecision(
           {
             id: candidate.id,
             createdAt: candidate.createdAt,
             hasCards: cardLines > 0,
             trustedIp: !!candidate.clientIp && this.utils.isTrustedIp(candidate.clientIp),
+            ipMailedRecently: ipMailed > 0,
           },
           others,
           now
@@ -269,7 +299,7 @@ class AbandonedPayments {
     for (const line of payment.PaymentHasPlaylist) {
       if (line.playlist.type === 'giftcard') continue;
       lines.push({
-        name: line.playlist.name,
+        name: mailSafeText(line.playlist.name, 80),
         numberOfTracks: line.numberOfTracks,
         type: line.type === 'digital' ? 'digital' : line.subType === 'sheets' ? 'sheets' : 'physical',
         amount: line.amount,
@@ -281,7 +311,7 @@ class AbandonedPayments {
     const locale = payment.locale || 'en';
     const { url, validUntil } = resumeLink(payment.orderId, locale);
     return Mail.getInstance().sendPaymentHelpMail(
-      { email: payment.email, name: payment.fullname, locale },
+      { email: payment.email, name: mailSafeText(payment.fullname, 60), locale },
       { orderId: payment.orderId, lines, resumeUrl: url, validUntil },
       sendTo
     );

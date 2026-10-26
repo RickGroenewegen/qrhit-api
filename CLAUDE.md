@@ -2059,9 +2059,16 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   written and the next run looks again; a paid payment started at or after
   this one means they made it (`skipped_paid`); only the newest abandoned
   try gets it (`skipped_newer`); one help mail per customer in 30 days
-  (`skipped_recent`); test-mode orders from a trusted IP (`skipped_test`)
-  and gift-card-only orders (`skipped_nocards`) never. Everyone else gets
-  it, marketing opt-in or not (Rick, 2026-10-26: it is service).
+  (`skipped_recent`); one per checkout IP in 7 days (`skipped_ip`);
+  test-mode orders from a trusted IP (`skipped_test`) and gift-card-only
+  orders (`skipped_nocards`) never. Everyone else gets it, marketing
+  opt-in or not (Rick, 2026-10-26: it is service).
+- **Anyone can type someone else's address at checkout and cancel**, and
+  the mail then goes from info@ to that address without a payment in
+  between. So the IP cap above, and the name and playlist name are left out
+  when they read as a link or an address or are longer than a name
+  (`mailSafeText`). The card picture is the design as uploaded, with no
+  screening before payment (finalCheck only runs on paid orders).
   The row is claimed (`sending`) before sending, then `sent` or `error`;
   an error is never retried.
 - **The cleanup keeps abandoned orders 14 days** (`ABANDONED_KEEP_DAYS` in
@@ -2084,16 +2091,22 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   (`payment-resume`, 7 days) and keyed on the order number, which survives;
   the `tr_` id does not. A paid order goes to its check page; an open
   payment with a live checkout goes back to that checkout (a second click,
-  or a mail scanner's); anything else gets a new Mollie payment for the
-  same amount in the same currency, with the order's own methods
+  or a mail scanner's). **Only a payment Mollie itself reports as canceled,
+  failed or expired is replaced**: one that Mollie says is paid, pending or
+  authorized while our row does not know yet (its webhook on the way) goes
+  to the check page, because moving the row to a new id would leave that
+  webhook without an order; no answer from Mollie goes to the contact page.
+  Otherwise a new Mollie payment for the same amount in the same currency, with the order's own methods
   (`resolveMollieMethods`, no Klarna or in3: they need the order lines that
   only checkout builds). The row takes the new id, `status = open`,
   `createdAt = now` (day reports and the invoice count from the payment that
   pays it) and `helpMailResumedAt`; QRGames moves along
   (`gamesPurchase.molliePaymentId`), cleaned AI lists are restored, and a
-  discount it had counts again (`reserveReleasedUsesAgain`) unless its
-  balance or uses went elsewhere meanwhile, which sends the customer to the
-  contact page instead. Then the webhook settles it like any payment. A
+  discount it had counts again (`reserveReleasedUsesAgain`), held to what
+  checkout's redeem asks under the same `lock:discount:<code>` locks: within
+  its dates, uses left, balance left for all this order takes from it, and
+  for a once-per-customer code no use by this customer since. A code that
+  fails sends the customer to the contact page instead. Then the webhook settles it like any payment. A
   HEAD request (link checkers) never makes a payment.
 - **Counting what it did:** `helpMailStatus = 'sent'` rows are the mails;
   `status = 'paid' AND helpMailResumedAt IS NOT NULL` are the orders the link

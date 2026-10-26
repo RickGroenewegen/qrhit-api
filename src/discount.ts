@@ -740,37 +740,93 @@ class Discount {
   /**
    * The help mail's link pays an abandoned order again (Mollie
    * resumeAbandonedPayment): its discount uses, released when the payment
-   * failed, count again as reservations. False, and nothing changes, when a
-   * code can no longer carry its use: the balance went elsewhere meanwhile,
-   * or it reached its maximum uses.
+   * failed, count again as reservations. Each code is held to what checkout's
+   * redeem asks of it (evaluateDiscounts), under the same per-code locks:
+   * still within its dates, uses left, not used by this customer since if it
+   * is once per customer, and balance left for everything this order takes
+   * from it. False, and nothing changes, when one code fails; the order is
+   * the same one, so what a code applies to has not changed.
    */
   public async reserveReleasedUsesAgain(paymentId: number, now: Date = new Date()): Promise<boolean> {
-    return this.prisma.$transaction(async (tx) => {
-      const released = await tx.discountCodedUses.findMany({
-        where: { paymentId, status: 'released' },
-        select: {
-          id: true,
-          amount: true,
-          discountCodeId: true,
-          discountCode: { select: { type: true, general: true, amount: true, maxUses: true } },
+    const released = await this.prisma.discountCodedUses.findMany({
+      where: { paymentId, status: 'released' },
+      select: {
+        id: true,
+        amount: true,
+        email: true,
+        discountCodeId: true,
+        discountCode: {
+          select: {
+            code: true,
+            type: true,
+            general: true,
+            amount: true,
+            maxUses: true,
+            oncePerCustomer: true,
+            startDate: true,
+            endDate: true,
+          },
         },
-      });
-      for (const use of released) {
-        const code = use.discountCode;
-        const usage = await this.getLiveUsage(use.discountCodeId, tx, now);
-        if (code.maxUses !== null && usage.useCount >= code.maxUses) return false;
-        if (code.type !== 'percent' && !code.general && use.amount > code.amount - usage.amountUsed + 0.005) {
-          return false;
-        }
+      },
+    });
+    if (released.length === 0) return true;
+
+    const perCode = new Map<number, { code: (typeof released)[number]['discountCode']; amount: number; count: number; email: string | null }>();
+    for (const use of released) {
+      const entry = perCode.get(use.discountCodeId);
+      if (entry) {
+        entry.amount += use.amount;
+        entry.count++;
+      } else {
+        perCode.set(use.discountCodeId, { code: use.discountCode, amount: use.amount, count: 1, email: use.email });
       }
-      if (released.length > 0) {
+    }
+
+    const acquired: string[] = [];
+    try {
+      for (const code of [...new Set(released.map((use) => use.discountCode.code))].sort()) {
+        const lockKey = `lock:discount:${code}`;
+        let ok = false;
+        for (let attempt = 0; attempt < 5 && !ok; attempt++) {
+          ok = !!(await this.cache.executeCommand('set', lockKey, 'locked', 'NX', 'PX', 5000));
+          if (!ok) await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        if (!ok) return false;
+        acquired.push(lockKey);
+      }
+
+      return await this.prisma.$transaction(async (tx) => {
+        for (const [discountCodeId, entry] of perCode) {
+          const code = entry.code;
+          if ((code.startDate && code.startDate > now) || (code.endDate && code.endDate < now)) return false;
+          const usage = await this.getLiveUsage(discountCodeId, tx, now);
+          if (code.maxUses !== null && usage.useCount + entry.count > code.maxUses) return false;
+          if (
+            code.oncePerCustomer &&
+            entry.email &&
+            (await this.countLiveUsesForEmail(tx, discountCodeId, entry.email, now)) > 0
+          ) {
+            return false;
+          }
+          if (code.type !== 'percent' && !code.general && entry.amount > code.amount - usage.amountUsed + 0.005) {
+            return false;
+          }
+        }
         await tx.discountCodedUses.updateMany({
-          where: { id: { in: released.map((use) => use.id) } },
+          where: { id: { in: released.map((use) => use.id) }, status: 'released' },
           data: { status: 'reserved', expiresAt: new Date(now.getTime() + RESERVATION_TTL_MS) },
         });
+        return true;
+      });
+    } finally {
+      for (const lockKey of acquired) {
+        try {
+          await this.cache.executeCommand('del', lockKey);
+        } catch (e) {
+          // Lock expires on its own after 5 s.
+        }
       }
-      return true;
-    });
+    }
   }
 
   /**

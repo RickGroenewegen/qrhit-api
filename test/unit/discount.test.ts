@@ -75,7 +75,7 @@ function makePrismaImpls() {
 
 const prismaMock = {
   discountCode: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
+  discountCodedUses: { aggregate: vi.fn(), deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), findMany: vi.fn() },
   $transaction: vi.fn(),
 };
 
@@ -321,15 +321,21 @@ describe('Discount.releaseDiscountUsesByPaymentId', () => {
 });
 
 describe('Discount.reserveReleasedUsesAgain (the help mail resumes an order)', () => {
-  // A transaction over one payment's released uses and each code's live usage
-  function withTx(released: any[], usage: Record<number, { amount: number; count: number }>) {
+  // One payment's released uses, and a transaction that sees each code's
+  // live usage and this customer's live uses of it
+  function withUses(
+    released: any[],
+    usage: Record<number, { amount: number; count: number }>,
+    mine: Record<number, number> = {}
+  ) {
+    prismaMock.discountCodedUses.findMany.mockResolvedValueOnce(released);
     const tx = {
       discountCodedUses: {
-        findMany: vi.fn(async () => released),
         aggregate: vi.fn(async ({ where }: any) => ({
           _sum: { amount: usage[where.discountCodeId]?.amount ?? null },
           _count: { _all: usage[where.discountCodeId]?.count ?? 0 },
         })),
+        count: vi.fn(async ({ where }: any) => mine[where.discountCodeId] ?? 0),
         updateMany: vi.fn(async () => ({ count: released.length })),
       },
     };
@@ -339,37 +345,68 @@ describe('Discount.reserveReleasedUsesAgain (the help mail resumes an order)', (
   const use = (id: number, amount: number, code: Record<string, any>) => ({
     id,
     amount,
+    email: 'buyer@example.com',
     discountCodeId: code['id'],
-    discountCode: { type: 'fixed', general: false, maxUses: null, ...code },
+    discountCode: {
+      code: `CODE${code['id']}`,
+      type: 'fixed',
+      general: false,
+      maxUses: null,
+      oncePerCustomer: false,
+      startDate: null,
+      endDate: null,
+      ...code,
+    },
   });
+  const NOW = new Date('2026-10-26T12:00:00Z');
 
   it('turns the released uses back into reservations with a new expiry', async () => {
-    const tx = withTx([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 5, count: 1 } });
-    const now = new Date('2026-10-26T12:00:00Z');
-    expect(await makeSvc().reserveReleasedUsesAgain(99, now)).toBe(true);
+    const tx = withUses([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 5, count: 1 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(true);
     expect(tx.discountCodedUses.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: [1] } },
-      data: { status: 'reserved', expiresAt: new Date(now.getTime() + 60 * 60 * 1000) },
+      where: { id: { in: [1] }, status: 'released' },
+      data: { status: 'reserved', expiresAt: new Date(NOW.getTime() + 60 * 60 * 1000) },
     });
   });
 
   it('refuses when the balance went elsewhere meanwhile', async () => {
-    const tx = withTx([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 20, count: 2 } });
-    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(false);
+    const tx = withUses([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 20, count: 2 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
     expect(tx.discountCodedUses.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('adds up everything the order takes from one code before comparing', async () => {
+    withUses([use(1, 8, { id: 5, amount: 25 }), use(2, 8, { id: 5, amount: 25 })], { 5: { amount: 10, count: 1 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
+    withUses([use(1, 2, { id: 6, maxUses: 2 }), use(2, 2, { id: 6, maxUses: 2 })], { 6: { amount: 0, count: 1 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
   });
 
   it('refuses a code that reached its maximum uses', async () => {
-    withTx([use(1, 3, { id: 6, type: 'percent', amount: 10, maxUses: 1 })], { 6: { amount: 3, count: 1 } });
-    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(false);
+    withUses([use(1, 3, { id: 6, type: 'percent', amount: 10, maxUses: 1 })], { 6: { amount: 3, count: 1 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
+  });
+
+  it('refuses a code outside its dates, as checkout does', async () => {
+    withUses([use(1, 5, { id: 8, amount: 25, endDate: new Date('2026-10-25T00:00:00Z') })], {});
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
+    withUses([use(1, 5, { id: 8, amount: 25, startDate: new Date('2026-11-01T00:00:00Z') })], {});
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
+  });
+
+  it('refuses a once-per-customer code this customer used since', async () => {
+    withUses([use(1, 5, { id: 9, amount: 25, oncePerCustomer: true })], {}, { 9: 1 });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(false);
+    withUses([use(1, 5, { id: 9, amount: 25, oncePerCustomer: true })], {}, {});
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(true);
   });
 
   it('lets a general code through whatever its balance, and an order without codes', async () => {
-    withTx([use(1, 10, { id: 7, amount: 5, general: true })], { 7: { amount: 50, count: 9 } });
-    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(true);
-    const tx = withTx([], {});
-    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(true);
-    expect(tx.discountCodedUses.updateMany).not.toHaveBeenCalled();
+    withUses([use(1, 10, { id: 7, amount: 5, general: true })], { 7: { amount: 50, count: 9 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(true);
+    prismaMock.discountCodedUses.findMany.mockResolvedValueOnce([]);
+    expect(await makeSvc().reserveReleasedUsesAgain(99, NOW)).toBe(true);
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
   });
 });
 

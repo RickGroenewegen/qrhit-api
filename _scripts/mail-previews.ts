@@ -33,7 +33,8 @@ const EXTRA: Record<string, Record<string, unknown>> = {
     },
     lines: [
       { name: 'Summer Hits 2026', cid: 'card0', card: true, detail: { html: '150 printed cards' }, sets: { html: '2 sets' } },
-      { name: 'Road Trip Classics', cid: 'card1', card: false, detail: { html: '80 cards as a PDF to print yourself' }, sets: null },
+      // a playlist name the mail leaves out (mailSafeText)
+      { name: '', cid: 'card1', card: false, detail: { html: '80 cards as a PDF to print yourself' }, sets: null },
     ],
     resumeUrl: `${API}/order/resume/100009439?l=en`,
     validUntil: { html: 'This link works until 2 November.' },

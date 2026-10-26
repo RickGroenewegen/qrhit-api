@@ -4,6 +4,7 @@ import {
   HelpMailOtherPayment,
   RESUME_LINK_DAYS,
   helpMailDecision,
+  mailSafeText,
   resumeLink,
 } from '../../src/abandonedPayments';
 import { isSignedRenderRequest } from '../../src/renderSignature';
@@ -16,6 +17,7 @@ const candidate = (over: Partial<HelpMailCandidate> = {}): HelpMailCandidate => 
   createdAt: at(3),
   hasCards: true,
   trustedIp: false,
+  ipMailedRecently: false,
   ...over,
 });
 
@@ -85,6 +87,10 @@ describe('helpMailDecision (who gets the help mail)', () => {
     ).toBe('send');
   });
 
+  it('mails one checkout IP at most once a week, whoever the address is', () => {
+    expect(helpMailDecision(candidate({ ipMailedRecently: true }), [], NOW)).toBe('skipped_ip');
+  });
+
   it('skips test-mode orders and orders without cards', () => {
     expect(helpMailDecision(candidate({ trustedIp: true }), [], NOW)).toBe('skipped_test');
     expect(helpMailDecision(candidate({ hasCards: false }), [], NOW)).toBe('skipped_nocards');
@@ -94,6 +100,33 @@ describe('helpMailDecision (who gets the help mail)', () => {
     expect(
       helpMailDecision(candidate({ trustedIp: true, hasCards: false }), [other({ id: 101, createdAt: at(1) })], NOW)
     ).toBe('skipped_paid');
+  });
+});
+
+describe('mailSafeText (what someone typed at checkout, in a mail to the address they typed)', () => {
+  it('keeps names and playlist names as they are', () => {
+    expect(mailSafeText('  Anna de Vries ', 60)).toBe('Anna de Vries');
+    expect(mailSafeText('Mama und Papa', 80)).toBe('Mama und Papa');
+    expect(mailSafeText("80's & 90's Hits 2.0", 80)).toBe("80's & 90's Hits 2.0");
+    expect(mailSafeText('J. Smith', 60)).toBe('J. Smith');
+  });
+
+  it('leaves out anything that reads as a link or an address', () => {
+    for (const text of [
+      'Win a prize at https://example.test',
+      'www.example.test',
+      'visit example.shop now',
+      'mail me: someone@example.test',
+      'example.test/claim',
+    ]) {
+      expect(mailSafeText(text, 80)).toBe('');
+    }
+  });
+
+  it('leaves out what is longer than a name, and nothing at all', () => {
+    expect(mailSafeText('a'.repeat(61), 60)).toBe('');
+    expect(mailSafeText('', 60)).toBe('');
+    expect(mailSafeText(null, 60)).toBe('');
   });
 });
 

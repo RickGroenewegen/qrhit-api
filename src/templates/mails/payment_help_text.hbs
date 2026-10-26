@@ -1,9 +1,9 @@
-{{{ translations.hello }}} {{{ fullname }}},
+{{{ translations.hello }}}{{#if fullname}} {{{ fullname }}}{{/if}},
 
 {{{ intro.text }}}
 
 {{#each lines}}
-- {{{ this.name }}}: {{{ this.detail.text }}}{{#if this.sets}} ({{{ this.sets.text }}}){{/if}}
+- {{#if this.name}}{{{ this.name }}}: {{/if}}{{{ this.detail.text }}}{{#if this.sets}} ({{{ this.sets.text }}}){{/if}}
 {{/each}}
 
 {{{ translations.helpTitle }}}

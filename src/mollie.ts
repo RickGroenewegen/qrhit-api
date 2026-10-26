@@ -3799,9 +3799,15 @@ class Mollie {
         const resumed = await client.payments.get({ paymentId: fresh.paymentId }).catch(() => null);
         return resumed?.links?.checkout?.href || checkPage(fresh.paymentId);
       }
-      const openCheckout = current?.links?.checkout?.href;
-      if (current && this.openPaymentStatus.includes(current.status) && openCheckout) {
-        return openCheckout;
+      // A new payment only replaces one Mollie has closed for good. A paid,
+      // pending or authorized one whose webhook is still on the way would
+      // lose its row to the new id, and the order with it. Mollie not
+      // answering is no answer either.
+      if (!current) return contactPage(locale);
+      if (!this.failedPaymentStatus.includes(current.status)) {
+        const openCheckout = current.links?.checkout?.href;
+        if (this.openPaymentStatus.includes(current.status) && openCheckout) return openCheckout;
+        return checkPage(row.paymentId);
       }
 
       const currency: SupportedCurrency = isSupportedCurrency(row.currency) ? row.currency : 'EUR';

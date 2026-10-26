@@ -511,7 +511,8 @@ class Mail {
       sets: line.amount > 1 ? t('sets', { amount: line.amount }) : null,
     }));
     const mailParams = {
-      fullname: to.name || to.email.split('@')[0],
+      // may be empty: the greeting is then just "Hello,"
+      fullname: to.name,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
