@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Installs and builds run at the lowest CPU and disk priority: the API and the
+# SSR server keep serving during a deploy and must always come first. WS1 is a
+# t3a.large (2 vCPUs, 8 GiB plus a 4 GiB swap file since 2026-10-26), and a
+# build at full priority competes with the live site for both.
+low() {
+  if command -v ionice >/dev/null; then nice -n 19 ionice -c2 -n7 "$@"; else nice -n 19 "$@"; fi
+}
+
 # Navigate to the Git repository directory
 # Replace '/path/to/your/repo' with the actual path to your Git repository
 cd /home/ec2-user/sites/qrsong
@@ -17,7 +25,7 @@ sudo chmod +x deploy
 sudo chmod +x deploy_api
 sudo chmod +x deploy_frontend
 
-npm install --force
+low npm install --force
 npx prisma generate
 npx prisma db push
 npx prisma generate
@@ -28,7 +36,7 @@ echo "Repository has been reset and updated."
 # build. The restart used to sit above the pull, where it raced the pull and
 # rebuilt with the API down. A failed build leaves the old process running and
 # the frontend deploy below still goes ahead.
-if npm run build; then
+if low npm run build; then
   pm2 restart qrsong
 else
   echo "API build failed, NOT restarting: the API is still running the previous build."
@@ -37,10 +45,10 @@ fi
 cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
-sudo npm install --force
+low sudo npm install --force
 
 # See deploy_frontend: publish, restart, then clear CloudFront.
-if sudo npm run build; then
+if low sudo npm run build; then
   pm2 restart qrsong-frontend
   sudo npm run invalidate-cloudfront
 else

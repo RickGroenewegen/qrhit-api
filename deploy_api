@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Install and build at the lowest CPU and disk priority, see `deploy`.
+low() {
+  if command -v ionice >/dev/null; then nice -n 19 ionice -c2 -n7 "$@"; else nice -n 19 "$@"; fi
+}
+
 # Navigate to the Git repository directory
 # Replace '/path/to/your/repo' with the actual path to your Git repository
 cd /home/ec2-user/sites/qrsong
@@ -17,7 +22,7 @@ sudo chmod +x deploy
 sudo chmod +x deploy_api
 sudo chmod +x deploy_frontend
 
-sudo npm install --force
+low sudo npm install --force
 sudo prisma db push
 echo "Repository has been reset and updated."
 
@@ -25,7 +30,7 @@ echo "Repository has been reset and updated."
 # runs) sees that ./build matches this commit and starts straight away, so the
 # API is only down for its own boot. A failed build stops here: the old
 # process keeps running on the old build.
-if ! npm run build; then
+if ! low npm run build; then
   echo "Build failed, NOT restarting: the API is still running the previous build."
   exit 1
 fi
