@@ -320,6 +320,59 @@ describe('Discount.releaseDiscountUsesByPaymentId', () => {
   });
 });
 
+describe('Discount.reserveReleasedUsesAgain (the help mail resumes an order)', () => {
+  // A transaction over one payment's released uses and each code's live usage
+  function withTx(released: any[], usage: Record<number, { amount: number; count: number }>) {
+    const tx = {
+      discountCodedUses: {
+        findMany: vi.fn(async () => released),
+        aggregate: vi.fn(async ({ where }: any) => ({
+          _sum: { amount: usage[where.discountCodeId]?.amount ?? null },
+          _count: { _all: usage[where.discountCodeId]?.count ?? 0 },
+        })),
+        updateMany: vi.fn(async () => ({ count: released.length })),
+      },
+    };
+    prismaMock.$transaction.mockImplementationOnce(async (fn: any) => fn(tx));
+    return tx;
+  }
+  const use = (id: number, amount: number, code: Record<string, any>) => ({
+    id,
+    amount,
+    discountCodeId: code['id'],
+    discountCode: { type: 'fixed', general: false, maxUses: null, ...code },
+  });
+
+  it('turns the released uses back into reservations with a new expiry', async () => {
+    const tx = withTx([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 5, count: 1 } });
+    const now = new Date('2026-10-26T12:00:00Z');
+    expect(await makeSvc().reserveReleasedUsesAgain(99, now)).toBe(true);
+    expect(tx.discountCodedUses.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: [1] } },
+      data: { status: 'reserved', expiresAt: new Date(now.getTime() + 60 * 60 * 1000) },
+    });
+  });
+
+  it('refuses when the balance went elsewhere meanwhile', async () => {
+    const tx = withTx([use(1, 10, { id: 5, amount: 25 })], { 5: { amount: 20, count: 2 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(false);
+    expect(tx.discountCodedUses.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses a code that reached its maximum uses', async () => {
+    withTx([use(1, 3, { id: 6, type: 'percent', amount: 10, maxUses: 1 })], { 6: { amount: 3, count: 1 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(false);
+  });
+
+  it('lets a general code through whatever its balance, and an order without codes', async () => {
+    withTx([use(1, 10, { id: 7, amount: 5, general: true })], { 7: { amount: 50, count: 9 } });
+    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(true);
+    const tx = withTx([], {});
+    expect(await makeSvc().reserveReleasedUsesAgain(99)).toBe(true);
+    expect(tx.discountCodedUses.updateMany).not.toHaveBeenCalled();
+  });
+});
+
 // ──────────────────────────────────────────────
 // checkDiscount
 // ──────────────────────────────────────────────

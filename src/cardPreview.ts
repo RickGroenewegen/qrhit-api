@@ -13,6 +13,11 @@ import { getExtraDesigns } from './cardDesigns';
 import { computePrintFingerprint } from './printFingerprint';
 import { RenderedPage, renderPdfPages } from './pdfRaster';
 import { resolveQrSubDir } from './qrPaths';
+import Qr from './qr';
+import { applyQrLogo, qrLogoOptionsFor } from './qr-logo';
+import { signedRenderQuery } from './renderSignature';
+import MusicServiceRegistry from './services/MusicServiceRegistry';
+import { ProviderTrackData } from './interfaces/IMusicProvider';
 
 /**
  * The first card of an order line as the printer gets it, front and back as
@@ -67,6 +72,29 @@ const LOCK_SECONDS = 120;
 const FAILED_SECONDS = 600;
 // a stored printer PDF that does not render is passed over for this long
 const UNREADABLE_PDF_SECONDS = 86_400;
+// A draft card's sample track is kept this long: the render route reads it
+// back, so it draws the track its QR code was made for
+const DRAFT_TRACK_SECONDS = 86_400;
+// Nothing plays before an order is paid, so a draft card's QR opens the website
+const DRAFT_QR_LINK = 'https://www.qrsong.io';
+// how far down the playlist a draft looks for a track whose year we know
+const DRAFT_TRACK_CANDIDATES = 25;
+
+/** The track a draft card shows, in the fields the card templates read. */
+export interface DraftTrack {
+  trackId: string;
+  name: string;
+  artist: string;
+  year: number | null;
+  extraNameAttribute: string | null;
+  extraArtistAttribute: string | null;
+}
+
+/** A card's front and back as cut, as PNGs. */
+export interface CardPictures {
+  front: Buffer;
+  back: Buffer;
+}
 
 export type CardPreviewSource = 'pdf' | 'render';
 
@@ -282,6 +310,60 @@ export function previewName(paymentHasPlaylistId: number, parts: Record<string, 
     .digest('hex')
     .slice(0, 32);
   return `${paymentHasPlaylistId}-${hash}`;
+}
+
+/**
+ * A card's front and back side by side on `background`, with the die's
+ * rounded corners and a soft shadow, as one JPEG for a mail: e-mail clients
+ * draw no rounded corners or shadows of their own (Outlook none at all).
+ */
+export async function cardPairJpeg(
+  pictures: CardPictures,
+  background: string = '#fff8f3',
+  cardPx: number = 440
+): Promise<Buffer> {
+  const gap = 32;
+  const pad = 24;
+  const radius = Math.round(cardPx * DIE_RADIUS_PER_CARD_MM);
+  const mask = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${cardPx}" height="${cardPx}">` +
+      `<rect width="${cardPx}" height="${cardPx}" rx="${radius}" ry="${radius}" fill="#fff"/></svg>`
+  );
+  const rounded = (png: Buffer) =>
+    sharp(png)
+      .resize(cardPx, cardPx, { fit: 'fill' })
+      .composite([{ input: mask, blend: 'dest-in' }])
+      .png()
+      .toBuffer();
+  // the shadow falls a little below the card, inside a margin of `pad / 2`
+  const margin = pad / 2;
+  const shadow = await sharp(
+    Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${cardPx + 2 * margin}" height="${cardPx + 2 * margin}">` +
+        `<rect x="${margin}" y="${margin + 4}" width="${cardPx}" height="${cardPx}" rx="${radius}" ry="${radius}" fill="#0b2c31" fill-opacity="0.22"/></svg>`
+    )
+  )
+    .blur(6)
+    .png()
+    .toBuffer();
+  const [front, back] = await Promise.all([rounded(pictures.front), rounded(pictures.back)]);
+  const left = [pad, pad + cardPx + gap];
+  return sharp({
+    create: { width: 2 * pad + 2 * cardPx + gap, height: 2 * pad + cardPx, channels: 3, background },
+  })
+    .composite([
+      { input: shadow, left: left[0] - margin, top: pad - margin },
+      { input: shadow, left: left[1] - margin, top: pad - margin },
+      { input: front, left: left[0], top: pad },
+      { input: back, left: left[1], top: pad },
+    ])
+    .jpeg({ quality: 86, mozjpeg: true })
+    .toBuffer();
+}
+
+/** A track id as a file name: the QR of a draft card is stored under it. */
+export function safeTrackFileId(trackId: unknown): string {
+  return String(trackId ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 }
 
 class CardPreviews {
@@ -566,6 +648,180 @@ class CardPreviews {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * One card of an order line that has no cards yet (an unpaid order), front
+   * and back as cut, for the help mail after an abandoned payment
+   * (src/abandonedPayments.ts). Drawn like forLine through the line's printer
+   * template, with a sample track from its own playlist and a QR code made
+   * for it in the line's QR colour and centre logo; the QR opens the website,
+   * since nothing plays before the order is paid. Waits for the PDF Lambda.
+   * Null when there is no card to draw (a gift card, no track to show) or the
+   * render failed: the caller shows the playlist cover instead.
+   */
+  public async draftForLine(paymentHasPlaylistId: number): Promise<CardPictures | null> {
+    try {
+      const draft = await this.draftLine(paymentHasPlaylistId);
+      if (!draft) return null;
+      const name = previewName(draft.php.id, { source: 'draft', ...draft.parts });
+      if (!(await this.exists(name))) await this.makeDraft(draft, name);
+      const [front, back] = await Promise.all(
+        (['front', 'back'] as const).map((side) => fs.readFile(path.join(this.dir(), `${name}-${side}.png`)))
+      );
+      return { front, back };
+    } catch (e) {
+      this.log(paymentHasPlaylistId, `the draft card could not be drawn: ${(e as Error).message}`, 'yellow');
+      return null;
+    }
+  }
+
+  /** What GET /qr/pdf-draft/:paymentHasPlaylistId renders: the draft card's one track. */
+  public async draftView(paymentHasPlaylistId: number) {
+    const draft = await this.draftLine(paymentHasPlaylistId);
+    if (!draft) return null;
+    const payment = await this.prisma.payment.findUnique({
+      where: { paymentId: draft.php.payment.paymentId },
+    });
+    if (!payment) return null;
+    const user = payment.userId ? await this.data.getUser(payment.userId) : null;
+    const playlist = await this.data.getPlaylist(draft.php.playlist.playlistId);
+    return {
+      payment,
+      user,
+      playlist,
+      // the first card, not the how-to cards in front of it
+      php: { ...draft.row, addHowToCard: false },
+      tracks: [draft.track],
+      requestedTemplate: draft.template,
+      subdir: `draft/${draft.php.id}`,
+    };
+  }
+
+  /** An unpaid order line, its sample track and the template its card is drawn with. */
+  private async draftLine(paymentHasPlaylistId: number) {
+    const php = await this.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: {
+        id: true,
+        allowDuplicates: true,
+        payment: { select: { paymentId: true } },
+        playlist: { select: { id: true, playlistId: true, serviceType: true, type: true } },
+      },
+    });
+    if (!php || php.playlist.type === 'giftcard') return null;
+    const rows = await this.data.getPlaylistsByPaymentId(php.payment.paymentId, php.playlist.playlistId);
+    const row = rows.find((r: any) => Number(r.paymentHasPlaylistId) === php.id);
+    if (!row) return null;
+    const track = await this.sampleTrack(php);
+    if (!track) return null;
+
+    const template = printerTemplateFor(row.orderTemplate, row.printerType);
+    const pinned = template === row.orderTemplate ? row.orderTemplateVersion : null;
+    const stored = await CardTemplates.getInstance().forRender(template, pinned);
+    const cardSizeMm = await this.pdf.printerPageSize(template, row.printerType, row);
+    const parts = {
+      template,
+      version: stored?.version ?? null,
+      file: !stored && isFileTemplate(template) ? await this.mtime(path.join(viewsDir(), `pdf_${template}.ejs`)) : null,
+      cardSizeMm,
+      card: computePrintFingerprint(row, [track]),
+    };
+    return { php, row, track, template, cardSizeMm, parts };
+  }
+
+  /**
+   * The track a draft card shows: the playlist's first stored track with a
+   * year (a featured or earlier-ordered list), else one from the top of the
+   * music service's track list (cached; the order flow fetched it), the first
+   * whose year we know when there is one.
+   */
+  private async sampleTrack(php: {
+    id: number;
+    allowDuplicates: boolean;
+    playlist: { id: number; playlistId: string; serviceType: string | null };
+  }): Promise<DraftTrack | null> {
+    const key = `card-draft-track:${php.id}`;
+    const kept = await this.cache.get(key, false).catch(() => null);
+    if (kept) return JSON.parse(kept) as DraftTrack;
+
+    let track: DraftTrack | null = null;
+    const stored: any[] = (await this.data.getTracks(php.playlist.id, 0, php.id)) || [];
+    const known = stored.find((t) => Number(t.year) > 0 && safeTrackFileId(t.trackId));
+    if (known) {
+      track = {
+        trackId: safeTrackFileId(known.trackId),
+        name: known.name,
+        artist: known.artist,
+        year: Number(known.year),
+        extraNameAttribute: known.extraNameAttribute ?? null,
+        extraArtistAttribute: known.extraArtistAttribute ?? null,
+      };
+    } else {
+      const provider = MusicServiceRegistry.getInstance().getProviderByString(php.playlist.serviceType || 'spotify');
+      const result = provider
+        ? await provider
+            .getTracks(php.playlist.playlistId, { cache: true, allowDuplicates: php.allowDuplicates === true })
+            .catch(() => null)
+        : null;
+      const listed: ProviderTrackData[] = (result?.success && result.data?.tracks) || [];
+      const top = listed
+        .filter((t) => safeTrackFileId(t.id) && t.name)
+        .slice(0, DRAFT_TRACK_CANDIDATES);
+      if (top.length) {
+        const ours = await this.prisma.track.findMany({
+          where: { trackId: { in: top.map((t) => t.id) }, year: { gt: 0 } },
+          select: { trackId: true, name: true, artist: true, year: true },
+        });
+        const byId = new Map(ours.map((t) => [t.trackId, t]));
+        const pick = top.find((t) => byId.has(t.id)) ?? top[0];
+        const own = byId.get(pick.id);
+        const released = pick.releaseDate ? parseInt(pick.releaseDate.slice(0, 4), 10) : NaN;
+        track = {
+          trackId: safeTrackFileId(pick.id),
+          name: own?.name || pick.name,
+          artist: own?.artist || pick.artist,
+          year: own?.year ?? (Number.isFinite(released) ? released : null),
+          extraNameAttribute: null,
+          extraArtistAttribute: null,
+        };
+      }
+    }
+    if (track) await this.cache.set(key, JSON.stringify(track), DRAFT_TRACK_SECONDS).catch(() => {});
+    return track;
+  }
+
+  /** Makes a draft card's QR code, renders the card and stores its pictures under `name`. */
+  private async makeDraft(draft: NonNullable<Awaited<ReturnType<CardPreviews['draftLine']>>>, name: string): Promise<void> {
+    const { php, row, track, cardSizeMm } = draft;
+    const qrDir = path.join(process.env['PUBLIC_DIR'] as string, 'qr', 'draft', String(php.id));
+    await fs.mkdir(qrDir, { recursive: true });
+    const qrPath = path.join(qrDir, `${track.trackId}.png`);
+    await new Qr().generateQR(DRAFT_QR_LINK, qrPath, row.qrColor || '#000000');
+    const logo = qrLogoOptionsFor(row, this.logger);
+    if (logo) await applyQrLogo(qrPath, DRAFT_QR_LINK, logo, this.logger);
+
+    const url = `${process.env['API_URI']}/qr/pdf-draft/${php.id}?${signedRenderQuery('card-draft', {
+      paymentHasPlaylistId: String(php.id),
+    }, {})}`;
+    const rendered = await this.pdf.renderUrlToPdfBuffer(url, {
+      width: cardSizeMm,
+      height: cardSizeMm,
+      marginTop: 0,
+      marginRight: 0,
+      marginBottom: 0,
+      marginLeft: 0,
+      pageRanges: '1-2',
+    });
+    const pages = await renderPdfPages(rendered, [1, 2], RENDER_SCALE);
+    const [front, back] = await Promise.all(
+      pages.map(async (page) => {
+        const bled = await withBleed(page.png, cardSizeMm, false);
+        return { cut: await cropToCut(bled.png, bled.pageMm), die: await drawDieLines(bled.png, bled.pageMm) };
+      })
+    );
+    await this.store(php.id, name, [front.cut, back.cut, front.die, back.die]);
+    this.log(php.id, `draft card with ${white.bold(`${track.artist}, ${track.name}`)} ✓`);
   }
 
   /** Writes every picture (temp file, then rename), in SIDES order, and drops the line's older ones. */

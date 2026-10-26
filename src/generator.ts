@@ -18,7 +18,7 @@ import PushoverClient from './pushover';
 import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
-import { applyQrLogo, clampScale, resolveLogoPath } from './qr-logo';
+import { applyQrLogo, qrLogoOptionsFor } from './qr-logo';
 import PDF, { printerTemplateFor } from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
@@ -1009,7 +1009,7 @@ class Generator {
       playlist,
       await getExtraDesigns(playlist.paymentHasPlaylistId, this.prisma)
     );
-    const qrLogoOptions = designs.map((design) => this.qrLogoOptionsFor(design));
+    const qrLogoOptions = designs.map((design) => qrLogoOptionsFor(design, this.logger));
     const designOf = (index: number) =>
       designIndexForCard(designs.length, index);
     const drawLogo = async (outputPath: string, link: string, index: number) => {
@@ -1046,44 +1046,6 @@ class Generator {
         );
       }
     }
-  }
-
-  /**
-   * Options for drawing a design's centre logo into its QR codes, or null when
-   * the design has none.
-   *
-   * A centre logo is drawn into the QR bitmap rather than overlaid by the
-   * templates, so every template gets it and nothing can misalign - see
-   * src/qr-logo.ts. resolveLogoPath rejects anything that is not a plain
-   * filename inside the logo directory, so a crafted qrLogo cannot make sharp
-   * read elsewhere.
-   */
-  private qrLogoOptionsFor(design: any) {
-    const qrLogoPath = resolveLogoPath(
-      process.env['PUBLIC_DIR'] as string,
-      design.qrLogo
-    );
-    if (design.qrLogo && !qrLogoPath) {
-      this.logger.log(
-        color.yellow.bold(
-          `Ignoring invalid QR logo filename ${color.white.bold(
-            design.qrLogo
-          )}`
-        )
-      );
-    }
-    return qrLogoPath
-      ? {
-          logoPath: qrLogoPath,
-          scale: clampScale(design.qrLogoScale),
-          // The logo has to read as QR "light": the shape colour when there is
-          // one, white when the QR sits directly on the card.
-          backingColor:
-            (design.qrBackgroundType || 'square') === 'none'
-              ? '#ffffff'
-              : design.qrBackgroundColor || '#ffffff',
-        }
-      : null;
   }
 
   public async finalizeOrder(

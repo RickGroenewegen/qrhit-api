@@ -591,5 +591,20 @@
   "giftVoucher.step1": "Zeskanuj kod lub wejdź na {{ url }}",
   "giftVoucher.step2": "Zaloguj się lub załóż darmowe konto",
   "giftVoucher.step3": "Zeskanuj kartę darmową aplikacją QRSong! i graj",
-  "giftVoucher.codeLabel": "Twój kod"
+  "giftVoucher.codeLabel": "Twój kod",
+  "payment_help.subject": "Możemy pomóc z Twoim zamówieniem QRSong!?",
+  "payment_help.title": "Możemy pomóc z Twoim zamówieniem?",
+  "payment_help.preheader": "Twoja playlista i projekt kart są zapisane. Po prostu odpisz, jeśli potrzebujesz pomocy.",
+  "payment_help.hello": "Cześć",
+  "payment_help.intro": "Widzimy, że płatność za twoje zamówienie QRSong! {{ orderId }} nie przeszła. Tak się zdarza i nic nie przepadło: twoja playlista i projekt kart są zapisane dokładnie tak, jak je zostawiono.",
+  "payment_help.printed": "Wydrukowane karty: {{ count }}",
+  "payment_help.sheets": "{{ count }} kart na wydrukowanych arkuszach A4",
+  "payment_help.digital": "{{ count }} kart w PDF do samodzielnego wydruku",
+  "payment_help.sets": "{{ amount }} zestawy",
+  "payment_help.helpTitle": "Utknąłeś? Chętnie pomożemy",
+  "payment_help.helpText": "Coś było niejasne albo płatność nie przeszła? Po prostu odpowiedz na tego maila. Trafi prosto do nas, a my chętnie pomożemy ci z płatnością, playlistą albo projektem.",
+  "payment_help.readyText": "Chcesz dokończyć zamówienie? Przycisk poniżej otworzy nową, bezpieczną płatność za dokładnie to zamówienie, z kartami dokładnie takimi, jak je zaprojektowałeś.",
+  "payment_help.buttonText": "Dokończ moje zamówienie",
+  "payment_help.validUntil": "Ten link działa do {{ date }}.",
+  "payment_help.greetings": "Pozdrawiamy"
 }

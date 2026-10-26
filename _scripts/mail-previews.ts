@@ -25,6 +25,21 @@ const PREFIX: Record<string, string> = {
   qrvote_verification: 'verification',
 };
 
+// Sample data a template reads under a name another one uses differently
+const EXTRA: Record<string, Record<string, unknown>> = {
+  payment_help: {
+    intro: {
+      html: 'We saw that the payment for your QRSong! order 100009439 didn&#39;t go through. That can happen, and nothing is lost: your playlist and your card design are saved, just as you made them.',
+    },
+    lines: [
+      { name: 'Summer Hits 2026', cid: 'card0', card: true, detail: { html: '150 printed cards' }, sets: { html: '2 sets' } },
+      { name: 'Road Trip Classics', cid: 'card1', card: false, detail: { html: '80 cards as a PDF to print yourself' }, sets: null },
+    ],
+    resumeUrl: `${API}/order/resume/100009439?l=en`,
+    validUntil: { html: 'This link works until 2 November.' },
+  },
+};
+
 async function main() {
   const en = JSON.parse(await fs.readFile('src/locales/en.json', 'utf8')) as Record<string, string>;
   const byPrefix = (prefix: string) =>
@@ -130,7 +145,7 @@ async function main() {
   for (const file of files) {
     const name = file.replace('_html.hbs', '');
     const prefix = PREFIX[name] ?? (en[`${name}.subject`] || en[`${name}.title`] ? name : 'mail');
-    const data = { ...base, translations: { ...mail, ...byPrefix(prefix) } };
+    const data = { ...base, ...EXTRA[name], translations: { ...mail, ...byPrefix(prefix) } };
     try {
       let html = await templates.render(`mails/${name}_html`, data);
       html = html

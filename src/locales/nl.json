@@ -591,5 +591,20 @@
   "giftVoucher.step1": "Scan de code of ga naar {{ url }}",
   "giftVoucher.step2": "Log in of maak een gratis account aan",
   "giftVoucher.step3": "Scan een kaart met de gratis QRSong! app en speel",
-  "giftVoucher.codeLabel": "Jouw code"
+  "giftVoucher.codeLabel": "Jouw code",
+  "payment_help.subject": "Kunnen we je helpen met je QRSong!-bestelling?",
+  "payment_help.title": "Kunnen we je helpen met je bestelling?",
+  "payment_help.preheader": "Je playlist en je kaartontwerp zijn opgeslagen. Reageer gewoon als je hulp nodig hebt.",
+  "payment_help.hello": "Hallo",
+  "payment_help.intro": "We zagen dat de betaling voor je QRSong!-bestelling {{ orderId }} niet is gelukt. Dat kan gebeuren, en er is niets verloren: je playlist en je kaartontwerp zijn opgeslagen, precies zoals je ze hebt gemaakt.",
+  "payment_help.printed": "{{ count }} geprinte kaarten",
+  "payment_help.sheets": "{{ count }} kaarten op geprinte A4-vellen",
+  "payment_help.digital": "{{ count }} kaarten als pdf om zelf te printen",
+  "payment_help.sets": "{{ amount }} sets",
+  "payment_help.helpTitle": "Liep je ergens vast? We helpen je graag",
+  "payment_help.helpText": "Was er iets onduidelijk, of lukte de betaling niet? Beantwoord gewoon deze e-mail. Die komt direct bij ons terecht en we helpen je graag met betalen, je playlist of je ontwerp.",
+  "payment_help.readyText": "Wil je je bestelling afronden? Met de knop hieronder start je een nieuwe, veilige betaling voor precies deze bestelling, met je kaarten precies zoals je ze ontworpen hebt.",
+  "payment_help.buttonText": "Rond mijn bestelling af",
+  "payment_help.validUntil": "Deze link werkt tot {{ date }}.",
+  "payment_help.greetings": "Groetjes"
 }

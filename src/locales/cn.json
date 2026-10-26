@@ -591,5 +591,20 @@
   "giftVoucher.step1": "扫描二维码或访问 {{ url }}",
   "giftVoucher.step2": "登录或创建免费账户",
   "giftVoucher.step3": "用免费的QRSong!应用扫描卡片，开始游戏",
-  "giftVoucher.codeLabel": "你的代码"
+  "giftVoucher.codeLabel": "你的代码",
+  "payment_help.subject": "需要我们帮你处理QRSong!订单吗？",
+  "payment_help.title": "需要我们帮你处理订单吗？",
+  "payment_help.preheader": "你的歌单和卡片设计都已保存。需要帮忙的话，直接回复就行。",
+  "payment_help.hello": "你好",
+  "payment_help.intro": "我们发现你的 QRSong! 订单 {{ orderId }} 付款没有成功。这种情况时有发生，别担心，什么都没丢：你的歌单和卡片设计都已保存，和你做好时一模一样。",
+  "payment_help.printed": "{{ count }} 张印刷卡片",
+  "payment_help.sheets": "{{ count }} 张卡片，印在 A4 纸上",
+  "payment_help.digital": "{{ count }} 张卡片，PDF 格式自行打印",
+  "payment_help.sets": "{{ amount }} 套",
+  "payment_help.helpTitle": "遇到问题了吗？我们很乐意帮忙",
+  "payment_help.helpText": "有什么不清楚的地方，或者付款没成功？直接回复这封邮件就行。邮件会直接发到我们这里，无论是付款、歌单还是设计，我们都很乐意帮你。",
+  "payment_help.readyText": "想完成订单吗？点击下方按钮，即可为这笔订单发起一笔新的安全付款，卡片和你设计的一模一样。",
+  "payment_help.buttonText": "完成我的订单",
+  "payment_help.validUntil": "此链接有效期至 {{ date }}。",
+  "payment_help.greetings": "祝好"
 }

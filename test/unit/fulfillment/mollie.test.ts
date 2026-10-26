@@ -70,10 +70,11 @@ const prismaMock = vi.hoisted(() => ({
     count: vi.fn(),
   },
   user: { update: vi.fn(), findUnique: vi.fn() },
-  gamesPurchase: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+  gamesPurchase: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn() },
   appDesignPurchase: { groupBy: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
   companyList: { findMany: vi.fn() },
   $queryRawUnsafe: vi.fn(),
+  $transaction: vi.fn(),
 }));
 vi.mock('../../../src/prisma', () => ({
   default: { getInstance: () => prismaMock },
@@ -84,6 +85,8 @@ const cacheMock = vi.hoisted(() => ({
   set: vi.fn(),
   del: vi.fn(),
   executeCommand: vi.fn(),
+  acquireLock: vi.fn(),
+  releaseLock: vi.fn(),
 }));
 vi.mock('../../../src/cache', () => ({
   default: { getInstance: () => cacheMock },
@@ -122,6 +125,7 @@ const discountMock = vi.hoisted(() => ({
   removeDiscountUsesByIds: vi.fn(),
   supersedeOpenReservations: vi.fn(),
   sweepExpiredReservations: vi.fn(),
+  reserveReleasedUsesAgain: vi.fn(),
 }));
 vi.mock('../../../src/discount', () => {
   class DiscountStub {
@@ -135,6 +139,7 @@ vi.mock('../../../src/discount', () => {
     removeDiscountUsesByIds = discountMock.removeDiscountUsesByIds;
     supersedeOpenReservations = discountMock.supersedeOpenReservations;
     sweepExpiredReservations = discountMock.sweepExpiredReservations;
+    reserveReleasedUsesAgain = discountMock.reserveReleasedUsesAgain;
     // Same normalisation as the real class (trim, upper-case, dedupe).
     static normalizeCodes(discounts?: { code?: string }[] | null): string[] {
       const out: string[] = [];
@@ -309,11 +314,15 @@ function applyDefaults(): void {
   prismaMock.appDesignPurchase.findUnique.mockResolvedValue(null);
   prismaMock.companyList.findMany.mockResolvedValue([]);
   prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+  prismaMock.$transaction.mockImplementation(async (ops: any) => (Array.isArray(ops) ? Promise.all(ops) : ops(prismaMock)));
+  prismaMock.gamesPurchase.updateMany.mockResolvedValue({ count: 0 });
   upgradeInvoicesMock.issue.mockResolvedValue(undefined);
 
   cacheMock.get.mockResolvedValue(null);
   cacheMock.set.mockResolvedValue(undefined);
   cacheMock.del.mockResolvedValue(undefined);
+  cacheMock.acquireLock.mockResolvedValue(true);
+  cacheMock.releaseLock.mockResolvedValue(undefined);
 
   // Mirrors Fx.tryConvert: EUR (or unsupported) → identity; USD → ×1.2.
   fxMock.tryConvert.mockImplementation(
@@ -376,6 +385,7 @@ function applyDefaults(): void {
   });
   discountMock.supersedeOpenReservations.mockResolvedValue({ paymentIds: [] });
   discountMock.sweepExpiredReservations.mockResolvedValue(0);
+  discountMock.reserveReleasedUsesAgain.mockResolvedValue(true);
   mollieApi.liveClient.payments.cancel.mockResolvedValue({});
 
   translationMock.getTranslationsByPrefix.mockResolvedValue(TRANSLATIONS);
@@ -1589,6 +1599,149 @@ describe('getPaymentUri', () => {
 // ---------------------------------------------------------------------------
 // processWebhook
 // ---------------------------------------------------------------------------
+
+describe('cleanPayments (abandoned orders are kept for the help mail)', () => {
+  it('deletes canceled and expired rows only after 14 days, never failed ones', async () => {
+    const before = Date.now();
+    await (mollie as any).cleanPayments();
+    const where = prismaMock.payment.findMany.mock.calls[0][0].where;
+    expect(where.status).toEqual({ in: ['expired', 'canceled'] });
+    const keptFor = before - where.updatedAt.lt.getTime();
+    expect(Math.round(keptFor / (24 * 60 * 60 * 1000))).toBe(14);
+    expect(prismaMock.payment.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('resumeAbandonedPayment (the help mail link)', () => {
+  const FRONTEND = process.env['FRONTEND_URI'];
+  const row = (over: Record<string, any> = {}) => ({
+    id: 9439,
+    paymentId: 'tr_old',
+    status: 'canceled',
+    locale: 'de',
+    clientIp: '203.0.113.7',
+    countrycode: 'DE',
+    currency: 'EUR',
+    totalPrice: 42.5,
+    totalPricePresentment: 42.5,
+    PaymentHasPlaylist: [
+      { type: 'physical', playlist: { playlistId: 'sp1' } },
+      { type: 'digital', playlist: { playlistId: 'sp2' } },
+    ],
+    ...over,
+  });
+  const oldPayment = (over: Record<string, any> = {}) =>
+    fakeMolliePayment({
+      id: 'tr_old',
+      status: 'canceled',
+      description: 'QRSong! 2x Playlists',
+      metadata: { clientIp: '203.0.113.7', refreshPlaylists: 'sp1' },
+      links: {},
+      ...over,
+    });
+  const newPayment = fakeMolliePayment({
+    id: 'tr_new',
+    links: { checkout: { href: 'https://pay.mollie.test/tr_new' } },
+  });
+
+  beforeEach(() => {
+    prismaMock.payment.findFirst.mockResolvedValue(row());
+    prismaMock.payment.findUnique.mockResolvedValue({ paymentId: 'tr_old', status: 'canceled' });
+    mollieApi.liveClient.payments.get.mockResolvedValue(oldPayment());
+    mollieApi.liveClient.payments.create.mockResolvedValue(newPayment);
+  });
+
+  it('makes a new payment for the same row and sends the customer to its checkout', async () => {
+    const url = await mollie.resumeAbandonedPayment('100009439', 'en');
+    expect(url).toBe('https://pay.mollie.test/tr_new');
+
+    const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+    expect(request.amount).toEqual({ currency: 'EUR', value: '42.50' });
+    expect(request.description).toBe('QRSong! 2x Playlists');
+    expect(request.metadata).toEqual({
+      clientIp: '203.0.113.7',
+      refreshPlaylists: 'sp1',
+      resumedFrom: 'tr_old',
+    });
+    expect(request.webhookUrl).toBe(`${process.env['API_URI']}/mollie/webhook`);
+    expect(request.locale).toBe('de_DE');
+    // the order's language, not the link's
+    expect(mollieApi.liveClient.payments.update.mock.calls[0][0]).toEqual({
+      paymentId: 'tr_new',
+      requestBody: { redirectUrl: `${FRONTEND}/de/generate/check_payment?paymentId=tr_new` },
+    });
+
+    const update = prismaMock.payment.update.mock.calls[0][0];
+    expect(update.where).toEqual({ id: 9439 });
+    expect(update.data).toMatchObject({ paymentId: 'tr_new', status: 'open', paymentMethod: null });
+    expect(update.data.createdAt).toBeInstanceOf(Date);
+    expect(update.data.helpMailResumedAt).toBeInstanceOf(Date);
+    expect(prismaMock.gamesPurchase.updateMany).toHaveBeenCalledWith({
+      where: { molliePaymentId: 'tr_old', type: 'initial' },
+      data: { molliePaymentId: 'tr_new' },
+    });
+    expect(discountMock.reserveReleasedUsesAgain).toHaveBeenCalledWith(9439);
+    expect(aiPlaylistMock.restoreCleanedPlaylists).toHaveBeenCalledWith(['sp1']);
+    expect(cacheMock.releaseLock).toHaveBeenCalledWith('payment-resume:9439');
+  });
+
+  it('charges the presentment amount in the order currency', async () => {
+    prismaMock.payment.findFirst.mockResolvedValue(
+      row({ currency: 'HUF', totalPrice: 42.5, totalPricePresentment: 16990 })
+    );
+    await mollie.resumeAbandonedPayment('100009439', 'en');
+    const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+    expect(request.amount).toEqual({ currency: 'HUF', value: '16990.00' });
+  });
+
+  it('sends a paid order to its check page and makes nothing', async () => {
+    prismaMock.payment.findFirst.mockResolvedValue(row({ status: 'paid' }));
+    const url = await mollie.resumeAbandonedPayment('100009439', 'en');
+    expect(url).toBe(`${FRONTEND}/de/generate/check_payment?paymentId=tr_old`);
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+  });
+
+  it('reuses a checkout that is still open (a second click, a mail scanner)', async () => {
+    mollieApi.liveClient.payments.get.mockResolvedValue(
+      oldPayment({ status: 'open', links: { checkout: { href: 'https://pay.mollie.test/tr_old' } } })
+    );
+    const url = await mollie.resumeAbandonedPayment('100009439', 'en');
+    expect(url).toBe('https://pay.mollie.test/tr_old');
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('follows a resume that another click made while this one waited', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({ paymentId: 'tr_other', status: 'open' });
+    mollieApi.liveClient.payments.get.mockImplementation(async ({ paymentId }: any) =>
+      paymentId === 'tr_other'
+        ? fakeMolliePayment({ id: 'tr_other', links: { checkout: { href: 'https://pay.mollie.test/tr_other' } } })
+        : oldPayment()
+    );
+    const url = await mollie.resumeAbandonedPayment('100009439', 'en');
+    expect(url).toBe('https://pay.mollie.test/tr_other');
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+  });
+
+  it('goes to the contact page when a discount on it is spent, an order is gone or is not a Mollie one', async () => {
+    discountMock.reserveReleasedUsesAgain.mockResolvedValueOnce(false);
+    expect(await mollie.resumeAbandonedPayment('100009439', 'en')).toBe(`${FRONTEND}/de/contact`);
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+
+    prismaMock.payment.findFirst.mockResolvedValueOnce(null);
+    expect(await mollie.resumeAbandonedPayment('100000001', 'fr')).toBe(`${FRONTEND}/fr/contact`);
+
+    prismaMock.payment.findFirst.mockResolvedValueOnce(row({ paymentId: 'free_abc' }));
+    expect(await mollie.resumeAbandonedPayment('100009439', 'nl')).toBe(`${FRONTEND}/nl/contact`);
+  });
+
+  it('goes to the contact page and changes nothing when Mollie refuses the new payment', async () => {
+    mollieApi.liveClient.payments.create.mockRejectedValue(new Error('Mollie down'));
+    expect(await mollie.resumeAbandonedPayment('100009439', 'en')).toBe(`${FRONTEND}/de/contact`);
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+    expect(cacheMock.releaseLock).toHaveBeenCalledWith('payment-resume:9439');
+  });
+});
 
 describe('processWebhook', () => {
   it('ignores webhooks without an id', async () => {

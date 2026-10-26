@@ -206,6 +206,13 @@ model Payment {
   // Defaults to true so orders that existed before this feature never
   // receive the gift box folding email; new orders are created with false.
   boxInstructionsMailSent  Boolean              @default(true)
+  // The help mail after a payment that was canceled, failed or expired
+  // (src/abandonedPayments.ts): sending | sent | error | skipped_<why>; null
+  // until the job has looked at it
+  helpMailStatus           String?              @db.VarChar(20)
+  helpMailAt               DateTime?
+  // When the mail's "Complete my order" link made a new Mollie payment
+  helpMailResumedAt        DateTime?
   reviewAllowed            Int                  @default(0)
   reviewAllowedAt          DateTime?
   finalizedAt              DateTime?

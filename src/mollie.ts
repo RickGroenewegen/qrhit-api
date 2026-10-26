@@ -73,6 +73,10 @@ import {
   includesConsumer,
 } from './businessSales';
 
+// How long a canceled or expired order stays before the nightly cleanup
+// deletes it, so the help mail's link can still pay it
+export const ABANDONED_KEEP_DAYS = 14;
+
 interface ExtraTracksInvoiceContext {
   paymentHasPlaylistId: number;
   userId: number;
@@ -1261,11 +1265,18 @@ class Mollie {
     }
 
     try {
+      // Kept for a while instead of the same night: the help mail goes out an
+      // hour after a payment ended, and its "Complete my order" link pays this
+      // very row again (src/abandonedPayments.ts)
+      const keepSince = new Date(
+        Date.now() - ABANDONED_KEEP_DAYS * 24 * 60 * 60 * 1000
+      );
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
           status: {
             in: ['expired', 'canceled'],
           },
+          updatedAt: { lt: keepSince },
         },
         select: {
           id: true,
@@ -3727,6 +3738,172 @@ class Mollie {
     return {
       success: true,
     };
+  }
+
+  /**
+   * Where the help mail's "Complete my order" link (src/abandonedPayments.ts,
+   * GET /order/resume/:orderId) sends the customer. An order whose payment
+   * was canceled, failed or expired gets a new Mollie payment on the same
+   * row: the order number, the cards, the design and the amount stay as they
+   * were, the row takes the new payment's id and starts over as open, and the
+   * webhook settles it like any payment. A second click while that payment
+   * is open (or a mail scanner's) lands on the same checkout. Klarna and in3
+   * are not offered on it: they need order lines, which only the checkout
+   * builds (services/pay-later.ts).
+   */
+  public async resumeAbandonedPayment(orderId: string, fallbackLocale: string): Promise<string> {
+    const frontend = process.env['FRONTEND_URI'];
+    const contactPage = (locale: string) => `${frontend}/${locale}/contact`;
+    const row = await this.prisma.payment.findFirst({
+      where: { orderId },
+      select: {
+        id: true,
+        paymentId: true,
+        status: true,
+        locale: true,
+        clientIp: true,
+        countrycode: true,
+        currency: true,
+        totalPrice: true,
+        totalPricePresentment: true,
+        PaymentHasPlaylist: {
+          select: { type: true, playlist: { select: { playlistId: true } } },
+        },
+      },
+    });
+    if (!row || !row.paymentId.startsWith('tr_')) return contactPage(fallbackLocale);
+    const locale = row.locale || fallbackLocale;
+    const checkPage = (paymentId: string) =>
+      `${frontend}/${locale}/generate/check_payment?paymentId=${paymentId}`;
+    if (this.paidPaymentStatus.includes(row.status)) return checkPage(row.paymentId);
+
+    const lock = `payment-resume:${row.id}`;
+    let locked = false;
+    for (let attempt = 0; attempt < 10 && !locked; attempt++) {
+      locked = await this.cache.acquireLock(lock, 30).catch(() => false);
+      if (!locked) await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    if (!locked) return checkPage(row.paymentId);
+
+    try {
+      const { client } = await this.getClient(row.clientIp || '');
+      const current = await client.payments.get({ paymentId: row.paymentId }).catch(() => null);
+      // Re-read: another click may have resumed it while this one waited
+      const fresh = await this.prisma.payment.findUnique({
+        where: { id: row.id },
+        select: { paymentId: true, status: true },
+      });
+      if (!fresh) return contactPage(locale);
+      if (this.paidPaymentStatus.includes(fresh.status)) return checkPage(fresh.paymentId);
+      if (fresh.paymentId !== row.paymentId) {
+        const resumed = await client.payments.get({ paymentId: fresh.paymentId }).catch(() => null);
+        return resumed?.links?.checkout?.href || checkPage(fresh.paymentId);
+      }
+      const openCheckout = current?.links?.checkout?.href;
+      if (current && this.openPaymentStatus.includes(current.status) && openCheckout) {
+        return openCheckout;
+      }
+
+      const currency: SupportedCurrency = isSupportedCurrency(row.currency) ? row.currency : 'EUR';
+      const amount = currency === 'EUR' ? row.totalPrice : row.totalPricePresentment;
+      if (!amount || amount <= 0) return contactPage(locale);
+
+      // A discount it had counts again; a balance spent elsewhere meanwhile
+      // cannot pay this order twice
+      if (!(await this.discount.reserveReleasedUsesAgain(row.id))) {
+        this.logger.log(
+          color.yellow.bold(
+            `Order ${white.bold(orderId)} not resumed: a discount on it is no longer available`
+          )
+        );
+        return contactPage(locale);
+      }
+
+      const resolved = this.resolveMollieMethods({
+        language: locale,
+        billingCountry: row.countrycode,
+        currency,
+      });
+      const oldMetadata =
+        current?.metadata && typeof current.metadata === 'object' ? (current.metadata as Record<string, unknown>) : {};
+      const payment = await client.payments.create({
+        paymentRequest: {
+          amount: { currency, value: amount.toFixed(2) },
+          description: current?.description || `${process.env['PRODUCT_NAME']} ${orderId}`,
+          metadata: { ...oldMetadata, clientIp: row.clientIp || '', resumedFrom: row.paymentId },
+          method: resolved.methods,
+          redirectUrl: `${frontend}/${locale}/generate/check_payment`,
+          webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+          locale: resolved.locale,
+        },
+      });
+      // As in getPaymentUri: the return trip carries the id
+      try {
+        await client.payments.update({
+          paymentId: payment.id,
+          requestBody: { redirectUrl: checkPage(payment.id) },
+        });
+      } catch (e) {
+        this.logger.log(
+          color.yellow.bold(
+            `Could not attach paymentId to redirect URL for ${white.bold(payment.id)}: ${
+              e instanceof Error ? e.message : String(e)
+            }`
+          )
+        );
+      }
+
+      const now = new Date();
+      await this.prisma.$transaction([
+        // createdAt moves along: the day reports and the invoice count the
+        // order from the payment that pays it
+        this.prisma.payment.update({
+          where: { id: row.id },
+          data: {
+            paymentId: payment.id,
+            status: 'open',
+            paymentMethod: null,
+            createdAt: now,
+            helpMailResumedAt: now,
+          },
+        }),
+        // The customer report joins QRGames on the payment's Mollie id
+        this.prisma.gamesPurchase.updateMany({
+          where: { molliePaymentId: row.paymentId, type: 'initial' },
+          data: { molliePaymentId: payment.id },
+        }),
+      ]);
+
+      // An AI-made list in it may have been cleaned up since (aiPlaylist.ts)
+      const physicalPlaylists = [
+        ...new Set(
+          row.PaymentHasPlaylist.filter((line) => line.type === 'physical').map((line) => line.playlist.playlistId)
+        ),
+      ];
+      if (physicalPlaylists.length > 0) {
+        try {
+          const { default: AIPlaylistGenerator } = await import('./aiPlaylist');
+          await AIPlaylistGenerator.getInstance().restoreCleanedPlaylists(physicalPlaylists);
+        } catch (err) {
+          this.logger.log(color.yellow.bold(`Failed to restore cleaned AI playlists: ${err}`));
+        }
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Order ${white.bold(orderId)} resumed from the help mail: ${white.bold(row.paymentId)} → ${white.bold(payment.id)}`
+        )
+      );
+      return payment.links.checkout?.href || checkPage(payment.id);
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Could not resume order ${white.bold(orderId)}: `) +
+          color.white.bold(error instanceof Error ? error.message : String(error))
+      );
+      return contactPage(locale);
+    } finally {
+      await this.cache.releaseLock(lock).catch(() => {});
+    }
   }
 
   public async checkPaymentStatus(paymentId: string): Promise<ApiResult> {

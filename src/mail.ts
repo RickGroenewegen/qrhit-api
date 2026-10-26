@@ -52,6 +52,18 @@ export interface GiftMailSet {
   appDesign: boolean;
 }
 
+/** An order line in the help mail after an abandoned payment (src/abandonedPayments.ts). */
+export interface PaymentHelpMailLine {
+  name: string;
+  numberOfTracks: number;
+  type: 'digital' | 'physical' | 'sheets';
+  // sets of this playlist in the order
+  amount: number;
+  // the card front and back side by side, else the playlist cover; none
+  // when neither could be had
+  picture: { data: Buffer; contentType: 'image/jpeg' | 'image/png'; card: boolean } | null;
+}
+
 class Mail {
   private static instance: Mail;
   private ses: SESClient | null = null;
@@ -461,6 +473,108 @@ class Mail {
       this.logger.log(
         color.red.bold(`Failed to send ${template} mail to ${white.bold(to.email)}: ${error}`)
       );
+    }
+  }
+
+  /**
+   * To a customer whose payment was canceled, failed or expired and who did
+   * not pay otherwise (src/abandonedPayments.ts): their cards, a link that
+   * pays this same order again, and above all an invitation to reply. Sent
+   * from and replied to the info address, so a reply reaches us. `sendTo`
+   * replaces the recipient (an example or a test). True once SES took it.
+   */
+  public async sendPaymentHelpMail(
+    to: { email: string; name: string; locale: string },
+    order: { orderId: string; lines: PaymentHelpMailLine[]; resumeUrl: string; validUntil: Date },
+    sendTo?: string
+  ): Promise<boolean> {
+    if (!this.ses || !to.email) return false;
+    const locale = to.locale || 'en';
+    const translations = await this.translation.getTranslationsByPrefix(locale, 'payment_help');
+    const lineLabel = {
+      physical: 'printed',
+      sheets: 'sheets',
+      digital: 'digital',
+    } as const;
+    // translate() fills params through Mustache, which HTML-escapes them
+    // already: the HTML template prints these with {{{ }}}, the text one gets
+    // them decoded
+    const t = (key: string, params: Record<string, unknown>) => {
+      const html = this.translation.translate(`payment_help.${key}`, locale, params);
+      return { html, text: decode(html) };
+    };
+    const lines = order.lines.map((line, index) => ({
+      name: line.name,
+      cid: line.picture ? `card${index}` : null,
+      card: line.picture?.card === true,
+      detail: t(lineLabel[line.type], { count: line.numberOfTracks }),
+      sets: line.amount > 1 ? t('sets', { amount: line.amount }) : null,
+    }));
+    const mailParams = {
+      fullname: to.name || to.email.split('@')[0],
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+      lines,
+      resumeUrl: order.resumeUrl,
+      intro: t('intro', { orderId: order.orderId }),
+      validUntil: t('validUntil', {
+        date: new Intl.DateTimeFormat(locale, {
+          day: 'numeric',
+          month: 'long',
+          timeZone: 'Europe/Amsterdam',
+        }).format(order.validUntil),
+      }),
+    };
+    try {
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const html = await this.templates.render('mails/payment_help_html', mailParams);
+      const text = await this.templates.render('mails/payment_help_text', mailParams);
+      const subject = decode(this.translation.translate('payment_help.subject', locale));
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: this.wrapBase64(logoBuffer.toString('base64')),
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+      order.lines.forEach((line, index) => {
+        if (!line.picture) return;
+        attachments.push({
+          contentType: line.picture.contentType,
+          filename: `card${index + 1}.${line.picture.contentType === 'image/jpeg' ? 'jpg' : 'png'}`,
+          data: this.wrapBase64(line.picture.data.toString('base64')),
+          isInline: true,
+          cid: `card${index}`,
+        });
+      });
+      const rawEmail = await this.renderRaw({
+        // Replies must reach us: the mail asks them to answer it
+        from: `${process.env['PRODUCT_NAME']} <${process.env['INFO_EMAIL']}>`,
+        to: sendTo || to.email,
+        subject: this.encodeHeader(subject),
+        html,
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['INFO_EMAIL'],
+      });
+      await this.ses.send(new SendRawEmailCommand({ RawMessage: { Data: Buffer.from(rawEmail) } }));
+      this.logger.log(
+        color.blue.bold(
+          `Payment help mail for order ${white.bold(order.orderId)} sent to ${white.bold(sendTo || to.email)}`
+        )
+      );
+      return true;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to send the payment help mail for order ${white.bold(order.orderId)}: ${error}`
+        )
+      );
+      return false;
     }
   }
 

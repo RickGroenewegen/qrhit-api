@@ -591,5 +591,20 @@
   "giftVoucher.step1": "Olvasd be a kódot, vagy menj ide: {{ url }}",
   "giftVoucher.step2": "Jelentkezz be, vagy hozz létre ingyenes fiókot",
   "giftVoucher.step3": "Szkennelj be egy kártyát az ingyenes QRSong! appal, és játssz",
-  "giftVoucher.codeLabel": "A kódod"
+  "giftVoucher.codeLabel": "A kódod",
+  "payment_help.subject": "Segíthetünk a QRSong!-rendelésedben?",
+  "payment_help.title": "Segíthetünk a rendelésedben?",
+  "payment_help.preheader": "A lejátszási listád és a kártyadizájnod el van mentve. Ha segítség kell, csak válaszolj.",
+  "payment_help.hello": "Szia",
+  "payment_help.intro": "Láttuk, hogy a(z) {{ orderId }} számú QRSong!-rendelésed fizetése nem ment át. Ez előfordul, és semmi sem veszett el: a lejátszási listád és a kártyáid dizájnja el van mentve, pontosan úgy, ahogy elkészítetted.",
+  "payment_help.printed": "{{ count }} nyomtatott kártya",
+  "payment_help.sheets": "{{ count }} kártya nyomtatott A4-es íveken",
+  "payment_help.digital": "{{ count }} kártya PDF-ben, hogy magad nyomtasd ki",
+  "payment_help.sets": "{{ amount }} szett",
+  "payment_help.helpTitle": "Elakadtál? Szívesen segítünk",
+  "payment_help.helpText": "Valami nem volt világos, vagy nem sikerült a fizetés? Csak válaszolj erre az e-mailre. Egyenesen hozzánk érkezik, és szívesen segítünk a fizetésben, a playlisteddel vagy a dizájnoddal.",
+  "payment_help.readyText": "Szeretnéd befejezni a rendelésed? Az alábbi gomb egy új, biztonságos fizetést nyit pontosan erre a rendelésre, a kártyáiddal pont úgy, ahogy megtervezted őket.",
+  "payment_help.buttonText": "Rendelésem befejezése",
+  "payment_help.validUntil": "Ez a link {{ date }}-ig működik.",
+  "payment_help.greetings": "Üdv"
 }

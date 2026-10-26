@@ -591,5 +591,20 @@
   "giftVoucher.step1": "コードをスキャンするか、{{ url }} にアクセスしてね",
   "giftVoucher.step2": "ログインまたは無料アカウントを作成",
   "giftVoucher.step3": "無料のQRSong!アプリでカードをスキャンして遊ぼう",
-  "giftVoucher.codeLabel": "あなたのコード"
+  "giftVoucher.codeLabel": "あなたのコード",
+  "payment_help.subject": "QRSong!のご注文、お手伝いしましょうか？",
+  "payment_help.title": "ご注文、お手伝いしましょうか？",
+  "payment_help.preheader": "プレイリストとカードデザインは保存されています。手伝いが必要なら、気軽に返信してね。",
+  "payment_help.hello": "こんにちは",
+  "payment_help.intro": "QRSong!のご注文 {{ orderId }} のお支払いが完了しなかったようです。よくあることなので大丈夫、何も失われていません。プレイリストもカードのデザインも、作ったときのまま保存されています。",
+  "payment_help.printed": "印刷カード {{ count }} 枚",
+  "payment_help.sheets": "印刷済みA4シートに{{ count }}枚のカード",
+  "payment_help.digital": "{{ count }}枚のカード（自分で印刷するPDF）",
+  "payment_help.sets": "{{ amount }}セット",
+  "payment_help.helpTitle": "うまくいかなかった？喜んでお手伝いします",
+  "payment_help.helpText": "わかりにくいところがあった？それとも支払いがうまくいかなかった？このメールにそのまま返信してね。直接私たちに届くので、支払い、プレイリスト、デザインのことなど喜んでお手伝いします。",
+  "payment_help.readyText": "注文を完了したい？下のボタンから、この注文専用の新しい安全な支払いページが開きます。カードはデザインしたそのままだよ。",
+  "payment_help.buttonText": "注文を完了する",
+  "payment_help.validUntil": "このリンクは{{ date }}まで有効だよ。",
+  "payment_help.greetings": "よろしくね"
 }

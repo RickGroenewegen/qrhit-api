@@ -2032,6 +2032,74 @@ that list whose requirements the payment does not meet. Reworked on
 - Pay by Bank is in `notOnBadges`: the homepage strip leaves it out (no
   brand anyone looks for).
 
+## Help mail after an abandoned payment
+
+A customer who got as far as Mollie and then canceled, or whose payment
+failed or expired, gets one friendly mail: their cards, a link that pays the
+same order again and, above all, an invitation to reply, which reaches
+info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
+
+| what | where |
+|---|---|
+| the job, the rules (`helpMailDecision`), the resume link | `src/abandonedPayments.ts` |
+| the mail | `Mail.sendPaymentHelpMail`, `templates/mails/payment_help_*.hbs`, `payment_help.*` |
+| "Complete my order" | `GET /order/resume/:orderId` → `Mollie.resumeAbandonedPayment` |
+| the card picture of an unpaid line | `CardPreviews.draftForLine`, `GET /qr/pdf-draft/:id` |
+| by hand: one pass, or one order's mail to another address | `npx tsx scripts/abandoned-mail.ts --run [--delay=0]` / `--payment=<id> --to=<email>` |
+| state per payment | `payments.helpMailStatus`, `helpMailAt`, `helpMailResumedAt` |
+
+- **When.** Hourly at :20 from 08:20 to 20:20 Amsterdam time, on the main
+  server only and never in development (the cron is not even scheduled
+  there; try it with the script). It takes a `tr_` payment that is
+  `canceled`, `failed` or `expired`, ended at least an hour ago (a quick
+  retry needs no mail) and at most 48 hours ago (failed rows are never
+  cleaned up and go back years), and was not looked at yet.
+- **Who**, per customer (their `userId`, so per e-mail), in this order:
+  a newer payment still open means a retry is under way, so nothing is
+  written and the next run looks again; a paid payment started at or after
+  this one means they made it (`skipped_paid`); only the newest abandoned
+  try gets it (`skipped_newer`); one help mail per customer in 30 days
+  (`skipped_recent`); test-mode orders from a trusted IP (`skipped_test`)
+  and gift-card-only orders (`skipped_nocards`) never. Everyone else gets
+  it, marketing opt-in or not (Rick, 2026-10-26: it is service).
+  The row is claimed (`sending`) before sending, then `sent` or `error`;
+  an error is never retried.
+- **The cleanup keeps abandoned orders 14 days** (`ABANDONED_KEEP_DAYS` in
+  `cleanPayments`). It used to delete every canceled and expired row at
+  01:00 the same night, with its lines and designs, so neither the mail nor
+  its link would have had an order to show or pay.
+- **The mail** comes from and replies to `INFO_EMAIL`, BCC as usual, in the
+  order's language. Each card line shows its first card front beside back
+  (`cardPairJpeg`), drawn like the gift voucher's but for a line that has no
+  tracks or QR codes yet: a sample track (the line's first stored track with
+  a year, else one from the provider's cached list with our year or the
+  release year, kept a day in Redis), a QR code made on the spot that
+  encodes qrsong.io in the line's colour and logo, and the line's own
+  printer template through the signed `/qr/pdf-draft/:id` (the same view
+  code as `/qr/pdf`, `sendCardPages`). A failed render falls back to the
+  playlist cover; no picture never stops the mail. The draft takes about
+  35 s through the PDF Lambda and is stored under `card-previews` like the
+  printer previews.
+- **"Complete my order" pays this very row again.** The link is signed
+  (`payment-resume`, 7 days) and keyed on the order number, which survives;
+  the `tr_` id does not. A paid order goes to its check page; an open
+  payment with a live checkout goes back to that checkout (a second click,
+  or a mail scanner's); anything else gets a new Mollie payment for the
+  same amount in the same currency, with the order's own methods
+  (`resolveMollieMethods`, no Klarna or in3: they need the order lines that
+  only checkout builds). The row takes the new id, `status = open`,
+  `createdAt = now` (day reports and the invoice count from the payment that
+  pays it) and `helpMailResumedAt`; QRGames moves along
+  (`gamesPurchase.molliePaymentId`), cleaned AI lists are restored, and a
+  discount it had counts again (`reserveReleasedUsesAgain`) unless its
+  balance or uses went elsewhere meanwhile, which sends the customer to the
+  contact page instead. Then the webhook settles it like any payment. A
+  HEAD request (link checkers) never makes a payment.
+- **Counting what it did:** `helpMailStatus = 'sent'` rows are the mails;
+  `status = 'paid' AND helpMailResumedAt IS NOT NULL` are the orders the link
+  saved. `helpMailResumedAt` alone counts link opens, mail scanners
+  included.
+
 ## Error tracking (PostHog)
 
 API errors go to the same PostHog project as the site's

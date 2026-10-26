@@ -591,5 +591,20 @@
   "mail.appDesignTrackingLine": "Zatímco čekáš: bezplatná appka QRSong! může nosit tvoje barvy, fotku a logo hned po naskenování první karty.",
   "mail.appDesignTrackingLink": "Mrkni na App Designer",
   "mail.giftBoxIncluded": "Dárková krabička",
-  "mail.giftBoxIncludedPrinter": "Tvoje objednávka obsahuje i vlastní dárkovou krabičku, kterou vytiskneme a pošleme spolu s tvými kartami."
+  "mail.giftBoxIncludedPrinter": "Tvoje objednávka obsahuje i vlastní dárkovou krabičku, kterou vytiskneme a pošleme spolu s tvými kartami.",
+  "payment_help.subject": "Můžeme ti pomoct s tvou objednávkou QRSong!?",
+  "payment_help.title": "Můžeme ti pomoct s tvou objednávkou?",
+  "payment_help.preheader": "Tvůj playlist i design karet jsou uložené. Stačí odpovědět, pokud potřebuješ pomoct.",
+  "payment_help.hello": "Ahoj",
+  "payment_help.intro": "Všimli jsme si, že platba za tvou objednávku QRSong! {{ orderId }} neprošla. To se stává a nic není ztraceno: tvůj playlist i design karet jsou uložené přesně tak, jak je máš.",
+  "payment_help.printed": "Tištěné karty: {{ count }}",
+  "payment_help.sheets": "{{ count }} karet na vytištěných arších A4",
+  "payment_help.digital": "{{ count }} karet jako PDF k vlastnímu tisku",
+  "payment_help.sets": "{{ amount }} sady",
+  "payment_help.helpTitle": "Zasekl ses? Rádi ti pomůžeme",
+  "payment_help.helpText": "Bylo něco nejasné, nebo platba neprošla? Prostě odpověz na tenhle e-mail. Přijde přímo nám a rádi ti pomůžeme s platbou, playlistem nebo designem.",
+  "payment_help.readyText": "Chceš dokončit objednávku? Tlačítko níže otevře novou, bezpečnou platbu přesně pro tuhle objednávku, s kartami přesně tak, jak sis je navrhl.",
+  "payment_help.buttonText": "Dokončit objednávku",
+  "payment_help.validUntil": "Tento odkaz funguje do {{ date }}.",
+  "payment_help.greetings": "S pozdravem"
 }

@@ -591,5 +591,20 @@
   "giftVoucher.step1": "Skann koden eller gå til {{ url }}",
   "giftVoucher.step2": "Logg inn eller lag en gratis konto",
   "giftVoucher.step3": "Skann et kort med den gratis QRSong!-appen og spill",
-  "giftVoucher.codeLabel": "Din kode"
+  "giftVoucher.codeLabel": "Din kode",
+  "payment_help.subject": "Kan vi hjelpe deg med QRSong!-bestillingen din?",
+  "payment_help.title": "Kan vi hjelpe deg med bestillingen din?",
+  "payment_help.preheader": "Spillelisten og kortdesignet ditt er lagret. Bare svar hvis du trenger en hånd.",
+  "payment_help.hello": "Hei",
+  "payment_help.intro": "Vi så at betalingen for QRSong!-bestillingen din {{ orderId }} ikke gikk gjennom. Det kan skje, og ingenting er tapt: spillelisten og kortdesignet ditt er lagret, akkurat slik du lagde dem.",
+  "payment_help.printed": "{{ count }} trykte kort",
+  "payment_help.sheets": "{{ count }} kort på trykte A4-ark",
+  "payment_help.digital": "{{ count }} kort som PDF du skriver ut selv",
+  "payment_help.sets": "{{ amount }} sett",
+  "payment_help.helpTitle": "Sto du fast? Vi hjelper deg gjerne",
+  "payment_help.helpText": "Var noe uklart, eller gikk ikke betalingen gjennom? Bare svar på denne e-posten. Den kommer rett til oss, og vi hjelper deg gjerne med betalingen, spillelisten eller designet ditt.",
+  "payment_help.readyText": "Vil du fullføre bestillingen? Knappen nedenfor åpner en ny, sikker betaling for akkurat denne bestillingen, med kortene dine akkurat slik du designet dem.",
+  "payment_help.buttonText": "Fullfør bestillingen min",
+  "payment_help.validUntil": "Denne lenken fungerer til {{ date }}.",
+  "payment_help.greetings": "Hilsen"
 }

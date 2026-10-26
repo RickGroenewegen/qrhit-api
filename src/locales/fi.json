@@ -591,5 +591,20 @@
   "mail.appDesignTrackingLine": "Sillä välin: ilmainen QRSong!-sovellus voi näyttää sinun väreilläsi, kuvallasi ja logollasi heti, kun ensimmäinen kortti skannataan.",
   "mail.appDesignTrackingLink": "Katso App Designer",
   "mail.giftBoxIncluded": "Lahjarasia",
-  "mail.giftBoxIncludedPrinter": "Tilaukseesi kuuluu myös oma lahjarasia, joka painetaan ja lähetetään korttiesi mukana."
+  "mail.giftBoxIncludedPrinter": "Tilaukseesi kuuluu myös oma lahjarasia, joka painetaan ja lähetetään korttiesi mukana.",
+  "payment_help.subject": "Voimmeko auttaa QRSong!-tilauksesi kanssa?",
+  "payment_help.title": "Voimmeko auttaa tilauksesi kanssa?",
+  "payment_help.preheader": "Soittolistasi ja korttiesi ulkoasu on tallennettu. Vastaa vain, jos tarvitset apua.",
+  "payment_help.hello": "Hei",
+  "payment_help.intro": "Huomasimme, että QRSong!-tilauksesi {{ orderId }} maksu ei mennyt läpi. Niin voi käydä, eikä mitään ole menetetty: soittolistasi ja korttiesi ulkoasu on tallennettu juuri sellaisina kuin teit ne.",
+  "payment_help.printed": "{{ count }} painettua korttia",
+  "payment_help.sheets": "{{ count }} korttia painetuilla A4-arkeilla",
+  "payment_help.digital": "{{ count }} korttia PDF:nä itse tulostettavaksi",
+  "payment_help.sets": "{{ amount }} settiä",
+  "payment_help.helpTitle": "Jäitkö jumiin? Autamme mielellämme",
+  "payment_help.helpText": "Jäikö jokin epäselväksi, tai eikö maksu onnistunut? Vastaa vain tähän sähköpostiin. Se tulee suoraan meille, ja autamme mielellämme maksamisessa, soittolistassasi tai suunnittelussasi.",
+  "payment_help.readyText": "Haluatko viimeistellä tilauksesi? Alla oleva painike avaa uuden, turvallisen maksun juuri tälle tilaukselle, ja korttisi ovat juuri sellaiset kuin ne suunnittelit.",
+  "payment_help.buttonText": "Viimeistele tilaukseni",
+  "payment_help.validUntil": "Tämä linkki toimii {{ date }} asti.",
+  "payment_help.greetings": "Terveisin"
 }

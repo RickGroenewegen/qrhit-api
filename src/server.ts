@@ -47,6 +47,7 @@ import aiAdminRoutes from './routes/aiAdminRoutes';
 import aiCostRoutes from './routes/aiCostRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
+import AbandonedPayments from './abandonedPayments';
 import AppTheme from './apptheme';
 import TrackEnrichment from './trackEnrichment';
 
@@ -292,6 +293,10 @@ class Server {
       // Initialize CalendarService (starts monthly event-calendar prefill cron;
       // production main server only — see startPrefillCron)
       CalendarService.getInstance();
+
+      // The help mail after an abandoned payment (hourly cron; production
+      // main server only)
+      AbandonedPayments.getInstance();
     } else {
       this.workerId = parseInt(process.env['WORKER_ID'] as string);
       this.startServer();

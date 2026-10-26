@@ -31,6 +31,7 @@ import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
 import PrismaInstance from '../prisma';
 import UpgradeInvoices from '../upgradeInvoice';
 import { isSignedRenderRequest } from '../renderSignature';
+import CardPreviews from '../cardPreview';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -73,6 +74,22 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // Payment webhook
   fastify.post('/mollie/webhook', async (request: any, _reply) => {
     return await mollie.processWebhook(request.body);
+  });
+
+  // The help mail's "Complete my order" link (src/abandonedPayments.ts): a
+  // new Mollie payment for the same order. A link that expired or was
+  // altered goes to the contact page, which is what the mail is about.
+  fastify.get('/order/resume/:orderId', async (request: any, reply) => {
+    const requested = String(request.query?.l || '');
+    const locale = translation.isValidLocale(requested) ? requested : 'en';
+    // Fastify answers HEAD with this handler; a mail scanner checking the
+    // link must not make a payment
+    if (request.method === 'HEAD' || !isSignedRenderRequest('payment-resume', request)) {
+      return reply.redirect(`${process.env['FRONTEND_URI']}/${locale}/contact`);
+    }
+    return reply.redirect(
+      await mollie.resumeAbandonedPayment(String(request.params.orderId), locale)
+    );
   });
 
   // Get order progress
@@ -451,117 +468,179 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       // Slice the tracks based on the start and end index
       const startIndex = parseInt(request.params.startIndex);
       const endIndex = parseInt(request.params.endIndex);
-      const eco = utils.parseBoolean(request.params.eco);
-      const emptyPages = parseInt(request.params.emptyPages);
-      const subdir = request.params.subdir;
       const itemIndex = request.params.itemIndex ? parseInt(request.params.itemIndex) : undefined;
       tracks = tracks.slice(startIndex, endIndex + 1);
 
-      // Construct batch number with item index if provided
-      let batchNumber = php[0].paymentHasPlaylistId.toString();
-      if (itemIndex && itemIndex > 0) {
-        batchNumber = `${php[0].paymentHasPlaylistId}-${itemIndex}`;
-      }
-
       if (payment.email) {
-        // An admin-chosen order template (see forcedPrinterTemplate) replaces
-        // the single-card printer layout only: digital downloads and sheets
-        // keep their multi-card layout instead of coming out one card per page.
-        // php[0].template is the playlist's (legacy) column in this query;
-        // the order line's own template is orderTemplate.
-        const requestedTemplate: string = request.params.template;
-        const forcedTemplate = forcedPrinterTemplate(php[0].orderTemplate);
-        const template =
-          forcedTemplate && !isMultiCardTemplate(requestedTemplate)
-            ? forcedTemplate
-            : requestedTemplate;
-
-        // Load how-to card translations if enabled
-        let howtoTranslations: Record<string, string> | null = null;
-        if (php[0].addHowToCard) {
-          howtoTranslations = await translation.getTranslationsByPrefix(
-            php[0].addHowToCardLocale || 'en',
-            'howto'
-          );
-        }
-
-        // Alternating card designs (src/cardDesigns.ts). Card numbers run over
-        // the whole deck, so a chunk that starts at startIndex continues the
-        // cycle instead of restarting it. One design is php[0] itself.
-        const designs = deckDesigns(
-          php[0],
-          await getExtraDesigns(php[0].paymentHasPlaylistId)
-        );
-        const cardDesignIndexes = tracks.map((_: any, index: number) =>
-          designIndexForCard(designs.length, startIndex + index)
-        );
-        const cardDesigns = cardDesignIndexes.map((k: number) => designs[k]);
-
-        const view = {
-          subdir,
+        await sendCardPages(reply, {
           payment,
+          user,
           playlist,
           php: php[0],
           tracks,
-          designs,
-          cardDesigns,
-          cardDesignIndexes,
-          user,
-          eco,
-          emptyPages,
-          batchNumber,
+          requestedTemplate: request.params.template,
+          subdir: request.params.subdir,
+          eco: utils.parseBoolean(request.params.eco),
+          emptyPages: parseInt(request.params.emptyPages),
           startIndex,
-          howtoTranslations,
-          getYearFontSize,
-          // Admin-chosen fonts outside fonts.ts get their weights from the
-          // Google catalogue; the fixed list resolves as before.
-          getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelperForFonts(
-            designs.map((design: any) => design.selectedFont)
-          ),
-          getGoogleFontName,
-          getFontWeight,
-          getQrTotalModules,
-        };
-
-        // A stored template (src/cardTemplates.ts) at the version the order
-        // line pinned; any other name must be a views/pdf_<name>.ejs file.
-        const stored = await CardTemplates.getInstance().forRender(
-          template,
-          template === php[0].orderTemplate ? php[0].orderTemplateVersion : null
-        );
-        if (stored) {
-          try {
-            await sendStoredPage(
-              reply,
-              stored,
-              {
-                php: php[0],
-                designs,
-                cardDesignIndexes,
-                tracks,
-                subdir,
-                eco,
-                startIndex,
-                batchNumber,
-                apiUri: process.env['API_URI'] as string,
-              },
-              view
-            );
-          } catch (error) {
-            if (!(error instanceof CardTemplateError)) throw error;
-            logger.log(color.red.bold(`Card template ${template} v${stored.version}: ${error.message}`));
-            reply.status(500).send({ error: `card template ${template}: ${error.message}` });
-          }
-          return;
-        }
-        if (!TEMPLATE_NAME.test(template) || !isFileTemplate(template)) {
-          reply.status(404).send({ error: 'Unknown template' });
-          return;
-        }
-        await reply.view(`pdf_${template}.ejs`, view);
+          itemIndex,
+        });
       }
     }
   );
+
+  // One card of an order line that has no cards yet, drawn with a sample
+  // track and a QR code made for it (CardPreviews.draftForLine): the help mail
+  // after an abandoned payment shows the customer's card before anything was
+  // generated. Opened by the PDF Lambda only, so the link is signed.
+  fastify.get(
+    '/qr/pdf-draft/:paymentHasPlaylistId',
+    async (request: any, reply) => {
+      if (!isSignedRenderRequest('card-draft', request)) {
+        reply.status(404).send({ error: 'Not found' });
+        return;
+      }
+      const draft = await CardPreviews.getInstance().draftView(
+        Number(request.params.paymentHasPlaylistId)
+      );
+      if (!draft) {
+        reply.status(404).send({ error: 'Not found' });
+        return;
+      }
+      await sendCardPages(reply, {
+        ...draft,
+        eco: false,
+        emptyPages: 0,
+        startIndex: 0,
+      });
+    }
+  );
+
+  /**
+   * The card pages of an order line as the printer and the downloads get
+   * them, through the line's template: a stored one (src/cardTemplates.ts)
+   * or a views/pdf_<name>.ejs file.
+   */
+  async function sendCardPages(
+    reply: any,
+    page: {
+      payment: any;
+      user: any;
+      playlist: any;
+      php: any;
+      tracks: any[];
+      requestedTemplate: string;
+      subdir: string;
+      eco: boolean;
+      emptyPages: number;
+      startIndex: number;
+      itemIndex?: number;
+    }
+  ): Promise<void> {
+    const { payment, user, playlist, php, tracks, subdir, eco, emptyPages, startIndex, itemIndex } = page;
+
+    // Construct batch number with item index if provided
+    let batchNumber = php.paymentHasPlaylistId.toString();
+    if (itemIndex && itemIndex > 0) {
+      batchNumber = `${php.paymentHasPlaylistId}-${itemIndex}`;
+    }
+
+    // An admin-chosen order template (see forcedPrinterTemplate) replaces
+    // the single-card printer layout only: digital downloads and sheets
+    // keep their multi-card layout instead of coming out one card per page.
+    // php.template is the playlist's (legacy) column in this query;
+    // the order line's own template is orderTemplate.
+    const requestedTemplate = page.requestedTemplate;
+    const forcedTemplate = forcedPrinterTemplate(php.orderTemplate);
+    const template =
+      forcedTemplate && !isMultiCardTemplate(requestedTemplate)
+        ? forcedTemplate
+        : requestedTemplate;
+
+    // Load how-to card translations if enabled
+    let howtoTranslations: Record<string, string> | null = null;
+    if (php.addHowToCard) {
+      howtoTranslations = await translation.getTranslationsByPrefix(
+        php.addHowToCardLocale || 'en',
+        'howto'
+      );
+    }
+
+    // Alternating card designs (src/cardDesigns.ts). Card numbers run over
+    // the whole deck, so a chunk that starts at startIndex continues the
+    // cycle instead of restarting it. One design is php itself.
+    const designs = deckDesigns(
+      php,
+      await getExtraDesigns(php.paymentHasPlaylistId)
+    );
+    const cardDesignIndexes = tracks.map((_: any, index: number) =>
+      designIndexForCard(designs.length, startIndex + index)
+    );
+    const cardDesigns = cardDesignIndexes.map((k: number) => designs[k]);
+
+    const view = {
+      subdir,
+      payment,
+      playlist,
+      php,
+      tracks,
+      designs,
+      cardDesigns,
+      cardDesignIndexes,
+      user,
+      eco,
+      emptyPages,
+      batchNumber,
+      startIndex,
+      howtoTranslations,
+      getYearFontSize,
+      // Admin-chosen fonts outside fonts.ts get their weights from the
+      // Google catalogue; the fixed list resolves as before.
+      getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelperForFonts(
+        designs.map((design: any) => design.selectedFont)
+      ),
+      getGoogleFontName,
+      getFontWeight,
+      getQrTotalModules,
+    };
+
+    // A stored template (src/cardTemplates.ts) at the version the order
+    // line pinned; any other name must be a views/pdf_<name>.ejs file.
+    const stored = await CardTemplates.getInstance().forRender(
+      template,
+      template === php.orderTemplate ? php.orderTemplateVersion : null
+    );
+    if (stored) {
+      try {
+        await sendStoredPage(
+          reply,
+          stored,
+          {
+            php,
+            designs,
+            cardDesignIndexes,
+            tracks,
+            subdir,
+            eco,
+            startIndex,
+            batchNumber,
+            apiUri: process.env['API_URI'] as string,
+          },
+          view
+        );
+      } catch (error) {
+        if (!(error instanceof CardTemplateError)) throw error;
+        logger.log(color.red.bold(`Card template ${template} v${stored.version}: ${error.message}`));
+        reply.status(500).send({ error: `card template ${template}: ${error.message}` });
+      }
+      return;
+    }
+    if (!TEMPLATE_NAME.test(template) || !isFileTemplate(template)) {
+      reply.status(404).send({ error: 'Unknown template' });
+      return;
+    }
+    await reply.view(`pdf_${template}.ejs`, view);
+  }
 
   // Box insert PDF
   fastify.get(

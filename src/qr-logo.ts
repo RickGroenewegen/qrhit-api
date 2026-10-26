@@ -202,6 +202,41 @@ export interface QrLogoOptions {
 }
 
 /**
+ * Options for drawing a design's centre logo into its QR codes, or null when
+ * the design has none.
+ *
+ * A centre logo is drawn into the QR bitmap rather than overlaid by the
+ * templates, so every template gets it and nothing can misalign.
+ * resolveLogoPath rejects anything that is not a plain filename inside the
+ * logo directory, so a crafted qrLogo cannot make sharp read elsewhere.
+ */
+export function qrLogoOptionsFor(design: any, logger?: Logger): QrLogoOptions | null {
+  const qrLogoPath = resolveLogoPath(
+    process.env['PUBLIC_DIR'] as string,
+    design.qrLogo
+  );
+  if (design.qrLogo && !qrLogoPath) {
+    logger?.log(
+      color.yellow.bold(
+        `Ignoring invalid QR logo filename ${color.white.bold(design.qrLogo)}`
+      )
+    );
+  }
+  return qrLogoPath
+    ? {
+        logoPath: qrLogoPath,
+        scale: clampScale(design.qrLogoScale),
+        // The logo has to read as QR "light": the shape colour when there is
+        // one, white when the QR sits directly on the card.
+        backingColor:
+          (design.qrBackgroundType || 'square') === 'none'
+            ? '#ffffff'
+            : design.qrBackgroundColor || '#ffffff',
+      }
+    : null;
+}
+
+/**
  * Draw the centre logo into a generated QR PNG, in place.
  *
  * The modules it covers are cleared rather than painted over, and the logo is

@@ -591,5 +591,20 @@
   "giftVoucher.step1": "Scanne den Code oder geh auf {{ url }}",
   "giftVoucher.step2": "Log dich ein oder erstelle ein kostenloses Konto",
   "giftVoucher.step3": "Scanne eine Karte mit der kostenlosen QRSong! App und spiel los",
-  "giftVoucher.codeLabel": "Dein Code"
+  "giftVoucher.codeLabel": "Dein Code",
+  "payment_help.subject": "Können wir dir bei deiner QRSong!-Bestellung helfen?",
+  "payment_help.title": "Können wir dir bei deiner Bestellung helfen?",
+  "payment_help.preheader": "Deine Playlist und dein Kartendesign sind gespeichert. Antworte einfach, wenn du Hilfe brauchst.",
+  "payment_help.hello": "Hallo",
+  "payment_help.intro": "Wir haben gesehen, dass die Zahlung für deine QRSong!-Bestellung {{ orderId }} nicht durchgegangen ist. Das kann passieren, und nichts ist verloren: Deine Playlist und dein Kartendesign sind gespeichert, genau so, wie du sie erstellt hast.",
+  "payment_help.printed": "{{ count }} gedruckte Karten",
+  "payment_help.sheets": "{{ count }} Karten auf gedruckten A4-Bögen",
+  "payment_help.digital": "{{ count }} Karten als PDF zum Selbstdrucken",
+  "payment_help.sets": "{{ amount }} Sets",
+  "payment_help.helpTitle": "Bist du irgendwo hängen geblieben? Wir helfen dir gern",
+  "payment_help.helpText": "War etwas unklar oder hat die Zahlung nicht geklappt? Antworte einfach auf diese E-Mail. Sie landet direkt bei uns, und wir helfen dir gern beim Bezahlen, mit deiner Playlist oder deinem Design.",
+  "payment_help.readyText": "Möchtest du deine Bestellung abschließen? Über den Button unten startest du eine neue, sichere Zahlung für genau diese Bestellung – mit deinen Karten genau so, wie du sie gestaltet hast.",
+  "payment_help.buttonText": "Bestellung abschließen",
+  "payment_help.validUntil": "Dieser Link funktioniert bis {{ date }}.",
+  "payment_help.greetings": "Viele Grüße"
 }

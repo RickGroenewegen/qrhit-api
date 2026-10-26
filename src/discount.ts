@@ -738,6 +738,42 @@ class Discount {
   }
 
   /**
+   * The help mail's link pays an abandoned order again (Mollie
+   * resumeAbandonedPayment): its discount uses, released when the payment
+   * failed, count again as reservations. False, and nothing changes, when a
+   * code can no longer carry its use: the balance went elsewhere meanwhile,
+   * or it reached its maximum uses.
+   */
+  public async reserveReleasedUsesAgain(paymentId: number, now: Date = new Date()): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const released = await tx.discountCodedUses.findMany({
+        where: { paymentId, status: 'released' },
+        select: {
+          id: true,
+          amount: true,
+          discountCodeId: true,
+          discountCode: { select: { type: true, general: true, amount: true, maxUses: true } },
+        },
+      });
+      for (const use of released) {
+        const code = use.discountCode;
+        const usage = await this.getLiveUsage(use.discountCodeId, tx, now);
+        if (code.maxUses !== null && usage.useCount >= code.maxUses) return false;
+        if (code.type !== 'percent' && !code.general && use.amount > code.amount - usage.amountUsed + 0.005) {
+          return false;
+        }
+      }
+      if (released.length > 0) {
+        await tx.discountCodedUses.updateMany({
+          where: { id: { in: released.map((use) => use.id) } },
+          data: { status: 'reserved', expiresAt: new Date(now.getTime() + RESERVATION_TTL_MS) },
+        });
+      }
+      return true;
+    });
+  }
+
+  /**
    * Release reservations for a payment that never came into existence
    * (payment creation threw). Those rows have no paymentId yet, so the
    * webhook could never clean them up.
