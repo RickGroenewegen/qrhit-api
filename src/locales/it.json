@@ -606,5 +606,10 @@
   "payment_help.readyText": "Vuoi completare il tuo ordine? Il pulsante qui sotto apre un nuovo pagamento sicuro proprio per questo ordine, con le tue carte esattamente come le hai create.",
   "payment_help.buttonText": "Completa il mio ordine",
   "payment_help.validUntil": "Questo link funziona fino al {{ date }}.",
-  "payment_help.greetings": "Un saluto"
+  "payment_help.greetings": "Un saluto",
+  "countdown.playHeading": "Gioca con le tue carte musicali!",
+  "countdown.playInBrowser": "Gioca nel tuo browser",
+  "countdown.playInBrowserNote": "Funziona con Spotify, Apple Music, YouTube Music, Deezer e Tidal.",
+  "countdown.orTheApp": "Oppure gioca con l'app gratuita:",
+  "countdown.noTimeToInstall": "Non riesci a installare l'app adesso?"
 }

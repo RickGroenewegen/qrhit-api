@@ -726,6 +726,21 @@ class AppleMusicProvider implements IMusicProvider {
   }
 
   /**
+   * The 30-second preview of a catalog song, for the web scanner. A song id
+   * is mostly the same in every storefront; when the link's storefront does
+   * not know it, the default one is asked.
+   */
+  async getSongPreviewUrl(songId: string, storefront: string = DEFAULT_STOREFRONT): Promise<string | null> {
+    const storefronts = storefront === DEFAULT_STOREFRONT ? [storefront] : [storefront, DEFAULT_STOREFRONT];
+    for (const candidate of storefronts) {
+      const result = await this.apiRequest<any>(`/songs/${songId}`, candidate, { quiet404: true });
+      const url = result.data?.data?.[0]?.attributes?.previews?.[0]?.url;
+      if (typeof url === 'string' && url.startsWith('https://')) return url;
+    }
+    return null;
+  }
+
+  /**
    * Resolve an Apple Music song link to a song that can be streamed in the
    * given storefront. Returns the original link when nothing better is found.
    *

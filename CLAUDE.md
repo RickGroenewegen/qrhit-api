@@ -2250,6 +2250,56 @@ Things here that cost something to learn:
   change, which is why the dashboard refuses to unblock a denylisted address
   and says so instead.
 
+## The site's web scanner (`/scan` on qrsong.io)
+
+The site has a web scanner (`/:lang/scan`, see the frontend's CLAUDE.md) that
+reads a card with the phone's camera and plays it in the browser without
+showing the song. Built 2026-10-26. It uses the scan endpoints the app uses
+(`/qrlink2`, `/qrlink`, `/qrlink_unknown`, `/theme/:slug`) plus what is below.
+**Nothing the native apps get back changed**; every web-only behaviour is
+switched on by `scanClient()` saying `web`.
+
+| what | where |
+|---|---|
+| which client a scan came from (`ios`, `android`, `web`, or null), by `Origin` then user agent; kept with each scan in the Redis `ipInfoList` for the admin map's cards | `src/scanClient.ts`, `client` in `logLink` (`musicLinks.ts`) / `data.ts` |
+| the 30-second preview for a card | `POST /scan/preview`, `src/scanPreview.ts`, `src/routes/scanRoutes.ts` |
+| YouTube (Bopster) cards, web only | `resolveYouTubeCard` in `spotify.ts` (`ResolveCardOptions.partnerCards`), `src/youtubeLink.ts` |
+| web push | `src/webPush.ts`, `/push/web/key|subscribe|unsubscribe` (public), `/push/audience`, `/push/web/test-device`, `/push/web/device` (admin) |
+| "Play in your browser" on the card-scan page | `renderOnboarding` in `musicRoutes.ts`, `views/onboarding.ejs` |
+
+- **`POST /scan/preview`** takes the links a card resolved to
+  (`{ links: { link, am, dz }, prefer }`) and answers `{ success, url, source }`:
+  Spotify's embed `audioPreview`, Deezer's `preview`, or Apple Music's
+  `previews[0]`, the preferred service first. Spotify's Web API has given no
+  preview URLs since November 2024. Only those fixed hosts are called, with
+  ids that passed a strict pattern. Cached in Redis per source and id (Deezer
+  10 min, its URLs expire after 15; others 6 h; a miss 30 min). 60 per minute
+  per IP, a 429 and **no ban**: it is not under the qrlink AbuseGuard and is
+  not a play.
+- **Partner cards.** Hitify cards resolve for every client, as before. Plain
+  YouTube links (Bopster prints them) resolve for the web scanner only,
+  through MusicFetch (paid per uncached lookup: 20 per IP per hour, 500 a
+  day, a video that is no song stays unknown for a week). The app keeps
+  inviting those cards to make their own deck. Rick (2026-10-26): the web
+  scanner plays Hitify and Bopster cards, the native apps never do. For the
+  web scanner a result that is only a Spotify URI also gets its
+  `open.spotify.com` link, because the scanner plays links.
+- **Web push** goes next to the Firebase tokens: a broadcast from
+  `/dashboard/broadcast` reaches subscribed browsers too, and `push_messages`
+  stores `iosDevices` / `androidDevices` / `webDevices`. Subscriptions are
+  table `web_push_subscriptions`, keyed on a hash of the endpoint; only the
+  push services of Chrome, Firefox, Safari and Edge are accepted as endpoints,
+  so a caller cannot make the server post anywhere else. A gone subscription
+  (404/410) is deleted on send. Needs `WEB_PUSH_PUBLIC_KEY`,
+  `WEB_PUSH_PRIVATE_KEY` and `WEB_PUSH_SUBJECT` in `.env`; without them web
+  push is off and broadcasts skip browsers. **Never change the key pair**: a
+  new one orphans every stored subscription. Production has its own pair.
+- **The card-scan page's "Play in your browser" is held back**
+  (`OFFER_WEB_SCANNER = false` in `musicRoutes.ts`) until Rick has tested the
+  scanner in production. The copy is translated and ready; flipping the
+  constant shows it on `/qr`, `/qr2` and `/qr_url2`.
+- `/scan` is in the sitemap (`src/data/misc.ts`).
+
 ## Spotify quota protection on the playlist endpoints
 
 `src/plugins/playlistGuardPlugin.ts` guards `/<service>/playlists` and

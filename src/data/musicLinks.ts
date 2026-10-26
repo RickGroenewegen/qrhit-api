@@ -4,6 +4,7 @@ import { serviceColumnMap, serviceCheckedColumnMap, serviceTypeMap } from '../pr
 import { DataDeps } from './types';
 import { isPlaylistBlocked } from './playlists';
 import { playPhpId } from '../analytics';
+import { ScanClient } from '../scanClient';
 
 export const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 
@@ -65,7 +66,8 @@ export async function logLink(
   deps: DataDeps,
   trackId: number,
   clientIp: string,
-  php?: number
+  php?: number,
+  client?: ScanClient | null
 ): Promise<void> {
   const ipInfo = await deps.utils.lookupIp(clientIp);
   const ipInfoWithTrackId = {
@@ -73,6 +75,8 @@ export async function logLink(
     trackId,
     timestamp: new Date().toISOString(),
     php,
+    // ios, android or web, for the map's cards (since 2026-10-26)
+    client: client || null,
   };
   // Store the IP info in a list and maintain only the last 100 entries
   const ipInfoListKey = 'ipInfoList';
@@ -90,10 +94,11 @@ export async function getLink(
   clientIp: string,
   useCache: boolean = true,
   userAgent?: string,
-  php?: number
+  php?: number,
+  client?: ScanClient | null
 ): Promise<ApiResult> {
   deps.analytics.increaseCounter('songs', 'played');
-  logLink(deps, trackId, clientIp, php);
+  logLink(deps, trackId, clientIp, php, client);
 
   // Per order line, for the play rankings on the admin Analytics page. Old
   // cards (/qrlink without a php) cannot be attributed to an order.

@@ -606,5 +606,10 @@
   "payment_help.readyText": "Chceš dokončit objednávku? Tlačítko níže otevře novou, bezpečnou platbu přesně pro tuhle objednávku, s kartami přesně tak, jak sis je navrhl.",
   "payment_help.buttonText": "Dokončit objednávku",
   "payment_help.validUntil": "Tento odkaz funguje do {{ date }}.",
-  "payment_help.greetings": "S pozdravem"
+  "payment_help.greetings": "S pozdravem",
+  "countdown.playHeading": "Hraj se svými hudebními kartami!",
+  "countdown.playInBrowser": "Hraj v prohlížeči",
+  "countdown.playInBrowserNote": "Funguje se Spotify, Apple Music, YouTube Music, Deezer a Tidal.",
+  "countdown.orTheApp": "Nebo hraj s aplikací zdarma:",
+  "countdown.noTimeToInstall": "Teď nemůžeš nainstalovat aplikaci?"
 }

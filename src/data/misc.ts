@@ -159,6 +159,8 @@ export async function getLastPlays(deps: DataDeps): Promise<any[]> {
           longitude: ipInfo.longitude,
           timestamp: ipInfo.timestamp,
           trackId: track.trackId,
+          // ios, android or web; null for scans logged before 2026-10-26
+          client: ipInfo.client || null,
         };
 
         // Add playlist and user info if php is available
@@ -659,6 +661,10 @@ export async function createSiteMap(
     '/music-timeline',
     '/user/examples',
     '/download-app',
+    // The web scanner. Public since 2026-10-26: it was in PRIVATE_PATH_PREFIXES
+    // while it could only play previews of three services. Not in the header
+    // menu or footer until Rick has tested it in production.
+    '/scan',
     // '/generate/playlist' removed: it is the first step of checkout, is in
     // PRIVATE_PATH_PREFIXES and now serves X-Robots-Tag: noindex. Submitting
     // it for indexing contradicted that (it had ~450 impressions across

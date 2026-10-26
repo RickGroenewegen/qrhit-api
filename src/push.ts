@@ -4,6 +4,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
+import WebPush from './webPush';
 
 initializeApp({
   credential: cert(
@@ -80,12 +81,18 @@ class Push {
     const tokens = await this.prisma.pushToken.findMany({
       where: test ? { test, valid: true } : { valid: true },
     });
+    // Browsers are counted and sent apart from the app's devices: nothing on
+    // the web side may stop or delay a broadcast to the app
+    const webPush = WebPush.getInstance();
+    const webDevices = await webPush.countTargets(test).catch(() => 0);
+    const iosDevices = tokens.filter((token) => token.type === 'ios').length;
+    const androidDevices = tokens.filter((token) => token.type === 'android').length;
 
     this.logger.log(
       color.blue.bold(
         `Broadcasting ${
           test ? 'test' : 'live'
-        } notification to ${color.white.bold(tokens.length)} device(s)`
+        } notification to ${color.white.bold(tokens.length)} app device(s) and ${color.white.bold(webDevices)} browser(s)`
       )
     );
 
@@ -106,14 +113,24 @@ class Push {
       data: {
         title,
         message,
-        numberOfDevices: tokens.length,
+        numberOfDevices: tokens.length + webDevices,
+        iosDevices,
+        androidDevices,
+        webDevices,
         test,
         dry,
       },
     });
 
     try {
-      await Promise.all(sendPromises);
+      await Promise.all([
+        ...sendPromises,
+        webPush.broadcast(title, message, test, dry).catch((error: any) => {
+          this.logger.log(
+            color.red.bold(`Web push broadcast failed: ${color.white.bold(error?.message || error)}`)
+          );
+        }),
+      ]);
       this.logger.log(
         color.blue.bold(
           `Broadcast ${
@@ -141,10 +158,34 @@ class Push {
         test: true,
         dry: true,
         numberOfDevices: true,
+        iosDevices: true,
+        androidDevices: true,
+        webDevices: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /** Who a broadcast would reach right now, per platform. */
+  public async getAudience(): Promise<{
+    live: { ios: number; android: number; web: number };
+    test: { ios: number; android: number; web: number };
+  }> {
+    const groups = await this.prisma.pushToken.groupBy({
+      by: ['type', 'test'],
+      where: { valid: true },
+      _count: { _all: true },
+    });
+    const count = (type: string, testOnly: boolean) =>
+      groups
+        .filter((group) => group.type === type && (!testOnly || group.test))
+        .reduce((sum, group) => sum + group._count._all, 0);
+    const webPush = WebPush.getInstance();
+    return {
+      live: { ios: count('ios', false), android: count('android', false), web: await webPush.countTargets(false) },
+      test: { ios: count('ios', true), android: count('android', true), web: await webPush.countTargets(true) },
+    };
   }
 
   public async sendPushNotification(

@@ -345,6 +345,10 @@ model PushMessage {
   title           String
   message         String   @db.Text
   numberOfDevices Int
+  // Per platform since 2026-10-26; older broadcasts have only the total
+  iosDevices      Int?
+  androidDevices  Int?
+  webDevices      Int?
   test            Boolean  @default(false)
   dry             Boolean  @default(false)
   createdAt       DateTime @default(now())
@@ -364,6 +368,26 @@ model PushToken {
 
   @@index([token])
   @@map("push_tokens")
+}
+
+// Browsers subscribed to broadcasts through the site's web scanner (standard
+// Web Push with our VAPID keys, not Firebase like the app's push_tokens). An
+// endpoint is a URL of several hundred characters, too long for a unique
+// VARCHAR(191), so it is unique by its SHA-256 instead.
+model WebPushSubscription {
+  id           Int      @id @default(autoincrement())
+  endpointHash String   @unique @db.Char(64)
+  endpoint     String   @db.Text
+  p256dh       String   @db.VarChar(255)
+  auth         String   @db.VarChar(255)
+  locale       String?  @db.VarChar(8)
+  test         Boolean  @default(false)
+  valid        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([valid, test])
+  @@map("web_push_subscriptions")
 }
 
 model taxRate {

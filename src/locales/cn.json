@@ -606,5 +606,10 @@
   "payment_help.readyText": "想完成订单吗？点击下方按钮，即可为这笔订单发起一笔新的安全付款，卡片和你设计的一模一样。",
   "payment_help.buttonText": "完成我的订单",
   "payment_help.validUntil": "此链接有效期至 {{ date }}。",
-  "payment_help.greetings": "祝好"
+  "payment_help.greetings": "祝好",
+  "countdown.playHeading": "玩你的音乐卡吧！",
+  "countdown.playInBrowser": "在浏览器中玩",
+  "countdown.playInBrowserNote": "支持 Spotify、Apple Music、YouTube Music、Deezer 和 Tidal。",
+  "countdown.orTheApp": "或者用免费应用来玩：",
+  "countdown.noTimeToInstall": "现在没法安装应用？"
 }

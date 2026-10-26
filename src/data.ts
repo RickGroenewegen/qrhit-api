@@ -28,6 +28,7 @@ import * as tracksModule from './data/tracks';
 import * as trackYearsModule from './data/trackYears';
 import * as musicLinksModule from './data/musicLinks';
 import * as featuredPlaylistsModule from './data/featuredPlaylists';
+import { ScanClient } from './scanClient';
 
 class Data {
   private static instance: Data;
@@ -122,8 +123,8 @@ class Data {
     return musicLinksModule.prefillLinkCache(this.deps);
   }
 
-  public async logLink(trackId: number, clientIp: string, php?: number): Promise<void> {
-    return musicLinksModule.logLink(this.deps, trackId, clientIp, php);
+  public async logLink(trackId: number, clientIp: string, php?: number, client?: ScanClient | null): Promise<void> {
+    return musicLinksModule.logLink(this.deps, trackId, clientIp, php, client);
   }
 
   public async getLink(
@@ -131,9 +132,10 @@ class Data {
     clientIp: string,
     useCache: boolean = true,
     userAgent?: string,
-    php?: number
+    php?: number,
+    client?: ScanClient | null
   ): Promise<ApiResult> {
-    return musicLinksModule.getLink(this.deps, trackId, clientIp, useCache, userAgent, php);
+    return musicLinksModule.getLink(this.deps, trackId, clientIp, useCache, userAgent, php, client);
   }
 
   public async getPlaylistLinkCoverage(playlistId: number) {

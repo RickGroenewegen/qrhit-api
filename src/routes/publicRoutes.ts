@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { color, white } from 'console-log-colors';
 import Mail from '../mail';
 import Push from '../push';
+import WebPush, { validateSubscription } from '../webPush';
 import Suggestion from '../suggestion';
 import Designer from '../designer';
 import DesignScreen from '../designScreen';
@@ -50,6 +51,7 @@ import os from 'os';
 export default async function publicRoutes(fastify: FastifyInstance) {
   const mail = Mail.getInstance();
   const push = Push.getInstance();
+  const webPush = WebPush.getInstance();
   const suggestion = Suggestion.getInstance();
   const designer = Designer.getInstance();
   const reviews = Reviews.getInstance();
@@ -394,6 +396,49 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
     await push.addToken(token, type);
     reply.send({ success: true });
+  });
+
+  // Web push for the site's web scanner (see webPush.ts). The key is public
+  // by design: the browser needs it to subscribe.
+  fastify.get('/push/web/key', async (_request: any, reply: any) => {
+    const key = webPush.publicKey();
+    if (!key) {
+      reply.status(404);
+      return { success: false, error: 'web_push_off' };
+    }
+    return { success: true, key };
+  });
+
+  fastify.post('/push/web/subscribe', async (request: any, reply: any) => {
+    const ip = utils.resolveTrustedClientIp(request);
+    try {
+      // A browser subscribes once and renews now and then; far more than this
+      // from one address is someone filling the table.
+      if ((await cache.increment(`web_push_sub_rl:${ip}`, 3600)) > 30) {
+        reply.status(429);
+        return { success: false, error: 'rate_limited' };
+      }
+    } catch {
+      // Redis down: still accept the subscription
+    }
+    const subscription = validateSubscription(request.body?.subscription);
+    if (!subscription) {
+      reply.status(400);
+      return { success: false, error: 'invalid_subscription' };
+    }
+    const locale = typeof request.body?.locale === 'string' ? request.body.locale : null;
+    await webPush.subscribe(subscription, locale);
+    return { success: true };
+  });
+
+  fastify.post('/push/web/unsubscribe', async (request: any, reply: any) => {
+    const endpoint = request.body?.endpoint;
+    if (typeof endpoint !== 'string' || endpoint.length > 2048) {
+      reply.status(400);
+      return { success: false, error: 'invalid_endpoint' };
+    }
+    await webPush.unsubscribe(endpoint);
+    return { success: true };
   });
 
   // Reviews

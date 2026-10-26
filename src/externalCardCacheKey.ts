@@ -46,6 +46,11 @@ export function hitifyCardCacheKey(code: string): string {
   return `${EXTERNAL_CARD_CACHE_PREFIX}hitify_${code}`;
 }
 
+/** A card that holds a plain YouTube video link (Bopster's standard cards). */
+export function youtubeCardCacheKey(videoId: string): string {
+  return `${EXTERNAL_CARD_CACHE_PREFIX}youtube_${videoId}`;
+}
+
 /**
  * Cache key for a stored external card, or null when the row lacks the
  * identifier its type needs (e.g. a jumbo card without a sku).

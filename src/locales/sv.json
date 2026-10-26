@@ -606,5 +606,10 @@
   "payment_help.readyText": "Vill du slutföra din beställning? Knappen nedan öppnar en ny, säker betalning för just den här beställningen, med dina kort precis som du designade dem.",
   "payment_help.buttonText": "Slutför min beställning",
   "payment_help.validUntil": "Den här länken fungerar till {{ date }}.",
-  "payment_help.greetings": "Vänliga hälsningar"
+  "payment_help.greetings": "Vänliga hälsningar",
+  "countdown.playHeading": "Spela dina musikkort!",
+  "countdown.playInBrowser": "Spela i din webbläsare",
+  "countdown.playInBrowserNote": "Funkar med Spotify, Apple Music, YouTube Music, Deezer och Tidal.",
+  "countdown.orTheApp": "Eller spela med den gratis appen:",
+  "countdown.noTimeToInstall": "Kan du inte installera appen just nu?"
 }

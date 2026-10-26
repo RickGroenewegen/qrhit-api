@@ -22,7 +22,9 @@ import youtubeMusicRoutes from './youtubeMusicRoutes';
 import tidalRoutes from './tidalRoutes';
 import deezerRoutes from './deezerRoutes';
 import appleMusicRoutes from './appleMusicRoutes';
+import scanRoutes from './scanRoutes';
 import { getProductCover } from '../playlistArtwork';
+import { scanClient } from '../scanClient';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -45,6 +47,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   await fastify.register(tidalRoutes);
   await fastify.register(deezerRoutes);
   await fastify.register(appleMusicRoutes);
+  await fastify.register(scanRoutes);
 
   // ============================================
   // Shared/Legacy Routes
@@ -109,13 +112,26 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       return;
     }
     try {
-      const result = await spotify.resolveSpotifyUrl(url);
+      // YouTube cards resolve for the site's web scanner only, and the app's
+      // answers stay exactly as they were (see ResolveCardOptions in spotify.ts)
+      const fromWebScanner =
+        scanClient(request.headers['origin'], request.headers['user-agent']) === 'web' &&
+        !!request.headers['origin'];
+      const result = await spotify.resolveSpotifyUrl(url, {
+        partnerCards: fromWebScanner,
+        clientIp: request.clientIp || null,
+      });
 
       // Build the response payload
+      const spotifyTrack = result.spotifyUri?.match(/^spotify:track:([a-zA-Z0-9]+)$/);
       const responsePayload = result.success ? {
         success: true,
         spotifyUri: result.spotifyUri || null,
-        link: result.links?.spotifyLink || null,
+        // A result that is only a Spotify URI (a redirect to Spotify) gets its
+        // link for the web scanner, which plays links; the app reads the URI
+        link:
+          result.links?.spotifyLink ||
+          (fromWebScanner && spotifyTrack ? `https://open.spotify.com/track/${spotifyTrack[1]}` : null),
         am: result.links?.appleMusicLink || null,
         td: result.links?.tidalLink || null,
         ym: result.links?.youtubeMusicLink || null,
@@ -314,8 +330,14 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // QR code routes
-  fastify.get('/qr/:trackId', async (request: any, reply) => {
+  // The page a phone camera opens when it scans a card. It offers the app and
+  // the site's web scanner, which gets the card along (`?card=`) and plays it
+  // straight away. The scanner link has no language: the site sends it on to
+  // the visitor's own, and the API's locale codes are not all the site's.
+  // Held back (2026-10-26) until Rick has tested the scanner in production;
+  // set to true to show "Play in your browser" on every card scan.
+  const OFFER_WEB_SCANNER = false;
+  const renderOnboarding = async (request: any, reply: any) => {
     const locale = utils.parseAcceptLanguage(
       request.headers['accept-language']
     );
@@ -323,59 +345,30 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       locale,
       'countdown'
     );
-    let useVersion = '1.0.0'; // Default version
+    // Raised with every change to onboarding.css/js, which are cached by URL
+    let useVersion = '1.1.0';
     if (process.env['ENVIRONMENT'] === 'development') {
       useVersion = new Date().getTime().toString();
     }
+    const cardUrl = `${process.env['API_URI']}${request.url}`;
     await reply.view(`onboarding.ejs`, {
       translations,
       version: useVersion,
       domain: process.env['FRONTEND_URI'],
+      scanUrl: OFFER_WEB_SCANNER ? `${process.env['FRONTEND_URI']}/scan?card=${encodeURIComponent(cardUrl)}` : null,
     });
-  });
+  };
 
-  fastify.get('/qr2/:trackId/:php', async (request: any, reply) => {
-    const locale = utils.parseAcceptLanguage(
-      request.headers['accept-language']
-    );
-    const translations = await translation.getTranslationsByPrefix(
-      locale,
-      'countdown'
-    );
-    let useVersion = '1.0.0'; // Default version
-    if (process.env['ENVIRONMENT'] === 'development') {
-      useVersion = new Date().getTime().toString();
-    }
-    await reply.view(`onboarding.ejs`, {
-      translations,
-      version: useVersion,
-      domain: process.env['FRONTEND_URI'],
-    });
-  });
+  // QR code routes
+  fastify.get('/qr/:trackId', renderOnboarding);
+  fastify.get('/qr2/:trackId/:php', renderOnboarding);
 
   // Cards for playlists whose tracks are not in our database (the summary
   // preview, the card designer) cannot use /qr2/:trackId/:php, so they carry
   // the streaming link itself: /qr_url2?link=<direct service link>. A phone
   // camera lands on the same onboarding page as any other card; the app reads
   // the link parameter and plays it straight away.
-  fastify.get('/qr_url2', async (request: any, reply) => {
-    const locale = utils.parseAcceptLanguage(
-      request.headers['accept-language']
-    );
-    const translations = await translation.getTranslationsByPrefix(
-      locale,
-      'countdown'
-    );
-    let useVersion = '1.0.0'; // Default version
-    if (process.env['ENVIRONMENT'] === 'development') {
-      useVersion = new Date().getTime().toString();
-    }
-    await reply.view(`onboarding.ejs`, {
-      translations,
-      version: useVersion,
-      domain: process.env['FRONTEND_URI'],
-    });
-  });
+  fastify.get('/qr_url2', renderOnboarding);
 
   // What a decoyed request gets instead of the track it asked for.
   //
@@ -441,7 +434,9 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       request.params.trackId,
       request.clientIp,
       true,
-      userAgent
+      userAgent,
+      undefined,
+      scanClient(headers['origin'], userAgent)
     );
     let link = '';
     let yt = null;
@@ -496,7 +491,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       request.clientIp,
       true,
       userAgent,
-      request.params.php
+      request.params.php,
+      scanClient(headers['origin'], userAgent)
     );
     let link = '';
     let yt = null;

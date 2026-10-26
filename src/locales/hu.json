@@ -606,5 +606,10 @@
   "payment_help.readyText": "Szeretnéd befejezni a rendelésed? Az alábbi gomb egy új, biztonságos fizetést nyit pontosan erre a rendelésre, a kártyáiddal pont úgy, ahogy megtervezted őket.",
   "payment_help.buttonText": "Rendelésem befejezése",
   "payment_help.validUntil": "Ez a link {{ date }}-ig működik.",
-  "payment_help.greetings": "Üdv"
+  "payment_help.greetings": "Üdv",
+  "countdown.playHeading": "Játssz a zenekártyáiddal!",
+  "countdown.playInBrowser": "Játssz a böngésződben",
+  "countdown.playInBrowserNote": "Működik a Spotify, Apple Music, YouTube Music, Deezer és Tidal szolgáltatásokkal.",
+  "countdown.orTheApp": "Vagy játssz az ingyenes appal:",
+  "countdown.noTimeToInstall": "Most nem tudod telepíteni az appot?"
 }

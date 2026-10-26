@@ -12,6 +12,7 @@ import AnalyticsClient from '../analytics';
 import Data from '../data';
 import Charts from '../charts';
 import Push from '../push';
+import WebPush from '../webPush';
 import Printer from '../printer';
 import Utils from '../utils';
 import Mollie from '../mollie';
@@ -227,6 +228,46 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       return await push.getMessages();
+    }
+  );
+
+  // Who a broadcast reaches right now: app devices per platform and browsers,
+  // for everyone and for the test devices only
+  fastify.get(
+    '/push/audience',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply: any) => {
+      return { success: true, ...(await push.getAudience()) };
+    }
+  );
+
+  // Marks the admin's own browser as a test device (after it subscribed
+  // through /push/web/subscribe), so test broadcasts reach it
+  fastify.post(
+    '/push/web/test-device',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { endpoint, test } = request.body || {};
+      if (typeof endpoint !== 'string') {
+        reply.status(400);
+        return { success: false, error: 'invalid_endpoint' };
+      }
+      const found = await WebPush.getInstance().setTest(endpoint, utils.parseBoolean(test));
+      return { success: found };
+    }
+  );
+
+  // Whether the admin's browser is subscribed, and as a test device
+  fastify.post(
+    '/push/web/device',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const endpoint = request.body?.endpoint;
+      if (typeof endpoint !== 'string') {
+        reply.status(400);
+        return { success: false, error: 'invalid_endpoint' };
+      }
+      return { success: true, ...(await WebPush.getInstance().device(endpoint)) };
     }
   );
 

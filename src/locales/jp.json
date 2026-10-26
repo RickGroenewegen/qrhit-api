@@ -606,5 +606,10 @@
   "payment_help.readyText": "注文を完了したい？下のボタンから、この注文専用の新しい安全な支払いページが開きます。カードはデザインしたそのままだよ。",
   "payment_help.buttonText": "注文を完了する",
   "payment_help.validUntil": "このリンクは{{ date }}まで有効だよ。",
-  "payment_help.greetings": "よろしくね"
+  "payment_help.greetings": "よろしくね",
+  "countdown.playHeading": "ミュージックカードで遊ぼう！",
+  "countdown.playInBrowser": "ブラウザで遊ぼう",
+  "countdown.playInBrowserNote": "Spotify、Apple Music、YouTube Music、Deezer、Tidalに対応。",
+  "countdown.orTheApp": "または無料アプリで遊ぼう：",
+  "countdown.noTimeToInstall": "今すぐアプリをインストールできない？"
 }

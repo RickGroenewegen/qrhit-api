@@ -606,5 +606,10 @@
   "payment_help.readyText": "Wil je je bestelling afronden? Met de knop hieronder start je een nieuwe, veilige betaling voor precies deze bestelling, met je kaarten precies zoals je ze ontworpen hebt.",
   "payment_help.buttonText": "Rond mijn bestelling af",
   "payment_help.validUntil": "Deze link werkt tot {{ date }}.",
-  "payment_help.greetings": "Groetjes"
+  "payment_help.greetings": "Groetjes",
+  "countdown.playHeading": "Speel je muziekkaarten!",
+  "countdown.playInBrowser": "Speel in je browser",
+  "countdown.playInBrowserNote": "Werkt met Spotify, Apple Music, YouTube Music, Deezer en Tidal.",
+  "countdown.orTheApp": "Of speel met de gratis app:",
+  "countdown.noTimeToInstall": "Kun je de app nu even niet installeren?"
 }

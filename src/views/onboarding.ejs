@@ -32,6 +32,16 @@
             </button>
         </div>
 
+        <% if (scanUrl) { %>
+        <div class="browser-option">
+            <p class="no-time"><%= translations.noTimeToInstall %></p>
+            <a href="<%= scanUrl %>" class="play-browser-btn">
+                <span class="btn-content"><i class="fas fa-play"></i><span><%= translations.playInBrowser %></span></span>
+            </a>
+            <p class="play-browser-note"><%= translations.playInBrowserNote %></p>
+        </div>
+        <% } %>
+
         <div class="tagline-row">
             <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <span class="tagline-text"><%= translations.createYourOwn %></span>

@@ -33,7 +33,9 @@ import {
   hitifyCardCacheKey,
   jumboCardCacheKey,
   musicMatchCardCacheKey,
+  youtubeCardCacheKey,
 } from './externalCardCacheKey';
+import { youtubeVideoId } from './youtubeLink';
 import { productPageDesign } from './data/productPageDesign';
 import { isUrlOnHosts, SHORTLINK_HOSTS, SPOTIFY_REDIRECT_HOSTS } from './shortlinks';
 
@@ -114,7 +116,28 @@ interface ResolveSpotifyUrlResult {
 type CardServiceMatch =
   | { service: 'musicmatch'; paymentHasPlaylistId: string; trackId: string }
   | { service: 'hitster'; setSku: string; cardNumber: string }
-  | { service: 'hitify'; code: string };
+  | { service: 'hitify'; code: string }
+  | { service: 'youtube'; videoId: string };
+
+/**
+ * Who is asking `resolveSpotifyUrl`. Plain YouTube links (what Bopster
+ * prints) are resolved for the site's web scanner only: the app invites those
+ * cards instead, and nothing the app gets back may change (Rick, 2026-10-26:
+ * the web scanner plays Hitify and Bopster cards, the native apps never do).
+ * Hitify cards resolve for everyone, as they did before. `clientIp` limits
+ * the paid YouTube lookups per address.
+ */
+export interface ResolveCardOptions {
+  partnerCards?: boolean;
+  clientIp?: string | null;
+}
+
+// MusicFetch is paid per lookup: a YouTube card that is not cached yet costs
+// one, so they are limited per address and per day. A video that is not a
+// song stays unknown for a week instead of an hour.
+const YOUTUBE_LOOKUPS_PER_IP_PER_HOUR = 20;
+const YOUTUBE_LOOKUPS_PER_DAY = 500;
+const YOUTUBE_FAILURE_TTL = 7 * 24 * 60 * 60;
 
 class Spotify {
   private static instance: Spotify;
@@ -1500,7 +1523,7 @@ class Spotify {
    * (MusicMatch Game, Hitster, Hitify) and returns the identifiers needed to
    * resolve it. Returns null when the URL is not a recognized card link.
    */
-  private matchCardService(url: string): CardServiceMatch | null {
+  private matchCardService(url: string, webScanner: boolean = false): CardServiceMatch | null {
     // MusicMatch Game: https://api.musicmatchgame.com/{paymentHasPlaylistId}/{trackId}
     const musicMatchGameMatch = url.match(
       /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/
@@ -1532,6 +1555,13 @@ class Spotify {
       return { service: 'hitify', code: hitifyMatch[1] };
     }
 
+    // A plain YouTube video: Bopster's standard cards. Web scanner only; for
+    // anyone else such a link takes the generic path below, as it always did.
+    const videoId = webScanner ? youtubeVideoId(url) : null;
+    if (videoId) {
+      return { service: 'youtube', videoId };
+    }
+
     return null;
   }
 
@@ -1550,6 +1580,8 @@ class Spotify {
           : jumboCardCacheKey(match.setSku, match.cardNumber);
       case 'hitify':
         return hitifyCardCacheKey(match.code);
+      case 'youtube':
+        return youtubeCardCacheKey(match.videoId);
     }
   }
 
@@ -1576,9 +1608,12 @@ class Spotify {
    */
   private async resolveCardService(
     match: CardServiceMatch,
-    cacheKey: string
+    cacheKey: string,
+    clientIp?: string | null
   ): Promise<ResolveSpotifyUrlResult> {
     switch (match.service) {
+      case 'youtube':
+        return this.resolveYouTubeCard(match.videoId, cacheKey, clientIp);
       case 'musicmatch':
         return this.resolveMusicMatchCard(
           match.paymentHasPlaylistId,
@@ -1707,6 +1742,80 @@ class Spotify {
     }
 
     return null;
+  }
+
+  /**
+   * Resolves a card that holds a plain YouTube video (Bopster's standard
+   * cards) to the same song on the music services, through MusicFetch's URL
+   * lookup. Web scanner only (see ResolveCardOptions); uncached lookups are
+   * limited because each one is paid.
+   */
+  private async resolveYouTubeCard(
+    videoId: string,
+    cacheKey: string,
+    clientIp?: string | null
+  ): Promise<ResolveSpotifyUrlResult> {
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      const perIp = clientIp
+        ? await this.cache.increment(`youtube_card_rl:${clientIp}`, 3600)
+        : 0;
+      const perDay = await this.cache.increment(`youtube_card_day:${day}`, 2 * 86400);
+      if (perIp > YOUTUBE_LOOKUPS_PER_IP_PER_HOUR || perDay > YOUTUBE_LOOKUPS_PER_DAY) {
+        this.logger.log(
+          color.yellow.bold(
+            `YouTube card lookup limited: video=${color.white.bold(videoId)}, ip=${color.white.bold(
+              clientIp || 'unknown'
+            )}, today=${color.white.bold(perDay)}`
+          )
+        );
+        // Not cached: the next scan after the limit may still find it
+        return { success: false, error: 'YouTube lookups limited, try again later', blacklisted: true };
+      }
+    } catch {
+      // Redis down: look it up anyway
+    }
+
+    const MusicFetch = (await import('./musicfetch')).default;
+    const lookup = await MusicFetch.getInstance().fetchLinksForTrack(
+      `https://www.youtube.com/watch?v=${videoId}`
+    );
+
+    if (!lookup.success) {
+      // Rate limited or down at MusicFetch: not cached, so a later scan retries
+      return { success: false, error: `YouTube lookup failed: ${lookup.error || 'unknown'}` };
+    }
+
+    const links = lookup.links || {};
+    const spotifyUri = this.extractSpotifyUri(links.spotifyLink || '') || undefined;
+    const hasLink = !!(
+      spotifyUri ||
+      links.appleMusicLink ||
+      links.deezerLink ||
+      links.tidalLink ||
+      links.youtubeMusicLink
+    );
+    const result: ResolveSpotifyUrlResult = hasLink
+      ? {
+          success: true,
+          spotifyUri,
+          links: {
+            spotifyLink: links.spotifyLink || null,
+            appleMusicLink: links.appleMusicLink || null,
+            tidalLink: links.tidalLink || null,
+            youtubeMusicLink: links.youtubeMusicLink || null,
+            deezerLink: links.deezerLink || null,
+            amazonMusicLink: links.amazonMusicLink || null,
+          },
+        }
+      : { success: false, error: `YouTube video ${videoId} is not a song MusicFetch knows` };
+
+    await this.cache.set(
+      cacheKey,
+      JSON.stringify(result),
+      result.success ? EXTERNAL_CARD_CACHE_TTL_SUCCESS : YOUTUBE_FAILURE_TTL
+    );
+    return result;
   }
 
   /**
@@ -1853,7 +1962,7 @@ class Spotify {
    * @param url The URL to resolve.
    * @returns {Promise<{ success: boolean, spotifyUri?: string, links?: object, error?: string, cached?: boolean, blacklisted?: boolean }>}
    */
-  public async resolveSpotifyUrl(url: string): Promise<{
+  public async resolveSpotifyUrl(url: string, options: ResolveCardOptions = {}): Promise<{
     success: boolean;
     spotifyUri?: string;
     links?: {
@@ -1902,7 +2011,7 @@ class Spotify {
       // Known physical card services (MusicMatch Game, Hitster, Hitify) are
       // cached under a key derived from the card itself, never the scanned
       // URL, so the entry can be invalidated when the card's links change.
-      const cardMatch = this.matchCardService(normalizedUrl);
+      const cardMatch = this.matchCardService(normalizedUrl, options.partnerCards === true);
       const resultCacheKey = cardMatch
         ? this.cardServiceCacheKey(cardMatch)
         : cacheKey;
@@ -1919,7 +2028,7 @@ class Spotify {
       }
 
       if (cardMatch) {
-        return await this.resolveCardService(cardMatch, resultCacheKey);
+        return await this.resolveCardService(cardMatch, resultCacheKey, options.clientIp);
       }
 
       // Check if URL is a native music service link (Deezer, YouTube Music, Tidal, Apple Music)

@@ -606,5 +606,10 @@
   "payment_help.readyText": "Haluatko viimeistellä tilauksesi? Alla oleva painike avaa uuden, turvallisen maksun juuri tälle tilaukselle, ja korttisi ovat juuri sellaiset kuin ne suunnittelit.",
   "payment_help.buttonText": "Viimeistele tilaukseni",
   "payment_help.validUntil": "Tämä linkki toimii {{ date }} asti.",
-  "payment_help.greetings": "Terveisin"
+  "payment_help.greetings": "Terveisin",
+  "countdown.playHeading": "Pelaa musiikkikorteillasi!",
+  "countdown.playInBrowser": "Pelaa selaimessasi",
+  "countdown.playInBrowserNote": "Toimii Spotifyn, Apple Musicin, YouTube Musicin, Deezerin ja Tidalin kanssa.",
+  "countdown.orTheApp": "Tai pelaa ilmaisella sovelluksella:",
+  "countdown.noTimeToInstall": "Etkö pysty asentamaan sovellusta juuri nyt?"
 }

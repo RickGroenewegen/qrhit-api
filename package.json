@@ -50,6 +50,7 @@
     "@hyzyla/pdfium": "^3.0.0",
     "@prisma/adapter-mariadb": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
     "accept-language-parser": "^1.5.0",
     "archiver": "^8.0.0",
@@ -109,6 +110,7 @@
     "sharp": "^0.35.4",
     "slugify": "^1.6.9",
     "tsx": "^4.23.13",
+    "web-push": "^3.6.7",
     "ws": "^8.21.3",
     "ytmusic-api": "^5.3.1",
     "zxing-wasm": "^3.1.4"
