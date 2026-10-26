@@ -22,10 +22,13 @@ export default async function discountRoutes(
   // Public
   // -------------------------------------------------------------------
 
-  // Check a single code. With a `cart` in the body the code is evaluated
-  // against the whole order with the same rules payment creation applies;
-  // without one the legacy single-code check answers (gift-card page, older
-  // clients).
+  // Check a single code. With a `cart` in the body (checkout) the code is
+  // evaluated against the whole order with the same rules payment creation
+  // applies; without one the single-code check answers (the gift-card page,
+  // which sends digital=1 because it does not know the order type yet). This
+  // is the only check route: the bare POST /discount/:code went on 2025-04-10
+  // (54b56454), and the gift-card page kept calling it, answered by a 404,
+  // until October 2026.
   fastify.post('/discount/:code/:digital', async (request: any, reply: any) => {
     const body = request.body || {};
     const result = await discount.checkDiscount(
@@ -44,9 +47,9 @@ export default async function discountRoutes(
 
   // The mobile app's standing offer, shown when someone scans a card that is
   // not ours. Public and read-only: it reads one evergreen percent code and
-  // never mints anything, so unlike /discount/:code it needs no reCAPTCHA (the
-  // app has no site key) and adds no abuse surface. A `success: false` answer
-  // simply hides the offer in the app.
+  // never mints anything, so unlike /discount/:code/:digital it needs no
+  // reCAPTCHA (the app has no site key) and adds no abuse surface. A
+  // `success: false` answer simply hides the offer in the app.
   fastify.get('/app/offer', async (request: any, reply: any) => {
     const result = await discount.getAppOffer();
     reply.send(result);
