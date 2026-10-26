@@ -37,9 +37,11 @@ export const HELP_MAIL_DELAY_MINUTES = 60;
 const HELP_MAIL_WINDOW_HOURS = 48;
 // One help mail per customer in this many days
 const HELP_MAIL_QUIET_DAYS = 30;
-// And one per checkout IP: anyone can type someone else's address at
-// checkout and cancel, so this caps how many strangers one sender reaches
-const HELP_MAIL_IP_QUIET_DAYS = 7;
+// And a few per checkout IP a day: anyone can type someone else's address
+// at checkout and cancel, so this caps how many strangers one sender
+// reaches, with room for a household or a mobile network's shared IP
+export const HELP_MAIL_IP_LIMIT = 3;
+const HELP_MAIL_IP_WINDOW_HOURS = 24;
 // How long the mail's link pays the order again (the cleanup keeps it longer)
 export const RESUME_LINK_DAYS = 7;
 const LOCK = 'abandoned-payment-mails';
@@ -60,8 +62,8 @@ export interface HelpMailCandidate {
   hasCards: boolean;
   // the payment was made from a trusted IP: a test-mode order
   trustedIp: boolean;
-  // another payment from the same checkout IP got a help mail lately
-  ipMailedRecently: boolean;
+  // help mails to other payments from the same checkout IP in the last 24 hours
+  ipMailCount: number;
 }
 
 /**
@@ -112,7 +114,7 @@ export function helpMailDecision(
   ) {
     return 'skipped_recent';
   }
-  if (candidate.ipMailedRecently) return 'skipped_ip';
+  if (candidate.ipMailCount >= HELP_MAIL_IP_LIMIT) return 'skipped_ip';
   if (candidate.trustedIp) return 'skipped_test';
   if (!candidate.hasCards) return 'skipped_nocards';
   return 'send';
@@ -202,13 +204,13 @@ class AbandonedPayments {
         const cardLines = await this.prisma.paymentHasPlaylist.count({
           where: { paymentId: candidate.id, playlist: { type: { not: 'giftcard' } } },
         });
-        const ipMailed = candidate.clientIp
+        const ipMailCount = candidate.clientIp
           ? await this.prisma.payment.count({
               where: {
                 id: { not: candidate.id },
                 clientIp: candidate.clientIp,
                 helpMailStatus: { in: ['sending', 'sent'] },
-                helpMailAt: { gte: new Date(now.getTime() - HELP_MAIL_IP_QUIET_DAYS * 24 * 60 * 60 * 1000) },
+                helpMailAt: { gte: new Date(now.getTime() - HELP_MAIL_IP_WINDOW_HOURS * 60 * 60 * 1000) },
               },
             })
           : 0;
@@ -218,7 +220,7 @@ class AbandonedPayments {
             createdAt: candidate.createdAt,
             hasCards: cardLines > 0,
             trustedIp: !!candidate.clientIp && this.utils.isTrustedIp(candidate.clientIp),
-            ipMailedRecently: ipMailed > 0,
+            ipMailCount,
           },
           others,
           now

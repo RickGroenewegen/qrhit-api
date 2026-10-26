@@ -2059,7 +2059,9 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   written and the next run looks again; a paid payment started at or after
   this one means they made it (`skipped_paid`); only the newest abandoned
   try gets it (`skipped_newer`); one help mail per customer in 30 days
-  (`skipped_recent`); one per checkout IP in 7 days (`skipped_ip`);
+  (`skipped_recent`); at most 3 per checkout IP in 24 hours, room for a
+  household or a mobile network's shared IP (`skipped_ip`, Rick
+  2026-10-26);
   test-mode orders from a trusted IP (`skipped_test`) and gift-card-only
   orders (`skipped_nocards`) never. Everyone else gets it, marketing
   opt-in or not (Rick, 2026-10-26: it is service).
@@ -2068,7 +2070,8 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   between. So the IP cap above, and the name and playlist name are left out
   when they read as a link or an address or are longer than a name
   (`mailSafeText`). The card picture is the design as uploaded, with no
-  screening before payment (finalCheck only runs on paid orders).
+  screening before payment (finalCheck only runs on paid orders); Rick
+  (2026-10-26) does not want the pictures checked for this mail.
   The row is claimed (`sending`) before sending, then `sent` or `error`;
   an error is never retried.
 - **The cleanup keeps abandoned orders 14 days** (`ABANDONED_KEEP_DAYS` in

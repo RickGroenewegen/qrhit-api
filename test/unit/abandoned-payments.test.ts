@@ -17,7 +17,7 @@ const candidate = (over: Partial<HelpMailCandidate> = {}): HelpMailCandidate => 
   createdAt: at(3),
   hasCards: true,
   trustedIp: false,
-  ipMailedRecently: false,
+  ipMailCount: 0,
   ...over,
 });
 
@@ -87,8 +87,9 @@ describe('helpMailDecision (who gets the help mail)', () => {
     ).toBe('send');
   });
 
-  it('mails one checkout IP at most once a week, whoever the address is', () => {
-    expect(helpMailDecision(candidate({ ipMailedRecently: true }), [], NOW)).toBe('skipped_ip');
+  it('mails one checkout IP at most three times a day, whoever the addresses are', () => {
+    expect(helpMailDecision(candidate({ ipMailCount: 2 }), [], NOW)).toBe('send');
+    expect(helpMailDecision(candidate({ ipMailCount: 3 }), [], NOW)).toBe('skipped_ip');
   });
 
   it('skips test-mode orders and orders without cards', () => {
