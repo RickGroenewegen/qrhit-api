@@ -338,13 +338,28 @@
         {
             "slug": "app-how-to",
             "title": "How does the QRSong app work?",
-            "description": "Download the free QRSong! companion app from the App Store or Google Play. Open the app, click the camera icon, and point it at the QR card. The song will start playing automatically and you can start guessing the song and artist!",
+            "description": "Download the free QRSong! companion app from the App Store or Google Play. Open the app, click the camera icon, and point it at the QR code side of a card. The song will start playing automatically and you can start guessing the song, the artist and the year! Then flip the card: the other side shows the artist, the release year and the song title.",
             "tags": [
                 "app",
                 "how to",
                 "scan",
                 "play",
                 "instructions"
+            ]
+        },
+        {
+            "slug": "how-to-play",
+            "title": "How do you play the game? What are the rules?",
+            "description": "The basic game is a music timeline game. (1) Every player gets one card and puts it down with the text side up (artist, year, title): that is the start of their timeline. (2) On your turn you take a new card from the deck and scan its QR code side with the free QRSong! app, without looking at the other side. Listen to the song. (3) Guess when it was released and place the card before, after or between the cards in your timeline. (4) Optionally name the title and/or the artist for bonus points; agree beforehand what earns a bonus. (5) Flip the card to check: is it in the right place in your timeline, you keep it; is it wrong, you lose it. (6) Then it is the next player's turn. The first player to complete a timeline of the agreed size (for example 10 cards) wins. You can also simply play it as a music quiz: scan, guess the song and artist, flip to check. The rules are explained step by step on qrsong.io/how-to. Besides this, QRGames (a paid add-on) offers Music Quiz, Music Bingo and Music Timeline as hosted games.",
+            "tags": [
+                "how to play",
+                "rules",
+                "game rules",
+                "timeline",
+                "gameplay",
+                "how does the game work",
+                "flip the card",
+                "winning"
             ]
         },
         {
@@ -374,13 +389,29 @@
         {
             "slug": "physical-cards",
             "title": "What are the physical cards like?",
-            "description": "Physical cards are high-quality printed cards (350gsm paper) delivered to your doorstep. They are double-sided and printed in full color. Cards come in a transport box, neatly tied together with a paper band. No assembly required - ready to play right out of the box.",
+            "description": "Physical cards are high-quality printed cards (350gsm paper) delivered to your doorstep. They are double-sided and printed in full color: the QR code on one side, and the artist, the release year and the song title on the other side (see 'What is on each side of a card?'). Cards come in a transport box, neatly tied together with a paper band. No assembly required - ready to play right out of the box.",
             "tags": [
                 "physical",
                 "real cards",
                 "quality",
                 "delivery",
                 "printed"
+            ]
+        },
+        {
+            "slug": "card-sides",
+            "title": "What is on each side of a card? Is the QR code on one side and the artist, title and year on the other?",
+            "description": "Yes. Every QRSong! card has two sides. The front (the QR code side) shows the QR code that you scan with the app, on the card background: our standard design, or your own background image or colour, with your own logo and QR code colours if you choose them in the card designer. The back (the text side) shows the answer: the artist at the top, the release year large in the middle and the song title at the bottom, in the font and text colour you choose. Extra information you add after purchase (for example a movie title or a personal message) is printed in a smaller font under the artist and/or the title. So while playing you scan the QR side without looking at the text side, guess, and then flip the card to check. This is the same for physical cards, printed sheets and the digital PDF. In the digital PDF the double-sided version puts the QR sides and the text sides on alternating pages for a duplex printer; the single-sided version puts each card's QR side and text side above each other on one page, to cut out and fold along the dashed line. With the eco-friendly version the QR side has a white background. You see a preview of your card design before you order, and you can check every artist, title and year in the correction form after purchase.",
+            "tags": [
+                "card sides",
+                "front and back",
+                "QR code side",
+                "text side",
+                "artist title year",
+                "what is on the card",
+                "card layout",
+                "flip the card",
+                "double-sided"
             ]
         },
         {
