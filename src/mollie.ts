@@ -31,6 +31,7 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Cache from './cache';
+import MetaConversions from './metaConversions';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
 import {
@@ -3085,6 +3086,14 @@ class Mollie {
         },
       });
 
+      // The Meta pixel's purchase is sent again from the webhook
+      // (src/metaConversions.ts), with what the checkout sent along when the
+      // buyer accepted advertising cookies. An order that needs no payment
+      // gets no webhook, and no event.
+      if (molliePaymentStatus !== 'paid') {
+        await MetaConversions.getInstance().remember(paymentId, params.meta);
+      }
+
       // An order that needs no payment gets no webhook: switch its App
       // Designer on here, before generation sends the order mail.
       if (appDesignRequest && molliePaymentStatus === 'paid') {
@@ -3764,6 +3773,9 @@ class Mollie {
             false,
             false
           );
+
+          // Not awaited and never throws: Meta must not slow down the webhook.
+          void MetaConversions.getInstance().sendPurchase(dbPayment.id);
         }
       }
     }

@@ -2183,6 +2183,42 @@ that list whose requirements the payment does not meet. Reworked on
 - Pay by Bank is in `notOnBadges`: the homepage strip leaves it out (no
   brand anyone looks for).
 
+## Meta Conversions API (the purchase, from the server)
+
+`src/metaConversions.ts`, built 2026-10-27 at the ad agency's request (Beau
+of New Story). The Meta pixel is a tag in the agency's GTM container: it
+fires on the GA4 `purchase` event of the progress page (the site's
+`AnalyticsService.purchase`) and, since 2026-10-27, sends the order number
+(`transaction_id`) as its `event_id`. The webhook sends the same `Purchase`
+from here, with that `event_id` (`payment.orderId`), `value` = `totalPrice`
+(incl. VAT) and `currency` = EUR, exactly what the browser event carries, so
+Meta counts one order whichever of the two arrives, and still counts it when
+the browser never ran the pixel.
+
+- **Only with the buyer's Advertising consent** (CookieFirst). The checkout
+  (`PaymentService.metaAttribution` on the site) sends `meta: { consent,
+  fbp, fbc, userAgent }` only then; `getPaymentUri` hands it to
+  `remember()`, which keeps it in Redis (`meta_capi:<payment row id>`, 14
+  days, deleted once sent) and never in the database. No `meta`, no event.
+  The privacy policy's "Advertising Measurement (Meta)" item says what is
+  sent; change it with the code.
+- **Where it fires:** the paid branch of `processWebhook`, after the order
+  is queued, not awaited (`sendPurchase` never throws). The status claim
+  makes it once per order; a resumed payment keeps its row and so its key.
+  Free orders (no webhook), upgrades and Excel orders send nothing.
+- **What goes:** e-mail, first and last word of the name, city, postcode and
+  country normalised and SHA-256 hashed as Meta asks; IP (the checkout's
+  `clientIp`), the browser's own user agent (not the request's: behind
+  CloudFront that can be CloudFront's) and the `_fbp` / `_fbc` cookies as
+  they are. `event_source_url` is the progress page.
+- **Config:** `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN` (Events Manager →
+  the pixel → Settings → Conversions API). Without both nothing is kept or
+  sent. Outside production only with `META_CAPI_TEST_EVENT_CODE`; set it in
+  production too to watch the first events under Events Manager → Test
+  events, then remove it. Graph API `v26.0`.
+- No retry: a failure is logged in red and reported to PostHog
+  (`Meta Conversions API: purchase not sent`).
+
 ## Help mail after an abandoned payment
 
 A customer who got as far as Mollie and then canceled, or whose payment
