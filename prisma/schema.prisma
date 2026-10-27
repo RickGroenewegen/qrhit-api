@@ -200,6 +200,7 @@ model Payment {
   allTracksChecked         Boolean              @default(false)
   user                     User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   PaymentHasPlaylist       PaymentHasPlaylist[]
+  GamesPurchase            GamesPurchase[]
   OrderType                OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId              Int?
   reviewMailSent         Boolean              @default(false)
@@ -1850,10 +1851,16 @@ model GamesPurchase {
   countrycode      String?  @db.VarChar(10)
   taxRate          Float?
   molliePaymentId  String?  @db.VarChar(255)
+  // The order of an initial row (QRGames ticked at checkout), so the row
+  // goes when the nightly cleanup deletes an unpaid checkout. An upgrade
+  // is paid on its own Mollie payment and has none.
+  paymentId        Int?
   createdAt        DateTime @default(now())
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment          Payment? @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([paymentId])
   @@index([createdAt])
   @@map("games_purchases")
 }

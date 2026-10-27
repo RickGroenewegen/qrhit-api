@@ -1115,6 +1115,18 @@ carry `gamesTotal` (paid) next to `gamesExVat`/`gamesVAT`, and the tax and
 OSS report add the games shares to `totalPriceWithoutTax` and `totalVAT` the
 way they do App Designer's; a (zone, country, rate) with only a games upgrade
 gets a row. Initial games rows (free with an order) are counted, never summed.
+The rate of a games upgrade is its country's on the day it is bought
+(`processBingoUpgradePayment`), never the rate of the order it extends:
+until 1 April 2026 every EU consumer paid the Dutch 21%, and a reverse-charge
+order is 0%, so inheriting put German upgrades at 21% in Q2 and Q3 2026.
+
+**Reverse charge is no OSS sale** (2026-10-26). An order with `reverseCharge`
+(an EU business whose VAT ID VIES confirmed at checkout, charged 0%) stays in
+the tax report's rows and in the MoneyBird tax-report invoice, but the OSS
+breakdown leaves it out, with the QRGames and App Designer bought with it,
+and `getPaymentsByTaxRate` returns it as `reverseCharge` (date, country, VAT
+ID, company, amount after refunds) for the Dutch return (3b) and the ICP
+declaration. The OSS page shows that list under the OSS table.
 
 **Business sales** are company lists switched to "Sold" on a company's Lists
 tab (`PUT /business/companies/:companyId/lists/:listId/sold`, admin only;

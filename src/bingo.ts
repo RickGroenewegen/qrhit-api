@@ -3,6 +3,7 @@ import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import CacheInstance from './cache';
+import Data from './data';
 import { purchaserBillingOrder } from './upgradeInvoice';
 
 
@@ -326,11 +327,14 @@ class Bingo {
         return { success: true };
       }
 
-      // Country/taxRate from the purchaser's order: the one of the first
-      // playlist when they bought it, else their own latest (a set received
-      // as a gift sits on the giver's order)
+      // Country from the purchaser's order: the one of the first playlist
+      // when they bought it, else their own latest (a set received as a gift
+      // sits on the giver's order). The rate is that country's today, not
+      // the order's: an upgrade is a sale of its own, and an order from
+      // before the destination rates (1 April 2026, when every EU sale paid
+      // the Dutch 21%) or with reverse charge (0%, VIES-checked at that
+      // checkout only) must not pass its rate on.
       let countrycode: string | null = null;
-      let taxRate: number | null = null;
       const firstPhp = await this.prisma.paymentHasPlaylist.findUnique({
         where: { id: ids[0] },
         select: { paymentId: true },
@@ -338,7 +342,6 @@ class Bingo {
       const linkedPayment = await purchaserBillingOrder(userId, firstPhp?.paymentId);
       if (linkedPayment) {
         countrycode = linkedPayment.countrycode;
-        taxRate = linkedPayment.taxRate;
       } else {
         const purchaser = await this.prisma.user.findUnique({
           where: { id: userId },
@@ -346,6 +349,9 @@ class Bingo {
         });
         countrycode = purchaser?.country ?? null;
       }
+      const taxRate = countrycode
+        ? await Data.getInstance().getTaxRate(countrycode.toUpperCase())
+        : null;
 
       // Log GamesPurchase for the upgrade
       await this.prisma.gamesPurchase.create({

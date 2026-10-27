@@ -831,11 +831,16 @@ class Mollie {
       where,
       select: {
         paymentId: true,
+        createdAt: true,
         countrycode: true,
         taxRate: true,
         totalPrice: true,
         totalPriceWithoutTax: true,
         productVATPrice: true,
+        refundAmount: true,
+        reverseCharge: true,
+        vatIdChecked: true,
+        companyName: true,
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -1053,6 +1058,30 @@ class Mollie {
 
     // OSS breakdown: per-country × taxRate within EU (excluding NL).
     // Required for the Unieregeling (One Stop Shop) quarterly return.
+    //
+    // Reverse charge (an EU business whose VAT ID VIES confirmed at
+    // checkout, charged 0%) is no OSS sale: it goes on the Dutch return (3b)
+    // and the ICP declaration, so it is left out here and listed apart as
+    // `reverseCharge`. QRGames and App Designer bought with such an order
+    // carry its 0% and stay out with it.
+    const reverseChargeOrderIds = new Set(
+      rows.filter((r) => r.reverseCharge).map((r) => r.paymentId)
+    );
+    const reverseCharge = rows
+      .filter((r) => r.reverseCharge)
+      .map((r) => {
+        const refunded = r.refundAmount || 0;
+        return {
+          paymentId: r.paymentId,
+          createdAt: r.createdAt,
+          country: (r.countrycode || '').toUpperCase(),
+          vatId: r.vatIdChecked || '',
+          companyName: r.companyName || '',
+          totalPrice: round2((r.totalPrice || 0) - refunded),
+          totalRefunded: refunded,
+        };
+      });
+
     const ossKey = (country: string, taxRate: number) =>
       `${country}|${taxRate}`;
     const ossAgg = new Map<
@@ -1067,7 +1096,7 @@ class Mollie {
       }
     >();
     for (const r of rows) {
-      if (this.getTaxZone(r.countrycode) !== 'EU') continue;
+      if (this.getTaxZone(r.countrycode) !== 'EU' || r.reverseCharge) continue;
       const country = (r.countrycode || '').toUpperCase();
       const taxRate = r.taxRate || 0;
       const key = ossKey(country, taxRate);
@@ -1087,7 +1116,7 @@ class Mollie {
     }
 
     const ossRefundAdjustments = await this.getRefundAdjustmentsByKey(
-      where,
+      { ...where, reverseCharge: false },
       (p) => {
         if (this.getTaxZone(p.countrycode) !== 'EU') return '';
         return ossKey((p.countrycode || '').toUpperCase(), p.taxRate || 0);
@@ -1097,6 +1126,7 @@ class Mollie {
     const ossGamesMap = new Map<string, GamesAgg>();
     for (const g of gameRows) {
       if (this.getTaxZone(g.countrycode) !== 'EU') continue;
+      if (g.molliePaymentId && reverseChargeOrderIds.has(g.molliePaymentId)) continue;
       const country = (g.countrycode || '').toUpperCase();
       const taxRate = g.taxRate || 0;
       const key = ossKey(country, taxRate);
@@ -1117,6 +1147,7 @@ class Mollie {
     const ossAppDesignMap = new Map<string, AppDesignAgg>();
     for (const a of appDesignRows) {
       if (this.getTaxZone(a.countrycode) !== 'EU') continue;
+      if (a.paymentId && reverseChargeOrderIds.has(a.molliePaymentId)) continue;
       const country = (a.countrycode || '').toUpperCase();
       const taxRate = a.taxRate || 0;
       const key = ossKey(country, taxRate);
@@ -1171,7 +1202,7 @@ class Mollie {
       return b.taxRate - a.taxRate;
     });
 
-    return { rows: detailedReport, ossBreakdown };
+    return { rows: detailedReport, ossBreakdown, reverseCharge };
   }
 
   private getTaxZone(countryCode: string | null | undefined): string {
@@ -3014,6 +3045,7 @@ class Mollie {
             countrycode: params.extraOrderData.countrycode || null,
             taxRate: calculateResult.data.taxRate || null,
             molliePaymentId,
+            paymentId,
           },
         });
       }

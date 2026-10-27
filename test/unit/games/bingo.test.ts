@@ -17,6 +17,10 @@ const h = vi.hoisted(() => {
     cacheDel: vi.fn(async (key: string) => {
       cacheStore.delete(key);
     }),
+    // Today's rate per country, as the taxrates table has it
+    getTaxRate: vi.fn(
+      async (code: string) => ({ NL: 21, DE: 19, FR: 20, PL: 23 } as Record<string, number>)[code] ?? 0
+    ),
     prisma: {
       gamesPurchase: {
         findFirst: vi.fn(async () => null),
@@ -52,6 +56,10 @@ vi.mock('../../../src/cache', () => ({
   default: {
     getInstance: () => ({ get: h.cacheGet, set: h.cacheSet, del: h.cacheDel }),
   },
+}));
+
+vi.mock('../../../src/data', () => ({
+  default: { getInstance: () => ({ getTaxRate: h.getTaxRate }) },
 }));
 
 import Bingo, { BingoTrack, BingoSheet } from '../../../src/bingo';
@@ -222,7 +230,7 @@ describe('processBingoUpgradePayment', () => {
     h.prisma.user.findUnique.mockResolvedValue({ hash: 'user-hash-1' });
   });
 
-  it('takes the rate from the purchaser\'s own order for a set received as a gift', async () => {
+  it('takes the country from the purchaser\'s own order for a set received as a gift', async () => {
     // The set's order belongs to the giver (user 5), the buyer is user 9
     h.prisma.payment.findUnique.mockResolvedValue({ userId: 5, countrycode: 'BE', taxRate: 21 });
     h.prisma.payment.findFirst.mockResolvedValue({ userId: 9, countrycode: 'DE', taxRate: 19 });
@@ -234,14 +242,36 @@ describe('processBingoUpgradePayment', () => {
     );
   });
 
-  it('takes the account\'s country when the purchaser has no order at all', async () => {
+  it('takes the account\'s country and its rate when the purchaser has no order at all', async () => {
     h.prisma.payment.findUnique.mockResolvedValue({ userId: 5, countrycode: 'BE', taxRate: 21 });
     h.prisma.user.findUnique.mockResolvedValue({ hash: 'user-hash-1', country: 'FR' });
 
     await bingo.processBingoUpgradePayment([4], 9);
 
     expect(h.prisma.gamesPurchase.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'FR', taxRate: null }) })
+      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'FR', taxRate: 20 }) })
+    );
+  });
+
+  it('charges today\'s rate of the country, not the rate the order was charged', async () => {
+    // A German order from before 1 April 2026 paid the Dutch 21%
+    h.prisma.payment.findUnique.mockResolvedValue({ userId: 9, countrycode: 'DE', taxRate: 21 });
+
+    await bingo.processBingoUpgradePayment([4], 9);
+
+    expect(h.getTaxRate).toHaveBeenCalledWith('DE');
+    expect(h.prisma.gamesPurchase.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'DE', taxRate: 19 }) })
+    );
+  });
+
+  it('does not pass on the 0% of a reverse-charge order', async () => {
+    h.prisma.payment.findUnique.mockResolvedValue({ userId: 9, countrycode: 'PL', taxRate: 0 });
+
+    await bingo.processBingoUpgradePayment([4], 9);
+
+    expect(h.prisma.gamesPurchase.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ countrycode: 'PL', taxRate: 23 }) })
     );
   });
 

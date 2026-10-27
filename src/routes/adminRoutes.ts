@@ -2273,6 +2273,7 @@ export default async function adminRoutes(
         success: true,
         data: report.rows,
         ossBreakdown: report.ossBreakdown,
+        reverseCharge: report.reverseCharge,
       });
     }
   );

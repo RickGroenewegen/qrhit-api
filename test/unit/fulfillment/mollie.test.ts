@@ -1483,6 +1483,8 @@ describe('getPaymentUri', () => {
         countrycode: 'NL',
         taxRate: 21,
         molliePaymentId: 'tr_test123',
+        // the order's row id, so the row is deleted with an unpaid checkout
+        paymentId: 555,
       },
     });
   });
@@ -3529,6 +3531,79 @@ describe('getPaymentsByTaxRate: App Designer', () => {
       totalPriceWithoutTax: 4.13,
       totalVAT: 0.87,
       gamesExVat: 4.13,
+    });
+  });
+});
+
+describe('getPaymentsByTaxRate: reverse charge', () => {
+  beforeEach(() => {
+    prismaMock.payment.findMany.mockImplementation(async (args: any) =>
+      args?.where?.refundAmount
+        ? []
+        : [
+            {
+              paymentId: 'tr_de',
+              createdAt: new Date(2026, 7, 2),
+              countrycode: 'DE',
+              taxRate: 19,
+              totalPrice: 30,
+              totalPriceWithoutTax: 25.21,
+              productVATPrice: 4.79,
+              refundAmount: 0,
+              reverseCharge: false,
+            },
+            {
+              paymentId: 'tr_pl',
+              createdAt: new Date(2026, 8, 21),
+              countrycode: 'PL',
+              taxRate: 0,
+              totalPrice: 22,
+              totalPriceWithoutTax: 22,
+              productVATPrice: 0,
+              refundAmount: 0,
+              reverseCharge: true,
+              vatIdChecked: 'PL7722128813',
+              companyName: 'Kucharska',
+            },
+          ]
+    );
+    prismaMock.gamesPurchase.findMany.mockResolvedValue([
+      // The free games that came with the reverse-charge order.
+      { molliePaymentId: 'tr_pl', countrycode: 'PL', taxRate: 0, totalPrice: 5, type: 'initial' },
+    ]);
+    prismaMock.appDesignPurchase.findMany.mockResolvedValue([
+      // Bought at checkout with the reverse-charge order: its 0% and country.
+      { molliePaymentId: 'tr_pl', paymentId: 2, countrycode: 'PL', taxRate: 0, totalPrice: 9, totalPriceWithoutTax: 9, totalVAT: 0 },
+    ]);
+  });
+
+  it('leaves reverse charge and its add-ons out of the OSS breakdown and lists it apart', async () => {
+    const { rows, ossBreakdown, reverseCharge } = await mollie.getPaymentsByTaxRate(
+      new Date(2026, 6, 1),
+      new Date(2026, 9, 0, 23, 59, 59)
+    );
+
+    expect(ossBreakdown.map((r: any) => `${r.country}|${r.taxRate}`)).toEqual(['DE|19']);
+    expect(reverseCharge).toEqual([
+      {
+        paymentId: 'tr_pl',
+        createdAt: new Date(2026, 8, 21),
+        country: 'PL',
+        vatId: 'PL7722128813',
+        companyName: 'Kucharska',
+        totalPrice: 22,
+        totalRefunded: 0,
+      },
+    ]);
+    // The tax report itself (and the MoneyBird invoice made from it) still
+    // has the sale, at 0%.
+    expect(rows.find((r: any) => r.countrycode === 'PL')).toMatchObject({
+      zone: 'EU',
+      taxRate: 0,
+      numberOfSales: 1,
+      totalPrice: 22,
+      totalVAT: 0,
+      appDesignAmount: 1,
     });
   });
 });
