@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "width": 640,
+  "height": 512,
+  "exposure": -0.62,
+  "view": "Standard",
+  "base": "base.f16.gz",
+  "faces": [
+    {
+      "role": "screen",
+      "side": "page",
+      "file": "face-screen.f16.gz",
+      "box": [
+        39,
+        56,
+        499,
+        289
+      ],
+      "page": "screen",
+      "texW": 352,
+      "texH": 224,
+      "texPx": 352
+    }
+  ],
+  "blend": "tile-digital-v3.blend",
+  "exported": "2026-10-27"
+}

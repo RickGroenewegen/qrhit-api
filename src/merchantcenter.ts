@@ -19,6 +19,7 @@ import PDF from './pdf';
 import { renderPdfPagesToPng } from './pdfRaster';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
+import { productPhotoFor } from './productPhoto/photos';
 import {
   LOCALE_COUNTRY_PAIRS,
   ProductVariant,
@@ -767,11 +768,13 @@ export class MerchantCenterService {
     // Generate composite product image with the template (unique per variant)
     const imageKey = `${variant.playlistId}_${variant.type}_${variant.locale}`;
 
-    const productImage = await this.generateProductImage(
-      variant.image,
-      imageKey,
-      variant.type
-    );
+    // The product photo (src/productPhoto/), on crisp white, shows the
+    // physical cards; everything else keeps the AI photo or the composite.
+    const productPhoto =
+      variant.type === 'physical' ? await productPhotoFor(variant.slug).catch(() => null) : null;
+    const productImage =
+      productPhoto?.feed ??
+      (await this.generateProductImage(variant.image, imageKey, variant.type));
 
     // Guard against shipping a raw external cover URL as the Merchant image.
     // generateProductImage() falls back to the original playlist cover
@@ -782,7 +785,7 @@ export class MerchantCenterService {
     // composite/AI images live under /public/products/ — anything else is a
     // generation failure. The next sync will pick the variant back up once an
     // AI/composite image exists for the playlist.
-    if (!productImage.includes('/public/products/')) {
+    if (!productImage.includes('/public/products/') && !productImage.includes('/product-photo/')) {
       this.logger.log(
         yellow(
           `⤫ Skipping ${white.bold(variant.slug)} [${white.bold(

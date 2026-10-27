@@ -552,6 +552,8 @@ model Playlist {
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
 
+  productPhoto ProductPhoto?
+
   @@index([playlistId])
   @@index([serviceType])
   @@index([promotionalActive])
@@ -2138,4 +2140,30 @@ model UpgradeInvoice {
   @@unique([year, sequence])
   @@index([userId])
   @@map("upgrade_invoices")
+}
+
+// The product photo of a featured playlist (src/productPhoto/): the songs it
+// shows and where its files are. The photo itself is a set of files under
+// PUBLIC_DIR/product_photos/<photoKey>/, made from the scene's passes and the
+// playlist's own cards; photoKey changes whenever what the photo shows does.
+model ProductPhoto {
+  id            Int       @id @default(autoincrement())
+  playlistId    Int       @unique
+  playlist      Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  // tracks.id of the songs, in the scene's order: hero, songs, song, fan, deck
+  trackIds      Json?
+  pickSource    String    @default("auto") @db.VarChar(16) // auto | fallback | admin
+  status        String    @default("pending") @db.VarChar(16) // pending | ready | failed | skipped
+  error         String?   @db.VarChar(255)
+  photoKey      String?   @db.VarChar(32)
+  // the files of the photo before, kept a while for pages cached with it
+  previousKey   String?   @db.VarChar(32)
+  previousUntil DateTime?
+  sceneVersion  Int?
+  generatedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@map("product_photos")
 }

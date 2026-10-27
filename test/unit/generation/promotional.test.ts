@@ -50,6 +50,8 @@ const h = vi.hoisted(() => {
     fsWriteFile: vi.fn(async () => undefined),
     fsUnlink: vi.fn(async () => undefined),
     sharpToBuffer: vi.fn(async () => Buffer.from('processed-png')),
+    queueProductPhoto: vi.fn(),
+    productPhotoFeatured: vi.fn(),
   };
 });
 
@@ -85,6 +87,11 @@ vi.mock('../../../src/data', () => ({
       calculateSinglePlaylistDecadePercentages: h.calcDecades,
     }),
   },
+}));
+// the triggers load the BullMQ queue (and Redis); only whether they fire matters here
+vi.mock('../../../src/productPhoto/triggers', () => ({
+  queueProductPhoto: h.queueProductPhoto,
+  productPhotoFeatured: h.productPhotoFeatured,
 }));
 vi.mock('../../../src/seoDescriptions', () => ({
   default: {
@@ -329,7 +336,7 @@ describe('Promotional.savePromotionalSetup', () => {
       slug: 'old-slug',
       customImage: null,
     });
-    h.prisma.playlist.update.mockResolvedValue({});
+    h.prisma.playlist.update.mockResolvedValue({ id: 42 });
   });
 
   it('rejects unverified ownership', async () => {
@@ -366,9 +373,12 @@ describe('Promotional.savePromotionalSetup', () => {
         name: 'Best QRSong! Mix', // hitster -> QRSong!
         slug: 'best-qrsong-mix',
       },
+      select: { id: true },
     });
     // Old slug differs -> cache for it is cleared.
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', 'old-slug');
+    // active -> featured, so the product photo is made
+    expect(h.productPhotoFeatured).toHaveBeenCalledWith(42, true);
   });
 
   it('shares the design only on an explicit true, and always drops the cached product page', async () => {

@@ -12,6 +12,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const h = vi.hoisted(() => ({
   clearPlaylistCache: vi.fn(async () => undefined),
   createSiteMap: vi.fn(async () => ({ locales: 0, urls: 0 })),
+  queueProductPhoto: vi.fn(),
+  productPhotoFeatured: vi.fn(),
+}));
+
+// the triggers load the BullMQ queue (and Redis); only whether they fire matters here
+vi.mock('../../../src/productPhoto/triggers', () => ({
+  queueProductPhoto: h.queueProductPhoto,
+  productPhotoFeatured: h.productPhotoFeatured,
 }));
 
 vi.mock('../../../src/spotify', () => ({
@@ -612,6 +620,7 @@ describe('updateFeaturedHidden / updateDesignHidden', () => {
 
   it('updateDesignHidden stores the admin veto and drops the cached product page', async () => {
     const { deps, prisma } = makeDeps();
+    prisma.playlist.update.mockResolvedValue({ id: 9 });
 
     const res = await updateDesignHidden(deps, 'pl1', true);
 
@@ -621,8 +630,11 @@ describe('updateFeaturedHidden / updateDesignHidden', () => {
     expect(prisma.playlist.update).toHaveBeenCalledWith({
       where: { playlistId: 'pl1' },
       data: { featuredDesignHidden: true },
+      select: { id: true },
     });
     expect(h.clearPlaylistCache).toHaveBeenCalledWith(deps, 'pl1');
+    // the product photo shows the design the page shows
+    expect(h.queueProductPhoto).toHaveBeenCalledWith(9);
   });
 
   it('updateDesignHidden reports errors instead of throwing', async () => {

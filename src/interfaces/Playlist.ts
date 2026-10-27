@@ -1,3 +1,5 @@
+import type { ProductPhotoUrls } from '../productPhoto/photos';
+
 export interface Playlist {
   id: string;
   playlistId: string;
@@ -10,6 +12,8 @@ export interface Playlist {
   featured?: boolean;
   /** ISO timestamp of the catalogue row; featured lookups only. */
   createdAt?: string | null;
+  /** The product photo's URLs (src/productPhoto/photos.ts); featured lookups only. */
+  productPhoto?: ProductPhotoUrls | null;
   decadePercentage0?: number;
   decadePercentage1900?: number;
   decadePercentage1950?: number;

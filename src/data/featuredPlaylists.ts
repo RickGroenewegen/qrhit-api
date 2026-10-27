@@ -8,6 +8,7 @@ import {
 import { clearPlaylistCache, createSiteMap } from './misc';
 import { productPageLocales } from './productPageLocales';
 import { DataDeps } from './types';
+import { productPhotoFeatured, queueProductPhoto } from '../productPhoto/triggers';
 
 export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
 const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocales_';
@@ -697,6 +698,8 @@ export async function updatePlaylistFeatured(
       where: { playlistId },
       data: { featured, markedForMerchantCenter: true },
     });
+    // made right away, so the first visitor already sees it
+    productPhotoFeatured(playlist.id, featured);
 
     // Clear all Spotify cache for this playlist
     await deps.cache.delPattern(`${CACHE_KEY_PLAYLIST}${playlistId}*`);
@@ -761,10 +764,13 @@ export async function updateDesignHidden(
   hidden: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await deps.prisma.playlist.update({
+    const playlist = await deps.prisma.playlist.update({
       where: { playlistId },
       data: { featuredDesignHidden: hidden },
+      select: { id: true },
     });
+    // the photo shows the design the product page shows
+    queueProductPhoto(playlist.id);
 
     await clearPlaylistCache(deps, playlistId);
 
@@ -807,6 +813,7 @@ async function setPlaylistFeatured(
         markedForMerchantCenter: true,
       },
     });
+    productPhotoFeatured(playlist.id, featured);
 
     // The product page lookup of a featured playlist is cached forever, and
     // a miss is cached too, so the page would keep its old answer without this.
@@ -963,6 +970,7 @@ export async function acceptPromotionalPlaylist(
       where: { playlistId },
       data: { promotionalAccepted: true, markedForMerchantCenter: true },
     });
+    queueProductPhoto(playlist.id);
 
     // Clear featured playlists cache
     await deps.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);

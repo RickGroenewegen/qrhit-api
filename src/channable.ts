@@ -12,6 +12,7 @@ import { blue, red, yellow, white, green } from 'console-log-colors';
 import PrismaInstance from './prisma';
 import Fx from './services/fx';
 import { getCurrencyForCountry } from './data/currency-map';
+import { productPhotoFor } from './productPhoto/photos';
 import {
   LOCALE_COUNTRY_PAIRS,
   ProductVariant,
@@ -530,6 +531,13 @@ export class ChannableService {
       process.env['PUBLIC_DIR'] || path.join(__dirname, '..', 'public');
     const productsDir = path.join(publicDir, 'products');
     const apiUri = process.env['API_URI'] || 'https://api.qrsong.io';
+
+    // 0. The product photo (src/productPhoto/), on crisp white: the
+    // playlist's real cards. It shows physical cards, so only for those.
+    if (variant.type === 'physical') {
+      const photo = await productPhotoFor(variant.slug).catch(() => null);
+      if (photo) return photo.feed;
+    }
 
     let files: string[];
     try {

@@ -224,6 +224,13 @@ export const LLM_TASKS = {
     primary: { provider: 'anthropic', model: 'claude-sonnet-5-5', effort: 'low' },
     fallback: { provider: 'openai', model: 'gpt-5.6-terra', effort: 'none' },
   },
+  productPhotoSongs: {
+    kind: 'text',
+    label: 'Product photo songs',
+    description: 'Picks the five best-known songs of a featured playlist for its product photo (src/productPhoto/songs.ts).',
+    primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'low' },
+    fallback: { provider: 'openai', model: 'gpt-5.6-terra', effort: 'low' },
+  },
   orderExtract: {
     kind: 'text',
     label: 'Printer invoice extraction',

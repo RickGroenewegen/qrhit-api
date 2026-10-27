@@ -186,6 +186,7 @@ vi.mock('@hyzyla/pdfium', () => ({
   PDFiumLibrary: {
     init: async () => ({
       loadDocument: async () => ({
+        getPageCount: () => 10,
         getPage: () => ({
           getOriginalSize: () => ({ originalWidth: 170.08, originalHeight: 170.08 }),
           render: async () => ({ data: Buffer.from('png-bytes') }),

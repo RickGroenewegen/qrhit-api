@@ -1,5 +1,6 @@
 import PrismaInstance from './prisma';
 import Data from './data';
+import { queueProductPhoto } from './productPhoto/triggers';
 import { MusicProviderFactory } from './providers';
 
 /**
@@ -123,6 +124,8 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
     await data.storeTracks(row.id, newPlaylistId, tracks, trackOrder, 'spotify', 'en');
     await prisma.playlist.update({ where: { id: row.id }, data: { numberOfTracks: tracks.length } });
     await data.clearPlaylistCache(newPlaylistId, row.slug || undefined);
+    // songs that left the playlist are picked again
+    if (row.featured) queueProductPhoto(row.id);
   } else {
     error = response?.error || 'no tracks fetched';
   }

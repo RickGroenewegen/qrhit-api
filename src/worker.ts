@@ -3,6 +3,7 @@ import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
 import GeneratorQueue from './generatorQueue';
 import ExcelQueue from './excelQueue';
+import ProductPhotoQueue from './productPhotoQueue';
 import ErrorTracking from './errorTracking';
 
 dotenv.config({ quiet: true });
@@ -40,6 +41,7 @@ class QueueWorker {
         await Promise.all([
           this.generatorQueue.shutdown(),
           this.excelQueue.close(),
+          ProductPhotoQueue.getInstance().close(),
         ]);
         this.logger.log(color.green.bold('Worker shutdown complete'));
         process.exit(0);
@@ -75,6 +77,8 @@ class QueueWorker {
 
       // Start Excel workers (2 workers for concurrent Excel processing)
       this.excelQueue.startWorkers(2);
+
+      ProductPhotoQueue.getInstance().startWorker();
 
       this.logger.log(
         color.green.bold(

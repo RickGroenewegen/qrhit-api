@@ -32,6 +32,7 @@ import PrismaInstance from '../prisma';
 import UpgradeInvoices from '../upgradeInvoice';
 import { isSignedRenderRequest } from '../renderSignature';
 import CardPreviews from '../cardPreview';
+import { showcaseView } from '../productPhoto/cards';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -516,6 +517,27 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // The cards of a product photo (src/productPhoto/cards.ts), drawn from a
+  // spec the render left in Redis: no order line behind them. Opened by the
+  // PDF Lambda only, so the link is signed.
+  fastify.get('/qr/pdf-showcase/:token', async (request: any, reply) => {
+    if (!isSignedRenderRequest('card-showcase', request)) {
+      reply.status(404).send({ error: 'Not found' });
+      return;
+    }
+    const view = await showcaseView(String(request.params.token));
+    if (!view) {
+      reply.status(404).send({ error: 'Not found' });
+      return;
+    }
+    await sendCardPages(reply, {
+      ...view,
+      eco: false,
+      emptyPages: 0,
+      startIndex: 0,
+    });
+  });
+
   /**
    * The card pages of an order line as the printer and the downloads get
    * them, through the line's template: a stored one (src/cardTemplates.ts)
@@ -535,6 +557,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       emptyPages: number;
       startIndex: number;
       itemIndex?: number;
+      // '' prints none (a product photo's cards)
+      batchNumber?: string;
     }
   ): Promise<void> {
     const { payment, user, playlist, php, tracks, subdir, eco, emptyPages, startIndex, itemIndex } = page;
@@ -544,6 +568,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     if (itemIndex && itemIndex > 0) {
       batchNumber = `${php.paymentHasPlaylistId}-${itemIndex}`;
     }
+    if (page.batchNumber !== undefined) batchNumber = page.batchNumber;
 
     // An admin-chosen order template (see forcedPrinterTemplate) replaces
     // the single-card printer layout only: digital downloads and sheets

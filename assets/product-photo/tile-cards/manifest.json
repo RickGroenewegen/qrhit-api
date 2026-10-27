@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "width": 640,
+  "height": 512,
+  "exposure": -0.62,
+  "view": "Standard",
+  "base": "base.f16.gz",
+  "faces": [
+    {
+      "role": "backs",
+      "side": "back",
+      "file": "face-backs.f16.gz",
+      "box": [
+        24,
+        108,
+        247,
+        166
+      ],
+      "texPx": 256,
+      "card": 1
+    },
+    {
+      "role": "fronts",
+      "side": "front",
+      "file": "face-fronts.f16.gz",
+      "box": [
+        462,
+        161,
+        131,
+        158
+      ],
+      "texPx": 240,
+      "card": 2
+    },
+    {
+      "role": "stand",
+      "side": "front",
+      "file": "face-stand.f16.gz",
+      "box": [
+        218,
+        111,
+        271,
+        293
+      ],
+      "texPx": 256,
+      "card": 0
+    }
+  ],
+  "blend": "tile-cards-v3.blend",
+  "exported": "2026-10-27"
+}

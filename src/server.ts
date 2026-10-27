@@ -43,6 +43,8 @@ import toolkitRoutes from './routes/toolkitRoutes';
 import cardTemplateRoutes from './routes/cardTemplateRoutes';
 import appThemeRoutes from './routes/appThemeRoutes';
 import defaultPlaylistRoutes from './routes/defaultPlaylistRoutes';
+import productPhotoRoutes from './routes/productPhotoRoutes';
+import ProductPhotoQueue from './productPhotoQueue';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import aiCostRoutes from './routes/aiCostRoutes';
 import ExternalCardService from './externalCardService';
@@ -175,6 +177,7 @@ class Server {
     await cardTemplateRoutes(this.fastify, getAuthHandler);
     await appThemeRoutes(this.fastify, getAuthHandler);
     await defaultPlaylistRoutes(this.fastify, getAuthHandler);
+    await productPhotoRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -266,6 +269,8 @@ class Server {
 
           const excelQueue = ExcelQueue.getInstance();
           excelQueue.startWorkers(2);
+
+          ProductPhotoQueue.getInstance().startWorker();
 
           this.logger.log(
             color.blue.bold(

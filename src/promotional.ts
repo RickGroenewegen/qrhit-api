@@ -12,6 +12,7 @@ import Utils from './utils';
 import Discount from './discount';
 import SeoDescriptions from './seoDescriptions';
 import { sanitizeBrandName } from './brandName';
+import { productPhotoFeatured, queueProductPhoto } from './productPhoto/triggers';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -286,10 +287,13 @@ class Promotional {
 
       // Update playlist with promotional data
       // Also update 'featured' field which controls visibility on the site
-      await this.prisma.playlist.update({
+      const saved = await this.prisma.playlist.update({
         where: { playlistId },
         data: updateData,
+        select: { id: true },
       });
+      // the photo follows the design choice too
+      productPhotoFeatured(saved.id, data.active === true);
 
       // The product page lookup of a featured playlist is cached forever and
       // holds the design, so the cache goes on every save (a changed design
@@ -908,6 +912,7 @@ class Promotional {
         where: { playlistId },
         data: updateData,
       });
+      queueProductPhoto(playlist.id);
 
       // Clear all relevant caches (pass old slug in case it changed)
       await Data.getInstance().clearPlaylistCache(playlistId, oldSlug || undefined);

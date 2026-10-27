@@ -26,6 +26,12 @@ export async function renderPdfPages(pdfBuffer: Buffer, pages: number[], scale: 
     const doc = await library.loadDocument(new Uint8Array(pdfBuffer));
     try {
       const out: RenderedPage[] = [];
+      // asking for a page the PDF lacks gives an empty bitmap, which sharp
+      // reports as "Input Bit Array is empty"; a Chromium render of an error
+      // page (the page it was sent to was down) is one page long
+      const count = doc.getPageCount();
+      const missing = pages.find((pageNum) => pageNum > count);
+      if (missing) throw new Error(`the PDF has ${count} page(s), page ${missing} was asked for`);
       for (const pageNum of pages) {
         // pdfium uses 0-based page indexes
         const page = doc.getPage(pageNum - 1);

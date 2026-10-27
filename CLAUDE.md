@@ -1941,6 +1941,142 @@ too until 2026-10-12; they now go to Serper and Wikipedia directly (see
 - The `trustpilot` table (`TrustPilot` model) is left in place and unread, so
   rolling back is a deploy.
 
+## Product photos (product page and Channable feed)
+
+Every featured playlist gets a photo of its own cards, looking like a
+product photographer's: a hero card standing up with its QR code (real, it
+scans), a stack, a fan, and three backs lying in front showing an artist,
+year and title. The playlist's design when the product page shows it
+(`productPageDesign`), else the standard one. Built 2026-10-27; the frontend
+side is in qrhit's CLAUDE.md ("Product photo").
+
+**No Blender on the server.** The scene was rendered once in Blender (Cycles,
+on a Mac) and exported as passes; a playlist's photo is the playlist's printed
+cards put into those passes, in a few seconds of CPU:
+
+| what | where |
+|---|---|
+| the passes (float16, gzipped) and their manifest, committed | `assets/product-photo/scene-1/` |
+| the export, run inside Blender against the approved `.blend` | `scripts/product-photo/export-passes.py` (`Blender -b <blend> -P … -- --out <dir>`, ~5 min on Metal) |
+| the composite: base + (card − 1) × light per face, footprint filter | `src/productPhoto/compose.ts` |
+| the published files (srcset tiers, cream fallback, white feed, og) | `src/productPhoto/outputs.ts` |
+| the cards as printed: one Lambda render of `pdf_printer.ejs` | `src/productPhoto/cards.ts`, route `/qr/pdf-showcase/:token` |
+| the songs: five famous ones, by the LLM task `productPhotoSongs` | `src/productPhoto/songs.ts` |
+| the whole run, the row, the files, the lookup | `src/productPhoto/photos.ts` |
+| queue (concurrency 1, nightly check at 01:30) and triggers | `src/productPhotoQueue.ts`, `src/productPhoto/triggers.ts` |
+| routes | `src/routes/productPhotoRoutes.ts` |
+| CLI: `textures`, `tiers`, `compose`, `generate --slug=… [--force] [--repick]`, `web-passes [--site=../qrhit]`, `tiles --textures=<dir>`, `page-textures` | `scripts/product-photo.ts` |
+| the light copy for the browser | `src/productPhoto/webPasses.ts` |
+| the format tiles (three small scenes, `assets/product-photo/tile-*`) | `src/productPhoto/tiles.ts`, pages in `src/productPhoto/pages.ts` |
+| the `.blend` files, one per approved render version, textures linked relative | `qrhit/studio/product-photo/` (tracked in git there; textures and HDRI are not) |
+
+- **The browser makes photos too** (2026-10-27): the customer's own design
+  after the designer, and pasted playlists, which have no photo. They run on
+  a light copy of the scene that `web-passes` writes into the frontend
+  (`src/assets/product-photo/<scene>-<fingerprint>/` and
+  `src/app/shared/card-photo/scenes.generated.ts`; the frontend's CLAUDE.md,
+  "Photos made in the browser"). It contains:
+  - the base as WebP (alpha cleaned by `cleanAlpha`, the feed shadow's lift
+    and feather);
+  - per face: coverage and light as bytes (light square-root coded up to
+    `lightScale`, delta-coded, gzipped);
+  - u and v as cubic least-squares fits over the face's box (`UV_TERMS`,
+    within 0.4 texels). Stored as planes, u and v were 80% of the file.
+  - `mask.png`: the scene's silhouette (`silhouetteMask`, alpha ≥ 204, a
+    16-colour PNG, 400 px wide, 200 for the tiles), the shape of the site's
+    contour skeleton; its URL goes to `scene-masks.generated.ts`.
+  
+  Widths are `WEB_WIDTHS` (720 and 1080 for scene-1, 320 for the tiles).
+  `cardOf(face)` (`pp_card`, else `FACE_CARDS`) says which of the photo's
+  cards each face shows, here and in the browser. After any
+  change to the scene, the passes or that table, run `web-passes` again and
+  commit the frontend's new folder and generated file.
+- **The format tiles** (2026-10-27, Rick's approval of `tile-cards-v3`,
+  `tile-sheets-v1` and `tile-digital-v3`): the Digital, Sheets and Cards
+  options of the site's format selector, in the playlist's design. They are
+  three small Blender scenes made like the photo (640×512, exported with
+  `--width 640`) and composed in the photo job from the same five card
+  pictures, best-effort: a tile that fails logs a yellow line and the page
+  shows the standard one. Each tile is
+  `tile-<digital|sheets|cards>-<width>.<avif|webp|png>` at `TILE_WIDTHS`
+  (160, 320 and 640 px, served as `w` srcsets: the site shows them from
+  80 px in the format picker up to 320 px in its info modals), written to the
+  photo's key folder. `productPhotoFor` only lists the tiles whose files
+  exist (`tiles` on `ProductPhotoUrls`), so photos made before
+  `PHOTO_VERSION` 3 simply have none. About 1.5 s of CPU per photo
+  job.
+  - **Page faces.** The laptop's screen and the sheets are a page laid out
+    from card pictures (`pages.ts`: plain shapes under and over the cards,
+    square cells). The screen is the real `pdf_digital.ejs` layout (front
+    over back with the dashed fold, three across) in a light PDF viewer;
+    the sheet is 3×4 fronts on A4. The site lays out the same pages from
+    the same layouts, which `web-passes` puts in the manifest. Keep the
+    layouts to the shape kinds there: the browser draws them on a canvas
+    itself, because a canvas with an SVG drawn into it may not be read back
+    in Safari. `page-textures` writes the pictures the `.blend` files use
+    (`studio/product-photo/textures/tiles/`).
+  - **What `export-passes.py` reads from a scene:** objects with the custom
+    properties `pp_role`, `pp_side` (front/back) or `pp_page` (a layout),
+    `pp_card` and optionally `pp_slot`; scene-1 has none and falls back to
+    the old FACES list. A page face gets `texW`/`texH` (pixels across and
+    down). A picture may feed Emission instead of Base Color (the screen is
+    emission only: lit and emissive at once washed the cream out). The
+    formula holds for both, since both are linear in the picture.
+  - **The standard design's tiles are static in the site**:
+    `tiles --textures=../qrhit/studio/product-photo/textures/all-taylor-swift-songs`
+    writes `src/assets/images/format-tiles/standard-<fingerprint>/` and
+    `src/app/shared/format-tile/standard-tiles.generated.ts` there. The
+    folder name carries the fingerprint because `/assets` is cached for a
+    year. Run it again after re-exporting a tile scene.
+- **The table `product_photos` (model `ProductPhoto`) needs a production
+  `prisma db push` BEFORE the deploy.** A missing table reads as "no photo"
+  (P2021), but the triggers and the worker would fail on every job.
+- **When it is made:** the moment a playlist is featured (the admin switch,
+  "Feature again", accepting a promotional playlist, the customer's
+  promotional form), when the "Own design" switch changes, after a playlist
+  replace, and from the admin. Unfeaturing deletes the row. The nightly check
+  queues every featured playlist; a photo whose key is unchanged costs
+  nothing, so it only makes the missing and the out-of-date ones (the first
+  night after the deploy makes them all: about 20 s each, one at a time, one
+  Lambda call and one Haiku call per playlist).
+- **The key is the content**: sha256 of `PHOTO_VERSION`, the scene's version
+  and export date, the tile scenes' export dates, the design and the five
+  cards. Files live under
+  `PUBLIC_DIR/product_photos/<key>/` and are served by
+  `GET /product-photo/:key/<slug>-qr-music-cards-<tier>.<ext>` with
+  `immutable` (the tiles as `…-qr-music-cards-tile-<kind>-<width>.<ext>`).
+  **Files under a key never change**: a change to what `compose.ts`,
+  `outputs.ts`, `tiles.ts` or `pages.ts` draws must raise `PHOTO_VERSION`, or the old
+  files stay (and browsers keep them for a year). A replaced photo stays 7
+  days for open tabs; `cleanupPhotoFiles` (nightly) removes the rest.
+- **The hero QR is read back** at 720 px before anything is written; a photo
+  whose code does not scan fails and the previous one stays.
+- **The QR codes are `/qr_url2?link=<streaming link>`**, generated locally:
+  nothing calls `/qrlink`, so the AbuseGuard never sees the render.
+- **Songs:** the candidates have a year, a streaming link and a printed text
+  of at most 28 characters, no remasters or live versions (`photoCandidates`).
+  The model picks the five best known for the playlist's market; without an
+  answer, one per decade by rule. An admin choice (`pickSource: 'admin'`)
+  stays until "Pick songs automatically". The order is the scene's: song 1
+  is the hero (its back lies front right), 2 tops the stack, 3 lies front
+  left, 4 and 5 show their QR side only.
+- **The feed photo is crisp white** (Rick, 2026-10-27, for Channable and
+  Merchant Center): the cards cut to their shadow, 4% white margin, pure
+  white beyond the shadow, JPEG 4:4:4 so the years and QR modules stay sharp.
+- `productPhotoFor(slug)` is what the product page and the feeds read:
+  Redis-cached 5 minutes, independent of the playlist answer, which
+  `spotify.ts` caches forever. `getPlaylist` attaches it to featured slug
+  lookups as `productPhoto`.
+- The one approximation: what a card reflects onto another (the hero in the
+  glossy cards in front of it) stays as the white card of the base, about 3
+  levels of 255. Mean difference against a full Blender render: 1.9/255.
+- A PDF missing pages (the Lambda rendered an error page because the
+  `/qr/pdf-showcase` URL was unreachable, e.g. the local API down behind
+  ngrok) fails with "the PDF has N page(s)" (`renderPdfPages`) instead of
+  PDFium's empty bitmap.
+- `SCENE_DIR` comes from `ASSETS_DIR`, not `__dirname`: `tsc -w` runs from
+  `build/src/`, tsx from `src/`.
+
 ## Product feeds: Merchant Center and Channable
 
 Two modules publish the same catalogue:
@@ -1981,10 +2117,13 @@ Two things `channable.ts` deliberately does NOT do:
 - It never touches `markedForMerchantCenter`. That flag is written by
   `promotional.ts` / `adminRoutes.ts` and cleared only by the Google sync; a
   second consumer would race with it. A feed is a full snapshot anyway.
-- It never generates product images, only reads what `merchantcenter.ts` has
-  already written under `public/products/`. **When `merchantcenter.ts` is
-  retired, its image-generation half has to move into `channable.ts` or a
-  shared module, or the feed will slowly lose images.**
+- It never generates product images. Its first choice is the playlist's
+  product photo on white (`productPhotoFor(slug).feed`, see "Product photos"
+  below; physical only, which is all the feed lists). Without one it reads
+  what `merchantcenter.ts` has written under `public/products/`: the AI photo,
+  then the composite. `createMerchantProduct` prefers the product photo the
+  same way, for the day the direct push comes back. **When `merchantcenter.ts`
+  is retired, a playlist without a product photo loses its fallback image.**
 
 ## Mollie payment methods: pay later, Riverty and the dead ones
 

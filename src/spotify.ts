@@ -37,6 +37,7 @@ import {
 } from './externalCardCacheKey';
 import { youtubeVideoId } from './youtubeLink';
 import { productPageDesign } from './data/productPageDesign';
+import { productPhotoFor } from './productPhoto/photos';
 import { isUrlOnHosts, SHORTLINK_HOSTS, SPOTIFY_REDIRECT_HOSTS } from './shortlinks';
 
 // Spotify Cache Key Prefixes
@@ -570,6 +571,15 @@ class Spotify {
 
       // Track analytics for playlist retrieval
       this.analytics.increaseCounter('spotify', 'playlist', 1);
+
+      // The product photo has its own short cache: it changes without the
+      // playlist changing, and this answer is cached forever.
+      if (playlist && featured && isSlug) {
+        playlist.productPhoto = await productPhotoFor(playlistId).catch((error) => {
+          this.logger.log(color.red.bold(`Error reading the product photo of ${color.white.bold(playlistId)}: ${error.message}`));
+          return null;
+        });
+      }
 
       return {
         success: true,

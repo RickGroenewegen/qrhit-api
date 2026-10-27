@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "width": 1600,
+  "height": 1000,
+  "exposure": -0.62,
+  "view": "Standard",
+  "base": "base.f16.gz",
+  "faces": [
+    {
+      "role": "hero",
+      "side": "front",
+      "file": "face-hero.f16.gz",
+      "box": [
+        556,
+        95,
+        492,
+        493
+      ],
+      "texPx": 480
+    },
+    {
+      "role": "answer",
+      "side": "back",
+      "file": "face-answer.f16.gz",
+      "box": [
+        927,
+        625,
+        531,
+        320
+      ],
+      "texPx": 512
+    },
+    {
+      "role": "deck",
+      "side": "front",
+      "file": "face-deck.f16.gz",
+      "box": [
+        633,
+        41,
+        466,
+        217
+      ],
+      "texPx": 448
+    },
+    {
+      "role": "fan",
+      "side": "front",
+      "file": "face-fan.f16.gz",
+      "box": [
+        1106,
+        222,
+        456,
+        253
+      ],
+      "texPx": 432
+    },
+    {
+      "role": "songs",
+      "side": "back",
+      "file": "face-songs.f16.gz",
+      "box": [
+        37,
+        196,
+        533,
+        297
+      ],
+      "texPx": 464
+    },
+    {
+      "role": "song",
+      "side": "back",
+      "file": "face-song.f16.gz",
+      "box": [
+        276,
+        587,
+        617,
+        368
+      ],
+      "texPx": 512
+    }
+  ],
+  "blend": "product-photo-v1.blend",
+  "exported": "2026-10-27"
+}
