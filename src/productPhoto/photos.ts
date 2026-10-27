@@ -68,7 +68,10 @@ const lookupKey = (slug: string) => `product-photo:${slug}`;
 const exists = (file: string) => fs.access(file).then(() => true, () => false);
 
 export function photoUrls(key: string, slug: string): ProductPhotoUrls {
-  const base = `${process.env['API_URI']}/product-photo/${key}/${slug}-qr-music-cards`;
+  // the slug is only there for search engines: FILE takes [a-z0-9-] (an
+  // admin's or a promotional slug may hold an underscore or an accent)
+  const name = slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  const base = `${process.env['API_URI']}/product-photo/${key}/${name}-qr-music-cards`;
   const srcset = (ext: string) => PHOTO_WIDTHS.map((width) => `${base}-${width}.${ext} ${width}w`).join(', ');
   return {
     avif: srcset('avif'),
@@ -197,6 +200,8 @@ export async function generateProductPhoto(
     update: {},
   });
 
+  // kept on a failure too, so trying again does not pick (and pay for) other songs
+  let chosen: { trackIds: number[]; pickSource: PickSource } | null = null;
   try {
     const candidates = await photoCandidates(playlist.id);
     let tracks = options.repick ? null : tracksByIds(row.trackIds, candidates);
@@ -211,6 +216,7 @@ export async function generateProductPhoto(
       tracks = picked.tracks;
       source = picked.source;
     }
+    chosen = { trackIds: tracks.map((track) => track.id), pickSource: source };
 
     const { design } = showcaseDesign(playlist);
     const cards = tracks.map(showcaseCard);
@@ -255,13 +261,22 @@ export async function generateProductPhoto(
       throw new Error(`the hero card's QR code does not read at ${PHOTO_WIDTHS[0]} px`);
     }
 
-    if (!(await exists(target))) {
+    // `force` writes the folder again: the same pictures, and a format tile
+    // that failed the first time (it only logs) gets another chance
+    if (!(await exists(target)) || options.force) {
       const files = [...(await photoOutputs(master, 'photo')), ...(await tileFiles(tileScenes, faces))];
       const tmp = path.join(photoRoot(), `.${key}-${process.pid}-${Date.now()}`);
       await fs.mkdir(tmp, { recursive: true });
       try {
         for (const { file, data } of files) await fs.writeFile(path.join(tmp, file), data);
-        await fs.rename(tmp, target);
+        if (await exists(target)) {
+          const old = `${tmp}-old`;
+          await fs.rename(target, old);
+          await fs.rename(tmp, target);
+          await fs.rm(old, { recursive: true, force: true });
+        } else {
+          await fs.rename(tmp, target);
+        }
       } catch (error) {
         await fs.rm(tmp, { recursive: true, force: true });
         // another run wrote the same photo first
@@ -270,6 +285,15 @@ export async function generateProductPhoto(
     }
 
     const replaced = row.photoKey && row.photoKey !== key ? row.photoKey : null;
+    if (replaced) {
+      // cleanupPhotoFiles keeps a folder 7 days from this date: pages and
+      // feeds built before may still name it, also after a second change
+      const now = new Date();
+      await fs.utimes(path.join(photoRoot(), replaced), now, now).catch(() => {});
+      await prisma()
+        .playlist.update({ where: { id: playlist.id }, data: { markedForMerchantCenter: true } })
+        .catch(() => {});
+    }
     await prisma().productPhoto.update({
       where: { id: row.id },
       data: {
@@ -293,7 +317,7 @@ export async function generateProductPhoto(
     await prisma()
       .productPhoto.update({
         where: { id: row.id },
-        data: { status: 'failed', error: String(error?.message || error).slice(0, 255) },
+        data: { ...(chosen ?? {}), status: 'failed', error: String(error?.message || error).slice(0, 255) },
       })
       .catch(() => {});
     throw error;
@@ -325,7 +349,8 @@ export async function dropProductPhoto(playlistId: number): Promise<void> {
 /**
  * Removes the folders no photo points at: replaced photos after their grace
  * period, photos of unfeatured playlists, half-written folders. A folder
- * younger than an hour is left alone, its row may not be written yet.
+ * written or replaced (generateProductPhoto dates it then) in the last 7 days
+ * stays: a feed, a cached page or an open tab may still name it.
  */
 export async function cleanupPhotoFiles(): Promise<number> {
   const root = photoRoot();
@@ -345,7 +370,7 @@ export async function cleanupPhotoFiles(): Promise<number> {
     const key = name.replace(/^\./, '').slice(0, 16);
     if (kept.has(name)) continue;
     const stat = await fs.stat(path.join(root, name)).catch(() => null);
-    if (!stat || now - stat.mtimeMs < 3_600_000) continue;
+    if (!stat || now - stat.mtimeMs < KEEP_PREVIOUS_DAYS * 86_400_000) continue;
     if (!KEY.test(key)) continue;
     await fs.rm(path.join(root, name), { recursive: true, force: true });
     removed++;

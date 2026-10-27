@@ -58,28 +58,45 @@ class ProductPhotoQueue {
     return ProductPhotoQueue.instance;
   }
 
-  /** Queues one playlist's photo; a job already waiting for it takes the stronger options. */
+  /**
+   * Queues one playlist's photo; a job already waiting for it takes the
+   * stronger options. A job that is running may have read the design before
+   * what changed (a design hidden mid-run went out on the product page and in
+   * the feed), so one more run follows it, whatever the trigger: a run that
+   * finds nothing changed costs a few queries.
+   */
   public async add(playlistId: number, options: { force?: boolean; repick?: boolean } = {}): Promise<void> {
     const jobId = `pp-${playlistId}`;
-    const existing = await this.queue.getJob(jobId);
-    if (existing) {
-      const state = await existing.getState();
-      if (state === 'waiting' || state === 'delayed' || state === 'prioritized') {
-        await existing.updateData({
-          playlistId,
-          force: existing.data.force || options.force,
-          repick: existing.data.repick || options.repick,
-        });
-        return;
-      }
-      if (state === 'active') {
-        // it may already be past what changed: run once more afterwards
-        if (options.force || options.repick) await this.queue.add('photo', { playlistId, ...options }, { delay: 30_000 });
-        return;
-      }
-      await existing.remove().catch(() => {});
+    if (await this.mergeInto(jobId, playlistId, options)) return;
+    const running = await this.queue.getJob(jobId);
+    if (running && (await running.getState()) === 'active') {
+      const againId = `${jobId}-again`;
+      if (await this.mergeInto(againId, playlistId, options)) return;
+      await this.queue.add('photo', { playlistId, ...options }, { jobId: againId, delay: 30_000 });
+      return;
     }
     await this.queue.add('photo', { playlistId, ...options }, { jobId });
+  }
+
+  /**
+   * Gives a job that has not started yet the stronger options; true when
+   * there was one. A finished or failed job of that id is removed, so the id
+   * can be used again.
+   */
+  private async mergeInto(jobId: string, playlistId: number, options: { force?: boolean; repick?: boolean }): Promise<boolean> {
+    const existing = await this.queue.getJob(jobId);
+    if (!existing) return false;
+    const state = await existing.getState();
+    if (state === 'waiting' || state === 'delayed' || state === 'prioritized') {
+      await existing.updateData({
+        playlistId,
+        force: existing.data.force || options.force,
+        repick: existing.data.repick || options.repick,
+      });
+      return true;
+    }
+    if (state !== 'active') await existing.remove().catch(() => {});
+    return false;
   }
 
   /** Queues every featured playlist; returns how many. */
