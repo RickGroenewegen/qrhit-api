@@ -27,6 +27,14 @@ export const FEATURED_COPIES_KEY = 'featuredCopies';
 // Payment statuses of an order that is still going (as in aiPlaylist.ts).
 const ONGOING_PAYMENT_STATUSES = ['open', 'pending', 'authorized', 'paid'];
 
+/**
+ * How long a copy in an unfinished order waits before it is looked at again.
+ * Only a paid order keeps a copy for good: keeping it for an open payment
+ * meant an abandoned checkout (our copy pasted on the playlist step) left it
+ * in our account forever.
+ */
+const ORDER_RECHECK_MS = 15 * 60 * 1000;
+
 const SPOTIFY_TRACK_ID = /track\/([A-Za-z0-9]{22})/;
 
 export interface FeaturedCopy {
@@ -181,29 +189,45 @@ class FeaturedCopies {
    * visitor's own) is kept and leaves the set: generating that order reads
    * it. A failed unfollow stays in the set for the next run.
    */
-  public async cleanupExpired(): Promise<{ deleted: number; kept: number; errors: number }> {
+  public async cleanupExpired(): Promise<{
+    deleted: number;
+    kept: number;
+    waiting: number;
+    errors: number;
+  }> {
     const now = Date.now();
     const due = (await this.cache.getSortedSetWithScores(FEATURED_COPIES_KEY)).filter(
       (entry) => entry.score <= now
     );
     let deleted = 0;
     let kept = 0;
+    let waiting = 0;
     let errors = 0;
 
     for (const { member: spotifyId } of due) {
       try {
-        const ordered = await this.prisma.paymentHasPlaylist.findFirst({
+        const orders = await this.prisma.paymentHasPlaylist.findMany({
           where: {
             playlist: { playlistId: spotifyId },
             payment: { status: { in: ONGOING_PAYMENT_STATUSES } },
           },
-          select: { id: true },
+          select: { payment: { select: { status: true } } },
         });
-        if (ordered) {
+        if (orders.some((order) => order.payment?.status === 'paid')) {
           await this.cache.removeFromSortedSet(FEATURED_COPIES_KEY, spotifyId);
           kept += 1;
           this.logger.log(
-            color.yellow.bold(`[Featured copy] kept ${white.bold(spotifyId)}: it is in an order`)
+            color.yellow.bold(`[Featured copy] kept ${white.bold(spotifyId)}: it is in a paid order`)
+          );
+          continue;
+        }
+        if (orders.length > 0) {
+          await this.cache.addToSortedSet(FEATURED_COPIES_KEY, now + ORDER_RECHECK_MS, spotifyId);
+          waiting += 1;
+          this.logger.log(
+            color.yellow.bold(
+              `[Featured copy] ${white.bold(spotifyId)} is in an unpaid order: looked at again later`
+            )
           );
           continue;
         }
@@ -230,11 +254,11 @@ class FeaturedCopies {
         color.blue.bold(
           `[Featured copy] cleanup: deleted=${white.bold(deleted.toString())} kept=${white.bold(
             kept.toString()
-          )} errors=${white.bold(errors.toString())}`
+          )} waiting=${white.bold(waiting.toString())} errors=${white.bold(errors.toString())}`
         )
       );
     }
-    return { deleted, kept, errors };
+    return { deleted, kept, waiting, errors };
   }
 
   private shortName(name: string): string {

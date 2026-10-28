@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   prismaMock: {
     playlist: { findFirst: vi.fn() },
     playlistHasTrack: { findMany: vi.fn() },
-    paymentHasPlaylist: { findFirst: vi.fn() },
+    paymentHasPlaylist: { findMany: vi.fn() },
   },
   spotifyCreate: vi.fn(),
   spotifyDelete: vi.fn(),
@@ -109,7 +109,7 @@ beforeEach(() => {
     { track: { spotifyLink: `${link(id(2))}?si=abc` } },
     { track: { spotifyLink: link(id(1)) } },
   ]);
-  h.prismaMock.paymentHasPlaylist.findFirst.mockReset().mockResolvedValue(null);
+  h.prismaMock.paymentHasPlaylist.findMany.mockReset().mockResolvedValue([]);
   let n = 0;
   h.spotifyCreate.mockReset().mockImplementation(async (name: string) => {
     n += 1;
@@ -183,31 +183,50 @@ describe('createCopy', () => {
 });
 
 describe('cleanupExpired', () => {
-  it('unfollows expired copies only, keeps ordered ones and retries failures', async () => {
+  it('unfollows expired copies, keeps paid ones, waits on unpaid ones and retries failures', async () => {
     const now = Date.now();
     h.sortedSet.set('expired', now - 1000);
-    h.sortedSet.set('ordered', now - 1000);
+    h.sortedSet.set('paid', now - 1000);
+    h.sortedSet.set('unpaid', now - 1000);
     h.sortedSet.set('refused', now - 1000);
     h.sortedSet.set('fresh', now + 60_000);
-    h.prismaMock.paymentHasPlaylist.findFirst.mockImplementation(async ({ where }: any) =>
-      where.playlist.playlistId === 'ordered' ? { id: 5 } : null
-    );
+    h.prismaMock.paymentHasPlaylist.findMany.mockImplementation(async ({ where }: any) => {
+      if (where.playlist.playlistId === 'paid') {
+        return [{ payment: { status: 'open' } }, { payment: { status: 'paid' } }];
+      }
+      if (where.playlist.playlistId === 'unpaid') return [{ payment: { status: 'open' } }];
+      return [];
+    });
     h.spotifyDelete.mockImplementation(async (playlistId: string) =>
       playlistId === 'refused' ? { success: false, error: 'denied' } : { success: true }
     );
 
-    expect(await copies.cleanupExpired()).toEqual({ deleted: 1, kept: 1, errors: 1 });
+    expect(await copies.cleanupExpired()).toEqual({ deleted: 1, kept: 1, waiting: 1, errors: 1 });
 
     expect(h.spotifyDelete.mock.calls.map((c) => c[0]).sort()).toEqual(['expired', 'refused']);
-    // The refused one waits for the next run; the fresh one is not due yet.
-    expect([...h.sortedSet.keys()].sort()).toEqual(['fresh', 'refused']);
-    expect(h.prismaMock.paymentHasPlaylist.findFirst).toHaveBeenCalledWith({
+    // The paid one is ours for good and leaves the set; the refused one waits
+    // for the next run; the fresh one is not due yet.
+    expect([...h.sortedSet.keys()].sort()).toEqual(['fresh', 'refused', 'unpaid']);
+    // The unpaid one is looked at again in 15 minutes, so an abandoned
+    // checkout cannot keep it in our account for good.
+    expect(h.sortedSet.get('unpaid')).toBeGreaterThanOrEqual(now + 15 * 60 * 1000);
+    expect(h.prismaMock.paymentHasPlaylist.findMany).toHaveBeenCalledWith({
       where: {
         playlist: { playlistId: 'expired' },
         payment: { status: { in: ['open', 'pending', 'authorized', 'paid'] } },
       },
-      select: { id: true },
+      select: { payment: { select: { status: true } } },
     });
+  });
+
+  it('unfollows a copy once its unpaid order has expired', async () => {
+    h.sortedSet.set('abandoned', Date.now() - 1000);
+    // The payment expired, so it no longer matches the ongoing statuses.
+    h.prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([]);
+    h.spotifyDelete.mockResolvedValue({ success: true });
+
+    expect(await copies.cleanupExpired()).toEqual({ deleted: 1, kept: 0, waiting: 0, errors: 0 });
+    expect([...h.sortedSet.keys()]).toEqual([]);
   });
 });
 
