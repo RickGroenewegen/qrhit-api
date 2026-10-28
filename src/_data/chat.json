@@ -45,7 +45,7 @@
         {
             "slug": "cards-dont-work",
             "title": "My cards do not work / The app is playing the wrong songs, what can I do?",
-            "description": "If the app plays the wrong songs or the QR codes do not work, please first make sure you're using the latest version of the QRSong! app. If you're using Spotify without Premium, hidden mode is unavailable — you can switch to a different playback mode in the app settings. We suggest either 'No Spotify mode', or switching the music service to Tidal or Deezer (no subscription needed for either) for full hidden playback. If the problem persists, contact support at info@qrsong.io with details and screenshots if possible.",
+            "description": "If the app plays the wrong songs or the QR codes do not work, please first make sure you're using the latest version of the QRSong! app. If you're using Spotify without Premium, hidden mode is unavailable — you can switch to a different playback mode in the app settings. We suggest either 'No Spotify mode', or switching the music service to Tidal or Deezer (no subscription needed for either) for hidden playback of 30-second previews. If the problem persists, contact support at info@qrsong.io with details and screenshots if possible.",
             "tags": [
                 "cards don't work",
                 "wrong songs",
@@ -326,7 +326,7 @@
         {
             "slug": "spotify-premium",
             "title": "Do I need Spotify Premium?",
-            "description": "Spotify Premium is recommended but not required. Premium supports 'Hidden mode' which plays songs in the QRSong! app without showing the artist or title. With Spotify Free, songs still play but the artist and title become visible after a short delay (3 seconds by default — you can change this delay to any value in the app settings). If you'd prefer hidden playback without a Spotify Premium subscription, you can also switch the music service in the app to Tidal or Deezer (no subscription needed) or Apple Music (subscription required).",
+            "description": "Spotify Premium is recommended but not required. Premium supports 'Hidden mode' which plays the whole song from the beginning in the QRSong! app without showing the artist or title. With Spotify Free, songs still play as 30-second previews, and the artist and title become visible after a short delay (3 seconds by default — you can change this delay to any value in the app settings). If you'd prefer hidden playback without a Spotify Premium subscription, you can also switch the music service in the app to Tidal or Deezer (no subscription needed, 30-second previews) or Apple Music (subscription required, whole songs).",
             "tags": [
                 "spotify",
                 "premium",
@@ -921,12 +921,32 @@
         {
             "slug": "random-snippet",
             "title": "What is random snippet mode?",
-            "description": "Random snippet mode in the app plays different parts of songs for more challenging quizzes. Instead of always starting from the beginning, songs start from random positions.",
+            "description": "'Random snippet' is a setting in the QRSong! app that starts each song at a random point instead of at the beginning, for a harder quiz. It only appears once 'Limit playback' is switched on, and it works with Spotify Premium (hidden playback) and Apple Music, not with Deezer or Tidal. It is off by default: normally every song starts at the beginning.",
             "tags": [
                 "random snippet",
                 "app feature",
                 "quiz",
-                "difficulty"
+                "difficulty",
+                "start position",
+                "beginning"
+            ]
+        },
+        {
+            "slug": "song-start-full-or-preview",
+            "title": "Do the songs play from the beginning? Does the app play the whole song or only a preview?",
+            "description": "It depends on the music service chosen in the QRSong! app. Spotify with Premium (hidden playback, the app's default) and Apple Music (with an Apple Music subscription): the whole song plays, from the beginning. Deezer, Tidal and Spotify without Premium (the playback mode 'I've got no Spotify Premium'): the app plays a 30-second preview clip that the music service picks, so it does not always start at the beginning of the song. The playback mode 'Open Spotify app' and YouTube Music open the song in the Spotify or YouTube Music app, which plays it there. Two settings in the app change this: 'Limit playback' stops every song after a set number of seconds (30 by default), and with 'Limit playback' on, 'Random snippet' starts every song at a random point instead of the beginning (Spotify Premium and Apple Music only). Both are off until you switch them on.",
+            "tags": [
+                "from the beginning",
+                "start of the song",
+                "whole song",
+                "full song",
+                "preview",
+                "30 seconds",
+                "playback length",
+                "Spotify Premium",
+                "Apple Music",
+                "Deezer",
+                "Tidal"
             ]
         },
         {
@@ -1050,7 +1070,7 @@
         {
             "slug": "playback-timer",
             "title": "How do playback timer controls work?",
-            "description": "In the QRSong! app, you can set custom playback timers to control how long songs play during your quiz. This helps create the perfect difficulty level for your music game.",
+            "description": "In the QRSong! app settings, 'Limit playback' stops every song automatically after a set number of seconds ('Playback length', 30 by default) to keep the game moving. It is off by default. With 'Limit playback' on you can also switch on 'Random snippet', which starts every song at a random point instead of the beginning.",
             "tags": [
                 "timer",
                 "playback",
@@ -1270,7 +1290,7 @@
         {
             "slug": "platform-tidal",
             "title": "How does Tidal work with QRSong?",
-            "description": "Tidal is supported. Just paste your Tidal playlist URL to create your cards. Release years are not available from Tidal, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, songs play in the app without showing the artist or title. You can select Tidal as your preferred music service in the app settings. No Tidal subscription is needed.",
+            "description": "Tidal is supported. Just paste your Tidal playlist URL to create your cards. Release years are not available from Tidal, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, a 30-second preview of each song plays in the app without showing the artist or title. You can select Tidal as your preferred music service in the app settings. No Tidal subscription is needed.",
             "tags": [
                 "Tidal",
                 "hidden playback",
@@ -1281,7 +1301,7 @@
         {
             "slug": "platform-deezer",
             "title": "How does Deezer work with QRSong?",
-            "description": "Deezer is supported. Just paste any public Deezer playlist URL to create your cards. Release years are not available from Deezer, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, songs play in the app without showing the artist or title. You can select Deezer as your preferred music service in the app settings. No Deezer subscription is needed.",
+            "description": "Deezer is supported. Just paste any public Deezer playlist URL to create your cards. Release years are not available from Deezer, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, a 30-second preview of each song plays in the app without showing the artist or title. You can select Deezer as your preferred music service in the app settings. No Deezer subscription is needed.",
             "tags": [
                 "Deezer",
                 "hidden playback",
@@ -1305,7 +1325,7 @@
         {
             "slug": "playback-modes-explained",
             "title": "How does playback work when scanning QRSong cards?",
-            "description": "The QRSong app offers different playback experiences depending on your chosen music service and settings. Spotify with hidden mode (requires Spotify Premium): the song plays in the app without showing the artist or title — the best way to play for music quizzes. Spotify with countdown mode: a countdown is shown, then the Spotify app opens and plays the song (artist and title will be visible). No Spotify mode: the song plays in the QRSong app but the artist and title are shown. Apple Music: songs play in the app without showing artist or title — full hidden playback (requires Apple Music subscription). Deezer and Tidal: songs play in the QRSong app without showing artist or title — a great alternative if you don't have Spotify Premium or Apple Music. YouTube Music: a countdown is shown, then the YouTube Music app opens (artist and title visible immediately — no hidden playback). You can switch your preferred music service in the app settings at any time.",
+            "description": "The QRSong app offers different playback experiences depending on your chosen music service and settings. Spotify with hidden mode (requires Spotify Premium): the whole song plays from the beginning, in the app without showing the artist or title — the best way to play for music quizzes. Spotify with countdown mode: a countdown is shown, then the Spotify app opens and plays the song (artist and title will be visible). No Spotify mode: a 30-second preview plays in the QRSong app but the artist and title are shown. Apple Music: the whole song plays from the beginning, in the app without showing artist or title — full hidden playback (requires Apple Music subscription). Deezer and Tidal: a 30-second preview plays in the QRSong app without showing artist or title — a great alternative if you don't have Spotify Premium or Apple Music. YouTube Music: a countdown is shown, then the YouTube Music app opens (artist and title visible immediately — no hidden playback). You can switch your preferred music service in the app settings at any time.",
             "tags": [
                 "playback",
                 "hidden mode",
