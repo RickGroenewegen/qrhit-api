@@ -54,10 +54,11 @@ export function scanClient(origin: string | undefined, userAgent: string | undef
 }
 
 /**
- * The app version that looked up a card, for the scan log. The app sends it
- * as the `qrsv` header ("QRSong! 2.0.3") with `/qrlink`, `/qrlink2` and
- * `/qrlink_unknown` (since 2026-10-28); older apps and the web scanner send
- * none. The header is anyone's to set, so it is capped before it is logged.
+ * What looked up a card, for the scan log: the `qrsv` header on `/qrlink`,
+ * `/qrlink2` and `/qrlink_unknown` (since 2026-10-28). The app sends its
+ * version ("QRSong! 2.0.3"), the site's web scanner "QRSong! Web Scanner";
+ * older apps send none. The header is anyone's to set, so it is capped
+ * before it is logged.
  */
 export function scanAppVersion(headers: IncomingHttpHeaders): string | null {
   const value = headers['qrsv'];
