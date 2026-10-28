@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Eller spela med den gratis appen:",
   "countdown.noTimeToInstall": "Kan du inte installera appen just nu?",
   "mail.boxInstructionsGuideText": "Vår vikguide visar varje steg i en kort animation, och du kan gå fram och tillbaka i din egen takt:",
-  "mail.boxInstructionsGuideButton": "Öppna vikguiden"
+  "mail.boxInstructionsGuideButton": "Öppna vikguiden",
+  "mail.boxInstructionsGuideImageAlt": "Vikguiden: presentlådan vikt steg för steg i en animation"
 }

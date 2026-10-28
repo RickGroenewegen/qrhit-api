@@ -1451,10 +1451,14 @@ class Mail {
     const videoThumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
     const giftBoxLink = `${process.env['FRONTEND_URI']}/${payment.locale}/gift-box`;
     const foldGuideLink = `${giftBoxLink}/how-to-fold`;
+    // four steps of the folding animation with a play button, written by the site's
+    // _scripts/encode-fold-steps.mjs under a name that never changes
+    const foldGuideImage = `${process.env['FRONTEND_URI']}/assets/images/gift-box-fold-guide.jpg`;
 
     const mailParams = {
       payment,
       foldGuideLink,
+      foldGuideImage,
       videoLink,
       videoThumbnail,
       giftBoxLink,

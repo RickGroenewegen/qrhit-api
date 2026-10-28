@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Nebo hraj s aplikací zdarma:",
   "countdown.noTimeToInstall": "Teď nemůžeš nainstalovat aplikaci?",
   "mail.boxInstructionsGuideText": "Náš návod ke skládání ukazuje každý krok v krátké animaci a ty se můžeš posouvat tam a zpět vlastním tempem:",
-  "mail.boxInstructionsGuideButton": "Otevřít návod ke skládání"
+  "mail.boxInstructionsGuideButton": "Otevřít návod ke skládání",
+  "mail.boxInstructionsGuideImageAlt": "Návod ke skládání: dárková krabička složená krok za krokem v animaci"
 }

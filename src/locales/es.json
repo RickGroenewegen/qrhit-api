@@ -613,5 +613,6 @@
   "countdown.orTheApp": "O juega con la app gratis:",
   "countdown.noTimeToInstall": "¿No puedes instalar la app ahora mismo?",
   "mail.boxInstructionsGuideText": "Nuestra guía de plegado muestra cada paso en una breve animación, y puedes avanzar y retroceder a tu ritmo:",
-  "mail.boxInstructionsGuideButton": "Abrir la guía de plegado"
+  "mail.boxInstructionsGuideButton": "Abrir la guía de plegado",
+  "mail.boxInstructionsGuideImageAlt": "La guía de plegado: la caja regalo plegada paso a paso en una animación"
 }

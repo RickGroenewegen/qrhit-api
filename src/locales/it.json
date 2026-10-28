@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Oppure gioca con l'app gratuita:",
   "countdown.noTimeToInstall": "Non riesci a installare l'app adesso?",
   "mail.boxInstructionsGuideText": "La nostra guida al piegamento mostra ogni passaggio con una breve animazione, e puoi andare avanti e indietro al tuo ritmo:",
-  "mail.boxInstructionsGuideButton": "Apri la guida al piegamento"
+  "mail.boxInstructionsGuideButton": "Apri la guida al piegamento",
+  "mail.boxInstructionsGuideImageAlt": "La guida alla piegatura: la scatola regalo piegata passo passo in un'animazione"
 }

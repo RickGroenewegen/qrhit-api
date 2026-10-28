@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Tai pelaa ilmaisella sovelluksella:",
   "countdown.noTimeToInstall": "Etkö pysty asentamaan sovellusta juuri nyt?",
   "mail.boxInstructionsGuideText": "Taitto-ohjeemme näyttää jokaisen vaiheen lyhyenä animaationa, ja voit siirtyä eteen- ja taaksepäin omaan tahtiisi:",
-  "mail.boxInstructionsGuideButton": "Avaa taitto-ohje"
+  "mail.boxInstructionsGuideButton": "Avaa taitto-ohje",
+  "mail.boxInstructionsGuideImageAlt": "Taitto-opas: lahjarasia taiteltuna vaihe vaiheelta animaationa"
 }

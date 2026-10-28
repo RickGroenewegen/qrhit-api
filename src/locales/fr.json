@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Ou joue avec l'appli gratuite :",
   "countdown.noTimeToInstall": "Impossible d'installer l'appli maintenant ?",
   "mail.boxInstructionsGuideText": "Notre guide de pliage montre chaque étape en courte animation, et tu peux avancer ou revenir en arrière à ton rythme :",
-  "mail.boxInstructionsGuideButton": "Ouvrir le guide de pliage"
+  "mail.boxInstructionsGuideButton": "Ouvrir le guide de pliage",
+  "mail.boxInstructionsGuideImageAlt": "Le guide de pliage : la boîte cadeau pliée étape par étape en animation"
 }

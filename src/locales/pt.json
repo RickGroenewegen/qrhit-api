@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Ou joga com o app grátis:",
   "countdown.noTimeToInstall": "Não dá para instalar o app agora?",
   "mail.boxInstructionsGuideText": "Nosso guia de dobra mostra cada passo em uma animação curta, e você pode avançar e voltar no seu próprio ritmo:",
-  "mail.boxInstructionsGuideButton": "Abrir o guia de dobra"
+  "mail.boxInstructionsGuideButton": "Abrir o guia de dobra",
+  "mail.boxInstructionsGuideImageAlt": "O guia de dobra: a caixa de presente dobrada passo a passo em uma animação"
 }

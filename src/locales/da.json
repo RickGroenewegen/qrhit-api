@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Eller spil med den gratis app:",
   "countdown.noTimeToInstall": "Kan du ikke installere appen lige nu?",
   "mail.boxInstructionsGuideText": "Vores foldeguide viser hvert trin i en kort animation, og du kan gå frem og tilbage i dit eget tempo:",
-  "mail.boxInstructionsGuideButton": "Åbn foldeguiden"
+  "mail.boxInstructionsGuideButton": "Åbn foldeguiden",
+  "mail.boxInstructionsGuideImageAlt": "Foldeguiden: gaveæsken foldet trin for trin i en animation"
 }

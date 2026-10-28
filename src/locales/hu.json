@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Vagy játssz az ingyenes appal:",
   "countdown.noTimeToInstall": "Most nem tudod telepíteni az appot?",
   "mail.boxInstructionsGuideText": "A hajtogatási útmutatónk minden lépést egy rövid animációban mutat be, és a saját tempódban léphetsz előre-hátra:",
-  "mail.boxInstructionsGuideButton": "Hajtogatási útmutató megnyitása"
+  "mail.boxInstructionsGuideButton": "Hajtogatási útmutató megnyitása",
+  "mail.boxInstructionsGuideImageAlt": "Hajtogatási útmutató: az ajándékdoboz lépésről lépésre hajtogatva, animációban"
 }

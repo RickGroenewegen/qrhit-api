@@ -613,5 +613,6 @@
   "countdown.orTheApp": "または無料アプリで遊ぼう：",
   "countdown.noTimeToInstall": "今すぐアプリをインストールできない？",
   "mail.boxInstructionsGuideText": "折り方ガイドでは、各ステップを短いアニメーションで紹介。自分のペースで進んだり戻ったりできます：",
-  "mail.boxInstructionsGuideButton": "折り方ガイドを開く"
+  "mail.boxInstructionsGuideButton": "折り方ガイドを開く",
+  "mail.boxInstructionsGuideImageAlt": "折り方ガイド：ギフトボックスの折り方をアニメーションで一つずつ紹介"
 }

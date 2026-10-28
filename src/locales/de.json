@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Oder spiel mit der kostenlosen App:",
   "countdown.noTimeToInstall": "Kannst du die App gerade nicht installieren?",
   "mail.boxInstructionsGuideText": "Unsere Faltanleitung zeigt jeden Schritt in einer kurzen Animation, und du kannst in deinem eigenen Tempo vor- und zurückgehen:",
-  "mail.boxInstructionsGuideButton": "Faltanleitung öffnen"
+  "mail.boxInstructionsGuideButton": "Faltanleitung öffnen",
+  "mail.boxInstructionsGuideImageAlt": "Die Faltanleitung: die Geschenkbox Schritt für Schritt gefaltet als Animation"
 }

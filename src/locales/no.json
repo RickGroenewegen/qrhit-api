@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Eller spill med den gratis appen:",
   "countdown.noTimeToInstall": "Får du ikke installert appen akkurat nå?",
   "mail.boxInstructionsGuideText": "Brettguiden vår viser hvert steg i en kort animasjon, og du kan gå frem og tilbake i ditt eget tempo:",
-  "mail.boxInstructionsGuideButton": "Åpne brettguiden"
+  "mail.boxInstructionsGuideButton": "Åpne brettguiden",
+  "mail.boxInstructionsGuideImageAlt": "Bretteguiden: gaveesken brettet steg for steg i en animasjon"
 }

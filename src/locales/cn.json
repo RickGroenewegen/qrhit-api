@@ -613,5 +613,6 @@
   "countdown.orTheApp": "或者用免费应用来玩：",
   "countdown.noTimeToInstall": "现在没法安装应用？",
   "mail.boxInstructionsGuideText": "我们的折叠指南用简短动画展示每一步，你可以按自己的节奏前进或后退：",
-  "mail.boxInstructionsGuideButton": "打开折叠指南"
+  "mail.boxInstructionsGuideButton": "打开折叠指南",
+  "mail.boxInstructionsGuideImageAlt": "折叠指南：用动画一步步展示礼盒的折法"
 }

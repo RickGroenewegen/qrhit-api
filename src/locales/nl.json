@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Of speel met de gratis app:",
   "countdown.noTimeToInstall": "Kun je de app nu even niet installeren?",
   "mail.boxInstructionsGuideText": "Onze vouwgids laat elke stap zien in een korte animatie, en je kunt in je eigen tempo heen en weer gaan:",
-  "mail.boxInstructionsGuideButton": "Open de vouwgids"
+  "mail.boxInstructionsGuideButton": "Open de vouwgids",
+  "mail.boxInstructionsGuideImageAlt": "De vouwhandleiding: de cadeaudoos stap voor stap gevouwen in een animatie"
 }

@@ -613,5 +613,6 @@
   "countdown.orTheApp": "Albo graj w darmowej aplikacji:",
   "countdown.noTimeToInstall": "Nie możesz teraz zainstalować aplikacji?",
   "mail.boxInstructionsGuideText": "Nasza instrukcja składania pokazuje każdy krok w krótkiej animacji, a ty możesz przechodzić w przód i w tył we własnym tempie:",
-  "mail.boxInstructionsGuideButton": "Otwórz instrukcję składania"
+  "mail.boxInstructionsGuideButton": "Otwórz instrukcję składania",
+  "mail.boxInstructionsGuideImageAlt": "Instrukcja składania: pudełko prezentowe składane krok po kroku w animacji"
 }
