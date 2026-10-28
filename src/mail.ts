@@ -1450,9 +1450,11 @@ class Mail {
     const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
     const videoThumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
     const giftBoxLink = `${process.env['FRONTEND_URI']}/${payment.locale}/gift-box`;
+    const foldGuideLink = `${giftBoxLink}/how-to-fold`;
 
     const mailParams = {
       payment,
+      foldGuideLink,
       videoLink,
       videoThumbnail,
       giftBoxLink,

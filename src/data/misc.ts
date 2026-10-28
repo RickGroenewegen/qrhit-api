@@ -654,6 +654,7 @@ export async function createSiteMap(
     '/giftcard',
     '/gift',
     '/gift-box',
+    '/gift-box/how-to-fold',
     '/app-designer',
     '/music-match',
     '/music-bingo',
