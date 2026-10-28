@@ -325,31 +325,56 @@ function appleTrack(id: string, overrides: Record<string, any> = {}) {
 }
 
 describe('AppleMusicProvider.getTracks', () => {
-  it('paginates via the next URL, skips unavailable tracks and maps fields', async () => {
+  /** A provider whose pauses between retries and passes take no time. */
+  function provider(): AppleMusicProvider {
     const p = newProvider();
+    vi.spyOn(p as any, 'wait').mockResolvedValue(undefined);
+    return p;
+  }
+
+  /** Queue one complete pass through the track pages, as Apple pages them. */
+  function queuePass(playlistId: string, pages: any[][]) {
+    pages.forEach((data, index) => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          data,
+          ...(index < pages.length - 1
+            ? { next: `/v1/catalog/nl/playlists/${playlistId}/tracks?offset=${(index + 1) * 100}` }
+            : {}),
+        })
+      );
+    });
+  }
+
+  it('paginates via the next URL, skips unavailable tracks and maps fields', async () => {
+    const p = provider();
+    const pages = [
+      // page 1: one good track + one without playParams (unavailable)
+      [appleTrack('100'), appleTrack('101', { playParams: undefined })],
+      // page 2
+      [appleTrack('102')],
+    ];
     fetchMock
       // playlist metadata (track count + name)
       .mockResolvedValueOnce(
         jsonResponse({ data: [{ attributes: { trackCount: 3, name: 'Mix' } }] })
-      )
-      // page 1: one good track + one without playParams (unavailable)
-      .mockResolvedValueOnce(
-        jsonResponse({
-          data: [appleTrack('100'), appleTrack('101', { playParams: undefined })],
-          next: '/v1/catalog/nl/playlists/pl.mix/tracks?offset=100',
-        })
-      )
-      // page 2
-      .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('102')] }));
+      );
+    // fetched twice: the second pass confirms the first
+    queuePass('pl.mix', pages);
+    queuePass('pl.mix', pages);
 
     const progress: any[] = [];
     const result = await p.getTracks('pl.mix', { cache: true, onProgress: (pr) => progress.push(pr) });
 
-    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
-      'https://api.music.apple.com/v1/catalog/nl/playlists/pl.mix',
+    const pass = [
       'https://api.music.apple.com/v1/catalog/nl/playlists/pl.mix/tracks?limit=100',
       // catalog prefix is stripped from the next URL before re-requesting
       'https://api.music.apple.com/v1/catalog/nl/playlists/pl.mix/tracks?offset=100',
+    ];
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      'https://api.music.apple.com/v1/catalog/nl/playlists/pl.mix',
+      ...pass,
+      ...pass,
     ]);
 
     expect(result.success).toBe(true);
@@ -375,7 +400,9 @@ describe('AppleMusicProvider.getTracks', () => {
       serviceLink: 'https://music.apple.com/nl/song/song-100/100',
     });
 
+    // Progress comes from the first pass only
     expect(progress[0]).toMatchObject({ stage: 'fetching_ids', current: 0, total: 3, percentage: 1 });
+    expect(progress).toHaveLength(3);
     expect(progress.at(-1)).toMatchObject({ stage: 'fetching_metadata', current: 2, total: 3 });
 
     // Cache key includes the storefront
@@ -383,9 +410,10 @@ describe('AppleMusicProvider.getTracks', () => {
   });
 
   it('uses the storefront argument (5th param) for requests and cache key', async () => {
-    const p = newProvider();
+    const p = provider();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { trackCount: 1 } }] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('1')] }))
       .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('1')] }));
 
     await p.getTracks('pl.us', { cache: true, storefront: 'us' });
@@ -394,7 +422,7 @@ describe('AppleMusicProvider.getTracks', () => {
   });
 
   it('fails when the first page fails', async () => {
-    const p = newProvider();
+    const p = provider();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }))
       .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 404, statusText: 'Not Found' }));
@@ -402,6 +430,118 @@ describe('AppleMusicProvider.getTracks', () => {
     const result = await p.getTracks('pl.gone');
     expect(result).toEqual({ success: false, error: 'Apple Music API error: 404 Not Found' });
     expect(log.mock.calls.some(([line]) => String(line).includes('API error'))).toBe(true);
+    // A 404 is not asked again
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails, and caches nothing, when a later page keeps failing', async () => {
+    const p = provider();
+    const unavailable = jsonResponse({}, { ok: false, status: 503, statusText: 'Service Unavailable' });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { name: 'Mix' } }] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [appleTrack('1')],
+          next: '/v1/catalog/nl/playlists/pl.half/tracks?offset=100',
+        })
+      )
+      .mockResolvedValueOnce(unavailable)
+      .mockResolvedValueOnce(unavailable)
+      .mockResolvedValueOnce(unavailable);
+
+    const result = await p.getTracks('pl.half', { cache: false });
+
+    // Before 2026-10-28 this returned the first page as the whole playlist
+    expect(result).toEqual({ success: false, error: 'Apple Music API error: 503 Service Unavailable' });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect((p as any).wait.mock.calls).toEqual([[1000], [2000]]);
+    expect(h.cacheSet).not.toHaveBeenCalled();
+  });
+
+  it('asks a page again after a server error or a dropped connection', async () => {
+    const p = provider();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { name: 'Mix' } }] }));
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [appleTrack('1')],
+          next: '/v1/catalog/nl/playlists/pl.flaky/tracks?offset=100',
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse({}, { ok: false, status: 502, statusText: 'Bad Gateway' }))
+      .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('2')] }));
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [appleTrack('1')],
+          next: '/v1/catalog/nl/playlists/pl.flaky/tracks?offset=100',
+        })
+      )
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('2')] }));
+
+    const result = await p.getTracks('pl.flaky', { cache: false });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.tracks.map((t) => t.id)).toEqual(['1', '2']);
+    expect((p as any).wait.mock.calls).toEqual([[1000], [1000]]);
+  });
+
+  it('fetches again until two passes agree, and caches only the confirmed list', async () => {
+    const p = provider();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { name: 'Heinz' } }] }));
+    const full = [
+      [appleTrack('1'), appleTrack('2')],
+      [appleTrack('3'), appleTrack('4')],
+    ];
+    // Apple leaves tracks out of the middle now and then (563 of 592 on
+    // 2026-10-27), every page answering 200
+    queuePass('pl.heinz', [[appleTrack('1')], [appleTrack('4')]]);
+    queuePass('pl.heinz', full);
+    queuePass('pl.heinz', full);
+
+    const result = await p.getTracks('pl.heinz', { cache: false });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.tracks.map((t) => t.id)).toEqual(['1', '2', '3', '4']);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+    // One pause, after the pass that differed
+    expect((p as any).wait.mock.calls).toEqual([[2000]]);
+    expect(h.cacheSet).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(h.cacheSet.mock.calls[0][1]).tracks).toHaveLength(4);
+  });
+
+  it('compares every item, the unavailable ones too', async () => {
+    const p = provider();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { name: 'Mix' } }] }));
+    const withUnavailable = [[appleTrack('1'), appleTrack('2', { playParams: undefined })]];
+    // The playable tracks agree, the items do not: not yet the same answer
+    queuePass('pl.u', withUnavailable);
+    queuePass('pl.u', [[appleTrack('1')]]);
+    queuePass('pl.u', withUnavailable);
+    queuePass('pl.u', withUnavailable);
+
+    const result = await p.getTracks('pl.u', { cache: false });
+
+    expect(result.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(result.data?.tracks.map((t) => t.id)).toEqual(['1']);
+    expect(result.data?.skipped?.total).toBe(1);
+  });
+
+  it('fails, and caches nothing, when every pass comes back different', async () => {
+    const p = provider();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { name: 'Mix' } }] }));
+    queuePass('pl.chaos', [[appleTrack('1')]]);
+    queuePass('pl.chaos', [[appleTrack('1'), appleTrack('2')]]);
+    queuePass('pl.chaos', [[appleTrack('1')]]);
+    queuePass('pl.chaos', [[appleTrack('1'), appleTrack('2')]]);
+
+    const result = await p.getTracks('pl.chaos', { cache: false });
+
+    expect(result).toEqual({ success: false, error: 'Apple Music returned an incomplete playlist' });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(h.cacheSet).not.toHaveBeenCalled();
   });
 
   it('serves the cached track list', async () => {

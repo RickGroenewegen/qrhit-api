@@ -1413,6 +1413,19 @@ class Suggestion {
         });
       }
 
+      // Songs added since the order have no QR code yet. Made in the
+      // background so the customer does not wait for them; every PDF render
+      // checks again before it uses them.
+      this.generator.ensureLineQrCodes(paymentId, line.id).catch((error) => {
+        this.logger.log(
+          color.red.bold(
+            `Making the QR codes of line ${color.white.bold(
+              String(line.id)
+            )} after a reload failed: ${color.white.bold(String(error))}`
+          )
+        );
+      });
+
       this.logger.log(
         color.green.bold(
           `Successfully reloaded playlist ${color.white.bold(playlistId)} with ${color.white.bold(validation.currentTracks)} tracks`

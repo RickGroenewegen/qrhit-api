@@ -2487,6 +2487,43 @@ switched on by `scanClient()` saying `web`.
   constant shows it on `/qr`, `/qr2` and `/qr_url2`.
 - `/scan` is in the sitemap (`src/data/misc.ts`).
 
+## Apple Music track lists: fetched until two passes agree
+
+Apple now and then answers with part of a playlist, every page a 200: on
+2026-10-27 a customer's reload (order 100009458) got 563 of 592 tracks, 29
+from the middle missing, and two fetches ten seconds apart gave 512 and 592.
+Apple sends no total to check against: the playlist attributes have no
+`trackCount` and the track pages no `meta.total` (checked 2026-10-28), so
+`totalTracksExpected` in `AppleMusicProvider.getTracks` is always null.
+
+- `getTracks` walks the pages until two passes in a row return the same items,
+  unavailable ones included (at most 4 passes, 2 s pause after one that
+  differed). Never agreeing is an error. So every uncached fetch costs two
+  walks.
+- A failed page is asked again after 1 s and 2 s on a 429, a 5xx or no answer;
+  a 404 or any other status fails at once. A page that keeps failing fails the
+  fetch; it used to return the pages before it as the whole playlist.
+- Only a confirmed list reaches the Redis cache (`apple_music_tracks_*`, no
+  TTL), which `generate()` reads with `cache: true`. Lists cached before
+  2026-10-28 were never checked.
+
+## QR codes before every PDF render
+
+QR PNGs (`public/qr/<qrSubDir>_<php>/<trackId>.png`) are made by `generate()`
+and `regenerateDigitalLine()` only, and the card templates point at them with
+no fallback. A customer's playlist reload stores new tracks and nothing else,
+so a PDF rebuilt after it (the printer pass, `finalizeOrder` from "regenerate
+and mail") had cards without a QR code; the page count matched and finalCheck
+reads only the first card of each design, so nothing held it.
+
+`Generator.ensureQrCodes` checks every card of a line on disk and, when one is
+missing, makes the whole line again (colour and logo follow the card's place
+in the deck), then checks again and throws if a gap is left (the QR Lambda
+swallows its own errors). It runs in `finalizeOrder` before rendering, in
+`regenerateStalePrinterPdfs` (making any forces a PDF rebuild, also when the
+fingerprint matched; a throw holds the order as `regeneration-failed`), and in
+the background after a reload (`ensureLineQrCodes`).
+
 ## Spotify quota protection on the playlist endpoints
 
 `src/plugins/playlistGuardPlugin.ts` guards `/<service>/playlists` and

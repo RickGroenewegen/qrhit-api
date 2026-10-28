@@ -32,6 +32,7 @@ const h = vi.hoisted(() => ({
   queueDigitalRedesign: vi.fn(),
   sendToPrinter: vi.fn(),
   finalizeOrder: vi.fn(),
+  ensureLineQrCodes: vi.fn(),
   getProviderByString: vi.fn(),
   provider: { getPlaylist: vi.fn(), getTracks: vi.fn() },
   getStorefrontForLocale: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock('../../../src/generator', () => ({
       queueDigitalRedesign: h.queueDigitalRedesign,
       sendToPrinter: h.sendToPrinter,
       finalizeOrder: h.finalizeOrder,
+      ensureLineQrCodes: h.ensureLineQrCodes,
     }),
   },
 }));
@@ -186,6 +188,7 @@ function allMockFns(): ReturnType<typeof vi.fn>[] {
     h.queueDigitalRedesign,
     h.sendToPrinter,
     h.finalizeOrder,
+    h.ensureLineQrCodes,
     h.getProviderByString,
     h.provider.getPlaylist,
     h.provider.getTracks,
@@ -205,6 +208,7 @@ beforeEach(() => {
   h.queueDigitalRedesign.mockResolvedValue(undefined);
   h.sendToPrinter.mockResolvedValue(undefined);
   h.finalizeOrder.mockResolvedValue(undefined);
+  h.ensureLineQrCodes.mockResolvedValue(false);
   h.clearPlaylistCache.mockResolvedValue(undefined);
   h.storeTracks.mockResolvedValue(undefined);
   h.cacheDel.mockResolvedValue(undefined);
@@ -1559,6 +1563,7 @@ describe('reloadPlaylist', () => {
     });
     expect(h.storeTracks).not.toHaveBeenCalled();
     expect(h.prisma.playlist.update).not.toHaveBeenCalled();
+    expect(h.ensureLineQrCodes).not.toHaveBeenCalled();
   });
 
   it('stores fresh tracks, syncs counts, busts caches and stamps lastReloadAt on success', async () => {
@@ -1624,6 +1629,33 @@ describe('reloadPlaylist', () => {
       where: { paymentId: 9, playlistId: 3 },
       data: { lastReloadAt: expect.any(Date) },
     });
+    // Songs added since the order get their QR codes (order 100009458 had
+    // none for its new songs on 2026-10-27)
+    expect(h.ensureLineQrCodes).toHaveBeenCalledWith('pay_1', 30);
+  });
+
+  it('still reports the reload when making the QR codes fails: every render checks again', async () => {
+    routeRaw([
+      OWNED,
+      [
+        SQL.paidTracks,
+        [{ paidTracks: 50, playlistDbId: 3, serviceType: 'spotify', locale: 'en' }],
+      ],
+    ]);
+    h.prisma.payment.findFirst.mockResolvedValue({ id: 9 });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 3, numberOfTracks: 40 });
+    h.prisma.paymentHasPlaylist.findFirst.mockResolvedValue({ lastReloadAt: null });
+    h.provider.getTracks.mockResolvedValue({
+      success: true,
+      data: { tracks: tracksOf(40) },
+    });
+    h.ensureLineQrCodes.mockRejectedValue(new Error('Lambda down'));
+
+    const res = await reload();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(res.success).toBe(true);
+    expect(h.ensureLineQrCodes).toHaveBeenCalledWith('pay_1', 30);
   });
 
   it('reports the plain success message when the track count is unchanged', async () => {

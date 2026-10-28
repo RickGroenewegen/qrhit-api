@@ -40,6 +40,31 @@ const APPLE_MUSIC_TOKEN_EXPIRY = 180 * 24 * 60 * 60; // 180 days in seconds (App
 
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
+// A playlist's tracks are fetched until two passes in a row agree (see
+// getTracks), at most this many times, with a pause after a pass that
+// differed. A failed page is asked again after each of these delays.
+const APPLE_MUSIC_TRACK_PASSES = 4;
+const APPLE_MUSIC_PASS_RETRY_DELAY_MS = 2000;
+const APPLE_MUSIC_PAGE_RETRY_DELAYS_MS = [1000, 2000];
+
+/** One walk through a playlist's track pages; itemIds holds every item, unavailable ones too. */
+interface AppleTracksPass {
+  success: boolean;
+  error?: string;
+  tracks: ProviderTrackData[];
+  itemIds: string[];
+  skippedCount: number;
+}
+
+function sameItems(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+/** A rate limit, a server error or no answer at all (status 0). */
+function isRetryableStatus(status: number | undefined): boolean {
+  return status === 0 || status === 429 || (status !== undefined && status >= 500);
+}
+
 // Map frontend locale codes to Apple Music storefront country codes
 const LOCALE_TO_STOREFRONT = Translation.LOCALE_STOREFRONTS;
 const DEFAULT_STOREFRONT = 'nl';
@@ -325,12 +350,13 @@ class AppleMusicProvider implements IMusicProvider {
   /**
    * Make a request to the Apple Music API. `quiet404` keeps a 404 out of the
    * log for callers that expect one (the storefront resolver's id lookups).
+   * `status` is the HTTP status of a failed request, 0 when none came back.
    */
   private async apiRequest<T>(
     endpoint: string,
     storefront: string = DEFAULT_STOREFRONT,
     { quiet404 = false }: { quiet404?: boolean } = {}
-  ): Promise<{ success: boolean; data?: T; error?: string }> {
+  ): Promise<{ success: boolean; data?: T; error?: string; status?: number }> {
     const token = await this.getDeveloperToken();
     if (!token) {
       return {
@@ -359,6 +385,7 @@ class AppleMusicProvider implements IMusicProvider {
         return {
           success: false,
           error: `Apple Music API error: ${response.status} ${response.statusText}`,
+          status: response.status,
         };
       }
 
@@ -366,7 +393,7 @@ class AppleMusicProvider implements IMusicProvider {
       return { success: true, data };
     } catch (error: any) {
       this.logger.log(`ERROR: Apple Music API request failed: ${error.message}`);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, status: 0 };
     }
   }
 
@@ -458,7 +485,9 @@ class AppleMusicProvider implements IMusicProvider {
     }
 
     try {
-      // First, get the playlist to know the total track count and name
+      // First, get the playlist name for the log. Apple's playlist attributes
+      // carry no trackCount (checked 2026-10-28), so the total stays unknown
+      // unless that changes; the progress bar then follows a log curve.
       const playlistResult = await this.apiRequest<any>(`/playlists/${playlistId}`, storefront);
       const totalTracksExpected = playlistResult.data?.data?.[0]?.attributes?.trackCount || null;
       const playlistName = playlistResult.data?.data?.[0]?.attributes?.name || null;
@@ -468,11 +497,6 @@ class AppleMusicProvider implements IMusicProvider {
           `[${color.white.bold('apple_music')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''} (storefront: ${color.white.bold(storefront)})`
         )
       );
-
-      // Fetch playlist with tracks included
-      const allTracks: ProviderTrackData[] = [];
-      let nextUrl: string | null = `/playlists/${playlistId}/tracks?limit=100`;
-      let skippedCount = 0;
 
       // Report initial progress before first API call
       if (onProgress) {
@@ -485,111 +509,68 @@ class AppleMusicProvider implements IMusicProvider {
         });
       }
 
-      while (nextUrl) {
-        const result: { success: boolean; data?: any; error?: string } = await this.apiRequest<any>(nextUrl, storefront);
-
-        if (!result.success || !result.data) {
-          if (allTracks.length === 0) {
-            return { success: false, error: result.error || 'Failed to fetch tracks' };
-          }
-          break;
+      // Apple now and then answers with part of a playlist: on 2026-10-27 a
+      // reload got 563 of 592 tracks (29 from the middle missing), and two
+      // fetches ten seconds apart gave 512 and then 592. Every page succeeds,
+      // and Apple sends no total to check against. So the list is fetched
+      // until two passes in a row return the same items, the unavailable ones
+      // included; a short list is never stored or cached.
+      let previous: AppleTracksPass | null = null;
+      for (let pass = 1; pass <= APPLE_MUSIC_TRACK_PASSES; pass++) {
+        const current = await this.fetchTracksPass(
+          playlistId,
+          storefront,
+          pass === 1 ? onProgress : undefined,
+          totalTracksExpected
+        );
+        if (!current.success) {
+          return { success: false, error: current.error };
         }
 
-        const tracksData = result.data.data || [];
+        if (previous && sameItems(previous.itemIds, current.itemIds)) {
+          const trackResult: ProviderTracksResult = {
+            tracks: current.tracks,
+            total: current.tracks.length,
+            skipped: {
+              total: current.skippedCount,
+              summary: {
+                unavailable: current.skippedCount,
+                localFiles: 0,
+                podcasts: 0,
+                duplicates: 0,
+              },
+              details: [],
+            },
+          };
 
-        for (const track of tracksData) {
-          const attributes = track.attributes || {};
+          // Cache the complete list, then filter on the way out.
+          await this.cache.set(cacheKey, JSON.stringify(trackResult));
 
-          // Skip unavailable tracks
-          if (!attributes.playParams) {
-            skippedCount++;
-            continue;
-          }
-
-          const artwork = attributes.artwork;
-          const releaseDate = attributes.releaseDate || null;
-
-          allTracks.push({
-            id: track.id,
-            name: this.utils.cleanTrackName(attributes.name || 'Unknown'),
-            artist: attributes.artistName || 'Unknown Artist',
-            artistsList: [attributes.artistName || 'Unknown Artist'],
-            album: this.utils.cleanTrackName(attributes.albumName || ''),
-            albumImageUrl: artwork
-              ? artwork.url.replace('{w}', '640').replace('{h}', '640')
-              : null,
-            releaseDate: releaseDate,
-            isrc: attributes.isrc || undefined,
-            previewUrl: attributes.previews?.[0]?.url || null,
-            duration: attributes.durationInMillis || undefined,
-            serviceType: ServiceType.APPLE_MUSIC,
-            serviceLink: attributes.url || `https://music.apple.com/${storefront}/song/${track.id}`,
-          });
+          return {
+            success: true,
+            data: applyDuplicateFilter(trackResult, allowDuplicates),
+          };
         }
 
-        // Report progress using linear calculation when total is known
-        if (onProgress) {
-          let percentage: number;
-          if (totalTracksExpected && totalTracksExpected > 0) {
-            percentage = Math.min(99, Math.round((allTracks.length / totalTracksExpected) * 100));
-          } else {
-            percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
-          }
-          onProgress({
-            stage: 'fetching_metadata',
-            current: allTracks.length,
-            total: totalTracksExpected,
-            percentage: Math.max(1, percentage),
-            message: 'progress.loaded',
-          });
+        if (previous) {
+          this.logger.log(
+            color.yellow.bold(
+              `[${color.white.bold('apple_music')}] Playlist ${color.white.bold(playlistId)} came back with ${color.white.bold(previous.itemIds.length)} and then ${color.white.bold(current.itemIds.length)} items, fetching it again`
+            )
+          );
+          await this.wait(APPLE_MUSIC_PASS_RETRY_DELAY_MS);
         }
-
-        // Check for next page
-        if (result.data.next) {
-          // Apple Music returns next URLs in format: /v1/catalog/{storefront}/playlists/...
-          // We need to extract just the endpoint part after /catalog/{storefront}
-          const nextUrlStr = result.data.next;
-          const catalogPrefix = `/v1/catalog/${storefront}`;
-          if (nextUrlStr.startsWith(catalogPrefix)) {
-            nextUrl = nextUrlStr.substring(catalogPrefix.length);
-          } else if (nextUrlStr.startsWith(APPLE_MUSIC_API_BASE)) {
-            // Handle full URL format just in case
-            nextUrl = nextUrlStr.replace(APPLE_MUSIC_API_BASE + '/catalog/' + storefront, '');
-          } else {
-            // Assume it's already in the correct format
-            nextUrl = nextUrlStr;
-          }
-        } else {
-          nextUrl = null;
-        }
-
-        // Safety limit to prevent infinite loops
-        if (allTracks.length >= MAX_CARDS) {
-          break;
-        }
+        previous = current;
       }
 
-      const trackResult: ProviderTracksResult = {
-        tracks: allTracks,
-        total: allTracks.length,
-        skipped: {
-          total: skippedCount,
-          summary: {
-            unavailable: skippedCount,
-            localFiles: 0,
-            podcasts: 0,
-            duplicates: 0,
-          },
-          details: [],
-        },
-      };
-
-      // Cache the complete list, then filter on the way out.
-      await this.cache.set(cacheKey, JSON.stringify(trackResult));
-
+      this.logger.log(
+        color.red.bold(
+          `[${color.white.bold('apple_music')}] Playlist ${color.white.bold(playlistId)} came back different on each of ${color.white.bold(APPLE_MUSIC_TRACK_PASSES)} passes, not using it`
+        )
+      );
       return {
-        success: true,
-        data: applyDuplicateFilter(trackResult, allowDuplicates),
+        success: false,
+        error: 'Apple Music returned an incomplete playlist',
       };
     } catch (error: any) {
       this.logger.log(`ERROR: Apple Music error fetching tracks for playlist ${playlistId}: ${error.message}`);
@@ -598,6 +579,142 @@ class AppleMusicProvider implements IMusicProvider {
         error: error.message || 'Failed to fetch tracks',
       };
     }
+  }
+
+  /**
+   * One complete walk through a playlist's track pages. Any page that still
+   * fails after its retries fails the pass: a list missing pages is never
+   * returned as the playlist.
+   */
+  private async fetchTracksPass(
+    playlistId: string,
+    storefront: string,
+    onProgress: GetTracksOptions['onProgress'],
+    totalTracksExpected: number | null
+  ): Promise<AppleTracksPass> {
+    const allTracks: ProviderTrackData[] = [];
+    const itemIds: string[] = [];
+    let nextUrl: string | null = `/playlists/${playlistId}/tracks?limit=100`;
+    let skippedCount = 0;
+
+    while (nextUrl) {
+      const result = await this.fetchTracksPage(nextUrl, storefront);
+
+      if (!result.success || !result.data) {
+        return {
+          success: false,
+          error: result.error || 'Failed to fetch tracks',
+          tracks: [],
+          itemIds: [],
+          skippedCount: 0,
+        };
+      }
+
+      const tracksData = result.data.data || [];
+
+      for (const track of tracksData) {
+        itemIds.push(String(track.id));
+        const attributes = track.attributes || {};
+
+        // Skip unavailable tracks
+        if (!attributes.playParams) {
+          skippedCount++;
+          continue;
+        }
+
+        const artwork = attributes.artwork;
+        const releaseDate = attributes.releaseDate || null;
+
+        allTracks.push({
+          id: track.id,
+          name: this.utils.cleanTrackName(attributes.name || 'Unknown'),
+          artist: attributes.artistName || 'Unknown Artist',
+          artistsList: [attributes.artistName || 'Unknown Artist'],
+          album: this.utils.cleanTrackName(attributes.albumName || ''),
+          albumImageUrl: artwork
+            ? artwork.url.replace('{w}', '640').replace('{h}', '640')
+            : null,
+          releaseDate: releaseDate,
+          isrc: attributes.isrc || undefined,
+          previewUrl: attributes.previews?.[0]?.url || null,
+          duration: attributes.durationInMillis || undefined,
+          serviceType: ServiceType.APPLE_MUSIC,
+          serviceLink: attributes.url || `https://music.apple.com/${storefront}/song/${track.id}`,
+        });
+      }
+
+      // Report progress using linear calculation when total is known
+      if (onProgress) {
+        let percentage: number;
+        if (totalTracksExpected && totalTracksExpected > 0) {
+          percentage = Math.min(99, Math.round((allTracks.length / totalTracksExpected) * 100));
+        } else {
+          percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
+        }
+        onProgress({
+          stage: 'fetching_metadata',
+          current: allTracks.length,
+          total: totalTracksExpected,
+          percentage: Math.max(1, percentage),
+          message: 'progress.loaded',
+        });
+      }
+
+      // Check for next page
+      if (result.data.next) {
+        // Apple Music returns next URLs in format: /v1/catalog/{storefront}/playlists/...
+        // We need to extract just the endpoint part after /catalog/{storefront}
+        const nextUrlStr = result.data.next;
+        const catalogPrefix = `/v1/catalog/${storefront}`;
+        if (nextUrlStr.startsWith(catalogPrefix)) {
+          nextUrl = nextUrlStr.substring(catalogPrefix.length);
+        } else if (nextUrlStr.startsWith(APPLE_MUSIC_API_BASE)) {
+          // Handle full URL format just in case
+          nextUrl = nextUrlStr.replace(APPLE_MUSIC_API_BASE + '/catalog/' + storefront, '');
+        } else {
+          // Assume it's already in the correct format
+          nextUrl = nextUrlStr;
+        }
+      } else {
+        nextUrl = null;
+      }
+
+      // Safety limit to prevent infinite loops
+      if (allTracks.length >= MAX_CARDS) {
+        break;
+      }
+    }
+
+    return { success: true, tracks: allTracks, itemIds, skippedCount };
+  }
+
+  /**
+   * One page of a playlist's tracks, asked again after a rate limit, a server
+   * error or a dropped connection. Anything else (a 404, no token) fails at
+   * once.
+   */
+  private async fetchTracksPage(
+    endpoint: string,
+    storefront: string
+  ): Promise<{ success: boolean; data?: any; error?: string; status?: number }> {
+    let result = await this.apiRequest<any>(endpoint, storefront);
+    for (const delay of APPLE_MUSIC_PAGE_RETRY_DELAYS_MS) {
+      if (result.success || !isRetryableStatus(result.status)) {
+        break;
+      }
+      this.logger.log(
+        color.yellow.bold(
+          `[${color.white.bold('apple_music')}] Page ${color.white.bold(endpoint)} failed (${color.white.bold(result.error || 'unknown error')}), retrying in ${color.white.bold(delay)} ms`
+        )
+      );
+      await this.wait(delay);
+      result = await this.apiRequest<any>(endpoint, storefront);
+    }
+    return result;
+  }
+
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

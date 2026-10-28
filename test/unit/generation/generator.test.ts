@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import crypto from 'crypto';
+import * as fsp from 'fs/promises';
+import path from 'path';
 
 /**
  * Pure unit tests for src/generator.ts — generate() orchestration,
@@ -1156,5 +1158,96 @@ describe('regenerateDigitalLine()', () => {
 
     expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
     expect(outbound.calls('Mail', 'sendEmail')).toHaveLength(0);
+  });
+});
+
+describe('QR codes of songs added after the order (ensureQrCodes)', () => {
+  let qrSubDir: string;
+  let lineDir: string;
+
+  beforeEach(async () => {
+    qrSubDir = `qrtest_${crypto.randomBytes(4).toString('hex')}`;
+    lineDir = path.join(process.env['PUBLIC_DIR']!, 'qr', `${qrSubDir}_31`);
+    await fsp.mkdir(lineDir, { recursive: true });
+    // t1 was there at the order, t2 came in with a playlist reload
+    await fsp.writeFile(path.join(lineDir, 't1.png'), 'png');
+    h.data.getTracks.mockResolvedValue(dbTracksFixture);
+    h.qr.generateQRLambda.mockImplementation(async (_link: string, outputPath: string) => {
+      await fsp.writeFile(outputPath, 'png');
+    });
+  });
+
+  afterEach(async () => {
+    await fsp.rm(lineDir, { recursive: true, force: true });
+  });
+
+  it('finalizeOrder makes them before it renders ("regenerate and mail" after a reload)', async () => {
+    const payment = makePayment({ qrSubDir });
+    const playlist = makePlaylist();
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([playlist]);
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([{ id: 41, index: 1 }]);
+
+    const res = await gen.finalizeOrder('pay_1', mollie, true);
+
+    expect(res).toEqual({ success: true });
+    expect(h.data.getTracks).toHaveBeenCalledWith(21, 7, 31);
+    expect(h.qr.generateQRLambda).toHaveBeenCalledTimes(2);
+    await expect(fsp.access(path.join(lineDir, 't2.png'))).resolves.toBeUndefined();
+    expect(h.pdf.generatePDF).toHaveBeenCalledWith(
+      'pay_1_21_my_list_digital_cards_1.pdf',
+      playlist,
+      payment,
+      'digital',
+      `${qrSubDir}_31`,
+      false,
+      'printnbind',
+      1
+    );
+    expect(h.qr.generateQRLambda.mock.invocationCallOrder[1]).toBeLessThan(
+      h.pdf.generatePDF.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('finalizeOrder makes none when every card has one', async () => {
+    await fsp.writeFile(path.join(lineDir, 't2.png'), 'png');
+    const payment = makePayment({ qrSubDir });
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist()]);
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([{ id: 41, index: 1 }]);
+
+    await gen.finalizeOrder('pay_1', mollie, true);
+
+    expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
+    expect(h.pdf.generatePDF).toHaveBeenCalled();
+  });
+
+  it('ensureLineQrCodes makes them for the reloaded line', async () => {
+    const payment = makePayment({ qrSubDir });
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([
+      makePlaylist({ paymentHasPlaylistId: 32 }),
+      makePlaylist(),
+    ]);
+
+    expect(await gen.ensureLineQrCodes('pay_1', 31, mollie)).toBe(true);
+
+    expect(h.data.getTracks).toHaveBeenCalledWith(21, 7, 31);
+    expect(h.qr.generateQRLambda.mock.calls.map((c) => path.basename(c[1]))).toEqual([
+      't1.png',
+      't2.png',
+    ]);
+    expect(h.utils.createDir).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`/qr/${qrSubDir}_31$`)));
+  });
+
+  it('ensureLineQrCodes leaves an order that was never generated alone', async () => {
+    const payment = makePayment({ qrSubDir: null });
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist()]);
+
+    expect(await gen.ensureLineQrCodes('pay_1', 31, mollie)).toBe(false);
+
+    expect(h.data.getTracks).not.toHaveBeenCalled();
+    expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
   });
 });

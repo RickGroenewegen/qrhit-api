@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fsp from 'fs/promises';
 import * as fsSync from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 /**
  * Pure unit tests for src/generator.ts — the send-to-printer pipeline
@@ -105,6 +106,7 @@ import {
   resetGeneratorMocks,
   makePayment,
   makePlaylist,
+  dbTracksFixture,
 } from './harness';
 import Generator from '../../../src/generator';
 
@@ -551,6 +553,108 @@ describe('sendToPrinter()', () => {
       (c) => c[0].data.sentToPrinter === true
     );
     expect(sentUpdate![0].data.printApiOrderId).toBe('inlay-1');
+  });
+});
+
+describe('sendToPrinter(): QR codes before the PDF is rebuilt', () => {
+  let qrSubDir: string;
+  let lineDir: string;
+
+  beforeEach(async () => {
+    qrSubDir = `qrtest_${crypto.randomBytes(4).toString('hex')}`;
+    lineDir = path.join(process.env['PUBLIC_DIR']!, 'qr', `${qrSubDir}_31`);
+    await fsp.mkdir(lineDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await fsp.rm(lineDir, { recursive: true, force: true });
+  });
+
+  /** A Print&Bind line whose PDF fingerprint is current, cards t1 and t2. */
+  function arrange() {
+    const { payment, playlist } = arrangePrinter({ qrSubDir });
+    h.data.getTracks.mockResolvedValue(dbTracksFixture);
+    vi.spyOn(gen as any, 'computePrintFingerprintFor').mockResolvedValue('fp-current');
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ pdfFingerprint: 'fp-current' });
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([
+      { id: 41, index: 1, filename: 'phys.pdf' },
+    ]);
+    h.pdf.generatePDF.mockResolvedValue('phys.pdf');
+    return { payment, playlist };
+  }
+
+  const writeQr = (trackId: string) =>
+    fsp.writeFile(path.join(lineDir, `${trackId}.png`), 'png');
+
+  // The Lambda writes the PNG where it is told to
+  const lambdaWrites = () =>
+    h.qr.generateQRLambda.mockImplementation(async (_link: string, outputPath: string) => {
+      await fsp.writeFile(outputPath, 'png');
+    });
+
+  it('makes the QR codes a reload left out, then rebuilds the PDF although its fingerprint is current', async () => {
+    const { payment, playlist } = arrange();
+    // t2 came in with the customer's reload: tracks stored, no QR code
+    await writeQr('t1');
+    lambdaWrites();
+
+    const res = await gen.sendToPrinter('pay_1', '');
+
+    expect(res).toEqual({ success: true });
+    // The whole line is made again, so each card keeps its design's colour
+    expect(h.qr.generateQRLambda.mock.calls.map((c) => path.basename(c[1]))).toEqual([
+      't1.png',
+      't2.png',
+    ]);
+    await expect(fsp.access(path.join(lineDir, 't2.png'))).resolves.toBeUndefined();
+    expect(h.pdf.generatePDF).toHaveBeenCalledWith(
+      'phys.pdf',
+      playlist,
+      payment,
+      'printer',
+      `${qrSubDir}_31`,
+      false,
+      'printnbind',
+      1,
+      false
+    );
+    expect(h.qr.generateQRLambda.mock.invocationCallOrder[1]).toBeLessThan(
+      h.pdf.generatePDF.mock.invocationCallOrder[0]
+    );
+    expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 31 },
+      data: { pdfFingerprint: 'fp-current' },
+    });
+    expect(h.order.createOrder).toHaveBeenCalled();
+  });
+
+  it('leaves a line alone when every card has its QR code and the fingerprint is current', async () => {
+    arrange();
+    await writeQr('t1');
+    await writeQr('t2');
+
+    const res = await gen.sendToPrinter('pay_1', '');
+
+    expect(res).toEqual({ success: true });
+    expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
+    expect(h.pdf.generatePDF).not.toHaveBeenCalled();
+  });
+
+  it('does not send the order when a QR code still cannot be made', async () => {
+    arrange();
+    await writeQr('t1');
+    // the Lambda logs its errors and writes nothing
+
+    const res = await gen.sendToPrinter('pay_1', '');
+
+    expect(res).toEqual({
+      success: false,
+      reason: 'regeneration-failed: 1 QR codes of line 31 of payment pay_1 could not be made (first: t2)',
+    });
+    expect(h.pdf.generatePDF).not.toHaveBeenCalled();
+    expect(h.finalCheck.runCheck).not.toHaveBeenCalled();
+    expect(h.order.createOrder).not.toHaveBeenCalled();
+    expect(h.cache.releaseLock).toHaveBeenCalledWith('printer:pay_1');
   });
 });
 

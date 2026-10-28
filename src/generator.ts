@@ -1048,6 +1048,98 @@ class Generator {
     }
   }
 
+  /**
+   * Make sure every card of one order line has its QR code on disk before
+   * anything renders it, and return whether any had to be made.
+   *
+   * QR codes are only made by generate() and regenerateDigitalLine(). A
+   * customer's playlist reload stores new tracks and nothing else, and the
+   * card templates point at `qr/<dir>/<trackId>.png` with no fallback, so a
+   * PDF rebuilt afterwards (the printer pass, finalizeOrder from "regenerate
+   * and mail") printed those cards without a QR code. finalCheck reads only
+   * the first card of each design and the page count still matched, so
+   * nothing held it: order 100009458 was a printer pass away from that on
+   * 2026-10-27.
+   *
+   * When one is missing the whole line is made again, not just the gap: a
+   * card's QR colour and logo follow its place in the deck, and a reload can
+   * move cards. The Lambda swallows its own errors, so the files are checked
+   * again afterwards and a gap that is still there is an error.
+   */
+  private async ensureQrCodes(payment: any, playlist: any): Promise<boolean> {
+    if (!payment.qrSubDir || playlist.productType === 'giftcard') {
+      return false;
+    }
+
+    const dbTracks = await this.data.getTracks(
+      playlist.id,
+      payment.userId,
+      playlist.paymentHasPlaylistId
+    );
+    const missing = await this.missingQrCodes(payment.qrSubDir, playlist, dbTracks);
+    if (missing.length === 0) {
+      return false;
+    }
+
+    this.logger.log(
+      color.yellow.bold(
+        `${white.bold(String(missing.length))} of ${white.bold(
+          String(dbTracks.length)
+        )} QR codes missing for line ${white.bold(
+          String(playlist.paymentHasPlaylistId)
+        )} of payment ${white.bold(payment.paymentId)}, making them`
+      )
+    );
+    await this.generateQRCodes(playlist, dbTracks, payment.qrSubDir);
+
+    const stillMissing = await this.missingQrCodes(payment.qrSubDir, playlist, dbTracks);
+    if (stillMissing.length > 0) {
+      throw new Error(
+        `${stillMissing.length} QR codes of line ${playlist.paymentHasPlaylistId} of payment ${payment.paymentId} could not be made (first: ${stillMissing[0]})`
+      );
+    }
+    return true;
+  }
+
+  /** Track ids of the line's cards whose QR code is not on disk. */
+  private async missingQrCodes(
+    baseSubDir: string,
+    playlist: any,
+    dbTracks: any[]
+  ): Promise<string[]> {
+    const dir = await resolveQrSubDir(baseSubDir, playlist.paymentHasPlaylistId);
+    const missing: string[] = [];
+    for (const track of dbTracks) {
+      try {
+        await fs.access(`${process.env['PUBLIC_DIR']}/qr/${dir}/${track.trackId}.png`);
+      } catch {
+        missing.push(String(track.trackId));
+      }
+    }
+    return missing;
+  }
+
+  /**
+   * ensureQrCodes for one line, by ids, for a playlist reload. An order that
+   * was never generated has no QR directory yet and is left alone: generate()
+   * makes them all.
+   */
+  public async ensureLineQrCodes(
+    paymentId: string,
+    paymentHasPlaylistId: number,
+    mollie: Mollie = new Mollie()
+  ): Promise<boolean> {
+    const payment = await mollie.getPayment(paymentId);
+    const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
+    const playlist = playlists.find(
+      (line: any) => line.paymentHasPlaylistId === paymentHasPlaylistId
+    );
+    if (!payment || !playlist) {
+      return false;
+    }
+    return this.ensureQrCodes(payment, playlist);
+  }
+
   public async finalizeOrder(
     paymentId: string,
     mollie: Mollie,
@@ -1152,6 +1244,10 @@ class Generator {
           // Generate PDFs for each item
           let firstPrinterFilename = '';
           let firstDigitalFilename = '';
+
+          // After generate() they are all there; after a playlist reload the
+          // new cards have none yet
+          await this.ensureQrCodes(payment, playlist);
 
           const qrSubDir = await resolveQrSubDir(
             payment.qrSubDir,
@@ -1751,7 +1847,8 @@ class Generator {
 
   /**
    * Rebuild the printer PDFs for any physical playlist whose files on disk no
-   * longer match the live design, and return the refreshed filenames.
+   * longer match the live design, or whose cards were missing QR codes (see
+   * ensureQrCodes), and return the refreshed filenames.
    *
    * Runs *before* validation and finalCheck rather than after, so the pages
    * that get counted, the pages the vision check inspects and the bytes the
@@ -1773,13 +1870,17 @@ class Generator {
     for (const playlist of playlists) {
       if (playlist.orderType !== 'physical') continue;
 
+      // A PDF rendered while QR codes were missing has blank cards whatever
+      // its fingerprint says, so making any means rendering it again
+      const madeQrCodes = await this.ensureQrCodes(payment, playlist);
+
       const current = await this.computePrintFingerprintFor(playlist);
       const stored = await this.prisma.paymentHasPlaylist.findUnique({
         where: { id: playlist.paymentHasPlaylistId },
         select: { pdfFingerprint: true },
       });
 
-      if (stored?.pdfFingerprint && stored.pdfFingerprint === current) {
+      if (!madeQrCodes && stored?.pdfFingerprint && stored.pdfFingerprint === current) {
         continue;
       }
 
@@ -1787,8 +1888,12 @@ class Generator {
         color.yellow.bold(
           `[${white.bold('printer')}] PDF for ${white.bold(
             payment.paymentId
-          )} playlist ${white.bold(String(playlist.paymentHasPlaylistId))} is ${
-            stored?.pdfFingerprint ? 'stale' : 'unfingerprinted'
+          )} playlist ${white.bold(String(playlist.paymentHasPlaylistId))} ${
+            madeQrCodes
+              ? 'was missing QR codes'
+              : stored?.pdfFingerprint
+                ? 'is stale'
+                : 'is unfingerprinted'
           }, regenerating before verification`
         )
       );
