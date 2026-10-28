@@ -972,6 +972,31 @@ describe('processOrderRequest', () => {
     );
   });
 
+  it('sends a business order\'s company in its own field, contact unchanged', async () => {
+    happyRoutes();
+    await (peb as any).processOrderRequest(
+      [physicalItem()],
+      { ...customerNL, company: 'Acme GmbH', countrycode: 'DE' },
+      false
+    );
+
+    const [deliveryCall] = sentRequests('POST', '/v1/delivery/7989-1');
+    expect(body(deliveryCall)).toMatchObject({
+      name_contact: 'Jane Buyer',
+      company: 'Acme GmbH',
+      country: 'DE',
+    });
+  });
+
+  it('sends no company field without a company', async () => {
+    happyRoutes();
+    await (peb as any).processOrderRequest([physicalItem()], customerNL, false);
+
+    const [deliveryCall] = sentRequests('POST', '/v1/delivery/7989-1');
+    expect(body(deliveryCall).name_contact).toBe('Jane Buyer');
+    expect('company' in body(deliveryCall)).toBe(false);
+  });
+
   it('uses account payment and international delivery for non-EU countries', async () => {
     dataMock.getTaxRate.mockImplementation(async (c: string) =>
       c === 'NL' ? 21 : 0

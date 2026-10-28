@@ -24,6 +24,7 @@ import { postnlTrackingUrl } from '../postnl';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { createHash } from 'crypto';
 import { paymentTaxRate } from './paymentTaxRate';
+import { shippingCompany } from './shippingCompany';
 
 interface PriceResult {
   totalPrice: number;
@@ -428,6 +429,7 @@ class PrintEnBindV2 {
   private buildOrderRequest(
     customerInfo: {
       fullname?: string;
+      company?: string;
       email: string;
       address?: string;
       housenumber?: string;
@@ -455,6 +457,10 @@ class PrintEnBindV2 {
       anonymous: true,
       articles,
     };
+    if (customerInfo.company) {
+      // Printed on the label above the contact
+      request.company = customerInfo.company.slice(0, 35);
+    }
     if (options.orderComment) {
       request.comment = options.orderComment.slice(0, 255);
     }
@@ -479,6 +485,7 @@ class PrintEnBindV2 {
     items: any[],
     customerInfo: {
       fullname?: string;
+      company?: string;
       email: string;
       address?: string;
       housenumber?: string;
@@ -935,6 +942,7 @@ class PrintEnBindV2 {
 
     const customerInfo = {
       fullname: payment.fullname || undefined,
+      company: shippingCompany(payment),
       email: payment.email,
       address: payment.address || undefined,
       housenumber: payment.housenumber || undefined,
@@ -1564,6 +1572,7 @@ class PrintEnBindV2 {
       orderItems,
       {
         fullname: payment.fullname,
+        company: shippingCompany(payment),
         email: payment.email,
         address: payment.address,
         housenumber: payment.housenumber,
@@ -1685,6 +1694,7 @@ class PrintEnBindV2 {
       orderItems,
       {
         fullname: payment.fullname,
+        company: shippingCompany(payment),
         email: payment.email,
         address: payment.address,
         housenumber: payment.housenumber,

@@ -1396,6 +1396,26 @@ describe('processOrderRequest', () => {
     ).toHaveLength(0);
   });
 
+  it('sends a business order\'s company in its own field, contact unchanged', async () => {
+    orderRoutes();
+    await (peb as any).processOrderRequest(
+      [physicalItem()],
+      {
+        ...customerNL,
+        company: 'Muster Maschinenbau und Anlagentechnik GmbH',
+        countrycode: 'DE',
+      },
+      {}
+    );
+
+    const [orderCall] = placeOrderCalls();
+    expect(body(orderCall)).toMatchObject({
+      contact: 'Jane Buyer',
+      company: 'Muster Maschinenbau und Anlagentech', // the schema's 35
+      country: 'DE',
+    });
+  });
+
   it('uses international delivery and fast production for non-EU express orders', async () => {
     dataMock.getTaxRate.mockImplementation(async (c: string) =>
       c === 'NL' ? 21 : 0

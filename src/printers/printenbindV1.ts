@@ -21,6 +21,7 @@ import Discount from '../discount';
 import Shipping from '../shipping';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { paymentTaxRate } from './paymentTaxRate';
+import { shippingCompany } from './shippingCompany';
 
 interface PriceResult {
   totalPrice: number;
@@ -405,6 +406,7 @@ class PrintEnBindV1 {
     items: any[],
     customerInfo: {
       fullname?: string;
+      company?: string;
       email: string;
       address?: string;
       housenumber?: string;
@@ -745,8 +747,12 @@ class PrintEnBindV1 {
       const deliveryMethod =
         customerInfo.countrycode === 'NL' ? 'post' : 'international';
 
-      const deliveryData = {
+      // `company` is not in the documentation of this endpoint but is
+      // taken: the label then reads "<company>\nt.a.v. <name_contact>"
+      // (tried on an unfinished order, 2026-10-28).
+      const deliveryData: Record<string, string> = {
         name_contact: customerInfo.fullname?.trim() || 'John Doe',
+        ...(customerInfo.company ? { company: customerInfo.company } : {}),
         street: customerInfo.address?.trim() || 'Some lane',
         city: customerInfo.city?.trim() || 'Amsterdam',
         streetnumber: customerInfo.housenumber?.trim() || '1',
@@ -1104,6 +1110,7 @@ class PrintEnBindV1 {
 
     const customerInfo = {
       fullname: payment.fullname || undefined,
+      company: shippingCompany(payment),
       email: payment.email,
       address: payment.address || undefined,
       housenumber: payment.housenumber || undefined,
@@ -1781,6 +1788,7 @@ class PrintEnBindV1 {
       orderItems,
       {
         fullname: payment.fullname,
+        company: shippingCompany(payment),
         email: payment.email,
         address: payment.address,
         housenumber: payment.housenumber,
@@ -1970,6 +1978,7 @@ class PrintEnBindV1 {
       orderItems,
       {
         fullname: payment.fullname,
+        company: shippingCompany(payment),
         email: payment.email,
         address: payment.address,
         housenumber: payment.housenumber,
