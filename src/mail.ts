@@ -1446,9 +1446,6 @@ class Mail {
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
-    const videoId = 'OE3DsOM81Qo';
-    const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
-    const videoThumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
     const giftBoxLink = `${process.env['FRONTEND_URI']}/${payment.locale}/gift-box`;
     const foldGuideLink = `${giftBoxLink}/how-to-fold`;
     // four steps of the folding animation with a play button, written by the site's
@@ -1459,8 +1456,6 @@ class Mail {
       payment,
       foldGuideLink,
       foldGuideImage,
-      videoLink,
-      videoThumbnail,
       giftBoxLink,
       productName: process.env['PRODUCT_NAME'],
       translations: await this.translation.getTranslationsByPrefix(
