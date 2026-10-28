@@ -397,6 +397,8 @@ class Server {
             'sentry-trace',
             'baggage',
             'Authorization',
+            // The app's version on card lookups (scanAppVersion)
+            'qrsv',
           ],
         });
       },

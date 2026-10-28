@@ -24,7 +24,7 @@ import deezerRoutes from './deezerRoutes';
 import appleMusicRoutes from './appleMusicRoutes';
 import scanRoutes from './scanRoutes';
 import { getProductCover } from '../playlistArtwork';
-import { scanClient } from '../scanClient';
+import { scanClient, scanAppVersion } from '../scanClient';
 import featuredCopyRoutes from './featuredCopyRoutes';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
@@ -158,6 +158,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
             color.white.bold(`url="${url}"`) +
             color.blue.bold(', ip=') +
             color.white.bold(clientIp ?? 'unknown') +
+            color.blue.bold(', app=') +
+            color.white.bold(`"${scanAppVersion(request.headers) ?? 'unknown'}"`) +
             color.blue.bold(', ua=') +
             color.white.bold(`"${userAgent ?? 'unknown'}"`) +
             color.blue.bold(', result=') +
@@ -438,7 +440,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       true,
       userAgent,
       undefined,
-      scanClient(headers['origin'], userAgent)
+      scanClient(headers['origin'], userAgent),
+      scanAppVersion(headers)
     );
     let link = '';
     let yt = null;
@@ -494,7 +497,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       true,
       userAgent,
       request.params.php,
-      scanClient(headers['origin'], userAgent)
+      scanClient(headers['origin'], userAgent),
+      scanAppVersion(headers)
     );
     let link = '';
     let yt = null;

@@ -95,7 +95,8 @@ export async function getLink(
   useCache: boolean = true,
   userAgent?: string,
   php?: number,
-  client?: ScanClient | null
+  client?: ScanClient | null,
+  appVersion?: string | null
 ): Promise<ApiResult> {
   deps.analytics.increaseCounter('songs', 'played');
   logLink(deps, trackId, clientIp, php, client);
@@ -115,12 +116,14 @@ export async function getLink(
     });
   }
 
-  // Log IP, trackId, and user agent
+  // Log IP, trackId, app version and user agent
   deps.logger.log(
     color.blue.bold(
       `Link called for track ${color.white.bold(
         trackId
-      )}${php ? `, php=${color.white.bold(php)}` : ''}, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
+      )}${php ? `, php=${color.white.bold(php)}` : ''}, ip=${color.white.bold(clientIp)}, app=${color.white.bold(
+        appVersion || 'unknown'
+      )}, userAgent=${color.white.bold(
         userAgent || 'unknown'
       )}`
     )

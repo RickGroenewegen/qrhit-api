@@ -133,9 +133,10 @@ class Data {
     useCache: boolean = true,
     userAgent?: string,
     php?: number,
-    client?: ScanClient | null
+    client?: ScanClient | null,
+    appVersion?: string | null
   ): Promise<ApiResult> {
-    return musicLinksModule.getLink(this.deps, trackId, clientIp, useCache, userAgent, php, client);
+    return musicLinksModule.getLink(this.deps, trackId, clientIp, useCache, userAgent, php, client, appVersion);
   }
 
   public async getPlaylistLinkCoverage(playlistId: number) {

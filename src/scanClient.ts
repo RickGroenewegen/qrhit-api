@@ -9,6 +9,8 @@
  * is the site's. Without an origin the user agent decides, and a request that
  * says neither is left unknown rather than guessed.
  */
+import type { IncomingHttpHeaders } from 'http';
+
 export type ScanClient = 'ios' | 'android' | 'web';
 
 const IOS_APP_ORIGINS = new Set(['capacitor://localhost', 'ionic://localhost']);
@@ -49,4 +51,15 @@ export function scanClient(origin: string | undefined, userAgent: string | undef
   if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
   if (/Android/i.test(ua)) return 'android';
   return null;
+}
+
+/**
+ * The app version that looked up a card, for the scan log. The app sends it
+ * as the `qrsv` header ("QRSong! 2.0.3") with `/qrlink`, `/qrlink2` and
+ * `/qrlink_unknown` (since 2026-10-28); older apps and the web scanner send
+ * none. The header is anyone's to set, so it is capped before it is logged.
+ */
+export function scanAppVersion(headers: IncomingHttpHeaders): string | null {
+  const value = headers['qrsv'];
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 64) : null;
 }
