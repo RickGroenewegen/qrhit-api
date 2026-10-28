@@ -25,6 +25,7 @@ import appleMusicRoutes from './appleMusicRoutes';
 import scanRoutes from './scanRoutes';
 import { getProductCover } from '../playlistArtwork';
 import { scanClient } from '../scanClient';
+import featuredCopyRoutes from './featuredCopyRoutes';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -48,6 +49,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   await fastify.register(deezerRoutes);
   await fastify.register(appleMusicRoutes);
   await fastify.register(scanRoutes);
+  await fastify.register(featuredCopyRoutes);
 
   // ============================================
   // Shared/Legacy Routes

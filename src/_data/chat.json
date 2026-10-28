@@ -976,13 +976,31 @@
         {
             "slug": "curated-playlists",
             "title": "What are curated playlists?",
-            "description": "We offer many pre-created playlists across various genres including disco, dance, rock, rap, and more. These are ready for instant delivery and perfect if you don't have your own playlist or want inspiration.",
+            "description": "We offer many pre-created playlists across various genres including disco, dance, rock, rap, and more. These are ready for instant delivery and perfect if you don't have your own playlist or want inspiration. You can also change the songs of one of these playlists: see 'Change the songs' on the playlist's page.",
             "tags": [
                 "curated",
                 "featured",
                 "pre-made",
                 "genres",
                 "selection"
+            ]
+        },
+        {
+            "slug": "change-featured-playlist",
+            "title": "Can I change the songs in one of your ready-made playlists?",
+            "description": "Yes. On the page of any of our ready-made playlists, click 'Change the songs' (above the card previews, and at the bottom of the full song list). A window opens and we make a temporary copy of the playlist in our own Spotify account. Then: 1) Open our copy in Spotify. 2) Save it as your own playlist. On a phone: tap the three dots, then 'Add to other playlist' and 'New playlist'. On a computer: click the first song, Shift-click the last one, right-click, then 'Add to playlist' and 'New playlist'. 'Add to library' is not enough: that only saves our copy, which cannot be changed and disappears. 3) In Spotify, choose Share and Copy link on your new playlist, paste that link into the window on our site and click 'Use my playlist'. You then continue with your own playlist, in the same card design. Our copy is removed from our account after 5 minutes, so save your own copy before then. If the 5 minutes ran out, click 'Make a new copy' in the window. After that you can change the songs in Spotify: remove the ones you don't want and add new ones (the order of the songs does not matter for the cards). Back on our site, click 'Reload my playlist' to bring in your changes. Paste the link of your own copy, not of our copy: ours cannot be changed and disappears. You need a Spotify account for this (a free one is enough); the cards still work with every music service. Songs of the playlist that are not on Spotify are left out of the copy, and the window says how many. Without a Spotify account: make your own playlist with the songs you want on your own music service (Apple Music, YouTube Music, Deezer or Tidal) and paste its link on the first step of the order.",
+            "tags": [
+                "change songs",
+                "edit playlist",
+                "remove song",
+                "add song",
+                "swap songs",
+                "featured",
+                "curated",
+                "ready-made",
+                "customize playlist",
+                "copy playlist",
+                "modify playlist"
             ]
         },
         {
