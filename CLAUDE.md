@@ -2336,7 +2336,8 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
 | the job, the rules (`helpMailDecision`), the resume link | `src/abandonedPayments.ts` |
 | the mail | `Mail.sendPaymentHelpMail`, `templates/mails/payment_help_*.hbs`, `payment_help.*` |
 | "Complete my order" | `GET /order/resume/:orderId` → `Mollie.resumeAbandonedPayment` |
-| the card picture of an unpaid line | `CardPreviews.draftForLine`, `GET /qr/pdf-draft/:id` |
+| the photo of an unpaid line's cards | `src/productPhoto/orderPhoto.ts` (`orderLinePhoto`), `mailPhoto` in `outputs.ts` |
+| the fallback card picture | `CardPreviews.draftForLine`, `GET /qr/pdf-draft/:id` |
 | by hand: one pass, or one order's mail to another address | `npx tsx scripts/abandoned-mail.ts --run [--delay=0]` / `--payment=<id> --to=<email>` |
 | state per payment | `payments.helpMailStatus`, `helpMailAt`, `helpMailResumedAt` |
 
@@ -2371,7 +2372,15 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   01:00 the same night, with its lines and designs, so neither the mail nor
   its link would have had an order to show or pay.
 - **The mail** comes from and replies to `INFO_EMAIL`, BCC as usual, in the
-  order's language. Each card line shows its first card front beside back
+  order's language. Each card line shows the photo of its cards that the
+  summary page shows (`orderLinePhoto`). It is the product photo's scene-1
+  with five of the line's songs (the product photo's `pickByRule`, from the
+  stored playlist or the provider's cached list), in its designs taking
+  turns as on the summary page and as an eco deck when it is one. The photo
+  is laid on the mail's cream panel as a JPEG (`mailPhoto`: mail clients
+  cannot be trusted with transparency). A gift card, a company card
+  template or a playlist without a usable song gets no photo, and a photo
+  that fails falls back to the first card front beside back
   (`cardPairJpeg`), drawn like the gift voucher's but for a line that has no
   tracks or QR codes yet: a sample track (the line's first stored track with
   a year, else one from the provider's cached list with our year or the

@@ -59,8 +59,8 @@ export interface PaymentHelpMailLine {
   type: 'digital' | 'physical' | 'sheets';
   // sets of this playlist in the order
   amount: number;
-  // the card front and back side by side, else the playlist cover; none
-  // when neither could be had
+  // the photo of the cards, else one card's front and back side by side,
+  // else the playlist cover; none when none could be had
   picture: { data: Buffer; contentType: 'image/jpeg' | 'image/png'; card: boolean } | null;
 }
 

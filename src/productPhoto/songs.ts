@@ -27,7 +27,7 @@ export type PickSource = 'auto' | 'fallback' | 'admin';
 // how many songs a photo shows: hero, songs, song, fan, deck
 export const PHOTO_SONGS = 5;
 // longer titles and artists wrap on the card and read worse in a photo
-const MAX_TEXT = 28;
+export const MAX_TEXT = 28;
 // what the model chooses from; a longer playlist is sampled evenly
 const MAX_CANDIDATES = 150;
 // a title that is a version of a song rather than the song
@@ -103,11 +103,11 @@ export function tracksByIds(ids: unknown, candidates: PhotoTrack[]): PhotoTrack[
 }
 
 /** One song per decade first, in playlist order, then the rest; artists not repeated while others are left. */
-export function pickByRule(candidates: PhotoTrack[]): PhotoTrack[] {
-  const picked: PhotoTrack[] = [];
+export function pickByRule<T extends Pick<PhotoTrack, 'artist' | 'year'>>(candidates: T[]): T[] {
+  const picked: T[] = [];
   const artists = new Set<string>();
   const decades = new Set<number>();
-  const take = (track: PhotoTrack) => {
+  const take = (track: T) => {
     picked.push(track);
     artists.add(track.artist.toLowerCase());
     decades.add(Math.floor(track.year / 10));

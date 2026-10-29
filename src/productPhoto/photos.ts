@@ -33,7 +33,7 @@ import { composeTile, loadTileScenes, TILE_KINDS, TILE_WIDTHS, TileKind, tileOut
 // raise when compose.ts, outputs.ts, tiles.ts or the card template change how a photo looks
 const PHOTO_VERSION = 3;
 // card pictures twice the largest face on screen; compose shrinks them
-const CARD_PX = 1024;
+export const CARD_PX = 1024;
 const KEEP_PREVIOUS_DAYS = 7;
 const LOOKUP_SECONDS = 300;
 const KEY = /^[0-9a-f]{16}$/;
@@ -131,7 +131,7 @@ export async function productPhotoFor(slug: string): Promise<ProductPhotoUrls | 
 }
 
 /** The QR link of a card: the streaming link itself, played straight away by the app. */
-function qrUrl(link: string): string {
+export function qrUrl(link: string): string {
   return `${process.env['API_URI']}/qr_url2?link=${encodeURIComponent(link)}`;
 }
 

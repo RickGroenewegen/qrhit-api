@@ -9,14 +9,16 @@ import Cache from './cache';
 import Mail, { PaymentHelpMailLine } from './mail';
 import CardPreviews, { cardPairJpeg } from './cardPreview';
 import { loadArtworkSource } from './playlistArtwork';
+import { orderLinePhoto } from './productPhoto/orderPhoto';
+import { mailPhoto } from './productPhoto/outputs';
 import { signedRenderQuery } from './renderSignature';
 
 /**
  * The help mail after an abandoned payment.
  *
  * A customer who got as far as Mollie and then canceled, or whose payment
- * failed or expired, gets one friendly mail: their cards (drawn from the
- * stored design, CardPreviews.draftForLine), a link that pays this same order
+ * failed or expired, gets one friendly mail: their cards (the summary page's
+ * photo of them, productPhoto/orderPhoto.ts), a link that pays this same order
  * again (Mollie.resumeAbandonedPayment) and above all an invitation to reply,
  * which reaches info@. Only when they did not pay otherwise: a paid order
  * placed since the abandoned one started means they retried and made it.
@@ -45,6 +47,9 @@ const HELP_MAIL_IP_WINDOW_HOURS = 24;
 // How long the mail's link pays the order again (the cleanup keeps it longer)
 export const RESUME_LINK_DAYS = 7;
 const LOCK = 'abandoned-payment-mails';
+// the mail's panel (mail-layout's qr-card), and its pictures at twice their 536 px
+const MAIL_PANEL = '#fff8f3';
+const MAIL_PICTURE_PX = 1072;
 
 export type HelpMailDecision =
   | 'send'
@@ -319,14 +324,25 @@ class AbandonedPayments {
     );
   }
 
-  /** The card's front and back side by side, else the playlist cover; null when neither is there. */
+  /**
+   * The photo of the cards, else one card's front and back side by side,
+   * else the playlist cover; null when none is there.
+   */
   private async picture(
     paymentHasPlaylistId: number,
     playlist: { image: string | null; customImage: string | null }
   ): Promise<PaymentHelpMailLine['picture']> {
+    try {
+      const photo = await orderLinePhoto(paymentHasPlaylistId);
+      if (photo) {
+        return { data: await mailPhoto(photo, MAIL_PANEL, MAIL_PICTURE_PX), contentType: 'image/jpeg', card: true };
+      }
+    } catch (error) {
+      this.log(`line ${white.bold(paymentHasPlaylistId)}: no photo of the cards (${(error as Error).message})`, 'yellow');
+    }
     const card = await CardPreviews.getInstance().draftForLine(paymentHasPlaylistId);
     if (card) {
-      return { data: await cardPairJpeg(card), contentType: 'image/jpeg', card: true };
+      return { data: await cardPairJpeg(card, MAIL_PANEL), contentType: 'image/jpeg', card: true };
     }
     const cover = await loadArtworkSource(playlist, process.env['PUBLIC_DIR'] as string);
     if (!cover) return null;

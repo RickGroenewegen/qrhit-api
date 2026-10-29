@@ -119,3 +119,27 @@ export async function photoOutputs(master: Buffer, name: string): Promise<PhotoF
   });
   return files;
 }
+
+/**
+ * A photo for a mail: the cards without the empty margin, on `ground` (the
+ * mail's panel), `width` px wide, as a JPEG. Mail clients cannot be trusted
+ * with transparency, so the soft shadow is laid onto the panel here.
+ */
+export async function mailPhoto(master: Buffer, ground: string, width: number): Promise<Buffer> {
+  const base = await cleanShadow(
+    sharp(master).resize({ width: PHOTO_WIDTH, kernel: 'lanczos3' }).sharpen({ sigma: 0.5 })
+  );
+  const trimmed = await sharp(base).trim({ threshold: 4 }).png().toBuffer();
+  const { width: trimmedWidth = PHOTO_WIDTH, height: trimmedHeight = 0 } = await sharp(trimmed).metadata();
+  const pad = Math.round(Math.max(trimmedWidth, trimmedHeight) * FEED_MARGIN);
+  // sharp extends after it resizes, whatever the order here: two passes
+  const framed = await sharp(trimmed)
+    .flatten({ background: ground })
+    .extend({ top: pad, bottom: pad, left: pad, right: pad, background: ground })
+    .png()
+    .toBuffer();
+  return sharp(framed)
+    .resize({ width, kernel: 'lanczos3' })
+    .jpeg({ quality: 86, mozjpeg: true, chromaSubsampling: '4:4:4' })
+    .toBuffer();
+}
