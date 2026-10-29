@@ -9,6 +9,7 @@ import cluster from 'cluster';
 import Shipping from './shipping';
 import { CronJob } from 'cron';
 import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS, APP_DESIGN_PRICE } from './config/constants';
+import { SITE_LOCALES } from './data/shared/shared-data.generated';
 import { formatCostUsd, llm } from './llm';
 import type { LlmMessage } from './llm';
 
@@ -424,6 +425,7 @@ export class ChatService {
 Your job is to identify which knowledge topics are relevant to answer the user's question.
 Analyze the question and select the most relevant topics from the available list.
 Select 1-5 topics maximum. Only select topics that are directly relevant.
+A question about buying many copies, sets or boxes (dozens or more, e.g. "350 exemplaren", "200 sets"), or about ordering for a company, staff, clients or an event, always includes "business". The number of cards or songs in one set ("a set of 100 cards") is not that.
 If the question is a greeting or general chat, return an empty array.`,
         },
         {
@@ -457,6 +459,16 @@ If the question is a greeting or general chat, return an empty array.`,
       return [];
     }
     return parsed.slugs || [];
+  }
+
+  /**
+   * Links in chat.json are written https://www.qrsong.io/[lang]/business, like
+   * the blog's. The chat's own language goes in; without a known one the
+   * unprefixed path, which the site sends on to the visitor's language.
+   */
+  private localizeLinks(text: string, locale?: string): string {
+    const known = SITE_LOCALES.some((l) => l.code === locale);
+    return text.replace(/\/\[lang\]\//g, known ? `/${locale}/` : '/');
   }
 
   /**
@@ -734,7 +746,8 @@ Only extract data that was clearly provided by the user.`,
     question: string,
     topicSlugs: string[],
     chatHistory: ChatHistoryMessage[],
-    onToken: (token: string) => void
+    onToken: (token: string) => void,
+    locale?: string
   ): Promise<string> {
     this.logger.log(color.cyan.bold(`[answerQuestion] `) + color.cyan(`Generating answer with `) + color.white.bold(`${topicSlugs.length}`) + color.cyan(` topics and `) + color.white.bold(`${chatHistory.length}`) + color.cyan(` history items`));
 
@@ -744,6 +757,7 @@ Only extract data that was clearly provided by the user.`,
       topicSlugs,
       chatHistory
     );
+    const businessPage = this.localizeLinks('https://www.qrsong.io/[lang]/business', locale);
 
     const messages: LlmMessage[] = [
       {
@@ -758,9 +772,10 @@ IMPORTANT INSTRUCTIONS:
 - Use markdown formatting for better readability
 - Be friendly and conversational
 - If the user greets you, greet them back warmly and ask how you can help
+- BUSINESS LEADS: someone who asks about a large quantity (dozens or hundreds of sets, boxes or copies), or about ordering for a company, organisation, staff, clients or an event, may be an important business customer. Tell them warmly about our business offer and invite them to request a free mockup of their box and a quotation on our business page, as a markdown link to ${businessPage}. Do not send them to info@qrsong.io and do not add [SHOW_SUPPORT_BUTTON] for this. Fewer than 100 sets is possible too, through the normal order flow on the site. The number of cards or songs in one set ("a set of 100 cards") is a normal order, not a business lead: then say nothing about the business offer. Only when a number could mean either ("350 copies") cover both briefly, the business offer first; one set of that many cards is simply a playlist with that many songs, ordered on the site.
 - CONTACT FORM: If the user appears frustrated, confused, repeats questions, expresses dissatisfaction, seems unhappy with answers, asks about something you cannot help with, or generally is not getting their question answered properly, let them know they can reach us at info@qrsong.io and add the marker [SHOW_SUPPORT_BUTTON] at the END of your response. This shows them a button to go to the contact form.
 
-${knowledgeContext}${toolContext}`,
+${this.localizeLinks(knowledgeContext, locale)}${toolContext}`,
       },
     ];
 
@@ -794,7 +809,8 @@ ${knowledgeContext}${toolContext}`,
     chatId: number,
     question: string,
     onToken: (token: string) => void,
-    onSearching?: () => void
+    onSearching?: () => void,
+    locale?: string
   ): Promise<void> {
     // Save user message and trigger async translation
     const userMessageId = await this.saveMessage(chatId, 'user', question);
@@ -814,7 +830,7 @@ ${knowledgeContext}${toolContext}`,
     const topics = await this.getTopics(question, previousHistory);
 
     // Generate and stream answer
-    const answer = await this.answerQuestion(question, topics, previousHistory, onToken);
+    const answer = await this.answerQuestion(question, topics, previousHistory, onToken, locale);
 
     // Save assistant response and trigger async translation
     const messageId = await this.saveMessage(chatId, 'assistant', answer);

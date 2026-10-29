@@ -233,7 +233,8 @@ class ChatWebSocketServer {
         // onSearching callback
         () => {
           this.sendMessage(connection.ws, { type: 'searching' });
-        }
+        },
+        connection.locale
       );
 
       // Signal that the response is complete

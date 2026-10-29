@@ -151,7 +151,7 @@
         {
             "slug": "box",
             "title": "Do the cards come in a box?",
-            "description": "By default the cards arrive in a mailbox-friendly transport box, neatly tied together with a paper band. You can also opt into a personalized gift box during checkout: a 12x12cm foldable presentation box with a window on the lid, a custom insert card you design yourself, and a personal message on the back. Important to know about the quality: the gift box is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games. It ships as a flat printed A3 cardboard sheet that you press out and fold into shape yourself at home (no glue or tools needed, just a few minutes of folding along the pre-scored creases). Personalized hard, rigid game boxes at retail quality simply aren't produced by print-on-demand companies. For larger business orders (more than 50 boxes) we can produce fully custom branded rigid boxes; see the branded-boxes entry.",
+            "description": "By default the cards arrive in a mailbox-friendly transport box, neatly tied together with a paper band. You can also opt into a personalized gift box during checkout: a 12x12cm foldable presentation box with a window on the lid, a custom insert card you design yourself, and a personal message on the back. Important to know about the quality: the gift box is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games. It ships as a flat printed A3 cardboard sheet that you press out and fold into shape yourself at home (no glue or tools needed, just a few minutes of folding along the pre-scored creases). Personalized hard, rigid game boxes at retail quality simply aren't produced by print-on-demand companies. For business orders (from 100 boxes) we produce fully custom branded rigid boxes; see the branded-boxes entry.",
             "tags": [
                 "box",
                 "gift box",
@@ -635,13 +635,29 @@
         },
         {
             "slug": "business",
-            "title": "What does QRSong! offer companies?",
-            "description": "Companies can order boxes of QR music cards in their own design, from 100 boxes. Leave your details on our business page and within 24 hours you get a design of your box and a quotation. Employees can also vote for their favourite songs on a voting page, and the top songs become the company's own card set.",
+            "title": "What does QRSong! offer companies? Can I order many sets at once?",
+            "description": "Companies and organisations order QRSong! in their own house style: a sturdy box of QR music cards with their logo, colours and style on the box and on both sides of every card, from 100 boxes, with 48, 96 or 192 cards per box. The music can be their own playlist, and employees can vote for their favourite songs on a voting page so the top songs become the company's own card set. Popular as Christmas gifts for staff, client gifts, giveaways and for events. How to start: fill in the short form on our business page, https://www.qrsong.io/[lang]/business, with the website or brand kit and the number of boxes. Within 24 hours you receive a mockup of your box in your house style and a quotation for all three sizes, free and with no obligation. Production takes about 15 working days after the digital proof is approved (a little longer around the holidays), and shipping to one address in the Netherlands is included. Fewer than 100 sets is possible too, through the normal order flow on the site instead of a quotation: pick or paste the playlist, design the cards (your own logo and pictures included), and choose the number of sets of that playlist at checkout.",
             "tags": [
                 "corporate",
                 "company",
                 "business",
-                "employees"
+                "employees",
+                "large order",
+                "large quantity",
+                "many sets",
+                "many copies",
+                "hundreds of sets",
+                "bulk order",
+                "100 boxes",
+                "staff gift",
+                "client gift",
+                "Christmas gift",
+                "relatiegeschenk",
+                "quote",
+                "quotation",
+                "offerte",
+                "mockup",
+                "house style"
             ]
         },
         {
@@ -1026,7 +1042,7 @@
         {
             "slug": "business-events",
             "title": "Can I use QRSong for business events?",
-            "description": "Absolutely! QRSong! cards are great for corporate events, team building, and client gifts. Check out our business page for boxes in your company's own design, or contact us for custom business solutions.",
+            "description": "Absolutely! QRSong! cards are great for corporate events, team building, and client gifts. For a company order (from 100 boxes) we make the box and the cards in your house style: leave your website or brand kit on our business page, https://www.qrsong.io/[lang]/business, and within 24 hours you get a mockup of your box and a quotation, free and with no obligation.",
             "tags": [
                 "business",
                 "corporate",
@@ -1478,7 +1494,7 @@
         {
             "slug": "branded-boxes",
             "title": "Do you offer custom branded boxes for large orders?",
-            "description": "Yes — for business orders of more than 50 boxes we can produce fully custom branded boxes with your own design printed on the exterior. This is a separate, premium product from our standard consumer gift box: business branded boxes are rigid, premade boxes (sturdy SK2 board, comparable to retail board-game boxes), available in 48-card, 96-card and 192-card formats, printed inside and out in your house style. This is a custom service, so lead time and pricing depend on the design and quantity. To get a quote, email us at info@qrsong.io with the number of boxes you need, your timeline, and a rough idea of the artwork you have in mind, and we'll get back to you with options. Note: this is different from the standard consumer gift box (an optional add-on during checkout), which is a foldable A3 press-and-fold cardboard sheet for gifting and is not available in a rigid premade format.",
+            "description": "Yes. For business orders, from 100 boxes, we produce fully custom branded boxes with your own design printed on the exterior. This is a separate, premium product from our standard consumer gift box: business branded boxes are rigid, premade boxes (sturdy SK2 board, comparable to retail board-game boxes), available in 48-card, 96-card and 192-card formats, printed inside and out in your house style, with the cards in your design too. To get a quote, fill in the form on our business page, https://www.qrsong.io/[lang]/business, with your website or brand kit and the number of boxes: within 24 hours you receive a mockup of your box and a quotation for all three sizes, free and with no obligation. Note: this is different from the standard consumer gift box (an optional add-on during checkout), which is a foldable A3 press-and-fold cardboard sheet for gifting and is not available in a rigid premade format.",
             "tags": [
                 "branded boxes",
                 "custom boxes",
@@ -1486,7 +1502,7 @@
                 "corporate",
                 "bulk",
                 "white label",
-                "50 boxes",
+                "100 boxes",
                 "custom design"
             ]
         },

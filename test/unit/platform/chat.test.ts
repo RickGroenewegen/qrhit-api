@@ -164,6 +164,12 @@ const KNOWLEDGE = [
     description: 'Cards cost money.',
     tags: ['price'],
   },
+  {
+    slug: 'business',
+    title: 'Business',
+    description: 'Fill in the form on https://www.qrsong.io/[lang]/business.',
+    tags: ['business'],
+  },
 ];
 
 let service: ChatService;
@@ -1262,6 +1268,28 @@ describe('answerQuestion', () => {
     expect(system).toContain(
       'Relevant information:\n**Shipping times**\nDelivery estimates.'
     );
+  });
+
+  it("puts the chat's language into knowledge links and the business-lead rule", async () => {
+    createMock.mockResolvedValueOnce(streamOf('Graag!'));
+
+    await service.answerQuestion('350 exemplaren?', ['business'], [], () => {}, 'nl');
+
+    const system = createMock.mock.calls[0][0].messages[0].content;
+    expect(system).toContain('Fill in the form on https://www.qrsong.io/nl/business.');
+    expect(system).toContain('BUSINESS LEADS');
+    expect(system).toContain('markdown link to https://www.qrsong.io/nl/business');
+    expect(system).not.toContain('[lang]');
+  });
+
+  it('falls back to the unprefixed link without a known language', async () => {
+    createMock.mockResolvedValueOnce(streamOf('Sure!'));
+
+    await service.answerQuestion('350 copies?', ['business'], [], () => {}, 'xx');
+
+    const system = createMock.mock.calls[0][0].messages[0].content;
+    expect(system).toContain('Fill in the form on https://www.qrsong.io/business.');
+    expect(system).not.toContain('[lang]');
   });
 });
 
