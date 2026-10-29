@@ -26,6 +26,11 @@ public
 
 # Test harness scratch space
 test/.tmp/
+
+# Print&Bind harness: runs, downloaded PDFs, the ledger, and fixtures that
+# name customer files (scripts/pnb-harness)
+reports/
+scripts/pnb-harness/*.local.json
 coverage/
 .claude/last-tested-commit
 

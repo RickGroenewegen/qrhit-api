@@ -214,12 +214,117 @@ poll cannot see orders placed on the other API.
 - Tracking comes back as barcodes only; `buildTrackingUrl` rebuilds the
   PostNL / international URLs because `shipping.ts` parses
   `code/country/postalcode` off the URL tail.
-- Sandbox orders can be cancelled with `DELETE /orders/{id}`.
+- `DELETE /orders/{id}` cancels an order on the sandbox and on live: it
+  answers "Order deleted successfully." and the order reads back as
+  `Geannuleerd` (two live test orders of 2026-09-29, 1508575 and 1508576,
+  went that way within seconds). The spec also lists a 403 without saying
+  when; presumably once production has started, so delete at once.
 - The tracking poll treats `Afgeleverd` / `Afgehaald` as shipped too, but
   only mails orders placed in the last 30 days. v1 only knew `Verzonden`, so
   every order that skipped it stayed `Submitted` forever; the first v2 poll
   after the September 2026 deploy mailed tracking links for orders delivered
   a year earlier. Older ones are now closed without a mail or tracking.
+
+### Print&Bind test harness (`scripts/pnb-harness`)
+
+Built 2026-10-29 to chase the intermittent live 500s that sent production
+back to v1, together with Print&Bind. It sends real orders to the sandbox
+and to live, as production builds them, and deletes every live order at once.
+At the end it writes an HTML report: the differences between the hosts come
+first, then a section to send to Print&Bind.
+
+```
+npm run pnb-harness -- fixtures                  # pick real orders + PDFs (prod DB, read-only)
+npm run pnb-harness -- cases                     # list the cases, sends nothing
+npm run pnb-harness -- run --mode calculate --env sandbox,live   # creates nothing
+npm run pnb-harness -- run --env live --cases deck-s-nl          # the canary alone
+npm run pnb-harness -- run --env sandbox,live --repeat 3
+npm run pnb-harness -- cleanup --env live        # delete whatever a run left open
+npm run pnb-harness -- pdf reports/pnb-harness/<run> [--lang nl|en|both]   # the PDF for Print&Bind
+npm run pnb-harness -- place --env live [--case deck-s-nl]   # ONE order, NOT deleted: cancel it by hand
+npm run pnb-harness -- status --env live <order id or reference>
+```
+
+A placed order answers `Aangemaakt` and reads back `Wachten` a few seconds
+later (order 1531054, 2026-10-29). `place` writes it to the ledger, so
+`cleanup` deletes it if it is forgotten.
+
+**A placed order's file cannot be replaced through the API** (tested on
+live, order 1531089, 2026-10-29). Only the portal can, or cancel and place
+again.
+- `POST /articles/{id}/documents` answers 422 "This article is not waiting
+  for a document": it only fills an article that has no file yet.
+- `PUT /articles/{id}` answers 422 "The order of this cart has already been
+  placed", with a new `file_url` and with `filenames` alike.
+- That order went `Aangemaakt` → `In opdracht` (8 s) → `Wachten` with
+  sub status `Bestandsverwerking` (12 s), and a DELETE at 13 s still
+  cancelled it.
+- Print&Bind fetches our PDF during `POST /orders`: the article reads
+  `waiting_for_file: false` straight away. Every file lands by name in the
+  account's document store (`GET /documents`, 6,204 files, 27 s to list).
+
+- **The PDF for Print&Bind** (`incident.ts`, Chrome through puppeteer-core
+  like the brochures, `CHROME_PATH` to override) is written by itself at
+  the end of a run that found anything, in Dutch by default (`--lang en` or
+  `both`). It contains:
+  - a summary per host and what stood out
+  - how we test
+  - the time per case against the PDF's size
+  - every finding in full: times in UTC and Amsterdam to the millisecond,
+    the reference, the request JSON, the response body and headers, the
+    files, the other host's answer to the same request, what followed
+    (search, delete, read-back) and a curl line
+  - a timeline of every request to set against their logs
+
+  A finding is a 5xx, a request without an answer, an order created behind
+  a failed POST, an order that would not cancel, or a different answer
+  from the two hosts. No keys in it (the curl uses `$PNB_TOKEN`); the
+  address is our own.
+
+- **The same requests as production.** The article shapes,
+  `toPbArticle`, `buildOrderRequest`, `boxPackingComment` and
+  `QUOTE_POSTCODES` live in `src/printers/printenbindV2Request.ts`, which
+  both `printenbindV2.ts` and the harness import. Change a request there,
+  never in a copy.
+- **Real PDFs.** `fixtures` reads production through `_scripts/ro-query.sh`.
+  It picks a recent order per shape: small, large and biggest deck, sheets,
+  1 and 2 boxes, a big deck with a box, two playlists with a merged insert,
+  one playlist ×2. It downloads each PDF to check it and count its pages,
+  and takes every stored V2 5xx for replay with our address. Output goes to
+  `scripts/pnb-harness/fixtures.local.json` (gitignored: it names customer
+  files; no names or addresses are kept). Print&Bind fetches the files from
+  `api.qrsong.io/public/...` itself.
+- **Live safety.** Live placing needs the typed `LIVE` (or `--yes-live`)
+  and `PNB_HARNESS_ADDRESS` (Rick's own address; a country without one is
+  only calculated).
+  - A canary order is placed, deleted and read back first. The run stops
+    placing on live when one does not end `Geannuleerd`.
+  - Deleting is the first thing that happens to a placed order.
+  - After a 5xx or a timeout the order is searched by its reference
+    (`qrs-harness-<run>-<case>-<n>`) and deleted if it exists anyway.
+    Such an orphan is the thing to report.
+  - The end of a run searches every reference again.
+  - `cleanup` only touches orders whose reference starts with `qrs-harness-`.
+  - `reports/pnb-harness/ledger.jsonl` records every step as it happens.
+- **Keys and hosts.** `PNB_HARNESS_SANDBOX_KEY` / `PNB_HARNESS_LIVE_KEY`
+  (shown as sha256 fingerprints only), URLs from Print&Bind's OpenAPI
+  servers unless `PNB_HARNESS_{SANDBOX,LIVE}_URL` says otherwise.
+  The live key must be the production account, **465330 "QRSong!"**.
+  `place`, `cleanup` and the report show the account (`GET /me`). Until
+  midday 2026-10-29 `.env` held a key for another account (611210, "Rick
+  Groenewegen"), and the first runs went there. Rick cancelled those
+  orders; their ledger is `ledger-account-611210-wrong-key.jsonl`.
+  The sandbox answers nginx's own 403 to IP addresses Print&Bind has not
+  whitelisted (Rick's office, 81.172.239.138, on 2026-10-29), even for
+  `openapi.json`; the preflight says so.
+- **What the first run showed** (2026-10-29, live calculate on the wrong
+  account 611210, every case 200; repeat on 465330): Print&Bind fetches the PDF while the request is open, and the time
+  grows with the file. 0.9 MB took 3 s, 8 MB 7 s, the 39.5 MB 1,442-card
+  deck 28 s. Live sits behind a caching proxy (`x-cache`,
+  `x-hosted-by: Cobytes`). Production's `POST /orders` has no timeout of
+  its own. Production keeps only the latest printer response per payment,
+  so only one V2 5xx was still stored: payment 8767 on 2026-09-09, the box
+  500 from before the REST token, which calculates fine now.
 
 ## Parcel tracking: PostNL's public track & trace
 
