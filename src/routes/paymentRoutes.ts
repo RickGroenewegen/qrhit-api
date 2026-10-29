@@ -16,6 +16,7 @@ import GoogleFonts from '../googleFonts';
 import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
 import CardTemplates, { CardTemplateError, isFileTemplate, sendStoredPage, TEMPLATE_NAME } from '../cardTemplates';
 import {
+  CardDesign,
   deckDesigns,
   designIndexForCard,
   getExtraDesigns,
@@ -532,7 +533,6 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
     await sendCardPages(reply, {
       ...view,
-      eco: false,
       emptyPages: 0,
       startIndex: 0,
     });
@@ -559,6 +559,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       itemIndex?: number;
       // '' prints none (a product photo's cards)
       batchNumber?: string;
+      // designs 2..N and each card's design, for cards without an order
+      // line (a product photo's); otherwise the line's own
+      extraDesigns?: CardDesign[];
+      cardDesignIndexes?: number[];
     }
   ): Promise<void> {
     const { payment, user, playlist, php, tracks, subdir, eco, emptyPages, startIndex, itemIndex } = page;
@@ -596,11 +600,13 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     // cycle instead of restarting it. One design is php itself.
     const designs = deckDesigns(
       php,
-      await getExtraDesigns(php.paymentHasPlaylistId)
+      page.extraDesigns ?? (await getExtraDesigns(php.paymentHasPlaylistId))
     );
-    const cardDesignIndexes = tracks.map((_: any, index: number) =>
-      designIndexForCard(designs.length, startIndex + index)
-    );
+    const cardDesignIndexes =
+      page.cardDesignIndexes ??
+      tracks.map((_: any, index: number) =>
+        designIndexForCard(designs.length, startIndex + index)
+      );
     const cardDesigns = cardDesignIndexes.map((k: number) => designs[k]);
 
     const view = {

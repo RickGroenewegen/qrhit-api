@@ -35,10 +35,16 @@ export interface ShowcaseCard {
   qrUrl: string;
   extraArtistAttribute?: string | null;
   extraNameAttribute?: string | null;
+  // which design draws it: 0 (or none) the spec's design, k its extraDesigns[k - 1]
+  design?: number;
 }
 
 export interface ShowcaseSpec {
   design: CardDesign;
+  // the designs the cards take turns with, as an order line's designs 2..N
+  extraDesigns?: CardDesign[];
+  // drawn as an eco deck prints
+  eco?: boolean;
   cards: ShowcaseCard[];
 }
 
@@ -68,18 +74,25 @@ export async function renderShowcaseCards(spec: ShowcaseSpec, px: number = 1200)
   if (!spec.cards.length || spec.cards.length > MAX_CARDS) {
     throw new Error(`a showcase has 1 to ${MAX_CARDS} cards, not ${spec.cards.length}`);
   }
-  const cards = spec.cards.map((card) => ({ ...card, trackId: safeTrackFileId(card.trackId) }));
+  const designs = [spec.design, ...(spec.extraDesigns ?? [])];
+  // one QR code file per card: a song can show twice, in two designs' QR colours
+  const cards = spec.cards.map((card, index) => {
+    const id = safeTrackFileId(card.trackId);
+    return { ...card, trackId: id && `${index}-${id}` };
+  });
   if (cards.some((card) => !card.trackId)) throw new Error('a showcase card has no track id');
+  if (cards.some((card) => !designs[card.design ?? 0])) throw new Error('a showcase card has no such design');
 
   const token = crypto.randomBytes(12).toString('hex');
   const dir = qrDir(token);
   const cache = Cache.getInstance();
   try {
     await fs.mkdir(dir, { recursive: true });
-    const logo = qrLogoOptionsFor(spec.design, logger);
+    const logos = designs.map((design) => qrLogoOptionsFor(design, logger));
     for (const card of cards) {
       const file = path.join(dir, `${card.trackId}.png`);
-      await new Qr().generateQR(card.qrUrl, file, spec.design.qrColor);
+      await new Qr().generateQR(card.qrUrl, file, designs[card.design ?? 0].qrColor);
+      const logo = logos[card.design ?? 0];
       if (logo) await applyQrLogo(file, card.qrUrl, logo, logger);
     }
     await cache.set(specKey(token), JSON.stringify({ ...spec, cards }), SPEC_SECONDS);
@@ -120,6 +133,9 @@ export async function showcaseView(token: string) {
     playlist: null,
     // the design stands in for an order line: no how-to card, no batch number
     php: { ...spec.design, paymentHasPlaylistId: 0, addHowToCard: false, orderTemplate: null },
+    extraDesigns: spec.extraDesigns ?? [],
+    cardDesignIndexes: spec.cards.map((card) => card.design ?? 0),
+    eco: spec.eco === true,
     tracks: spec.cards.map((card) => ({
       trackId: card.trackId,
       artist: card.artist,
