@@ -3608,6 +3608,90 @@ describe('getPaymentsByTaxRate: reverse charge', () => {
   });
 });
 
+describe('getPaymentsByTaxRate: VAT is what was paid minus ex-VAT', () => {
+  // Three Austrian orders at 20%, each where one of the stored VAT columns
+  // falls short. Q3 2026 showed €192.22 VAT for Austria on the OSS page
+  // where €227.04 was charged: productVATPrice has no VAT on shipping.
+  const payments = [
+    {
+      // €30 cards + €6 shipping: VAT 5 on the goods, 1 on the shipping.
+      paymentId: 'tr_ship',
+      countrycode: 'AT',
+      taxRate: 20,
+      totalPrice: 36,
+      totalPriceWithoutTax: 30,
+      productVATPrice: 5,
+      shippingVATPrice: 1,
+      totalVATPrice: 6,
+      refundAmount: 0,
+      reverseCharge: false,
+    },
+    {
+      // A €12 gift box bought later, booked on the order: totalVATPrice
+      // still says 6.
+      paymentId: 'tr_upgrade',
+      countrycode: 'AT',
+      taxRate: 20,
+      totalPrice: 48,
+      totalPriceWithoutTax: 40,
+      productVATPrice: 7,
+      shippingVATPrice: 1,
+      totalVATPrice: 6,
+      refundAmount: 0,
+      reverseCharge: false,
+    },
+    {
+      // Half of €36 refunded.
+      paymentId: 'tr_refund',
+      countrycode: 'AT',
+      taxRate: 20,
+      totalPrice: 36,
+      totalPriceWithoutTax: 30,
+      productVATPrice: 5,
+      shippingVATPrice: 1,
+      totalVATPrice: 6,
+      refundAmount: 18,
+      reverseCharge: false,
+    },
+  ];
+
+  beforeEach(() => {
+    prismaMock.payment.findMany.mockImplementation(async (args: any) =>
+      args?.where?.refundAmount
+        ? payments.filter((p) => p.refundAmount > 0)
+        : payments
+    );
+    prismaMock.gamesPurchase.findMany.mockResolvedValue([]);
+    prismaMock.appDesignPurchase.findMany.mockResolvedValue([]);
+  });
+
+  it('counts the VAT on shipping and on booked upgrades, net of refunds', async () => {
+    const { rows, ossBreakdown } = await mollie.getPaymentsByTaxRate(
+      new Date(2026, 6, 1),
+      new Date(2026, 9, 0, 23, 59, 59)
+    );
+
+    // 6 + 8 + (6 − 3 refunded)
+    for (const row of [rows[0], ossBreakdown[0]]) {
+      expect(row.totalPrice).toBeCloseTo(36 + 48 + 18, 2);
+      expect(row.totalPriceWithoutTax).toBeCloseTo(30 + 40 + 15, 2);
+      expect(row.totalVAT).toBeCloseTo(6 + 8 + 3, 2);
+      expect(row.totalRefunded).toBe(18);
+    }
+  });
+
+  it('keeps ex-VAT plus VAT equal to the amount paid', async () => {
+    const { rows, ossBreakdown } = await mollie.getPaymentsByTaxRate(
+      new Date(2026, 6, 1),
+      new Date(2026, 9, 0, 23, 59, 59)
+    );
+
+    for (const row of [...rows, ...ossBreakdown]) {
+      expect(row.totalPriceWithoutTax + row.totalVAT).toBeCloseTo(row.totalPrice, 2);
+    }
+  });
+});
+
 describe('getSalesTotals', () => {
   it("adds the report's rows up the way the day and month reports do", async () => {
     mockSalesReportQueries({

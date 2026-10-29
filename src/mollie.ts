@@ -86,6 +86,20 @@ interface ExtraTracksInvoiceContext {
   extraBoxes: number;
 }
 
+// The VAT a payment carries, for the tax and OSS report: what was paid minus
+// its ex-VAT share. totalPriceWithoutTax is the column every path keeps
+// current (checkout, upgrades booked on the order, the printer's profit
+// recompute), so ex-VAT and VAT always add up to totalPrice.
+// productVATPrice is the goods only, without the VAT on shipping (the OSS
+// page showed €192.22 for Austria in Q3 2026 where €227.04 was charged),
+// and totalVATPrice misses upgrades and the recompute.
+function paymentVAT(p: {
+  totalPrice: number | null;
+  totalPriceWithoutTax: number | null;
+}): number {
+  return (p.totalPrice || 0) - (p.totalPriceWithoutTax || 0);
+}
+
 // A day or month report period with business sales and no consumer ones.
 function emptyConsumerSalesRow(period: string) {
   return {
@@ -837,7 +851,6 @@ class Mollie {
         taxRate: true,
         totalPrice: true,
         totalPriceWithoutTax: true,
-        productVATPrice: true,
         refundAmount: true,
         reverseCharge: true,
         vatIdChecked: true,
@@ -854,7 +867,7 @@ class Mollie {
       numberOfSales: number;
       totalPrice: number;
       totalPriceWithoutTax: number;
-      productVATPrice: number;
+      vat: number;
     };
     const paymentKey = (zone: string, countrycode: string, taxRate: number) =>
       `${zone}|${countrycode}|${taxRate}`;
@@ -872,12 +885,12 @@ class Mollie {
         numberOfSales: 0,
         totalPrice: 0,
         totalPriceWithoutTax: 0,
-        productVATPrice: 0,
+        vat: 0,
       };
       cur.numberOfSales += 1;
       cur.totalPrice += r.totalPrice || 0;
       cur.totalPriceWithoutTax += r.totalPriceWithoutTax || 0;
-      cur.productVATPrice += r.productVATPrice || 0;
+      cur.vat += paymentVAT(r);
       agg.set(key, cur);
     }
 
@@ -937,7 +950,7 @@ class Mollie {
           numberOfSales: 0,
           totalPrice: 0,
           totalPriceWithoutTax: 0,
-          productVATPrice: 0,
+          vat: 0,
         });
       }
     }
@@ -1007,7 +1020,7 @@ class Mollie {
           numberOfSales: 0,
           totalPrice: 0,
           totalPriceWithoutTax: 0,
-          productVATPrice: 0,
+          vat: 0,
         });
       }
     }
@@ -1030,7 +1043,7 @@ class Mollie {
           (gamesData?.exVat || 0) +
           (appDesign?.exVat || 0),
         totalVAT:
-          entry.productVATPrice -
+          entry.vat -
           (adj?.refundedVAT || 0) +
           (gamesData?.vat || 0) +
           (appDesign?.vat || 0),
@@ -1093,7 +1106,7 @@ class Mollie {
         numberOfSales: number;
         totalPrice: number;
         totalPriceWithoutTax: number;
-        productVATPrice: number;
+        vat: number;
       }
     >();
     for (const r of rows) {
@@ -1107,12 +1120,12 @@ class Mollie {
         numberOfSales: 0,
         totalPrice: 0,
         totalPriceWithoutTax: 0,
-        productVATPrice: 0,
+        vat: 0,
       };
       cur.numberOfSales += 1;
       cur.totalPrice += r.totalPrice || 0;
       cur.totalPriceWithoutTax += r.totalPriceWithoutTax || 0;
-      cur.productVATPrice += r.productVATPrice || 0;
+      cur.vat += paymentVAT(r);
       ossAgg.set(key, cur);
     }
 
@@ -1139,7 +1152,7 @@ class Mollie {
           numberOfSales: 0,
           totalPrice: 0,
           totalPriceWithoutTax: 0,
-          productVATPrice: 0,
+          vat: 0,
         });
       }
     }
@@ -1160,7 +1173,7 @@ class Mollie {
           numberOfSales: 0,
           totalPrice: 0,
           totalPriceWithoutTax: 0,
-          productVATPrice: 0,
+          vat: 0,
         });
       }
     }
@@ -1181,7 +1194,7 @@ class Mollie {
           (gamesData?.exVat || 0) +
           (appDesign?.exVat || 0),
         totalVAT:
-          entry.productVATPrice -
+          entry.vat -
           (adj?.refundedVAT || 0) +
           (gamesData?.vat || 0) +
           (appDesign?.vat || 0),
@@ -1248,7 +1261,6 @@ class Mollie {
         taxRate: true,
         totalPrice: true,
         totalPriceWithoutTax: true,
-        productVATPrice: true,
         refundAmount: true,
       },
     });
@@ -1270,7 +1282,7 @@ class Mollie {
       };
       current.refundedTotal += refund;
       current.refundedExVAT += (p.totalPriceWithoutTax || 0) * ratio;
-      current.refundedVAT += (p.productVATPrice || 0) * ratio;
+      current.refundedVAT += paymentVAT(p) * ratio;
       adjustments.set(key, current);
     }
     return adjustments;
