@@ -218,18 +218,20 @@ describe('generate()', () => {
       ])
     );
 
-    // Payment status transitions, in order: qrSubDir then processedFirstTime
-    expect(h.prisma.payment.update.mock.calls[0][0]).toEqual({
+    // One status update, once the QR codes are made: the directory and
+    // processedFirstTime together, before the year check decides on
+    // finalizing (a year saved after that may then finalize it)
+    expect(h.prisma.payment.update).toHaveBeenCalledTimes(1);
+    expect(h.prisma.payment.update.mock.calls[0][0]).toMatchObject({
       where: { id: 11 },
-      data: { qrSubDir },
-    });
-    expect(h.prisma.payment.update.mock.calls[1][0]).toMatchObject({
-      where: { id: 11 },
-      data: { processedFirstTime: true },
+      data: { qrSubDir, processedFirstTime: true },
     });
     expect(
-      h.prisma.payment.update.mock.calls[1][0].data.processedFirstTimeAt
+      h.prisma.payment.update.mock.calls[0][0].data.processedFirstTimeAt
     ).toBeInstanceOf(Date);
+    expect(h.prisma.payment.update.mock.invocationCallOrder[0]).toBeLessThan(
+      h.data.areAllTracksManuallyChecked.mock.invocationCallOrder[0]
+    );
 
     // Tracks not all manually checked => no finalize yet
     expect(finalizeSpy).not.toHaveBeenCalled();
@@ -613,6 +615,19 @@ describe('finalizeOrder()', () => {
     expect(mollie.getPayment).not.toHaveBeenCalled();
     // Lock was never acquired, so it must not be released either
     expect(h.cache.releaseLock).not.toHaveBeenCalled();
+  });
+
+  it('refuses a cards order whose QR codes are not made yet (generation still running)', async () => {
+    const mollie = makeMollie(makePayment({ qrSubDir: null }));
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist()]);
+
+    const res = await gen.finalizeOrder('pay_1', mollie, true);
+
+    expect(res).toEqual({ success: false, error: 'QR codes not made yet' });
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.pdf.generatePDF).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail', 'sendEmail')).toHaveLength(0);
+    expect(h.cache.releaseLock).toHaveBeenCalledWith('finalizeOrder:pay_1');
   });
 
   it('refuses to re-finalize an already finalized payment (and releases the lock)', async () => {

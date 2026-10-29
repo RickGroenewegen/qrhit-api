@@ -713,13 +713,19 @@ class Generator {
         }
       }
     }
-    // Update the payment with the QR code directory
+    // Update the payment with the QR code directory. From here on its tracks
+    // are stored and their QR codes made, so a year saved on the Year check
+    // page may finalize it (checkUnfinalizedPayments only looks at processed
+    // orders). Set before the check below, or a year saved in between would
+    // find the order neither finished nor processed and leave it waiting.
     await this.prisma.payment.update({
       where: {
         id: payment.id,
       },
       data: {
         qrSubDir: subdir,
+        processedFirstTime: true,
+        processedFirstTimeAt: new Date(),
       },
     });
 
@@ -758,15 +764,6 @@ class Generator {
       'turnover',
       parseInt(payment.totalPrice)
     );
-
-    // Update processedFirstTime fields
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        processedFirstTime: true,
-        processedFirstTimeAt: new Date(),
-      },
-    });
 
     this.logger.log(
       color.green.bold(
@@ -1171,6 +1168,31 @@ class Generator {
         forceFinalize ||
         process.env['ENVIRONMENT'] === 'development'
       ) {
+        const playlists = await this.data.getPlaylistsByPaymentId(
+          payment.paymentId
+        );
+
+        // generate() names the QR code directory once the codes are made. A
+        // cards order without one is still being generated: its PDFs would
+        // point at QR codes that do not exist, and the mail would go out
+        // with them. Its own generation finalizes it.
+        if (
+          !payment.qrSubDir &&
+          playlists.some((playlist: any) => playlist.productType !== 'giftcard')
+        ) {
+          this.logger.log(
+            color.red.bold(
+              `Not finalizing payment ${white.bold(
+                paymentId
+              )}: its QR codes have not been made yet`
+            )
+          );
+          return {
+            success: false,
+            error: 'QR codes not made yet',
+          };
+        }
+
         // update payment finalized
         await this.prisma.payment.update({
           where: {
@@ -1182,9 +1204,6 @@ class Generator {
           },
         });
 
-        const playlists = await this.data.getPlaylistsByPaymentId(
-          payment.paymentId
-        );
         const physicalPlaylists = [];
         const emailedPlaylistIds = new Set<number>();
 

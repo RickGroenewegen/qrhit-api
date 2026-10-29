@@ -178,10 +178,17 @@ export async function verifyPayment(deps: DataDeps, paymentId: string) {
 }
 
 export async function checkUnfinalizedPayments(deps: DataDeps): Promise<string[]> {
+  // Only orders whose generation has stored their tracks and made their QR
+  // codes (processedFirstTime). Before that a line has no tracks yet, so
+  // areAllTracksManuallyChecked counts nothing open and calls it done: a year
+  // saved in those seconds finalized the order halfway through generate(),
+  // and the customer got a PDF without QR codes or years, or with no cards at
+  // all (100009461, 100009517, 100009519 in October 2026).
   const unfinalizedPayments = await deps.prisma.payment.findMany({
     where: {
       finalized: false,
       status: 'paid',
+      processedFirstTime: true,
     },
     select: {
       id: true,
