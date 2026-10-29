@@ -8,10 +8,15 @@ import {
   BookkeepingLineItem,
   BookkeepingProvider,
   ConnectionStatus,
+  TaxRateScope,
 } from './types';
 
 const MONEYBIRD_BASE = 'https://moneybird.com';
 const API_BASE = `${MONEYBIRD_BASE}/api/v2`;
+
+// The administration's 0% rate for sales outside the EU: "Product buiten
+// EU (btw verlegd)" (MoneyBird's own name), or an English one.
+const EXPORT_TAX_RATE_NAME = /buiten\s+(de\s+)?EU|outside\s+(the\s+)?EU/i;
 
 interface InvoiceLineItem {
   description: string;
@@ -338,10 +343,13 @@ class Moneybird implements BookkeepingProvider {
    * country (legacy NL default). MoneyBird's tax_rates endpoint is
    * read-only via the API, so missing rates must be created manually in
    * the MoneyBird UI.
+   *
+   * `scope: 'export'` (0% only) takes the export rate and nothing else.
    */
   public async findTaxRateId(args: {
     percentage: number;
     countryCode?: string;
+    scope?: TaxRateScope;
   }): Promise<string | undefined> {
     const wantPct = Number(args.percentage) || 0;
     const wantCountry = (args.countryCode || '').toUpperCase();
@@ -355,6 +363,32 @@ class Moneybird implements BookkeepingProvider {
     const usable = rates.filter(
       (r) => !isPurchaseLike(r.tax_rate_type || '')
     );
+
+    // A sale outside the EU goes on the export rate ("Product buiten EU
+    // (btw verlegd)"), which the VAT return books apart from the plain
+    // "0% btw". The API gives neither a country nor a return category, so
+    // the name is all that tells them apart. The tax report invoice put
+    // exports on "0% btw" until 2026-10-29; Rick moved the July and August
+    // 2026 lines by hand.
+    if (args.scope === 'export' && wantPct === 0) {
+      const exportRate = usable.find(
+        (r) =>
+          Number(r.percentage) === 0 &&
+          EXPORT_TAX_RATE_NAME.test(r.name || '')
+      );
+      if (exportRate?.id) {
+        this.info(
+          'export tax rate found ',
+          `id=${exportRate.id} country=${wantCountry || '-'} name="${exportRate.name || ''}"`
+        );
+        return String(exportRate.id);
+      }
+      this.warn(
+        'export tax rate not found ',
+        `no active 0% sales rate named like "Product buiten EU" (country=${wantCountry || '-'})`
+      );
+      return undefined;
+    }
 
     // Country can come from MoneyBird's `country` field, or — for rates the
     // user named manually — be embedded in the rate's `name` (e.g.

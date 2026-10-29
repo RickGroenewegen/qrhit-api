@@ -8,6 +8,7 @@ import {
   BookkeepingLineItem,
   BookkeepingProvider,
   ConnectionStatus,
+  TaxRateScope,
 } from './bookkeeping/types';
 
 /**
@@ -130,6 +131,7 @@ class Bookkeeping {
   public async findTaxRateId(args: {
     percentage: number;
     countryCode?: string;
+    scope?: TaxRateScope;
   }): Promise<string | undefined> {
     return this.provider.findTaxRateId(args);
   }

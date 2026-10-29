@@ -49,6 +49,9 @@ export interface ConnectionStatus {
   reason?: string;
 }
 
+/** A VAT rate the return books apart, beyond percentage and country. */
+export type TaxRateScope = 'export';
+
 export interface BookkeepingProvider {
   readonly name: string;
 
@@ -75,10 +78,15 @@ export interface BookkeepingProvider {
    * Returns undefined if no matching rate exists. MoneyBird's tax_rates
    * endpoint is read-only via the API, so callers must surface missing
    * rates to the admin instead of creating on the fly.
+   *
+   * `scope: 'export'` asks for the 0% rate of a sale outside the EU, which
+   * the VAT return books apart from a plain 0% (MoneyBird: "Product buiten
+   * EU"). Without that rate it returns undefined, never the plain 0%.
    */
   findTaxRateId(args: {
     percentage: number;
     countryCode?: string;
+    scope?: TaxRateScope;
   }): Promise<string | undefined>;
 
   /**

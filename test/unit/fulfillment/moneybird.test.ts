@@ -346,6 +346,34 @@ describe('tax rates', () => {
     expect(await mb.findTaxRateId({ percentage: 21, countryCode: 'NL' })).toBe('5');
     expect(await mb.findTaxRateId({ percentage: 21 })).toBe('5');
   });
+
+  // The administration's three 0% sales rates as MoneyBird answers them
+  // (2026-10-29): no country, no return category, only the name differs.
+  const zeroRates = [
+    { id: '483035543863559972', percentage: '0.0', name: '0% btw', country: null, tax_rate_type: 'sales_invoice', active: true },
+    { id: '484318904379769921', percentage: '0.0', name: 'Product binnen EU (btw verlegd)', country: null, tax_rate_type: 'sales_invoice', active: true },
+    { id: '492170032194782869', percentage: '0.0', name: 'Product buiten EU (btw verlegd)', country: null, tax_rate_type: 'sales_invoice', active: true },
+    { id: '484370184774092594', percentage: '0.0', name: '0% btw', country: null, tax_rate_type: 'purchase_invoice', active: true },
+  ];
+
+  it('findTaxRateId puts a sale outside the EU on the export rate, not the plain 0%', async () => {
+    const mb = fresh();
+    axiosRequest.mockResolvedValue({ data: zeroRates } as any);
+
+    expect(await mb.findTaxRateId({ percentage: 0, countryCode: 'CH', scope: 'export' })).toBe('492170032194782869');
+    expect(await mb.findTaxRateId({ percentage: 0, countryCode: 'US', scope: 'export' })).toBe('492170032194782869');
+    // Without the scope nothing changes: the plain 0% (reverse charge rows).
+    expect(await mb.findTaxRateId({ percentage: 0, countryCode: 'PL' })).toBe('483035543863559972');
+  });
+
+  it('findTaxRateId refuses an export sale when there is no export rate, rather than the plain 0%', async () => {
+    const mb = fresh();
+    axiosRequest.mockResolvedValue({
+      data: zeroRates.filter((r) => r.id !== '492170032194782869'),
+    } as any);
+
+    expect(await mb.findTaxRateId({ percentage: 0, countryCode: 'CH', scope: 'export' })).toBeUndefined();
+  });
 });
 
 describe('ledger accounts', () => {

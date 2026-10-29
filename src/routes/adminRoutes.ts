@@ -2348,24 +2348,32 @@ export default async function adminRoutes(
           suggestedName: string;
         }> = [];
         const seen = new Set<string>();
+        // Sales outside the EU go on the export rate ("Product buiten EU"),
+        // not on the plain 0% (Rick corrected the July and August 2026
+        // invoices by hand). A non-zero export row asks for its country's
+        // rate as before, which does not exist, so it is reported.
         for (const r of rows) {
           const pct = Number(r.taxRate) || 0;
           const country = (r.countrycode || '').toUpperCase();
+          const isExport = r.zone === 'EXPORT' && pct === 0;
           const taxRateId = await bookkeeping.findTaxRateId({
             percentage: pct,
             countryCode: country || undefined,
+            ...(isExport ? { scope: 'export' as const } : {}),
           });
           resolved.push({ row: r, taxRateId });
           if (!taxRateId) {
-            const key = `${country}|${pct}`;
+            const key = isExport ? 'export' : `${country}|${pct}`;
             if (!seen.has(key)) {
               seen.add(key);
               missing.push({
-                country: country || '—',
+                country: isExport ? 'outside the EU' : country || '—',
                 percentage: pct,
-                suggestedName: country
-                  ? `VAT ${pct}% ${country} (sales)`
-                  : `VAT ${pct}% (sales)`,
+                suggestedName: isExport
+                  ? 'Product buiten EU (btw verlegd)'
+                  : country
+                    ? `VAT ${pct}% ${country} (sales)`
+                    : `VAT ${pct}% (sales)`,
               });
             }
           }

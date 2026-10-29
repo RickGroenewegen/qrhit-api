@@ -709,6 +709,103 @@ describe('admin routes — wave 2 coverage', () => {
       }
     });
 
+    it('POST /tax_report/:period/invoice — books sales outside the EU on the export rate', async () => {
+      const bookkeeping = Bookkeeping.getInstance();
+      const createSpy = vi
+        .spyOn(bookkeeping, 'createInvoice')
+        .mockResolvedValue({ id: 'inv-3' } as any);
+      const findTaxRateSpy = vi
+        .spyOn(bookkeeping, 'findTaxRateId')
+        .mockImplementation(async ({ percentage, countryCode, scope }: any) =>
+          scope === 'export' ? 'tax-export' : `tax-${countryCode}-${percentage}`
+        );
+      const spies = [
+        createSpy,
+        findTaxRateSpy,
+        vi.spyOn(bookkeeping, 'getStatus').mockResolvedValue({ connected: true } as any),
+        vi.spyOn(bookkeeping, 'findInvoiceByReference').mockResolvedValue(null),
+        vi.spyOn(bookkeeping, 'findContactByCompanyName').mockResolvedValue({
+          id: 'c-1',
+          company_name: 'QRSong!',
+        } as any),
+        vi.spyOn(bookkeeping, 'findLedgerAccountIdByCode').mockResolvedValue('ledger-8010'),
+        vi.spyOn(bookkeeping, 'finalizeInvoice').mockResolvedValue({
+          id: 'inv-3',
+          invoice_id: '2026-0003',
+        } as any),
+        vi.spyOn(Mollie.prototype, 'getPaymentsByTaxRate').mockResolvedValue({
+          rows: [
+            { countrycode: 'PL', zone: 'EU', taxRate: 0, numberOfSales: 1, totalPriceWithoutTax: 13 },
+            { countrycode: 'CH', zone: 'EXPORT', taxRate: 0, numberOfSales: 2, totalPriceWithoutTax: 393.61 },
+            { countrycode: 'US', zone: 'EXPORT', taxRate: 0, numberOfSales: 1, totalPriceWithoutTax: 35 },
+          ],
+        }),
+      ];
+
+      try {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/tax_report/202609/invoice',
+          headers,
+        });
+        expect(res.statusCode).toBe(200);
+
+        const items = createSpy.mock.calls[0][0].items;
+        expect(items.map((i: any) => i.tax_rate_id)).toEqual([
+          // Reverse charge inside the EU keeps its plain 0%.
+          'tax-PL-0',
+          'tax-export',
+          'tax-export',
+        ]);
+        expect(findTaxRateSpy).toHaveBeenCalledWith({
+          percentage: 0,
+          countryCode: 'CH',
+          scope: 'export',
+        });
+        expect(findTaxRateSpy).toHaveBeenCalledWith({ percentage: 0, countryCode: 'PL' });
+      } finally {
+        spies.forEach((s) => s.mockRestore());
+      }
+    });
+
+    it('POST /tax_report/:period/invoice — names the missing export rate once', async () => {
+      const bookkeeping = Bookkeeping.getInstance();
+      const createSpy = vi.spyOn(bookkeeping, 'createInvoice');
+      const spies = [
+        createSpy,
+        vi.spyOn(bookkeeping, 'findTaxRateId').mockImplementation(async ({ scope }: any) =>
+          scope === 'export' ? undefined : 'tax-1'
+        ),
+        vi.spyOn(bookkeeping, 'getStatus').mockResolvedValue({ connected: true } as any),
+        vi.spyOn(bookkeeping, 'findInvoiceByReference').mockResolvedValue(null),
+        vi.spyOn(Mollie.prototype, 'getPaymentsByTaxRate').mockResolvedValue({
+          rows: [
+            { countrycode: 'CH', zone: 'EXPORT', taxRate: 0, numberOfSales: 2, totalPriceWithoutTax: 393.61 },
+            { countrycode: 'US', zone: 'EXPORT', taxRate: 0, numberOfSales: 1, totalPriceWithoutTax: 35 },
+          ],
+        }),
+      ];
+
+      try {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/tax_report/202609/invoice',
+          headers,
+        });
+        expect(res.statusCode).toBe(422);
+        expect(res.json().missing).toEqual([
+          {
+            country: 'outside the EU',
+            percentage: 0,
+            suggestedName: 'Product buiten EU (btw verlegd)',
+          },
+        ]);
+        expect(createSpy).not.toHaveBeenCalled();
+      } finally {
+        spies.forEach((s) => s.mockRestore());
+      }
+    });
+
     it('POST /admin/process_playback_counts — runs review process', async () => {
       const res = await app.inject({
         method: 'POST',
