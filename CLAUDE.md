@@ -224,6 +224,31 @@ poll cannot see orders placed on the other API.
   every order that skipped it stayed `Submitted` forever; the first v2 poll
   after the September 2026 deploy mailed tracking links for orders delivered
   a year earlier. Older ones are now closed without a mail or tracking.
+- **An order on `Wachten` is stuck until we act** (2026-10-30,
+  `src/printers/printerWaiting.ts`). Print&Bind puts an order there when its
+  file check refuses the file (sub status `Verwerkingscontrole` /
+  `Bestanden`, the article `waiting_for_file: true`) or when it asks us
+  something (`Antwoord klant`), and nothing on their side moves it on.
+  Order 100009123 (P&B 1514036) sat there from 6 to 30 October, with a
+  perfectly good PDF, until the customer asked the chat. Healthy orders read
+  `In opdracht` within a minute and then `In productie`; only the stuck
+  ones read `Wachten`.
+  - The tracking poll (both integrations) calls `PrinterWaiting.observe` for
+    every order it fetched. The first time an order reads `Wachten` it sets
+    `payments.printApiWaitingAt` (claimed on the empty column, so it happens
+    once) and the sub status in `printApiWaitingDetail`, and sends one
+    Pushover. A later sub status only updates the detail; once the order
+    moves on both are cleared, and a new wait would alert again.
+    `setupForPrinter` clears them for a new printer order.
+  - Only REST (v2) reports the sub status; v1 knows `Wachten` alone, so the
+    detail stays null on v1.
+  - An order sent less than 15 minutes ago is left for the next poll: right
+    after placing it passes `Wachten` / `Bestandsverwerking` for seconds.
+  - A set `printApiWaitingAt` on an unshipped order is the dashboard's
+    "Needs attention" reason `printer-waiting` (`mollie.ts`), shown as
+    "Waiting at printer" with the sub status and the date.
+  - The fix is Print&Bind's portal (a placed order's file cannot be replaced
+    through the API, see the harness below), or cancel and place again.
 
 ### Print&Bind test harness (`scripts/pnb-harness`)
 

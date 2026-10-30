@@ -936,12 +936,17 @@ describe('setSendToPrinterCron()', () => {
 });
 
 describe('setupForPrinter()', () => {
-  it('resets the print API status to Submitted and clears the tracking link', async () => {
+  it('resets the print API status to Submitted and clears the tracking link and waiting state', async () => {
     await gen.setupForPrinter('pay_1');
 
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'pay_1' },
-      data: { printApiStatus: 'Submitted', printApiTrackingLink: null },
+      data: {
+        printApiStatus: 'Submitted',
+        printApiTrackingLink: null,
+        printApiWaitingAt: null,
+        printApiWaitingDetail: null,
+      },
     });
   });
 });
@@ -973,7 +978,12 @@ describe('sendToPrinterFromAdmin()', () => {
     expect(res.success).toBe(true);
     expect(h.prisma.payment.update.mock.calls[0][0]).toEqual({
       where: { paymentId: 'pay_1' },
-      data: { printApiStatus: 'Submitted', printApiTrackingLink: null },
+      data: {
+        printApiStatus: 'Submitted',
+        printApiTrackingLink: null,
+        printApiWaitingAt: null,
+        printApiWaitingDetail: null,
+      },
     });
     expect(h.finalCheck.runCheck).not.toHaveBeenCalled();
     expect(h.order.createOrder).toHaveBeenCalled();

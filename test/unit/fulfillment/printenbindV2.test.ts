@@ -42,6 +42,7 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   paymentHasPlaylist: { findUnique: vi.fn(), findMany: vi.fn() },
   paymentHasPlaylistItem: { findMany: vi.fn() },
@@ -1959,6 +1960,49 @@ describe('handleTrackingMails', () => {
 
     await peb.handleTrackingMails();
 
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+    expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(0);
+  });
+
+  it('records an order Print&Bind has on Wachten once, with its sub status, and alerts', async () => {
+    prismaMock.payment.findMany.mockResolvedValue([orderRow]);
+    prismaMock.payment.findUnique.mockResolvedValue({
+      ...payment,
+      orderId: '100009123',
+      printApiOrderId: '7989',
+      sentToPrinterAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      printApiWaitingAt: null,
+      printApiWaitingDetail: null,
+    });
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
+    routeFetch([
+      {
+        method: 'GET',
+        url: `${PB}/orders/7989`,
+        response: () =>
+          jsonResponse({
+            data: {
+              id: 7989,
+              status: 'Wachten',
+              sub_status: ['Verwerkingscontrole', 'Bestanden'],
+              tracktrace: [],
+            },
+          }),
+      },
+    ]);
+
+    await peb.handleTrackingMails();
+
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledWith({
+      where: { id: 1, printApiWaitingAt: null },
+      data: {
+        printApiWaitingAt: expect.any(Date),
+        printApiWaitingDetail: 'Verwerkingscontrole, Bestanden',
+      },
+    });
+    const pushes = outbound.calls('PushoverClient', 'sendMessage');
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].args[0].message).toContain('100009123');
     expect(prismaMock.payment.update).not.toHaveBeenCalled();
     expect(outbound.calls('Mail', 'sendTrackingEmail')).toHaveLength(0);
   });

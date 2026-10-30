@@ -1845,10 +1845,24 @@ class Mollie {
       },
     };
 
+    // Part four - sent, but Print&Bind has the order on "Wachten" (waiting)
+    // for a file or an answer, and produces nothing until that is resolved.
+    // The hourly tracking poll sets printApiWaitingAt
+    // (src/printers/printerWaiting.ts) and clears it once the order moves on.
+    const waitingAtPrinterFilter: Prisma.PaymentWhereInput = {
+      printApiWaitingAt: { not: null },
+      printApiShipped: false,
+    };
+
     // `notSubmitted` is the old name of this flag, still sent by dashboards
     // loaded before the rename.
     const needsAttentionFilter: Prisma.PaymentWhereInput = {
-      OR: [notSentToPrinterFilter, notFinalizedFilter, notScheduledFilter],
+      OR: [
+        notSentToPrinterFilter,
+        notFinalizedFilter,
+        notScheduledFilter,
+        waitingAtPrinterFilter,
+      ],
     };
     const needsAttentionClause =
       search.needsAttention === true || search.notSubmitted === true
@@ -1953,6 +1967,8 @@ class Mollie {
         printApiOrderRequest: true,
         printApiOrderResponse: true,
         printApiOrderId: true,
+        printApiWaitingAt: true,
+        printApiWaitingDetail: true,
         sentToPrinterAt: true,
         sentToPrinter: true,
         canBeSentToPrinterAt: true,
@@ -2165,12 +2181,15 @@ class Mollie {
       !payment.printerHold &&
       payment.canBeSentToPrinterAt === null &&
       payment.PaymentHasPlaylist.some((php) => php.type === 'physical');
+    const isWaitingAtPrinter = (payment: (typeof payments)[number]) =>
+      payment.printApiWaitingAt !== null && !payment.printApiShipped;
 
     const attentionPayments = payments.filter(
       (payment) =>
         isNotSentToPrinter(payment) ||
         isNotFinalized(payment) ||
-        isNotScheduled(payment)
+        isNotScheduled(payment) ||
+        isWaitingAtPrinter(payment)
     );
 
     const suggestionCounts =
@@ -2211,15 +2230,24 @@ class Mollie {
       );
 
       // Most specific cause first: a refused send and open corrections both
-      // explain an order that never finalized, so they outrank it
+      // explain an order that never finalized, so they outrank it. An order
+      // Print&Bind is waiting on was placed, so none of the others apply.
       let reason:
+        | 'printer-waiting'
         | 'printer-error'
         | 'open-corrections'
         | 'not-finalized'
         | 'not-scheduled'
         | 'not-sent' = 'not-sent';
       let printerError: string | null = null;
-      if (payment.sentToPrinter && !payment.printApiOrderId) {
+      let printerWaiting: { since: Date; detail: string | null } | null = null;
+      if (isWaitingAtPrinter(payment)) {
+        reason = 'printer-waiting';
+        printerWaiting = {
+          since: payment.printApiWaitingAt!,
+          detail: payment.printApiWaitingDetail,
+        };
+      } else if (payment.sentToPrinter && !payment.printApiOrderId) {
         // The send was attempted and the printer refused it; sentToPrinter
         // stays set so the hourly pass does not retry
         reason = 'printer-error';
@@ -2241,7 +2269,7 @@ class Mollie {
       return {
         ...payment,
         appDesignEnabled,
-        attention: { reason, openCorrections, printerError },
+        attention: { reason, openCorrections, printerError, printerWaiting },
       };
     });
 

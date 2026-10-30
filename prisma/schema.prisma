@@ -119,6 +119,12 @@ model Payment {
   printApiOrderRequest     String?              @default("") @db.Text
   printApiOrderResponse    String?              @default("") @db.Text
   printApiTrackingLink     String?              @default("")
+  // Since when Print&Bind has the order on "Wachten" (waiting), and its sub
+  // status ("Verwerkingscontrole, Bestanden", "Antwoord klant"); set by the
+  // hourly tracking poll, cleared once it moves on (src/printers/printerWaiting.ts).
+  // A set value is the dashboard's "Needs attention" reason printer-waiting.
+  printApiWaitingAt        DateTime?
+  printApiWaitingDetail    String?              @db.VarChar(255)
   // Our own PostNL label for the order, made from the admin dashboard to
   // resend a returned parcel: its barcode and track & trace link, kept next
   // to the printer's. A later label replaces the earlier one.

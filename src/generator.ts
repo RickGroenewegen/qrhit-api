@@ -1834,6 +1834,9 @@ class Generator {
       data: {
         printApiStatus: 'Submitted',
         printApiTrackingLink: null,
+        // A new printer order starts without the old one's waiting state
+        printApiWaitingAt: null,
+        printApiWaitingDetail: null,
       },
     });
 

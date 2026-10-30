@@ -552,6 +552,7 @@ describe('admin order routes', () => {
           reason: 'not-finalized',
           openCorrections: 0,
           printerError: null,
+          printerWaiting: null,
         });
       });
 
@@ -565,6 +566,7 @@ describe('admin order routes', () => {
           reason: 'not-scheduled',
           openCorrections: 0,
           printerError: null,
+          printerWaiting: null,
         });
 
         // An approval makes the order eligible for the hourly pass without
@@ -654,6 +656,7 @@ describe('admin order routes', () => {
           reason: 'not-sent',
           openCorrections: 0,
           printerError: null,
+          printerWaiting: null,
         };
         expect(await reasons()).toEqual({
           tr_attention_approved: notSent,
@@ -687,11 +690,13 @@ describe('admin order routes', () => {
             reason: 'open-corrections',
             openCorrections: 0,
             printerError: null,
+            printerWaiting: null,
           },
           tr_attention_waiting: {
             reason: 'printer-error',
             openCorrections: 0,
             printerError: 'Pay on account is off',
+            printerWaiting: null,
           },
         });
         expect((await search({})).needsAttentionCount).toBe(5);
@@ -723,16 +728,61 @@ describe('admin order routes', () => {
             reason: 'open-corrections',
             openCorrections: 1,
             printerError: null,
+            printerWaiting: null,
           },
           tr_attention_expired: {
             reason: 'open-corrections',
             openCorrections: 1,
             printerError: null,
+            printerWaiting: null,
           },
         });
 
         // Deleting the track cascades to the correction
         await prisma().track.delete({ where: { id: track.id } });
+      });
+
+      it('lists a submitted order Print&Bind is waiting on, until it ships', async () => {
+        const submitted = async () =>
+          (await search({ needsAttention: true })).data.find(
+            (payment: any) => payment.paymentId === 'tr_attention_submitted'
+          );
+        expect(await submitted()).toBeUndefined();
+
+        const since = new Date('2026-10-06T19:15:00Z');
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_submitted' },
+          data: {
+            printApiWaitingAt: since,
+            printApiWaitingDetail: 'Verwerkingscontrole, Bestanden',
+          },
+        });
+        expect((await submitted()).attention).toEqual({
+          reason: 'printer-waiting',
+          openCorrections: 0,
+          printerError: null,
+          printerWaiting: {
+            since: since.toISOString(),
+            detail: 'Verwerkingscontrole, Bestanden',
+          },
+        });
+        expect((await search({})).needsAttentionCount).toBe(5);
+
+        // A shipped order no longer waits, whatever the poll left behind
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_submitted' },
+          data: { printApiShipped: true },
+        });
+        expect(await submitted()).toBeUndefined();
+
+        await prisma().payment.update({
+          where: { paymentId: 'tr_attention_submitted' },
+          data: {
+            printApiShipped: false,
+            printApiWaitingAt: null,
+            printApiWaitingDetail: null,
+          },
+        });
       });
 
       it('leaves attention empty on orders that do not need any', async () => {

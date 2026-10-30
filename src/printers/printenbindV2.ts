@@ -25,6 +25,7 @@ import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { createHash } from 'crypto';
 import { paymentTaxRate } from './paymentTaxRate';
 import { shippingCompany } from './shippingCompany';
+import { PrinterWaiting } from './printerWaiting';
 import {
   PbCustomerInfo,
   QUOTE_POSTCODES,
@@ -88,6 +89,7 @@ class PrintEnBindV2 {
   private discount = new Discount();
   private shipping = Shipping.getInstance();
   private pushover = new PushoverClient();
+  private printerWaiting = new PrinterWaiting();
   private shippingQuoteBlockedUntil = 0;
 
   // The hourly tracking / box-instruction crons live in the PrintEnBind
@@ -2016,6 +2018,12 @@ class PrintEnBindV2 {
               this.logger.log(color.red.bold(`Skipping order ID ${order.printApiOrderId} (paymentId: ${order.paymentId}): failed to get order status`));
               continue;
             }
+
+            await this.printerWaiting.observe(
+              payment,
+              pbOrder.status,
+              pbOrder.sub_status
+            );
 
             if (PB_SHIPPED_STATUSES.includes(pbOrder.status)) {
               this.logger.log(

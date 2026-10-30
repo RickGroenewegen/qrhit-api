@@ -22,6 +22,7 @@ import Shipping from '../shipping';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { paymentTaxRate } from './paymentTaxRate';
 import { shippingCompany } from './shippingCompany';
+import { PrinterWaiting } from './printerWaiting';
 
 interface PriceResult {
   totalPrice: number;
@@ -44,6 +45,7 @@ class PrintEnBindV1 {
   private data = Data.getInstance();
   private discount = new Discount();
   private shipping = Shipping.getInstance();
+  private printerWaiting = new PrinterWaiting();
   private countryCodes: string[] = [
     'AF',
     'AX',
@@ -2598,6 +2600,9 @@ class PrintEnBindV1 {
               this.logger.log(color.red.bold(`Skipping order ID ${order.printApiOrderId} (paymentId: ${order.paymentId}): failed to get order status`));
               continue;
             }
+
+            // v1 reports the status without its sub status
+            await this.printerWaiting.observe(payment, orderStatus.status, null);
 
             if (orderStatus.status == 'Verzonden') {
               this.logger.log(
