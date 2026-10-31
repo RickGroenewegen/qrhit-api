@@ -2,6 +2,10 @@ import { Server as HTTPServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import Redis from 'ioredis';
 import Logger from './logger';
+import type { OrderStage } from './orderProgress';
+
+/** The Redis channel every HTTP worker relays to its own connections. */
+export const PROGRESS_CHANNEL = 'progress-events';
 
 interface ProgressConnection {
   ws: WebSocket;
@@ -11,7 +15,7 @@ interface ProgressConnection {
   isAlive: boolean;
 }
 
-interface ProgressData {
+export interface ProgressData {
   stage?:
     | 'fetching_ids'
     | 'fetching_metadata'
@@ -19,7 +23,9 @@ interface ProgressData {
     | 'thinking_keywords'
     | 'searching_tracks'
     | 'curating_with_llm'
-    | 'creating_spotify_playlist';
+    | 'creating_spotify_playlist'
+    // An order being generated (src/orderProgress.ts)
+    | OrderStage;
   percentage: number;
   message?: string;
   /** Translation key the frontend should i18n. Preferred over `message`. */
@@ -39,6 +45,8 @@ interface ProgressData {
   keywordHits?: number;
   startYear?: number | null;
   endYear?: number | null;
+  /** An order's digital PDF, once it is made. */
+  downloadUrl?: string;
 }
 
 class ProgressWebSocketServer {
@@ -79,14 +87,14 @@ class ProgressWebSocketServer {
       this.pubClient = new Redis(redisUrl);
       this.subClient = new Redis(redisUrl);
 
-      this.subClient.subscribe('progress-events', (err) => {
+      this.subClient.subscribe(PROGRESS_CHANNEL, (err) => {
         if (err) {
           this.logger.log(`[ProgressWS] Failed to subscribe to progress-events: ${err.message}`);
         }
       });
 
       this.subClient.on('message', (channel, message) => {
-        if (channel === 'progress-events') {
+        if (channel === PROGRESS_CHANNEL) {
           try {
             const event = JSON.parse(message);
             this.handleRedisEvent(event);
@@ -114,7 +122,10 @@ class ProgressWebSocketServer {
 
   private publishProgressEvent(playlistId: string, serviceType: string, requestId: string, type: string, data: ProgressData) {
     if (this.pubClient) {
-      this.pubClient.publish('progress-events', JSON.stringify({ playlistId, serviceType, requestId, type, data }));
+      // A Redis hiccup loses one update, never the caller's work
+      this.pubClient
+        .publish(PROGRESS_CHANNEL, JSON.stringify({ playlistId, serviceType, requestId, type, data }))
+        .catch(() => undefined);
     } else {
       // Local broadcast fallback
       const key = `${playlistId}:${serviceType}:${requestId}`;
@@ -232,6 +243,31 @@ class ProgressWebSocketServer {
       message: error || 'An error occurred',
       error: error,
     });
+  }
+
+  /**
+   * Publish from any process. An HTTP worker goes through its own server; a
+   * process without one (the queue workers in the cluster primary and
+   * worker.ts) hands the event to `redisPublish`, in the form the HTTP
+   * workers' subscribers read. With neither, nobody can be listening.
+   */
+  public static publishEvent(
+    playlistId: string,
+    serviceType: string,
+    requestId: string,
+    type: 'progress' | 'complete' | 'error',
+    data: ProgressData,
+    redisPublish?: (channel: string, message: string) => Promise<unknown>
+  ): void {
+    const instance = ProgressWebSocketServer.instance;
+    if (instance) {
+      instance.publishProgressEvent(playlistId, serviceType, requestId, type, data);
+    } else if (redisPublish) {
+      redisPublish(
+        PROGRESS_CHANNEL,
+        JSON.stringify({ playlistId, serviceType, requestId, type, data })
+      ).catch(() => undefined);
+    }
   }
 
   /**

@@ -244,3 +244,45 @@ describe('updateTrackYear and earlier looked-up tracks', () => {
     expect(h.checkUnfinalizedPayments).not.toHaveBeenCalled();
   });
 });
+
+describe('updateTrackYear progress (an order\'s progress, src/orderProgress.ts)', () => {
+  const needingYears = [
+    { id: 1, isrc: 'I1', trackId: 'sp1', name: 'One', artist: 'A' },
+    { id: 2, isrc: 'I2', trackId: 'sp2', name: 'Two', artist: 'B' },
+    { id: 3, isrc: 'I3', trackId: 'sp3', name: 'Three', artist: 'C' },
+  ];
+
+  it('reports the start and each looked-up track', async () => {
+    const { deps, prisma } = makeDeps();
+    h.isAutoMode.mockResolvedValue(false);
+    h.findAndUpdateTrackByISRC.mockResolvedValue({ wasUpdated: true, method: 'isrc' });
+    prisma.$queryRaw.mockResolvedValueOnce(needingYears);
+    const onProgress = vi.fn();
+
+    await updateTrackYear(deps, ['sp1', 'sp2', 'sp3'], [], onProgress);
+
+    expect(onProgress.mock.calls).toEqual([
+      [0, 3],
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ]);
+  });
+
+  it('reports nothing when every year is known, and a failing report stops no lookup', async () => {
+    const { deps, prisma } = makeDeps();
+    h.isAutoMode.mockResolvedValue(false);
+    const silent = vi.fn();
+    await updateTrackYear(deps, ['sp1'], [], silent);
+    expect(silent).not.toHaveBeenCalled();
+
+    h.findAndUpdateTrackByISRC.mockResolvedValue({ wasUpdated: true, method: 'isrc' });
+    prisma.$queryRaw.mockResolvedValueOnce(needingYears);
+    const throwing = vi.fn(() => {
+      throw new Error('socket gone');
+    });
+    await updateTrackYear(deps, ['sp1', 'sp2', 'sp3'], [], throwing);
+    expect(h.findAndUpdateTrackByISRC).toHaveBeenCalledTimes(3);
+    expect(throwing).toHaveBeenCalledTimes(4);
+  });
+});

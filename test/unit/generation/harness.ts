@@ -106,6 +106,10 @@ export const h = {
   musicfetch: {
     processPlaylistTracks: vi.fn(),
   },
+  // What an order reports to the scan app's done screen (src/orderProgress.ts)
+  progress: {
+    report: vi.fn(),
+  },
   /** Constructor args of every CronJob created through the mocked 'cron'. */
   cronJobs: [] as any[][],
 };
@@ -130,6 +134,7 @@ export function resetGeneratorMocks(): void {
     h.finalCheck,
     h.suggestion,
     h.musicfetch,
+    h.progress,
   ]) {
     for (const fn of Object.values(group)) (fn as any).mockReset();
   }

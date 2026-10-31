@@ -44,6 +44,7 @@ import {
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
 import PrismaInstance from '../prisma';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
+import { STORE_PRODUCTS } from '../storeProducts';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -111,6 +112,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       // values served here as authoritative.
       maxCardsPhysical: MAX_CARDS_PHYSICAL,
       maxCardsDigital: MAX_CARDS,
+      // What the scan app sells through the App Store / Google Play, so it
+      // knows which products to load (prices come from the store itself).
+      storeProducts: STORE_PRODUCTS.map(({ id, maxCards, games, appDesign }) => ({
+        id,
+        maxCards,
+        games,
+        appDesign,
+      })),
     });
   });
 

@@ -540,7 +540,16 @@ describe('storeTracks', () => {
     expect(ins.sql).toContain('INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)');
     expect(ins.values).toEqual([99, 's1']);
 
-    expect(h.updateTrackYear).toHaveBeenCalledWith(deps, ['s1'], tracks);
+    expect(h.updateTrackYear).toHaveBeenCalledWith(deps, ['s1'], tracks, undefined);
+  });
+
+  it('passes the year lookups\' progress on (an order\'s progress, src/orderProgress.ts)', async () => {
+    const { deps } = makeDeps();
+    const onYearProgress = vi.fn();
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], undefined, 'spotify', 'en', onYearProgress);
+
+    expect(h.updateTrackYear).toHaveBeenCalledWith(deps, ['s1'], [goodTrack], onYearProgress);
   });
 
   it('stores the link in the service-specific column for non-spotify services', async () => {

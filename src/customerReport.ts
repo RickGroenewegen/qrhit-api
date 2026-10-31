@@ -14,9 +14,15 @@
  * how many), every QRGames purchase counted but only upgrades summed (an
  * initial one is in its order's total), and App Designer the same way (one
  * bought at checkout is in its order).
+ *
+ * `channel` (salesChannel.ts) narrows it to the orders placed on the website
+ * or in the scan app, the QRGames and App Designer bought with them, and on
+ * the website's side the upgrades and account purchases.
  */
 import PrismaInstance from './prisma';
 import { round2 } from './listPricing';
+import { SalesChannel, channelSql, ledgerChannelSql } from './salesChannel';
+import { notStoreTestSql } from './storeProducts';
 
 export type CustomerReportPeriod = 'all' | 'year' | '12m';
 export type CustomerReportSort = 'spend' | 'orders' | 'profit';
@@ -182,11 +188,13 @@ const CONSUMER_ORDER = `
   AND p.paymentId NOT LIKE 'toolkit\\_%'
   AND p.paymentId NOT LIKE 'reseller\\_%'
   AND NOT EXISTS (SELECT 1 FROM company_lists cl WHERE cl.paymentId = p.id)
+ ${notStoreTestSql('p')}
 `;
 
 export async function getCustomerReport(
   period: CustomerReportPeriod = 'all',
   sort: CustomerReportSort = 'spend',
+  channel: SalesChannel = 'all',
   limit: number = CUSTOMER_REPORT_LIMIT
 ): Promise<CustomerReportRow[]> {
   const prisma = PrismaInstance.getInstance();
@@ -238,7 +246,7 @@ export async function getCustomerReport(
         GROUP BY php.paymentId
       ) bx ON bx.paymentId = p.id
       WHERE ${CONSUMER_ORDER}
-        AND p.createdAt >= ?
+        AND p.createdAt >= ?${channelSql(channel, 'p')}
       GROUP BY p.userId
       `,
       since
@@ -260,7 +268,7 @@ export async function getCustomerReport(
       FROM games_purchases gp
       LEFT JOIN payments p ON gp.type <> 'upgrade' AND p.paymentId = gp.molliePaymentId
       WHERE gp.createdAt >= ?
-        AND (gp.type = 'upgrade' OR (p.id IS NOT NULL AND ${CONSUMER_ORDER}))
+        AND (gp.type = 'upgrade' OR (p.id IS NOT NULL AND ${CONSUMER_ORDER}))${ledgerChannelSql(channel, 'gp')}
       GROUP BY gp.userId
       `,
       since
@@ -275,7 +283,7 @@ export async function getCustomerReport(
       FROM app_design_purchases adp
       LEFT JOIN payments p ON p.id = adp.paymentId
       WHERE adp.createdAt >= ?
-        AND (adp.paymentId IS NULL OR (p.id IS NOT NULL AND ${CONSUMER_ORDER}))
+        AND (adp.paymentId IS NULL OR (p.id IS NOT NULL AND ${CONSUMER_ORDER}))${ledgerChannelSql(channel, 'adp')}
       GROUP BY adp.userId
       `,
       since

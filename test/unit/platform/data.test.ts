@@ -536,7 +536,8 @@ describe('delegation wrappers', () => {
       tracks,
       undefined,
       'spotify',
-      'en'
+      'en',
+      undefined
     );
   });
 

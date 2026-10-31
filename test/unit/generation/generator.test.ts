@@ -90,6 +90,10 @@ vi.mock('../../../src/musicfetch', async () => {
   return { default: { getInstance: () => h.musicfetch } };
 });
 vi.mock('cron', () => ({ CronJob: class {} }));
+vi.mock('../../../src/orderProgress', async () => {
+  const { h } = await import('./harness');
+  return { default: { getInstance: () => h.progress } };
+});
 
 import { outbound } from '../../helpers/recording-mock';
 import {
@@ -327,6 +331,28 @@ describe('generate()', () => {
     await gen.generate('pay_1', '1.1.1.1', '', mollie, false, true);
     expect(outbound.calls('Mail', 'sendEmail')).toHaveLength(0);
     expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(0);
+  });
+
+  it.each([
+    ['appstore', 'Via de App Store'],
+    ['googleplay', 'Via Google Play'],
+    ['ideal', 'In de app, via Mollie'],
+  ])('gives an app sale paid by %s a Pushover of its own', async (paymentMethod, paidBy) => {
+    const { mollie } = arrange({ channel: 'app', paymentMethod });
+    await gen.generate('pay_1', '9.9.9.9', '', mollie);
+    const push = outbound.calls('PushoverClient', 'sendMessage');
+    expect(push).toHaveLength(1);
+    expect(push[0].args[0]).toMatchObject({
+      title: '📱 APP-KA-CHING! € 5 verdiend!',
+      message: `${paidBy}: Rick Tester (NL) heeft 1 set(s) met in totaal 2 kaarten besteld voor totaal € 25.`,
+      sound: 'cashregister',
+    });
+  });
+
+  it('gives a website sale the usual Pushover', async () => {
+    const { mollie } = arrange();
+    await gen.generate('pay_1', '9.9.9.9', '', mollie);
+    expect(outbound.calls('PushoverClient', 'sendMessage')[0].args[0].sound).toBe('incoming');
   });
 
   it('onlyProductMail suppresses the main mail but still sends the pushover', async () => {
@@ -1264,5 +1290,104 @@ describe('QR codes of songs added after the order (ensureQrCodes)', () => {
 
     expect(h.data.getTracks).not.toHaveBeenCalled();
     expect(h.qr.generateQRLambda).not.toHaveBeenCalled();
+  });
+});
+
+describe('order progress for the scan app (src/orderProgress.ts)', () => {
+  const stages = () => h.progress.report.mock.calls.map((call: any[]) => call[1]);
+
+  function arrange() {
+    const payment = makePayment();
+    const playlist = makePlaylist();
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([playlist]);
+    h.provider.getTracks.mockResolvedValue({
+      success: true,
+      data: { tracks: [{ id: 't1' }, { id: 't2' }] },
+    });
+    h.data.getTracks.mockResolvedValue([...dbTracksFixture]);
+    return { payment, playlist, mollie };
+  }
+
+  it('reports each stage of generate(), then the year check it waits for', async () => {
+    const { mollie } = arrange();
+    vi.spyOn(gen, 'finalizeOrder').mockResolvedValue({ success: true });
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    expect(stages()).toEqual(['started', 'playlist', 'songs', 'qr', 'qr', 'yearcheck']);
+    expect(h.progress.report).toHaveBeenCalledWith('pay_1', 'playlist', { line: 0, lines: 1 });
+    // The Lambda path reports after each batch of 25
+    expect(h.progress.report).toHaveBeenCalledWith('pay_1', 'qr', { current: 0, total: 2 });
+    expect(h.progress.report).toHaveBeenCalledWith('pay_1', 'qr', { current: 2, total: 2 });
+  });
+
+  it('reports every card on the serial development path', async () => {
+    const { mollie } = arrange();
+    vi.spyOn(gen, 'finalizeOrder').mockResolvedValue({ success: true });
+    process.env['ENVIRONMENT'] = 'development';
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    const qr = h.progress.report.mock.calls.filter((call: any[]) => call[1] === 'qr');
+    expect(qr.map((call: any[]) => call[2])).toEqual([
+      { current: 0, total: 2 },
+      { current: 1, total: 2 },
+      { current: 2, total: 2 },
+    ]);
+  });
+
+  it('hands storeTracks a callback that reports the year lookups', async () => {
+    const { mollie } = arrange();
+    vi.spyOn(gen, 'finalizeOrder').mockResolvedValue({ success: true });
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    const onYearProgress = h.data.storeTracks.mock.calls[0][6];
+    onYearProgress(3, 7);
+    expect(h.progress.report).toHaveBeenLastCalledWith('pay_1', 'years', { current: 3, total: 7 });
+  });
+
+  it('does not report a year check when every year is checked: finalizeOrder takes over', async () => {
+    const { mollie } = arrange();
+    h.data.areAllTracksManuallyChecked.mockResolvedValue(true);
+    vi.spyOn(gen, 'finalizeOrder').mockResolvedValue({ success: true });
+
+    await gen.generate('pay_1', '1.1.1.1', '', mollie);
+
+    expect(stages()).not.toContain('yearcheck');
+  });
+
+  it('finalizeOrder reports the PDF, the mail and done with the digital download link', async () => {
+    const payment = makePayment();
+    const mollie = makeMollie(payment);
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist()]);
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([{ id: 41, index: 1 }]);
+
+    await gen.finalizeOrder('pay_1', mollie);
+
+    expect(stages()).toEqual(['pdf', 'mail', 'done']);
+    expect(h.progress.report).toHaveBeenLastCalledWith('pay_1', 'done', {
+      downloadUrl: `${process.env['API_URI']}/download/pay_1/userhash/pl1/digital`,
+    });
+  });
+
+  it('finalizeOrder of a printed order is done without a download link or mail stage', async () => {
+    const mollie = makeMollie(makePayment());
+    h.data.getPlaylistsByPaymentId.mockResolvedValue([makePlaylist({ orderType: 'physical' })]);
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([{ id: 41, index: 1 }]);
+
+    await gen.finalizeOrder('pay_1', mollie);
+
+    expect(stages()).toEqual(['pdf', 'done']);
+    expect(h.progress.report).toHaveBeenLastCalledWith('pay_1', 'done', { downloadUrl: undefined });
+  });
+
+  it('reports nothing when finalizing is refused', async () => {
+    const mollie = makeMollie(makePayment({ finalized: true }));
+
+    await gen.finalizeOrder('pay_1', mollie);
+
+    expect(h.progress.report).not.toHaveBeenCalled();
   });
 });

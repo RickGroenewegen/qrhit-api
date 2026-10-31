@@ -49,6 +49,7 @@ import CalendarService from '../calendarService';
 import Settings from '../settings';
 import SeoDescriptions from '../seoDescriptions';
 import { parseSalesSegment } from '../businessSales';
+import { parseSalesChannel } from '../salesChannel';
 import {
   getCustomerReport,
   parseCustomerReportPeriod,
@@ -1898,13 +1899,14 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { days, startDate, endDate } = request.query;
+        const { days, startDate, endDate, channel } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
         const chartData = await charts.getMovingAverage(
           daysNum,
           startDate as string | undefined,
-          endDate as string | undefined
+          endDate as string | undefined,
+          parseSalesChannel(channel)
         );
 
         reply.send({
@@ -1927,13 +1929,14 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { days, startDate, endDate } = request.query;
+        const { days, startDate, endDate, channel } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
         const chartData = await charts.getHourlySales(
           daysNum,
           startDate as string | undefined,
-          endDate as string | undefined
+          endDate as string | undefined,
+          parseSalesChannel(channel)
         );
 
         reply.send({
@@ -1956,13 +1959,14 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { days, startDate, endDate } = request.query;
+        const { days, startDate, endDate, channel } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
         const chartData = await charts.getDailySales(
           daysNum,
           startDate as string | undefined,
-          endDate as string | undefined
+          endDate as string | undefined,
+          parseSalesChannel(channel)
         );
 
         reply.send({
@@ -2231,7 +2235,8 @@ export default async function adminRoutes(
       const report = await mollie.getPaymentsByMonth(
         startDate,
         endDate,
-        parseSalesSegment(request.query?.segment)
+        parseSalesSegment(request.query?.segment),
+        parseSalesChannel(request.query?.channel)
       );
 
       reply.send({
@@ -2514,7 +2519,8 @@ export default async function adminRoutes(
       const report = await mollie.getSalesReport(
         'day',
         filter,
-        parseSalesSegment(request.query?.segment)
+        parseSalesSegment(request.query?.segment),
+        parseSalesChannel(request.query?.channel)
       );
       reply.send({
         success: true,
@@ -2532,7 +2538,8 @@ export default async function adminRoutes(
       const report = await mollie.getSalesReport(
         'month',
         filter,
-        parseSalesSegment(request.query?.segment)
+        parseSalesSegment(request.query?.segment),
+        parseSalesChannel(request.query?.channel)
       );
       reply.send({
         success: true,
@@ -2548,7 +2555,8 @@ export default async function adminRoutes(
     async (request: any, reply: any) => {
       const report = await getCustomerReport(
         parseCustomerReportPeriod(request.query?.period),
-        parseCustomerReportSort(request.query?.sort)
+        parseCustomerReportSort(request.query?.sort),
+        parseSalesChannel(request.query?.channel)
       );
       reply.send({
         success: true,

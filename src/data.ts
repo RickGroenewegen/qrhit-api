@@ -202,9 +202,10 @@ class Data {
     tracks: any,
     trackOrder?: Map<string, number>,
     serviceType: string = 'spotify',
-    locale: string = 'en'
+    locale: string = 'en',
+    onYearProgress?: (done: number, total: number) => void
   ): Promise<any> {
-    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType, locale);
+    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType, locale, onYearProgress);
   }
 
   public async searchTracks(

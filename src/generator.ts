@@ -37,12 +37,22 @@ import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 import { computePrintFingerprint } from './printFingerprint';
 import { deckDesigns, designIndexForCard, getExtraDesigns } from './cardDesigns';
 import { isBusinessDeck } from './trackMix';
+import { isStorePayment } from './storeProducts';
+import { APP_CHANNEL } from './salesChannel';
+import OrderProgress from './orderProgress';
 
 // The only lines sendToPrinter sends to Print&Bind. Schneiders, Tromp,
 // reseller and MusicMatch decks are printed elsewhere.
 const PRINTNBIND_PHYSICAL_LINE = {
   type: 'physical',
   printerType: PRINTER_TYPE.PRINTNBIND,
+};
+
+// Where an app sale was paid, the first words of its Pushover.
+const APP_SALE_PAID_BY: Record<string, string> = {
+  appstore: 'Via de App Store',
+  googleplay: 'Via Google Play',
+  mollie: 'In de app, via Mollie',
 };
 
 class Generator {
@@ -62,6 +72,7 @@ class Generator {
   private cache = Cache.getInstance();
   private generatorQueue: GeneratorQueue | null = null;
   private finalCheck = FinalCheck.getInstance();
+  private progress = OrderProgress.getInstance();
 
   private constructor() {
     this.setCron();
@@ -640,6 +651,9 @@ class Generator {
       return;
     }
 
+    // Whoever watches this order (the scan app's done screen) sees it start
+    this.progress.report(paymentId, 'started');
+
     // Get all playlists associated with the payment
     const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
 
@@ -662,8 +676,12 @@ class Generator {
 
     // Generate invoice and send the main mail for cards
     if (productType == 'cards' && !skipMainMail && !onlyProductMail) {
-      // Every order gets an invoice, digital or physical, personal or business
-      const invoicePath = await this.order.createInvoice(payment);
+      // Every order gets an invoice, digital or physical, personal or
+      // business, except one an app store sold: the store is the seller and
+      // sends the buyer its own receipt.
+      const invoicePath = isStorePayment(payment.paymentMethod)
+        ? ''
+        : await this.order.createInvoice(payment);
 
       // Send confirmation email with the invoice attached
       await this.mail.sendEmail('main_' + orderType, payment, playlists, '', '', invoicePath);
@@ -673,8 +691,13 @@ class Generator {
     const subdir = sanitizeFilename(crypto.randomBytes(8).toString('hex'));
 
     // Store data and generate QR codes for each playlist
-    for (const playlist of playlists) {
+    for (const [line, playlist] of playlists.entries()) {
       if (productType == 'cards') {
+        this.progress.report(paymentId, 'playlist', {
+          line,
+          lines: playlists.length,
+        });
+
         // Store playlist data
         await this.storePlaylistData(
           payment,
@@ -693,7 +716,9 @@ class Generator {
         );
 
         // Generate QR codes
-        await this.generateQRCodes(playlist, dbTracks, subdir);
+        await this.generateQRCodes(playlist, dbTracks, subdir, (current, total) =>
+          this.progress.report(paymentId, 'qr', { current, total })
+        );
 
         // Update analytics
         this.analytics.increaseCounter(
@@ -744,6 +769,9 @@ class Generator {
         forceFinalize,
         skipMainMail && !onlyProductMail
       );
+    } else {
+      // The PDF comes once the year check is done (POST /yearcheck)
+      this.progress.report(paymentId, 'yearcheck');
     }
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
@@ -754,16 +782,22 @@ class Generator {
       totalNumberOfTracks += playlist.numberOfTracks;
     }
 
-    this.analytics.increaseCounter(
-      'finance',
-      'profit',
-      parseInt(payment.profit)
-    );
-    this.analytics.increaseCounter(
-      'finance',
-      'turnover',
-      parseInt(payment.totalPrice)
-    );
+    // An app store test purchase (App Review, TestFlight, Play license
+    // testers) is paid by nobody: no turnover, and no KA-CHING.
+    const storeTest = payment.storeEnvironment === 'sandbox';
+
+    if (!storeTest) {
+      this.analytics.increaseCounter(
+        'finance',
+        'profit',
+        parseInt(payment.profit)
+      );
+      this.analytics.increaseCounter(
+        'finance',
+        'turnover',
+        parseInt(payment.totalPrice)
+      );
+    }
 
     this.logger.log(
       color.green.bold(
@@ -771,7 +805,7 @@ class Generator {
       )
     );
 
-    if (!skipMainMail) {
+    if (!skipMainMail && !storeTest) {
       let message = `${orderName} heeft ${
         payment.PaymentHasPlaylist.length
       } set(s) met in totaal ${totalNumberOfTracks} kaarten besteld voor totaal € ${payment.totalPrice
@@ -787,12 +821,20 @@ class Generator {
         ).toFixed(2)} besteld.`;
       }
 
+      // A sale in the scan app gets a Pushover of its own: its title, where
+      // it was paid, and the cash register instead of the usual sound.
+      const appSale = payment.channel === APP_CHANNEL;
+      if (appSale) {
+        title = `📱 APP-${title}`;
+        message = `${APP_SALE_PAID_BY[payment.paymentMethod] ?? APP_SALE_PAID_BY['mollie']}: ${message}`;
+      }
+
       // Pushover
       this.pushover.sendMessage(
         {
           title,
           message,
-          sound: 'incoming',
+          sound: appSale ? 'cashregister' : 'incoming',
         },
         ip
       );
@@ -848,6 +890,7 @@ class Generator {
     }
 
     const tracks = response.data.tracks;
+    this.progress.report(payment.paymentId, 'songs');
 
     // Trim anything past the cap for this order type. orderType is only ever
     // 'digital' or 'physical' (sheets orders are stored as 'physical'), so the
@@ -886,7 +929,9 @@ class Generator {
       tracks,
       trackOrder,
       serviceType,
-      payment.locale || 'en'
+      payment.locale || 'en',
+      (current, total) =>
+        this.progress.report(payment.paymentId, 'years', { current, total })
     );
 
     // Extract and store Apple Music storefront from track URLs
@@ -980,7 +1025,8 @@ class Generator {
   private async generateQRCodes(
     playlist: any,
     dbTracks: any[],
-    subdir: string
+    subdir: string,
+    onProgress?: (current: number, total: number) => void
   ): Promise<void> {
     this.logger.log(
       blue.bold(
@@ -1015,6 +1061,7 @@ class Generator {
       await applyQrLogo(outputPath, link, options, this.logger);
     };
 
+    onProgress?.(0, dbTracks.length);
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
       for (const [index, track] of dbTracks.entries()) {
@@ -1022,6 +1069,7 @@ class Generator {
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.qr.generateQR(link, outputPath, designs[designOf(index)].qrColor);
         await drawLogo(outputPath, link, index);
+        onProgress?.(index + 1, dbTracks.length);
       }
     } else {
       // Use new method in parallel batches of 25
@@ -1041,6 +1089,7 @@ class Generator {
             await drawLogo(outputPath, link, index);
           })
         );
+        onProgress?.(i + batch.length, dbTracks.length);
       }
     }
   }
@@ -1204,8 +1253,12 @@ class Generator {
           },
         });
 
+        this.progress.report(paymentId, 'pdf');
+
         const physicalPlaylists = [];
         const emailedPlaylistIds = new Set<number>();
+        // The first digital line's PDF, for whoever watches the order
+        let downloadUrl: string | undefined;
 
         for (const playlist of playlists) {
           if (playlist.productType === 'giftcard') {
@@ -1357,9 +1410,15 @@ class Generator {
             );
           }
 
+          if (playlist.orderType == 'digital' && !downloadUrl && payment.user?.hash) {
+            // The link the digital mail carries
+            downloadUrl = `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/digital`;
+          }
+
           if (playlist.orderType == 'digital' && !skipMail) {
             // Only send email if this playlist hasn't been emailed yet
             if (!emailedPlaylistIds.has(playlist.id)) {
+              this.progress.report(paymentId, 'mail');
               // If bingo is enabled, link to My Account where users can create their own bingo cards
               const bingoDownloadUrl = playlist.gamesEnabled
                 ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
@@ -1420,6 +1479,7 @@ class Generator {
             `Order finalized for payment: ${white.bold(paymentId)}`
           )
         );
+        this.progress.report(paymentId, 'done', { downloadUrl });
 
         return {
           success: true,

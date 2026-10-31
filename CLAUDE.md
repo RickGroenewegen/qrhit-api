@@ -1277,6 +1277,22 @@ shows both: `turnover`/`profit` are the sum, `consumer` and `business` the
 split. The tax and OSS reports stay consumer only; business VAT is on the
 MoneyBird invoices.
 
+**Website or app** (2.1.0, `src/salesChannel.ts`). `payments.channel` is
+`'app'` for an order the scan app placed (its App Store / Google Play
+purchases and the printed orders it pays through Mollie with `returnTo:
+'app'`; `getPaymentUri` sets it) and null for the website and every older
+order. The day and month reports, the country report, the customer report
+and the three charts take `?channel=web|app`; anything else is all, the
+same queries as before. `web` is `channel IS NULL`, `app` is `channel =
+'app'`, on every payments query that feeds the page (orders, refunds,
+boxes, profit, the country's playlists). QRGames and App Designer follow
+the order they came with (`paymentId`); one without an order (an upgrade,
+App Designer bought on the account) is the website's. Like the product
+filter it narrows the consumer orders only: sold company lists are neither.
+The tax and OSS reports and the monthly consumer invoice never take it, a
+VAT filing covers everything. The column has to exist before a deploy:
+`ALTER TABLE payments ADD COLUMN channel VARCHAR(8) NULL;`
+
 **Upgrades paid after the order are booked in full when their webhook
 lands** (`bookUpgradeOnPayment`): gross into `totalPrice`, the split into
 `totalPriceWithoutTax` and `productVATPrice`, and ex-VAT minus the boxes'
@@ -2348,6 +2364,116 @@ the browser never ran the pixel.
   events, then remove it. Graph API `v26.0`.
 - No retry: a failure is logged in red and reported to PostHog
   (`Meta Conversions API: purchase not sent`).
+
+## App store orders (scan app 2.1.0)
+
+Since 2.1.0 the scan app sells decks itself. Google rejected 2.0.1 for
+linking to this site, which sells digital items through Mollie, and the
+store rules split the money two ways:
+
+| what | paid through | why |
+|---|---|---|
+| digital deck (PDF), optionally with QRGames! / App Designer | App Store / Google Play | Apple 3.1.1, Google Payments §2: digital goods use store billing |
+| printed cards, sheets, gift box, shipping | Mollie, as on the site | Apple 3.1.3(e), Google §3: physical goods may NOT use store billing |
+
+No new routes; two existing ones take optional fields.
+
+- **`POST /mollie/payment` with `store: {platform: 'ios'|'android'}`**
+  - It takes only one digital card line, `amount` 1, and no codes. A code
+    may not unlock digital content bought in the app (Apple 3.1.1).
+    Otherwise it answers `store_cart` / `store_discount`.
+  - It writes the order like any other, but **open**, under `store_<uuid>`
+    with `paymentMethod` `appstore` / `googleplay`, and never calls Mollie.
+  - `storeProductId` holds the product the order must be paid with:
+    `requiredDeckProduct`, the smallest tier holding the deck plus its
+    add-ons.
+  - The amounts are the store price (`applyStorePrice`), and `profit` is
+    ex-VAT × 0.85 (`STORE_PROCEEDS_SHARE`).
+  - It answers `storeProductId` and `appAccountToken` (the uuid). The app
+    passes that token to the store with the purchase.
+- **`POST /mollie/check` with `store: {platform, productId, jws | purchaseToken}`**
+  - It verifies the purchase (`src/storePurchases.ts`).
+  - The purchase must be of the stored product and carry the order's
+    token. It claims the row (`status notIn paid`) with
+    `storeTransactionId` (unique) and `storeEnvironment`, then runs
+    `onOrderPaid`, the same side effects the Mollie webhook runs.
+  - Sending the same proof again answers paid without doing anything twice,
+    so the app sends it again after a lost answer and on every start until
+    it has finished the transaction.
+  - A purchase used for another order answers `store_transaction_used`.
+- **`returnTo: 'app'` on `POST /mollie/payment`** (printed orders):
+  `redirectUrl` becomes `nl.rickgroenewegen.qrsong://payment?paymentId=…`
+  (`APP_PAYMENT_RETURN_URL`). Mollie accepts custom schemes, and a banking
+  app often does not hand a universal link back.
+- Either one writes `channel = 'app'` on the order, for the reports'
+  Website / App toggle (see "Turnover and profit").
+
+**Verification** (`src/storePurchases.ts`):
+- **Apple**: the StoreKit 2 transaction JWS is checked offline against the
+  root certificates in `src/_data/apple` (`@apple/app-store-server-library`).
+  No App Store Server API key is needed. `environment` picks the verifier,
+  and the signature proves it. Xcode's local StoreKit testing is unsigned,
+  so it is accepted only with `ENVIRONMENT=development`.
+- **Google**: `purchases.products.get` under the service account in
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` (Play Console → Users and permissions:
+  "View financial data" and "Manage orders"), then `consume` once paid.
+  An unconsumed purchase is refunded after three days, and the app consumes
+  it too in case the server's call failed.
+- **Web**: `ng serve` has no store. With `ENVIRONMENT=development` a
+  `platform: 'web'` proof carrying the token is believed, so the whole flow
+  runs in a browser.
+- **Test purchases** are accepted and get `storeEnvironment='sandbox'`. App
+  Review buys in Apple's sandbox against production, and TestFlight and
+  Play's license testers do too. They stay out of every turnover report
+  (`notStoreTestSql`), the Redis turnover counters, Pushover and Meta.
+- **Pushover**: every sale the app placed (`channel = 'app'`, store or
+  Mollie) gets its own: "📱 APP-KA-CHING!", the first words saying where it
+  was paid ("Via de App Store", "Via Google Play", "In de app, via Mollie")
+  and the `cashregister` sound instead of `incoming` (generator
+  `APP_SALE_PAID_BY`).
+
+**Bookkeeping**: the store is the seller to the buyer. It sends the
+receipt and pays the VAT. So a store order:
+- gets no invoice from us (generator `isStorePayment`)
+- stays out of `getPaymentsByTaxRate`: the tax report, the OSS figures and
+  the monthly consumer invoice
+- has its revenue booked from the stores' monthly payouts
+
+The EUR columns keep the NL storefront price. Apple's JWS adds what the
+buyer paid in their own currency (`currency`, `totalPricePresentment`).
+Refunds come without a webhook (that would need a new route) and show in
+the stores' reports.
+
+**Prices** (`src/storeProducts.ts`):
+- The same as on the website (Rick, 2026-10-31): €13 / €23 / €30 / €33 /
+  €39, QRGames! €5, App Designer €9, a bundle the sum of its parts. The
+  store's 15% (Apple Small Business Program; Google from 30 June 2026) is
+  the cost of selling in the app: an app sale earns about 12% less than a
+  web sale.
+- Products: `deck.<500|1000|1500|2500|3000>[.games][.app]` and
+  `addon.games` / `addon.app`. `GET /api/pricing` lists them as
+  `storeProducts`.
+- A price changed here must change in App Store Connect and the Play
+  Console too.
+- Open `store_` orders older than `STORE_OPEN_KEEP_DAYS` (30) go with the
+  nightly cleanup. The abandoned-payment mail only looks at `tr_` orders.
+
+**Live progress** (the app's "your cards are being made" screen after a
+digital purchase; `src/orderProgress.ts`): generation reports what it does
+on the playlist progress socket, keyed `playlistId = requestId = paymentId`,
+`serviceType = 'order'`. Stages: `started`, `playlist`, `songs`, `years`
+and `qr` (with `current`/`total`), then `yearcheck` (the PDF waits for the
+year check; `POST /yearcheck` reports the rest later) or `pdf`, `mail` and
+`done` (type `complete`, `downloadUrl` = the digital mail's link). `error`
+only after the job's last attempt (generatorQueue). Per-card counts are
+throttled to one per 500 ms. The queue workers have no socket server, so
+they publish to Redis themselves (`ProgressWebSocketServer.publishEvent`);
+nobody listening costs one PUBLISH, and reporting never throws.
+- `GET /progress/:playlistId/:paymentId` also answers `payment.finalized`,
+  `payment.processedFirstTime` and per line `pdfReady`: the app's fallback
+  when the socket is silent.
+- `GET /download/...?inline=1` sends the PDF `inline`: the app opens it in
+  the in-app browser, whose viewer shares and saves it.
 
 ## Help mail after an abandoned payment
 

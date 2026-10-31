@@ -501,7 +501,8 @@ export async function storeTracks(
   tracks: any,
   trackOrder?: Map<string, number>,
   serviceType: string = 'spotify',
-  locale: string = 'en'
+  locale: string = 'en',
+  onYearProgress?: (done: number, total: number) => void
 ): Promise<any> {
   // Filter out any tracks with null/undefined artists or episode URLs (podcast episodes)
   const validTracks = tracks.filter((track: any) => {
@@ -835,7 +836,7 @@ export async function storeTracks(
     )
   );
 
-  await updateTrackYear(deps, providedTrackIds, tracks);
+  await updateTrackYear(deps, providedTrackIds, tracks, onYearProgress);
 
   if (mixSeed !== null) {
     await writeMixedTrackOrder(deps, playlistDatabaseId, mixSeed);

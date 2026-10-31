@@ -73,10 +73,48 @@ import {
   includesBusiness,
   includesConsumer,
 } from './businessSales';
+import {
+  APP_CHANNEL,
+  SalesChannel,
+  channelSql,
+  filterLedgerByChannel,
+  ledgerChannelCondition,
+  ledgerChannelSql,
+  paymentChannelWhere,
+} from './salesChannel';
+import {
+  STORE_GAMES_PRICE,
+  STORE_PAYMENT_METHOD,
+  STORE_PROCEEDS_SHARE,
+  StoreProduct,
+  applyStorePrice,
+  parseStorePlatform,
+  requiredDeckProduct,
+  storeCartRefusal,
+  notStoreTestSql,
+} from './storeProducts';
+import StorePurchases, {
+  StorePurchaseError,
+  VerifiedPurchase,
+  parseStoreProof,
+} from './storePurchases';
+import { randomUUID } from 'crypto';
 
 // How long a canceled or expired order stays before the nightly cleanup
 // deletes it, so the help mail's link can still pay it
 export const ABANDONED_KEEP_DAYS = 14;
+
+// Where Mollie sends a buyer back to the scan app (`returnTo: 'app'` on
+// POST /mollie/payment): the app's own URL scheme. Mollie accepts custom
+// schemes for redirectUrl, and a banking app often does not hand a
+// universal link back to the app it came from.
+export const APP_PAYMENT_RETURN_URL = 'nl.rickgroenewegen.qrsong://payment';
+
+// An app store order (store_…) still open after this long was never paid:
+// the buyer closed the store's sheet. Nothing reminds them of it. A purchase
+// the app could not report (no network) is settled on its next start well
+// within this time, so the nightly cleanup deletes the row after it.
+export const STORE_OPEN_KEEP_DAYS = 30;
 
 interface ExtraTracksInvoiceContext {
   paymentHasPlaylistId: number;
@@ -176,16 +214,18 @@ class Mollie {
   /**
    * The day and month reports. `segment` adds the company lists marked as
    * sold (businessSales.ts) as business* fields, or shows only those; the
-   * product filter narrows the consumer orders only. Every row carries both
-   * sets of fields, zero where the segment leaves them out.
+   * product filter and the channel (website or scan app, salesChannel.ts)
+   * narrow the consumer orders only. Every row carries both sets of fields,
+   * zero where the segment leaves them out.
    */
   public async getSalesReport(
     groupBy: 'day' | 'month',
     filter: string = 'all',
-    segment: SalesSegment = 'consumer'
+    segment: SalesSegment = 'consumer',
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     const consumerRows: any[] = includesConsumer(segment)
-      ? await this.getConsumerSalesReport(groupBy, filter)
+      ? await this.getConsumerSalesReport(groupBy, filter, channel)
       : [];
     const businessMap = includesBusiness(segment)
       ? groupBusinessSales(await getBusinessSales(), businessPeriodKey(groupBy))
@@ -201,14 +241,22 @@ class Mollie {
     }));
   }
 
-  private async getConsumerSalesReport(groupBy: 'day' | 'month', filter: string = 'all'): Promise<any[]> {
+  private async getConsumerSalesReport(
+    groupBy: 'day' | 'month',
+    filter: string = 'all',
+    channel: SalesChannel = 'all'
+  ): Promise<any[]> {
     const ignoreEmails = process.env['ENVIRONMENT'] === 'production'
       ? ['west14@gmail.com', 'info@rickgroenewegen.nl']
       : [];
 
-    const emailFilter = ignoreEmails.length
+    // An app store test purchase (App Review, TestFlight, Play license
+    // testers) is paid by nobody. Every query below reads payments as `p`,
+    // so the channel (nothing for all) rides along here.
+    const emailFilter = (ignoreEmails.length
       ? `AND p.email NOT IN (${ignoreEmails.map(e => `'${e}'`).join(',')})`
-      : '';
+      : '') + notStoreTestSql('p')
+      + channelSql(channel, 'p');
 
     const dateExpr = groupBy === 'day'
       ? "DATE_FORMAT(p.createdAt, '%Y-%m-%d')"
@@ -286,7 +334,7 @@ class Mollie {
             END
           ), 0) as gamesExVat
         FROM games_purchases gp
-        WHERE gp.createdAt > '2024-12-05'
+        WHERE gp.createdAt > '2024-12-05'${ledgerChannelSql(channel, 'gp')}
         GROUP BY ${gamesDateExpr}
       `);
 
@@ -313,13 +361,15 @@ class Mollie {
       // adds to profit (it costs nothing to deliver). Bought at checkout
       // (paymentId set) it is already in that order's totals and profit:
       // counted here, summed only there, like initial games.
+      const appDesignChannel = ledgerChannelCondition(channel, 'adp');
       const appDesignResults: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${appDesignDateExpr} as period,
           COUNT(*) as appDesignAmount,
           COALESCE(SUM(CASE WHEN adp.paymentId IS NULL THEN adp.totalPrice ELSE 0 END), 0) as appDesignTotal,
           COALESCE(SUM(CASE WHEN adp.paymentId IS NULL THEN adp.totalPriceWithoutTax ELSE 0 END), 0) as appDesignExVat
-        FROM app_design_purchases adp
+        FROM app_design_purchases adp${appDesignChannel ? `
+        WHERE ${appDesignChannel}` : ''}
         GROUP BY ${appDesignDateExpr}
       `);
 
@@ -523,10 +573,11 @@ class Mollie {
   public async getPaymentsByMonth(
     startDate: Date,
     endDate: Date,
-    segment: SalesSegment = 'consumer'
+    segment: SalesSegment = 'consumer',
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     const rows: any[] = includesConsumer(segment)
-      ? await this.getConsumerPaymentsByMonth(startDate, endDate)
+      ? await this.getConsumerPaymentsByMonth(startDate, endDate, channel)
       : [];
     const withBusiness = rows.map((r) => ({ ...r, ...emptyBusinessFigures() }));
 
@@ -552,7 +603,8 @@ class Mollie {
 
   private async getConsumerPaymentsByMonth(
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     let ignoreEmails: string[] = [];
 
@@ -561,8 +613,10 @@ class Mollie {
     }
 
     // Paid orders only, like the other reports: an open or failed payment
-    // already carries totals and a profit at creation.
+    // already carries totals and a profit at creation. An app store test
+    // purchase is paid by nobody. The channel adds nothing for all.
     const where = {
+      ...paymentChannelWhere(channel),
       status: 'paid',
       AND: [
         {
@@ -575,6 +629,9 @@ class Mollie {
           createdAt: {
             gt: new Date('2024-12-05'),
           },
+        },
+        {
+          OR: [{ storeEnvironment: null }, { storeEnvironment: { not: 'sandbox' } }],
         },
       ],
       email: {
@@ -605,15 +662,26 @@ class Mollie {
     // Count all games (initial + upgrade), but only sum upgrade prices
     // (initial prices are already in payment totals). Upgrades are charged
     // VAT-inclusive at the rate the row stores; exVat is their profit share.
-    const gameRows = await this.prisma.gamesPurchase.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
+    // A channel keeps the rows of its orders (an upgrade is the website's).
+    const gameRows = await filterLedgerByChannel(
+      this.prisma,
+      await this.prisma.gamesPurchase.findMany({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
         },
-      },
-      select: { countrycode: true, taxRate: true, totalPrice: true, type: true },
-    });
+        select: {
+          countrycode: true,
+          taxRate: true,
+          totalPrice: true,
+          type: true,
+          ...(channel === 'all' ? {} : { paymentId: true }),
+        },
+      }),
+      channel
+    );
     const gamesMap = new Map<string, { amount: number; total: number; exVat: number }>();
     for (const g of gameRows) {
       const key = g.countrycode || 'Unknown';
@@ -634,7 +702,7 @@ class Mollie {
       WHERE p.status = 'paid'
         AND p.createdAt >= '${startDate.toISOString()}'
         AND p.createdAt <= '${endDate.toISOString()}'
-        AND php.boxEnabled = 1
+        AND php.boxEnabled = 1${notStoreTestSql('p')}${channelSql(channel, 'p')}
       GROUP BY p.countrycode
     `);
     const boxMap = new Map(boxByCountry.map(b => [b.countrycode || 'Unknown', Number(b.boxAmount) || 0]));
@@ -643,21 +711,25 @@ class Mollie {
     // adds to profit. Every purchase is counted; only those bought on the
     // account add money, one bought at checkout (paymentId) is already in
     // its order's totals.
-    const appDesignRows = await this.prisma.appDesignPurchase.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
+    const appDesignRows = await filterLedgerByChannel(
+      this.prisma,
+      await this.prisma.appDesignPurchase.findMany({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
         },
-      },
-      select: {
-        countrycode: true,
-        paymentId: true,
-        totalPrice: true,
-        totalPriceWithoutTax: true,
-        taxRate: true,
-      },
-    });
+        select: {
+          countrycode: true,
+          paymentId: true,
+          totalPrice: true,
+          totalPriceWithoutTax: true,
+          taxRate: true,
+        },
+      }),
+      channel
+    );
     const appDesignMap = new Map<
       string,
       { amount: number; total: number; exVat: number; taxRate: number }
@@ -678,9 +750,9 @@ class Mollie {
     // at creation; physical orders only after submission to the print API
     // (printApiPrice > 0). Mirrors the groupBy `where` so it shares the same
     // denominator as numberOfSales.
-    const monthEmailFilter = ignoreEmails.length
+    const monthEmailFilter = (ignoreEmails.length
       ? `AND p.email NOT IN (${ignoreEmails.map(e => `'${e}'`).join(',')})`
-      : '';
+      : '') + notStoreTestSql('p') + channelSql(channel, 'p');
     const profitAssignedByCountry: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT
         p.countrycode,
@@ -732,6 +804,7 @@ class Mollie {
               lte: endDate,
               gt: new Date('2024-12-05'),
             },
+            ...paymentChannelWhere(channel),
           },
           select: {
             id: true,
@@ -831,6 +904,15 @@ class Mollie {
           createdAt: {
             gt: new Date('2024-12-05'),
           },
+        },
+        // Not what an app store sold: the store is the seller and pays the
+        // VAT, so those sales are not on our OSS return or the consumer
+        // invoice. The stores' payouts are booked as their own revenue.
+        {
+          OR: [
+            { paymentMethod: null },
+            { paymentMethod: { notIn: Object.values(STORE_PAYMENT_METHOD) } },
+          ],
         },
       ],
       email: {
@@ -1315,12 +1397,24 @@ class Mollie {
       const keepSince = new Date(
         Date.now() - ABANDONED_KEEP_DAYS * 24 * 60 * 60 * 1000
       );
+      const storeKeepSince = new Date(
+        Date.now() - STORE_OPEN_KEEP_DAYS * 24 * 60 * 60 * 1000
+      );
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
-          status: {
-            in: ['expired', 'canceled'],
-          },
-          updatedAt: { lt: keepSince },
+          OR: [
+            {
+              status: {
+                in: ['expired', 'canceled'],
+              },
+              updatedAt: { lt: keepSince },
+            },
+            {
+              paymentId: { startsWith: 'store_' },
+              status: 'open',
+              createdAt: { lt: storeKeepSince },
+            },
+          ],
         },
         select: {
           id: true,
@@ -1991,9 +2085,12 @@ class Mollie {
         currency: true,
         totalPricePresentment: true,
         refundReason: true,
-        // Mollie's method id, stored by the webhook; null for free_,
-        // toolkit_ and reseller_ orders, which never went through Mollie
+        // Mollie's method id, stored by the webhook; appstore / googleplay
+        // for the scan app's store orders; null for free_, toolkit_ and
+        // reseller_ orders, which were never paid through anyone
         paymentMethod: true,
+        // "sandbox" for a store test purchase (App Review, TestFlight)
+        storeEnvironment: true,
         // The discount codes on the order, with what each took off (incl.
         // VAT). A released use belongs to a checkout that was never paid.
         discount: true,
@@ -2405,6 +2502,38 @@ class Mollie {
         params.extraOrderData.countrycode = fallbackCountry;
       }
 
+      // The scan app paying through the App Store or Google Play
+      // (src/storeProducts.ts): one digital deck, no codes, and no Mollie.
+      // The order is written open here; POST /mollie/check with the store's
+      // proof marks it paid.
+      // A browser (`ng serve` of the app) has no store: in development its
+      // fake purchase is an App Store order, which /mollie/check pays as a
+      // test purchase (storePurchases.ts verifyWeb).
+      const storePlatform =
+        parseStorePlatform(params.store?.platform) ??
+        (params.store?.platform === 'web' && process.env['ENVIRONMENT'] === 'development'
+          ? 'ios'
+          : null);
+      // An app that asks for the store must never get a Mollie payment instead
+      if (params.store && !storePlatform) {
+        return { success: false, error: 'store_platform' };
+      }
+      if (storePlatform) {
+        const refusal = storeCartRefusal(params.cart);
+        if (refusal) return { success: false, error: refusal };
+      }
+      // An order the scan app placed: its store purchases and the printed
+      // orders it pays through Mollie. Recorded on the row (`channel`) for
+      // the reports' Website / App toggle; the website's orders leave it null.
+      const placedInApp = !!params.store || params.returnTo === 'app';
+      // Where Mollie sends the buyer back: the site, or the scan app.
+      const returnUrl = (molliePaymentRef?: string) => {
+        const query = molliePaymentRef ? `?paymentId=${molliePaymentRef}` : '';
+        return params.returnTo === 'app'
+          ? `${APP_PAYMENT_RETURN_URL}${query}`
+          : `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment${query}`;
+      };
+
       let useOrderType = 'digital';
       let description = '';
       let totalCards = 0;
@@ -2463,6 +2592,21 @@ class Mollie {
             ? 'no_shipping'
             : 'Failed to create payment',
         };
+      }
+
+      // The product the store must be paid with, and the store's price on
+      // the order instead of the web price. App Designer the e-mail already
+      // owns is not sold again (the designs are still made).
+      let storeProduct: StoreProduct | null = null;
+      if (storePlatform) {
+        const item = params.cart.items[0];
+        storeProduct = requiredDeckProduct(
+          item.numberOfTracks,
+          this.utils.parseBoolean(item.gamesEnabled),
+          params.cart.appDesign && !appDesignOwned
+        );
+        if (!storeProduct) return { success: false, error: 'store_cart' };
+        applyStorePrice(calculateResult.data, item, storeProduct);
       }
 
       const paymentClientResult = await this.getClient(clientIp);
@@ -2586,8 +2730,17 @@ class Mollie {
       const presentmentRate = converted.rate;
       const presentmentCurrency: SupportedCurrency = converted.currency;
 
-      // Handle free orders (with discount)
-      if (calculateResult.data.total === 0 && discountUsed) {
+      // The uuid the app hands to the store with the purchase
+      // (appAccountToken), which the check matches against this order.
+      const storeToken = storeProduct ? randomUUID() : '';
+
+      if (storeProduct) {
+        molliePaymentId = `store_${storeToken}`;
+        molliePaymentAmount = calculateResult.data.total;
+        molliePaymentStatus = 'open';
+        mollieCheckoutUrl = '';
+      } else if (calculateResult.data.total === 0 && discountUsed) {
+        // Handle free orders (with discount)
         molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
         molliePaymentAmount = 0;
         molliePaymentStatus = 'paid';
@@ -2664,7 +2817,7 @@ class Mollie {
           },
           method: paymentMethods,
           description: description,
-          redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment`,
+          redirectUrl: returnUrl(),
           webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
           locale: resolved.locale,
         };
@@ -2701,7 +2854,7 @@ class Mollie {
           await paymentClient.payments.update({
             paymentId: payment.id,
             requestBody: {
-              redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment?paymentId=${payment.id}`,
+              redirectUrl: returnUrl(payment.id),
             },
           });
         } catch (e) {
@@ -2816,6 +2969,8 @@ class Mollie {
         productVATPrice + shippingVATPrice - allocation.discountShippingVAT
       );
 
+      const gamesUnitPrice = storeProduct ? STORE_GAMES_PRICE : QRGAMES_UPGRADE_PRICE;
+
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
@@ -2903,7 +3058,7 @@ class Mollie {
             gamesPrice:
               item.productType === 'cards' &&
               this.utils.parseBoolean(item.gamesEnabled)
-                ? QRGAMES_UPGRADE_PRICE
+                ? gamesUnitPrice
                 : 0,
             // Box add-on
             boxEnabled: this.utils.parseBoolean(item.boxEnabled),
@@ -2969,6 +3124,14 @@ class Mollie {
         }
       }
 
+      // The store keeps its share of the ex-VAT price; what it pays out is
+      // the profit (a digital deck costs nothing to deliver).
+      if (storeProduct) {
+        totalProfit = round2(
+          exVat(calculateResult.data.total, goodsTaxRate) * STORE_PROCEEDS_SHARE
+        );
+      }
+
       // Only the address/contact fields the checkout form owns may reach the
       // Payment row. Everything the server computes (totals, VAT, discount,
       // fees, status) is set explicitly below and must never be overwritten
@@ -3026,6 +3189,13 @@ class Mollie {
           reverseCharge: !!calculateResult.data.reverseCharge,
           vatIdChecked: calculateResult.data.vatIdChecked || null,
           boxInstructionsMailSent: false,
+          ...(storePlatform && storeProduct
+            ? {
+                paymentMethod: STORE_PAYMENT_METHOD[storePlatform],
+                storeProductId: storeProduct.id,
+              }
+            : {}),
+          ...(placedInApp ? { channel: APP_CHANNEL } : {}),
           PaymentHasPlaylist: { create: playlists },
         },
       });
@@ -3079,9 +3249,9 @@ class Mollie {
         await this.prisma.gamesPurchase.create({
           data: {
             userId: userDatabaseId,
-            totalPrice: gamesPlaylists.length * QRGAMES_UPGRADE_PRICE,
+            totalPrice: gamesPlaylists.length * gamesUnitPrice,
             playlistCount: gamesPlaylists.length,
-            pricePerPlaylist: QRGAMES_UPGRADE_PRICE,
+            pricePerPlaylist: gamesUnitPrice,
             type: 'initial',
             countrycode: params.extraOrderData.countrycode || null,
             taxRate: calculateResult.data.taxRate || null,
@@ -3173,6 +3343,9 @@ class Mollie {
           paymentUri: mollieCheckoutUrl,
           userId: userDatabaseId,
           generationQueued: triggerDirectGeneration, // Flag to indicate generation was already queued
+          ...(storeProduct
+            ? { storeProductId: storeProduct.id, appAccountToken: storeToken }
+            : {}),
         },
       };
     } catch (e) {
@@ -3770,58 +3943,84 @@ class Mollie {
             clientIp: string;
             refreshPlaylists: string;
           };
-
-          // Clear the playlist cache for this user since they may have purchased new playlists
-          if (dbPayment.user?.hash) {
-            // Clear the user's playlist cache
-            await this.cache.del(`playlists:user:${dbPayment.user.hash}`);
-            this.logger.log(
-              color.blue.bold('Cleared playlist cache for user: ') +
-                color.white.bold(dbPayment.user.hash)
-            );
-          }
-
-          // Credit promotional discount for each playlist in this payment (one-time only)
-          const paymentPlaylists = await this.prisma.paymentHasPlaylist.findMany({
-            where: { paymentId: dbPayment.id },
-            select: { playlistId: true },
+          await this.onOrderPaid({
+            id: dbPayment.id,
+            paymentId: params.id,
+            userHash: dbPayment.user?.hash ?? null,
+            clientIp: metadata.clientIp,
+            refreshPlaylists: metadata.refreshPlaylists,
           });
-
-          for (const pp of paymentPlaylists) {
-            try {
-              await this.promotional.creditPromotionalDiscount(pp.playlistId, dbPayment.id);
-            } catch (e) {
-              this.logger.log(
-                color.yellow.bold(`Failed to credit promotional discount for playlist ${pp.playlistId}: ${e}`)
-              );
-            }
-          }
-
-          // App Designer bought at checkout. Before generation, so the order
-          // mail already says the design is on; never in its way.
-          try {
-            await AppDesign.getInstance().activateCheckoutPurchase(dbPayment.id);
-          } catch (e) {
-            console.error('Checkout App Designer activation failed', e);
-          }
-
-          this.generator.queueGenerate(
-            params.id,
-            metadata.clientIp,
-            metadata.refreshPlaylists,
-            false,
-            false,
-            false
-          );
-
-          // Not awaited and never throws: Meta must not slow down the webhook.
-          void MetaConversions.getInstance().sendPurchase(dbPayment.id);
         }
       }
     }
     return {
       success: true,
     };
+  }
+
+  /**
+   * What follows once an order is paid, whoever took the money: the Mollie
+   * webhook, or POST /mollie/check with an app store's proof. Runs once per
+   * order; the caller's atomic status claim makes sure of that.
+   */
+  private async onOrderPaid(order: {
+    id: number;
+    paymentId: string;
+    userHash: string | null;
+    clientIp: string;
+    refreshPlaylists: string;
+    // A store test purchase (App Review, TestFlight): no Meta purchase and
+    // no promoter credit.
+    sandbox?: boolean;
+  }): Promise<void> {
+    // Clear the playlist cache for this user since they may have purchased new playlists
+    if (order.userHash) {
+      await this.cache.del(`playlists:user:${order.userHash}`);
+      this.logger.log(
+        color.blue.bold('Cleared playlist cache for user: ') +
+          color.white.bold(order.userHash)
+      );
+    }
+
+    // Credit promotional discount for each playlist in this payment (one-time
+    // only). A store test purchase earns the promoter nothing and mails them
+    // nothing: nobody paid.
+    const paymentPlaylists = order.sandbox
+      ? []
+      : await this.prisma.paymentHasPlaylist.findMany({
+          where: { paymentId: order.id },
+          select: { playlistId: true },
+        });
+
+    for (const pp of paymentPlaylists) {
+      try {
+        await this.promotional.creditPromotionalDiscount(pp.playlistId, order.id);
+      } catch (e) {
+        this.logger.log(
+          color.yellow.bold(`Failed to credit promotional discount for playlist ${pp.playlistId}: ${e}`)
+        );
+      }
+    }
+
+    // App Designer bought at checkout. Before generation, so the order
+    // mail already says the design is on; never in its way.
+    try {
+      await AppDesign.getInstance().activateCheckoutPurchase(order.id);
+    } catch (e) {
+      console.error('Checkout App Designer activation failed', e);
+    }
+
+    this.generator.queueGenerate(
+      order.paymentId,
+      order.clientIp,
+      order.refreshPlaylists,
+      false,
+      false,
+      false
+    );
+
+    // Not awaited and never throws: Meta must not slow down the webhook.
+    if (!order.sandbox) void MetaConversions.getInstance().sendPurchase(order.id);
   }
 
   /**
@@ -3996,7 +4195,17 @@ class Mollie {
     }
   }
 
-  public async checkPaymentStatus(paymentId: string): Promise<ApiResult> {
+  public async checkPaymentStatus(
+    paymentId: string,
+    storeProof?: unknown
+  ): Promise<ApiResult> {
+    // The scan app after the store's payment sheet: settle the order with
+    // the store's proof first, then answer as for any other order.
+    if (storeProof !== undefined && typeof paymentId === 'string' && paymentId.startsWith('store_')) {
+      const settled = await this.settleStorePurchase(paymentId, storeProof);
+      if (!settled.success) return settled;
+    }
+
     // Get the payment from the database
     const payment = await this.prisma.payment.findUnique({
       where: {
@@ -4050,6 +4259,115 @@ class Mollie {
     }
   }
 
+  /**
+   * Marks an app store order (store_…) paid on the store's proof. The proof
+   * must be a purchase of the product the order was written for, made with
+   * the order's own token, and not used for another order. Repeating it is
+   * fine: the app sends it again after a lost answer or on its next start,
+   * and gets "paid" without anything happening twice.
+   */
+  private async settleStorePurchase(
+    paymentId: string,
+    rawProof: unknown
+  ): Promise<ApiResult> {
+    const proof = parseStoreProof(rawProof);
+    if (!proof) return { success: false, error: 'store_proof' };
+
+    const order = await this.prisma.payment.findUnique({
+      where: { paymentId },
+      select: {
+        id: true,
+        status: true,
+        clientIp: true,
+        totalPrice: true,
+        storeProductId: true,
+        storeTransactionId: true,
+        user: { select: { hash: true } },
+      },
+    });
+    if (!order?.storeProductId) return { success: false, error: 'store_unknown_order' };
+
+    let purchase: VerifiedPurchase;
+    try {
+      purchase = await StorePurchases.getInstance().verify(proof);
+    } catch (e) {
+      const code = e instanceof StorePurchaseError ? e.code : 'store_unavailable';
+      this.logger.log(
+        color.yellow.bold('Store purchase refused for ') +
+          color.white.bold(paymentId) +
+          color.yellow.bold(`: ${e instanceof Error ? e.message : String(e)}`)
+      );
+      return { success: false, error: code };
+    }
+
+    if (purchase.productId !== order.storeProductId) {
+      return { success: false, error: 'store_product_mismatch' };
+    }
+    if (purchase.appAccountToken !== paymentId.slice('store_'.length)) {
+      return { success: false, error: 'store_token_mismatch' };
+    }
+    if (order.status === 'paid') {
+      if (order.storeTransactionId !== purchase.transactionId) {
+        return { success: false, error: 'store_already_paid' };
+      }
+      await StorePurchases.getInstance().finish(purchase);
+      return { success: true };
+    }
+
+    // What the buyer paid in their own currency, when the store says so;
+    // the EUR columns keep the NL storefront price.
+    const presentment =
+      purchase.price !== null && purchase.currency
+        ? {
+            currency: purchase.currency,
+            totalPricePresentment: purchase.price,
+            exchangeRate:
+              order.totalPrice > 0
+                ? Math.round((purchase.price / order.totalPrice) * 1e6) / 1e6
+                : 1,
+          }
+        : {};
+
+    let claimed = false;
+    try {
+      const claim = await this.prisma.payment.updateMany({
+        where: { paymentId, status: { not: 'paid' } },
+        data: {
+          status: 'paid',
+          storeTransactionId: purchase.transactionId,
+          storeEnvironment: purchase.sandbox ? 'sandbox' : 'production',
+          ...presentment,
+        },
+      });
+      claimed = claim.count > 0;
+    } catch (e) {
+      // storeTransactionId is unique: this purchase already paid another order.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        return { success: false, error: 'store_transaction_used' };
+      }
+      throw e;
+    }
+
+    if (claimed) {
+      this.logger.log(
+        color.blue.bold('Store order paid: ') +
+          color.white.bold(paymentId) +
+          color.blue.bold(` (${purchase.platform} ${purchase.productId}, ${purchase.transactionId}`) +
+          color.blue.bold(purchase.sandbox ? ', sandbox)' : ')')
+      );
+      await this.onOrderPaid({
+        id: order.id,
+        paymentId,
+        userHash: order.user?.hash ?? null,
+        clientIp: order.clientIp || '',
+        refreshPlaylists: '',
+        sandbox: purchase.sandbox,
+      });
+    }
+    await StorePurchases.getInstance().finish(purchase);
+    return { success: true };
+  }
+
   public async getPayment(paymentId: string): Promise<any> {
     return (await this.prisma.payment.findUnique({
       where: {
@@ -4069,6 +4387,8 @@ class Mollie {
         orderId: true,
         totalPrice: true,
         paymentMethod: true,
+        storeEnvironment: true,
+        channel: true,
         printApiOrderId: true,
         locale: true,
         productPriceWithoutTax: true,
@@ -4562,6 +4882,14 @@ class Mollie {
     molliePaymentId: string,
     amount: number
   ): Promise<ApiResult> {
+    // The store sold it and pays it back: Apple through reportaproblem.apple.com,
+    // Google from the order in the Play Console.
+    if (molliePaymentId.startsWith('store_')) {
+      return {
+        success: false,
+        error: 'An app store order is refunded by Apple or Google, not through Mollie',
+      };
+    }
     try {
       const dbPayment = await this.prisma.payment.findUnique({
         where: { paymentId: molliePaymentId },

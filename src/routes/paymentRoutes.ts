@@ -54,8 +54,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const prisma = PrismaInstance.getInstance();
 
   // Check payment status
+  // `store`: the scan app's proof of an App Store / Google Play purchase,
+  // which settles a store_… order (see mollie.ts settleStorePurchase).
   fastify.post('/mollie/check', async (request: any, _reply) => {
-    return await mollie.checkPaymentStatus(request.body.paymentId);
+    return await mollie.checkPaymentStatus(request.body.paymentId, request.body.store);
   });
 
   // Create payment
@@ -173,9 +175,13 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         try {
           await fs.access(pdfFile.filePath, fs.constants.R_OK);
           reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
+          // `inline=1`: the scan app's done screen opens the PDF in the
+          // in-app browser, whose viewer shares and saves it
           reply.header(
             'Content-Disposition',
-            'attachment; filename=' + pdfFile.fileName
+            (request.query.inline === '1' ? 'inline' : 'attachment') +
+              '; filename=' +
+              pdfFile.fileName
           );
           reply.type('application/pdf');
           const fileContent = await fs.readFile(pdfFile.filePath);

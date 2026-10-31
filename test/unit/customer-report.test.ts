@@ -193,6 +193,32 @@ describe('getCustomerReport', () => {
     expect(rows.map((r) => r.userId)).toEqual([2, 1, 3]);
   });
 
+  it('narrows every query to a channel, and asks what it always did for all', async () => {
+    const appOrder = (alias: string) =>
+      `EXISTS (SELECT 1 FROM payments cp WHERE cp.id = ${alias}.paymentId AND cp.channel = 'app')`;
+    const sqls = () => prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+
+    mockQueries();
+    await getCustomerReport('year', 'profit');
+    for (const sql of sqls()) expect(sql).not.toContain('channel');
+
+    vi.clearAllMocks();
+    mockQueries();
+    await getCustomerReport('all', 'spend', 'app');
+    const [orders, games, appDesign] = sqls();
+    expect(orders).toContain("AND p.createdAt >= ? AND p.channel = 'app'");
+    expect(games).toContain(`AND ${appOrder('gp')}`);
+    expect(appDesign).toContain(`AND ${appOrder('adp')}`);
+
+    vi.clearAllMocks();
+    mockQueries();
+    await getCustomerReport('all', 'spend', 'web');
+    const [webOrders, webGames, webAppDesign] = sqls();
+    expect(webOrders).toContain('AND p.createdAt >= ? AND p.channel IS NULL');
+    expect(webGames).toContain(`AND NOT ${appOrder('gp')}`);
+    expect(webAppDesign).toContain(`AND NOT ${appOrder('adp')}`);
+  });
+
   it('asks nothing more when there are no customers', async () => {
     prismaMock.$queryRawUnsafe.mockResolvedValue([]);
 
