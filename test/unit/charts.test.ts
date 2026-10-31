@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
  * Unit tests for src/charts.ts.
@@ -99,12 +99,9 @@ describe('Charts.buildDateFilter via getMovingAverage', () => {
 // ──────────────────────────────────────────────
 
 describe('Charts.getMovingAverage', () => {
-  it('returns the raw query result directly', async () => {
-    const fakeRows = [{ date: '2024-01-01', daily_sales: 100 }];
-    queryRawUnsafe.mockResolvedValueOnce(fakeRows);
+  it('has nothing to show while nothing has been sold', async () => {
     const svc = makeSvc();
-    const result = await svc.getMovingAverage(90);
-    expect(result).toEqual(fakeRows);
+    expect(await svc.getMovingAverage(90)).toEqual([]);
   });
 
   it('adds App Designer gross to daily_sales and its ex-VAT to daily_profit', async () => {
@@ -121,13 +118,125 @@ describe('Charts.getMovingAverage', () => {
     expect(profitExpr).toContain('SUM(gp.totalPrice) FROM games_purchases gp');
   });
 
-  it('generated SQL includes moving average window', async () => {
+  it('asks the days with a sale, then the first sale', async () => {
     const svc = makeSvc();
     await svc.getMovingAverage(90);
-    const sql: string = queryRawUnsafe.mock.calls[0][0];
-    expect(sql).toContain('30 PRECEDING AND 1 PRECEDING');
-    expect(sql).toContain('sales_ma_30d');
-    expect(sql).toContain('profit_ma_30d');
+    const [days, firstSale] = (queryRawUnsafe.mock.calls as any[]).map((c) => c[0] as string);
+    expect(days).toContain('GROUP BY DATE(p.createdAt)');
+    expect(days).not.toContain('PRECEDING');
+    expect(firstSale).toContain('AS firstSale');
+  });
+});
+
+// ──────────────────────────────────────────────
+// getMovingAverage: every day, averages over calendar days
+// ──────────────────────────────────────────────
+
+describe('Charts.getMovingAverage: every day', () => {
+  // A day with a sale, as MySQL returns it through Prisma.
+  const saleDay = (date: string, sales: number, orders: number) => ({
+    date: new Date(`${date}T00:00:00.000Z`),
+    daily_sales: String(sales),
+    daily_profit: String(sales / 2),
+    payment_count: BigInt(orders),
+    daily_aov: String(sales / orders),
+  });
+
+  /** The days with a sale, then the first sale (reportPeriods.ts). */
+  function mockChart(rows: any[], firstSale: Date | null = new Date('2024-12-05T09:00:00.000Z')) {
+    queryRawUnsafe
+      .mockResolvedValueOnce(rows)
+      .mockResolvedValueOnce([{ firstSale }]);
+  }
+
+  const day = (d: { date: Date }) => d.date.toISOString().slice(0, 10);
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-31T12:00:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('gives every day of the range up to today, zeros on a day without sales', async () => {
+    mockChart([saleDay('2026-10-10', 100, 2)]);
+
+    const result = await makeSvc().getMovingAverage(30);
+
+    expect(result).toHaveLength(31);
+    expect(day(result[0])).toBe('2026-10-01');
+    expect(day(result[30])).toBe('2026-10-31');
+    expect(result[9]).toMatchObject({ daily_sales: 100, daily_profit: 50, payment_count: 2, daily_aov: 50 });
+    // No orders, so no order value either.
+    expect(result[8]).toMatchObject({ daily_sales: 0, daily_profit: 0, payment_count: 0, daily_aov: null });
+  });
+
+  it('averages the days before each day, the days without sales as zero', async () => {
+    mockChart([saleDay('2026-10-01', 30, 1), saleDay('2026-10-03', 90, 3)]);
+
+    const result = await makeSvc().getMovingAverage(30);
+
+    // Nothing before the first day of the range.
+    expect(result[0]).toMatchObject({ sales_ma_30d: null, orders_ma_30d: null, aov_ma_30d: null });
+    expect(result[1]).toMatchObject({ sales_ma_30d: 30, profit_ma_30d: 15, orders_ma_30d: 1, aov_ma_30d: 30 });
+    expect(result[2]).toMatchObject({ sales_ma_30d: 15, orders_ma_30d: 0.5, aov_ma_30d: 30 });
+    // 1, 2 and 3 October: (30 + 0 + 90) / 3; the order value of the days with orders.
+    expect(result[3]).toMatchObject({ sales_ma_30d: 40, orders_ma_30d: 1.33, aov_ma_30d: 30 });
+    expect(result[30]).toMatchObject({ sales_ma_30d: 4, orders_ma_30d: 0.13 });
+  });
+
+  it('drops a sale from the average after 30 days, however few days had one', async () => {
+    mockChart([saleDay('2026-09-01', 300, 1), saleDay('2026-10-20', 60, 1)]);
+
+    const result = await makeSvc().getMovingAverage(undefined, '2026-09-01', '2026-10-31');
+    const on = (date: string) => result.find((d) => day(d) === date)!;
+
+    expect(on('2026-10-01').sales_ma_30d).toBe(10); // 1 to 30 September
+    expect(on('2026-10-02').sales_ma_30d).toBe(0); // 2 September to 1 October
+    expect(on('2026-10-21').sales_ma_30d).toBe(2); // 21 September to 20 October
+  });
+
+  it('starts at the first sale when the range reaches back further', async () => {
+    mockChart([saleDay('2024-12-06', 50, 1)], new Date('2024-12-05T09:00:00.000Z'));
+
+    const result = await makeSvc().getMovingAverage(undefined, '2024-11-01', '2024-12-10');
+
+    expect(result.map(day)).toEqual([
+      '2024-12-05',
+      '2024-12-06',
+      '2024-12-07',
+      '2024-12-08',
+      '2024-12-09',
+      '2024-12-10',
+    ]);
+  });
+
+  it('ends today when the range reaches into the future', async () => {
+    mockChart([]);
+
+    const result = await makeSvc().getMovingAverage(undefined, '2026-10-25', '2026-11-30');
+
+    expect(result.map(day)).toEqual([
+      '2026-10-25',
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+    ]);
+  });
+
+  it('shows the app the same days as the website, from the first sale of either', async () => {
+    mockChart([saleDay('2026-10-30', 13, 1)]);
+
+    const result = await makeSvc().getMovingAverage(90, undefined, undefined, 'app');
+
+    expect(result).toHaveLength(91);
+    const firstSaleSql: string = (queryRawUnsafe.mock.calls as any[])[1][0];
+    expect(firstSaleSql).toContain('AS firstSale');
+    expect(firstSaleSql).not.toContain('channel');
   });
 });
 

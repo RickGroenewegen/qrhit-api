@@ -93,6 +93,7 @@ import {
   storeCartRefusal,
   notStoreTestSql,
 } from './storeProducts';
+import { getFirstSale, notOwnOrderSql, periodOf, reportPeriods } from './reportPeriods';
 import StorePurchases, {
   StorePurchaseError,
   VerifiedPurchase,
@@ -217,6 +218,11 @@ class Mollie {
    * product filter and the channel (website or scan app, salesChannel.ts)
    * narrow the consumer orders only. Every row carries both sets of fields,
    * zero where the segment leaves them out.
+   *
+   * Every day or month from the first sale's up to the current one gets a
+   * row, newest first, zeros where nothing was sold (reportPeriods.ts). The
+   * first sale ignores the filter, segment and channel, so they never change
+   * which rows there are.
    */
   public async getSalesReport(
     groupBy: 'day' | 'month',
@@ -230,10 +236,15 @@ class Mollie {
     const businessMap = includesBusiness(segment)
       ? groupBusinessSales(await getBusinessSales(), businessPeriodKey(groupBy))
       : new Map<string, BusinessFigures>();
+    const firstSale = await getFirstSale();
 
     const consumerMap = new Map(consumerRows.map((r) => [r.period, r]));
-    const periods = [...new Set([...consumerMap.keys(), ...businessMap.keys()])]
-      .sort((a, b) => String(b).localeCompare(String(a)));
+    const periods = reportPeriods(
+      [...consumerMap.keys(), ...businessMap.keys()],
+      groupBy,
+      firstSale ? periodOf(firstSale, groupBy) : null,
+      periodOf(new Date(), groupBy)
+    ).reverse();
 
     return periods.map((period) => ({
       ...(consumerMap.get(period) || emptyConsumerSalesRow(period)),
@@ -246,16 +257,11 @@ class Mollie {
     filter: string = 'all',
     channel: SalesChannel = 'all'
   ): Promise<any[]> {
-    const ignoreEmails = process.env['ENVIRONMENT'] === 'production'
-      ? ['west14@gmail.com', 'info@rickgroenewegen.nl']
-      : [];
-
-    // An app store test purchase (App Review, TestFlight, Play license
-    // testers) is paid by nobody. Every query below reads payments as `p`,
-    // so the channel (nothing for all) rides along here.
-    const emailFilter = (ignoreEmails.length
-      ? `AND p.email NOT IN (${ignoreEmails.map(e => `'${e}'`).join(',')})`
-      : '') + notStoreTestSql('p')
+    // Rick's own orders stay out in production (the first sale leaves them
+    // out too), and an app store test purchase (App Review, TestFlight, Play
+    // license testers) is paid by nobody. Every query below reads payments
+    // as `p`, so the channel (nothing for all) rides along here.
+    const emailFilter = notOwnOrderSql('p') + notStoreTestSql('p')
       + channelSql(channel, 'p');
 
     const dateExpr = groupBy === 'day'

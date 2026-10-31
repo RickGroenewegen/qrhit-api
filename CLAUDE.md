@@ -1293,6 +1293,19 @@ The tax and OSS reports and the monthly consumer invoice never take it, a
 VAT filing covers everything. The column has to exist before a deploy:
 `ALTER TABLE payments ADD COLUMN channel VARCHAR(8) NULL;`
 
+**Every day and month has a row** (Rick, 2026-10-31, `src/reportPeriods.ts`).
+The day and month reports give every period from the first sale's up to the
+current one, newest first, zeros where nothing was sold; the charts' moving
+average gives every day of its range from the first sale's up to today. The
+first sale (`getFirstSale`) is the first paid order the reports count, QRGames,
+App Designer or sold list, with no channel, product filter or segment, so those
+toggles change the figures and never which rows there are. Periods are UTC
+days and months, the calendar MySQL dates the rows in. The moving average is
+worked out in TypeScript over those days (the 30 days before each day): the
+SQL window it replaced averaged the last 30 rows, so the last 30 days that had
+a sale, which for the app's few orders reached back months. The website adds
+nothing: it shows the rows it gets and sums them.
+
 **Upgrades paid after the order are booked in full when their webhook
 lands** (`bookUpgradeOnPayment`): gross into `totalPrice`, the split into
 `totalPriceWithoutTax` and `productVATPrice`, and ex-VAT minus the boxes'
