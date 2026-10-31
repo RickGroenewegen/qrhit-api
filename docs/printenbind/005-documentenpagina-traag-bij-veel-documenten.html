@@ -1,0 +1,25 @@
+<meta name="type" content="bug">
+<meta name="title" content="Documentenpagina traag bij veel documenten">
+<meta name="date" content="2026-10-30">
+
+<div class="lead">De pagina <strong>Profiel › Documenten</strong> laat onze opgeslagen documenten pas na <strong>ruim 25 seconden</strong> zien. De pagina haalt alle 6.217 documenten in één keer op, en de server doet over dat antwoord 25 seconden. Er komen er dit jaar ruim 400 per maand bij.</div>
+
+<h2>Wat we zien</h2>
+<table>
+<tr><th>Wat</th><th class="num">Gemeten</th></tr>
+<tr><td>De pagina zelf, zonder documenten</td><td class="num">1,1 s</td></tr>
+<tr class="bad"><td>Antwoord van de server met alle documenten (<code>/bestanden</code>)</td><td class="num">25,4 s en 25,7 s</td></tr>
+<tr><td>Grootte van dat antwoord</td><td class="num">4,7 MB (0,9 MB ingepakt)</td></tr>
+<tr><td>Daarna zoeken met "Zoek bestand" (één woord)</td><td class="num">1,7 s</td></tr>
+<tr><td>De zoekterm weer wissen</td><td class="num">2,9 s</td></tr>
+</table>
+<p>Tot het antwoord binnen is, staat de lijst leeg, zonder melding dat hij nog laadt. Het lijkt dan alsof er geen documenten zijn. Daarna komen alle 6.217 documenten in één tabel, zonder pagina's. Die tabel staat twee keer in de pagina (ook in het verborgen uploadvenster): 12.434 rijen, samen ruim 270.000 elementen.</p>
+
+<h2>Hoe we het getest hebben</h2>
+<p>In Chrome, ingelogd op ons account, op 30 oktober 2026, met de tijden die de browser zelf bijhoudt. We hebben de pagina twee keer geladen; de server deed er beide keren ruim 25 seconden over. Ons oudste document is van 30 januari 2025: 1.847 documenten uit 2025 en 4.370 uit 2026.</p>
+
+<h2>Waarom het voor ons uitmaakt</h2>
+<p>Met elke order komen er documenten bij, dus de pagina wordt elke maand trager. Willen we een bestand terugvinden, dan wachten we nu eerst ruim 25 seconden, en daarna bij elke zoekopdracht nog een paar seconden.</p>
+
+<h2>Onze vraag</h2>
+<p>Zouden jullie willen kijken of de lijst in delen kan laden, bijvoorbeeld de nieuwste documenten eerst met bladeren, en zoeken via de server? Dan blijft de pagina snel, hoeveel documenten er ook bijkomen. En kan de lijst tijdens het laden laten zien dat hij nog komt?</p>
