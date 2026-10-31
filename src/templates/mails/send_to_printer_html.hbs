@@ -1,20 +1,20 @@
 {{#> mail-layout title=mail.sendToPrinterMailSubject preheader=mail.sendToPrinterMailSubject }}
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.printingStarted }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.printingStarted }}</p>
 <!-- Digital download -->
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.freeDigitalIncluded }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.freeDigitalIncluded }}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 4px 0 24px;">
     <tr>
         <td align="center">{{> mail-btn-pop href=digitalDownloadLink label=translations.downloadDigitalButtonPrinter }}</td>
     </tr>
 </table>
-<p style="margin: 0; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.thankYou }}</p>
+<p class="qr-text" style="margin: 0; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.thankYou }}</p>
 {{#if hasBox}}
 <!-- Gift box note -->
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 24px;">
     <tr>
-        <td style="padding: 14px 18px; background-color: #f8e1d2; border: 2px solid #18565e; border-radius: 14px;">
-            <p style="margin: 0; font-size: 14px; line-height: 22px; color: #0b2c31;">🎁 {{ translations.giftBoxIncludedPrinter }}</p>
+        <td class="qr-note" style="padding: 14px 18px; background-color: #f8e1d2; border: 2px solid #18565e; border-radius: 14px;">
+            <p class="qr-strong" style="margin: 0; font-size: 14px; line-height: 22px; color: #0b2c31;">🎁 {{ translations.giftBoxIncludedPrinter }}</p>
         </td>
     </tr>
 </table>
@@ -22,7 +22,7 @@
 {{> games-section }}
 {{> app-design-section }}
 {{#if showGiftHint}}
-<p style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #3d6d74;">🎁 {{ translations.giftHint }}</p>
+<p class="qr-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #3d6d74;">🎁 {{ translations.giftHint }}</p>
 {{/if}}
 {{> mail-closing }}
 {{/mail-layout}}

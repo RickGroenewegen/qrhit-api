@@ -1,0 +1,53 @@
+{{!-- The mails' dark palette, after the website's dark theme (qrhit src/styles/brand-tokens.css,
+      html.dark): an ink page, a deep teal card with a cream rim and a coral offset shadow, cream
+      text, white for what is bold, coral-200 links, coral buttons with ink text.
+      mail-layout includes it twice: inside @media (prefers-color-scheme: dark) without prefixes
+      (Apple Mail, iOS Mail, Outlook for Mac, Hey, Thunderbird), and for Outlook.com and Outlook on
+      the web, which ignore that query but mark every element whose colour they changed, with
+      ogsc="[data-ogsc] " (text, borders, shadows, display) and ogsb="[data-ogsb] " (backgrounds).
+      Every rule needs !important to beat the inline styles. A template marks what it colours with
+      these classes; anything coloured without one stays light-mode coloured on the dark card. --}}
+{{{ogsb}}}.qr-bg { background-color: #0b2c31 !important; }
+{{{ogsb}}}.qr-card { background-color: #14484f !important; }
+{{{ogsc}}}.qr-card { border-color: #feefe5 !important; box-shadow: 6px 6px 0 #f79677 !important; }
+{{{ogsc}}}.qr-logo-light { display: none !important; }
+{{{ogsc}}}.qr-logo-dark { display: block !important; max-height: none !important; overflow: visible !important; }
+{{{ogsc}}}.qr-text { color: #feefe5 !important; }
+{{{ogsc}}}.qr-strong { color: #ffffff !important; }
+{{{ogsc}}}.qr-muted { color: #c4d8da !important; }
+{{{ogsc}}}.qr-link { color: #fbcbb9 !important; }
+{{{ogsc}}}.qr-rule { border-color: #436a6d !important; }
+{{{ogsc}}}.qr-frame { border-color: #feefe5 !important; }
+{{!-- Panels (the cream bands, the help box, the gift box note) sink into a deeper teal --}}
+{{{ogsb}}}.qr-panel, {{{ogsb}}}.qr-alert, {{{ogsb}}}.qr-note { background-color: #0f3a40 !important; }
+{{{ogsc}}}.qr-panel { border-color: #2e6d75 !important; }
+{{{ogsc}}}.qr-alert { border-color: #7fb0b6 !important; }
+{{{ogsc}}}.qr-note { border-color: #f79677 !important; }
+{{!-- Ink wells: a code and the share link --}}
+{{{ogsb}}}.qr-code, {{{ogsb}}}.qr-field { background-color: #0b2c31 !important; }
+{{{ogsc}}}.qr-code { border-color: #f79677 !important; }
+{{{ogsc}}}.qr-field { border-color: #2e6d75 !important; }
+{{!-- Tables (mail-table): the website's dark sticker, a cream rim with a coral shadow; a teal band
+      would vanish into the teal panel, so bands are ink with a coral underline, as on the site --}}
+{{{ogsb}}}.qr-tbl { background-color: #0f3a40 !important; }
+{{{ogsc}}}.qr-tbl { border-color: #feefe5 #f79677 #f79677 #feefe5 !important; }
+{{{ogsb}}}.qr-tbl-head, {{{ogsb}}}.qr-tbl-total { background-color: #0b2c31 !important; }
+{{{ogsc}}}.qr-tbl-head { color: #feefe5 !important; border-bottom: 3px solid #f79677 !important; }
+{{{ogsc}}}.qr-tbl-label { color: #c4d8da !important; border-color: #46676a !important; }
+{{{ogsc}}}.qr-tbl-value { color: #ffffff !important; border-color: #46676a !important; }
+{{{ogsc}}}.qr-tbl-total { color: #feefe5 !important; }
+{{{ogsc}}}.qr-tbl-figure { color: #f79677 !important; }
+{{!-- The example card back in the finalized mail stays a light card, like the printed one --}}
+{{{ogsb}}}.qr-sample { background-color: #fff8f3 !important; }
+{{{ogsc}}}.qr-sample { border-color: #feefe5 !important; box-shadow: 4px 4px 0 #f79677 !important; }
+{{{ogsc}}}.qr-sample-text { color: #0b2c31 !important; }
+{{!-- Buttons keep their fill (Outlook.com would darken it); an ink shadow becomes the deepest teal --}}
+{{{ogsb}}}.qr-btn-pop, {{{ogsb}}}.qr-dot { background-color: #f79677 !important; }
+{{{ogsc}}}.qr-btn-pop a, {{{ogsc}}}.qr-btn-cream a, {{{ogsc}}}.qr-dot { color: #0b2c31 !important; }
+{{{ogsc}}}.qr-btn-pop, {{{ogsc}}}.qr-btn-shadow { box-shadow: 4px 4px 0 #071f23 !important; }
+{{{ogsb}}}.qr-btn-outline { background-color: #14484f !important; }
+{{{ogsc}}}.qr-btn-outline { border-color: #feefe5 !important; }
+{{{ogsc}}}.qr-btn-outline a { color: #feefe5 !important; }
+{{{ogsb}}}.qr-btn-cream, {{{ogsb}}}.qr-btn-disco { background-color: #feefe5 !important; }
+{{{ogsc}}}.qr-btn-cream, {{{ogsc}}}.qr-btn-disco { box-shadow: 4px 4px 0 #f79677 !important; }
+{{{ogsc}}}.qr-btn-disco a { color: #18565e !important; }

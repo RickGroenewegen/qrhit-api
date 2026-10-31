@@ -1,12 +1,12 @@
 {{#> mail-layout title=productName preheader=translations.voucherMessage }}
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.voucherMessage }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.voucherMessage }}</p>
 <!-- Order information -->
-<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin: 8px 0 0;">
-    {{> mail-th label=translations.orderInformation }}
+{{#> mail-table }}
+    {{> mail-th label=translations.orderInformation first=true }}
     {{> mail-tr label=translations.orderNumber value=orderId }}
     {{> mail-tr label=translations.fullname value=fullname }}
     {{> mail-tr label=translations.email value=email }}
-</table>
+{{/mail-table}}
 {{> mail-closing }}
 {{/mail-layout}}

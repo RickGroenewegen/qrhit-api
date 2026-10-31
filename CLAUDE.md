@@ -2568,6 +2568,39 @@ info@. Built 2026-10-26 on Rick's ask (live example: order 100009439).
   saved. `helpMailResumedAt` alone counts link opens, mail scanners
   included.
 
+## Mail templates: dark mode and tables
+
+Every customer mail is `src/templates/mails/<name>_html.hbs` inside the
+`mail-layout` partial. Dark mode and the brand tables were added on
+2026-10-31 (Rick: the dark mode "is really ugly").
+
+- **Dark mode** is declared (`color-scheme: light dark`) and styled in
+  `partials/mail-dark.hbs`, the one dark palette, after the website's
+  `html.dark` (qrhit `brand-tokens.css`): an ink page, a deep teal card with
+  a cream rim and a coral shadow, cream text. The layout includes it twice,
+  in `@media (prefers-color-scheme: dark)` (Apple Mail, iOS Mail, Outlook
+  for Mac, Hey, Thunderbird) and with `[data-ogsc]`/`[data-ogsb]` prefixes
+  for Outlook.com and Outlook on the web, each in a `<style>` of its own so
+  Gmail dropping one does not take the others along. **The rules hang on
+  classes:** `qr-text` (teal body text), `qr-strong` (ink), `qr-muted`,
+  `qr-link`, `qr-panel`, `qr-alert`, `qr-btn-pop`… An element coloured
+  inline without its class keeps its light colour on the dark card.
+- **Gmail's apps and the Outlook apps invert the mail themselves** and read
+  no CSS. What survives that is in the files: the logo
+  (`assets/images/mail/logo.png`) has a cream outline, invisible on the
+  card, so it reads as a sticker on their dark ground; dark mode swaps in the
+  cream `logo_dark.png`, which `Mail.renderRaw` attaches (`cid:logo_dark`)
+  for every mail that shows it. A picture on the cream panel (the help
+  mail's card photo) has rounded corners so it reads as a print there.
+- **Tables** go through `partials/mail-table.hbs` with `mail-th` (a Disco
+  band, `first=true` on the top one), `mail-tr` (label, value right-aligned
+  and bold, thin ink line) and `mail-total` (the band with the figure in
+  coral; last row). The hard offset shadow is a thicker right and bottom
+  border, since Gmail and Outlook drop `box-shadow`.
+- **Checking:** `npx tsx _scripts/mail-previews.ts <dir>` renders every
+  template with sample data; open the files with the system in light and in
+  dark mode.
+
 ## Error tracking (PostHog)
 
 API errors go to the same PostHog project as the site's

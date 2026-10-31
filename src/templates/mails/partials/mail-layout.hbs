@@ -6,8 +6,8 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>{{ title }}</title>
     <!--[if mso]>
     <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
@@ -17,7 +17,7 @@
     <![endif]-->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap');
-        :root { color-scheme: light; supported-color-schemes: light; }
+        :root { color-scheme: light dark; supported-color-schemes: light dark; }
         body { margin: 0; padding: 0; background-color: #feefe5; }
         a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
         @media (max-width: 620px) {
@@ -28,17 +28,35 @@
             .qr-mobile-only { display: block !important; max-height: none !important; overflow: visible !important; }
         }
     </style>
+    {{!-- Dark mode in blocks of their own: Gmail ignores the colour scheme and the data-ogsc
+          selectors, and drops a whole <style> it does not like, which must not take the rules above with it --}}
+    <style>
+        @media (prefers-color-scheme: dark) {
+{{> mail-dark ogsc="" ogsb="" }}
+        }
+    </style>
+    <style>
+{{> mail-dark ogsc="[data-ogsc] " ogsb="[data-ogsb] " }}
+        .qr-bg[data-ogsb] { background-color: #0b2c31 !important; }
+    </style>
 </head>
-<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #feefe5;">
+<body class="qr-bg" style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #feefe5;">
     {{#if preheader}}<div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">{{ preheader }}</div>{{/if}}
-    <div role="article" aria-roledescription="email" aria-label="{{#if label}}{{ label }}{{else}}{{ title }}{{/if}}" lang="en" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #feefe5;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #feefe5;">
+    <div role="article" aria-roledescription="email" aria-label="{{#if label}}{{ label }}{{else}}{{ title }}{{/if}}" lang="en" class="qr-bg" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #feefe5; color: #18565e;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="qr-bg" style="width: 100%; background-color: #feefe5;">
             <tr>
                 <td align="center" class="qr-shell" style="padding: 32px 16px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" class="qr-card" style="width: 100%; max-width: 600px; border-collapse: separate; background-color: #fff8f3; border: 2px solid #18565e; border-radius: 20px; box-shadow: 6px 6px 0 #18565e;">
                         <tr>
-                            <td align="center" style="padding: 32px 32px 4px;">
-                                <img src="cid:{{#if logoCid}}{{ logoCid }}{{else}}logo{{/if}}" alt="{{ productName }}" width="180" style="display: block; width: 180px; max-width: 180px; height: auto; border: 0;">
+                            <td align="center" style="padding: 29px 32px 1px;">
+                                {{!-- The logo has a cream outline, invisible on the card, that keeps it readable where Gmail
+                                      and the Outlook apps darken the mail themselves; dark mode swaps in the cream logo --}}
+                                <img src="cid:logo" alt="{{ productName }}" width="186" class="qr-logo-light" style="display: block; width: 186px; max-width: 186px; height: auto; border: 0;">
+                                <!--[if !mso]><!-->
+                                <div class="qr-logo-dark" style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+                                    <img src="cid:logo_dark" alt="{{ productName }}" width="186" style="display: block; width: 186px; max-width: 186px; height: auto; border: 0;">
+                                </div>
+                                <!--<![endif]-->
                             </td>
                         </tr>
                         <tr>
@@ -49,17 +67,17 @@
                     </table>
                     <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px;">
                         <tr>
-                            <td align="center" style="padding: 24px 16px 0; font-size: 12px; line-height: 18px; color: #3d6d74;">
+                            <td align="center" class="qr-muted" style="padding: 24px 16px 0; font-size: 12px; line-height: 18px; color: #3d6d74;">
                                 <p style="margin: 0;">&copy; {{ currentYear }} {{ productName }}. {{#if rights}}{{ rights }}{{else}}All rights reserved.{{/if}}</p>
                                 {{#if links}}
                                 <p style="margin: 8px 0 0;">
-                                    <a href="https://www.qrsong.io" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.visitWebsite }}</a>
+                                    <a href="https://www.qrsong.io" class="qr-link" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.visitWebsite }}</a>
                                     &nbsp;&middot;&nbsp;
-                                    <a href="mailto:support@qrsong.io" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.contactSupport }}</a>
+                                    <a href="mailto:support@qrsong.io" class="qr-link" style="color: #18565e; font-weight: 600; text-decoration: none;">{{ translations.contactSupport }}</a>
                                 </p>
                                 {{/if}}
                                 {{#if unsubscribe}}
-                                <p style="margin: 8px 0 0;"><a href="{{ unsubscribe }}" style="color: #3d6d74; text-decoration: underline;">{{ translations.unsubscribe }}</a></p>
+                                <p style="margin: 8px 0 0;"><a href="{{ unsubscribe }}" class="qr-muted" style="color: #3d6d74; text-decoration: underline;">{{ translations.unsubscribe }}</a></p>
                                 {{/if}}
                             </td>
                         </tr>

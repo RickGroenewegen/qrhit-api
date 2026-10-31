@@ -1,0 +1,11 @@
+{{!-- A table in the brand's sticker look (qrhit brand-components.css .qr-sticker / .qr-table--band):
+      a cream panel with an ink rim. The hard offset shadow is a thicker right and bottom border,
+      which every client draws, where Gmail and Outlook drop box-shadow. Its rows:
+        mail-th     a Disco band heading a section; first=true on the top one rounds its corners
+        mail-tr     a label and its value, right-aligned and bold, under a thin ink line;
+                    noLine=true on a first row that has no band above it
+        mail-total  the Disco band with the figure in coral; always the last row
+      Dark mode (mail-dark): a deeper teal panel with a cream rim and a coral shadow. --}}
+<table role="presentation" cellpadding="0" cellspacing="0" class="qr-tbl" style="width: 100%; margin: {{#if margin}}{{ margin }}{{else}}8px 0 0{{/if}}; border-collapse: separate; background-color: #feefe5; border: 2px solid #0b2c31; border-right-width: 5px; border-bottom-width: 5px; border-radius: 14px;">
+{{> @partial-block }}
+</table>

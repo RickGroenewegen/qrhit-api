@@ -1,15 +1,15 @@
 {{#> mail-layout title=(concat productName " - " translations.title) preheader=intro }}
-<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }} {{ fullname }},</p>
-<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ intro }}</p>
+<p class="qr-text" style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }} {{ fullname }},</p>
+<p class="qr-text" style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ intro }}</p>
 {{#each setLines}}
-<p style="margin: 0 0 8px; font-size: 16px; line-height: 26px; font-weight: 700; color: #0b2c31;">{{ this }}</p>
+<p class="qr-strong" style="margin: 0 0 8px; font-size: 16px; line-height: 26px; font-weight: 700; color: #0b2c31;">{{ this }}</p>
 {{/each}}
-<p style="margin: 16px 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.invoiceNote }}</p>
+<p class="qr-text" style="margin: 16px 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.invoiceNote }}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">
     <tr>
         <td align="center">{{> mail-btn-pop href=accountLink label=translations.buttonText }}</td>
     </tr>
 </table>
-<p style="margin: 0; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.questions }}</p>
+<p class="qr-muted" style="margin: 0; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.questions }}</p>
 {{> mail-closing }}
 {{/mail-layout}}

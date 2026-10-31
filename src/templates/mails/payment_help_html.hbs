@@ -1,14 +1,14 @@
 {{!-- intro, validUntil and each line's detail come from translate(), whose params are HTML-escaped already, hence {{{ }}} --}}
 {{#> mail-layout title=(concat productName " - " translations.title) preheader=translations.preheader }}
-<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }}{{#if fullname}} {{ fullname }}{{/if}},</p>
-<p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{{ intro.html }}}</p>
+<p class="qr-text" style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.hello }}{{#if fullname}} {{ fullname }}{{/if}},</p>
+<p class="qr-text" style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{{ intro.html }}}</p>
 {{#each lines}}
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">
     {{#if this.cid}}
     <tr>
         <td align="center" style="padding: 0;">
             {{#if this.card}}
-            <img src="cid:{{ this.cid }}" alt="{{ this.name }}" width="536" style="display: block; width: 100%; max-width: 536px; height: auto; border: 0;">
+            <img src="cid:{{ this.cid }}" alt="{{ this.name }}" width="536" style="display: block; width: 100%; max-width: 536px; height: auto; border: 0; border-radius: 14px;">
             {{else}}
             <img src="cid:{{ this.cid }}" alt="{{ this.name }}" width="180" style="display: block; width: 180px; max-width: 180px; height: auto; border: 0; border-radius: 12px;">
             {{/if}}
@@ -17,26 +17,26 @@
     {{/if}}
     <tr>
         <td align="center" style="padding: 8px 0 0;">
-            {{#if this.name}}<p style="margin: 0 0 2px; font-size: 17px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ this.name }}</p>{{/if}}
-            <p style="margin: 0; font-size: 14px; line-height: 22px; color: #3d6d74;">{{{ this.detail.html }}}{{#if this.sets}} &middot; {{{ this.sets.html }}}{{/if}}</p>
+            {{#if this.name}}<p class="qr-strong" style="margin: 0 0 2px; font-size: 17px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ this.name }}</p>{{/if}}
+            <p class="qr-muted" style="margin: 0; font-size: 14px; line-height: 22px; color: #3d6d74;">{{{ this.detail.html }}}{{#if this.sets}} &middot; {{{ this.sets.html }}}{{/if}}</p>
         </td>
     </tr>
 </table>
 {{/each}}
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">
     <tr>
-        <td style="padding: 18px 20px; background-color: #dce9ea; border: 2px solid #18565e; border-radius: 14px;">
-            <p style="margin: 0 0 6px; font-size: 17px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ translations.helpTitle }}</p>
-            <p style="margin: 0; font-size: 15px; line-height: 24px; color: #0b2c31;">{{ translations.helpText }}</p>
+        <td class="qr-alert" style="padding: 18px 20px; background-color: #dce9ea; border: 2px solid #18565e; border-radius: 14px;">
+            <p class="qr-strong" style="margin: 0 0 6px; font-size: 17px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ translations.helpTitle }}</p>
+            <p class="qr-strong" style="margin: 0; font-size: 15px; line-height: 24px; color: #0b2c31;">{{ translations.helpText }}</p>
         </td>
     </tr>
 </table>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.readyText }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.readyText }}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 12px;">
     <tr>
         <td align="center">{{> mail-btn-pop href=resumeUrl label=translations.buttonText }}</td>
     </tr>
 </table>
-<p style="margin: 0; text-align: center; font-size: 13px; line-height: 20px; color: #3d6d74;">{{{ validUntil.html }}}</p>
+<p class="qr-muted" style="margin: 0; text-align: center; font-size: 13px; line-height: 20px; color: #3d6d74;">{{{ validUntil.html }}}</p>
 {{> mail-closing }}
 {{/mail-layout}}
