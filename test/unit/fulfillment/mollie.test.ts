@@ -17,7 +17,7 @@
  * Mail + PrintEnBind stay on the global recording proxies from test/setup.ts
  * (asserted via `outbound.calls(...)`).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { outbound } from '../../helpers/recording-mock';
 
 // ---------------------------------------------------------------------------
@@ -3219,14 +3219,25 @@ describe('deletePayment', () => {
 // (app_design_purchases) next to the payments.
 // ---------------------------------------------------------------------------
 
-/** Route the raw sales-report queries by the table they read. */
+/** The query for the first sale (reportPeriods.ts), which reads every table. */
+function isFirstSaleSql(sql: string): boolean {
+  return sql.includes('AS firstSale');
+}
+
+/**
+ * Route the raw sales-report queries by the table they read. Without a
+ * `firstSale` nothing has been sold, and the report has only the rows' own
+ * periods.
+ */
 function mockSalesReportQueries(tables: {
   payments?: any[];
   games?: any[];
   boxes?: any[];
   appDesign?: any[];
+  firstSale?: Date | null;
 }): void {
   prismaMock.$queryRawUnsafe.mockImplementation(async (sql: string) => {
+    if (isFirstSaleSql(sql)) return [{ firstSale: tables.firstSale ?? null }];
     if (sql.includes('FROM app_design_purchases')) return tables.appDesign || [];
     if (sql.includes('FROM games_purchases')) return tables.games || [];
     if (sql.includes('boxAmount')) return tables.boxes || [];
@@ -3355,7 +3366,10 @@ describe('getSalesReport: App Designer', () => {
       appDesignTotal: 0,
       appDesignExVat: 0,
     });
-    const sqls = prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+    // Only the first sale reads it (which rows there are, not their figures).
+    const sqls = prismaMock.$queryRawUnsafe.mock.calls
+      .map((c: any[]) => c[0] as string)
+      .filter((sql: string) => !isFirstSaleSql(sql));
     expect(sqls.some((sql: string) => sql.includes('app_design_purchases'))).toBe(false);
   });
 });
@@ -3904,7 +3918,10 @@ describe('getSalesReport: business segment', () => {
 
     const report = await mollie.getSalesReport('month', 'digital', 'business');
 
-    expect(prismaMock.$queryRawUnsafe).not.toHaveBeenCalled();
+    // Only the first sale, which decides the rows in every segment.
+    const sqls = prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+    expect(sqls).toHaveLength(1);
+    expect(isFirstSaleSql(sqls[0])).toBe(true);
     expect(report).toHaveLength(1);
     expect(report[0]).toMatchObject({
       period: '2026-09',
@@ -4004,8 +4021,11 @@ describe('getPaymentsByMonth: business segment', () => {
 
 const APP_ORDER = "EXISTS (SELECT 1 FROM payments cp WHERE cp.id = %s.paymentId AND cp.channel = 'app')";
 
+// The report's own queries; the first sale has no channel (see "every period").
 function rawSqls(): string[] {
-  return prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+  return prismaMock.$queryRawUnsafe.mock.calls
+    .map((c: any[]) => c[0] as string)
+    .filter((sql: string) => !isFirstSaleSql(sql));
 }
 
 describe('getSalesReport: channel', () => {
@@ -4064,6 +4084,161 @@ describe('getSalesReport: channel', () => {
     expect(report[0]).toMatchObject({ numberOfSales: 0, businessAmount: 1, businessTotal: 1210 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Every day or month from the first sale's up to the current one has a row,
+// zeros where nothing was sold (src/reportPeriods.ts).
+// ---------------------------------------------------------------------------
+
+describe('getSalesReport: every period', () => {
+  const september = {
+    period: '2026-09',
+    numberOfSales: 10n,
+    totalPrice: '250',
+    totalPriceWithoutTax: '206.61',
+    totalRefunded: '0',
+    totalProfit: '80',
+    profitAssignedCount: 10n,
+  };
+  const june = { ...september, period: '2026-06', numberOfSales: 2n, totalPrice: '50', totalProfit: '16', profitAssignedCount: 2n };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-31T12:00:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('gives every month from the first sale up to this one, newest first, zeros in between', async () => {
+    mockSalesReportQueries({
+      payments: [september, june],
+      firstSale: new Date('2026-05-20T08:00:00.000Z'),
+    });
+
+    const report = await mollie.getSalesReport('month');
+
+    expect(report.map((r: any) => r.period)).toEqual([
+      '2026-10',
+      '2026-09',
+      '2026-08',
+      '2026-07',
+      '2026-06',
+      '2026-05',
+    ]);
+    expect(report[1]).toMatchObject({ numberOfSales: 10, totalPrice: 250, totalProfit: 80 });
+    expect(report[4]).toMatchObject({ numberOfSales: 2, totalPrice: 50, totalProfit: 16 });
+    // A month without sales is a full row of zeros, consumer and business.
+    for (const empty of [report[0], report[2], report[3], report[5]]) {
+      expect(empty).toEqual(emptyMonth(empty.period));
+    }
+  });
+
+  it('gives every day up to today, across a month end, in UTC like the rows', async () => {
+    vi.setSystemTime(new Date('2026-10-02T10:00:00.000Z'));
+    mockSalesReportQueries({
+      payments: [{ ...september, period: '2026-09-30' }],
+      // 00:30 on 30 September in Amsterdam: the 29th in UTC, as MySQL dates it.
+      firstSale: new Date('2026-09-29T22:30:00.000Z'),
+    });
+
+    const report = await mollie.getSalesReport('day');
+
+    expect(report.map((r: any) => r.period)).toEqual([
+      '2026-10-02',
+      '2026-10-01',
+      '2026-09-30',
+      '2026-09-29',
+    ]);
+    expect(report[2]).toMatchObject({ numberOfSales: 10, totalPrice: 250 });
+    expect(report[0]).toMatchObject({ numberOfSales: 0, totalPrice: 0, totalProfit: 0 });
+  });
+
+  it('keeps the same rows whatever the channel, filter or segment; only the figures change', async () => {
+    const firstSale = new Date('2026-05-20T08:00:00.000Z');
+    const months = ['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05'];
+
+    mockSalesReportQueries({ payments: [september, june], firstSale });
+    const all = await mollie.getSalesReport('month');
+
+    // The app sold in September only.
+    mockSalesReportQueries({ payments: [{ ...september, numberOfSales: 1n, totalPrice: '13' }], firstSale });
+    const app = await mollie.getSalesReport('month', 'all', 'consumer', 'app');
+    const appCards = await mollie.getSalesReport('month', 'cards', 'consumer', 'app');
+
+    // No sold lists at all.
+    const business = await mollie.getSalesReport('month', 'all', 'business');
+
+    for (const report of [all, app, appCards, business]) {
+      expect(report.map((r: any) => r.period)).toEqual(months);
+    }
+    expect(app[1]).toMatchObject({ numberOfSales: 1, totalPrice: 13 });
+    expect(app[4]).toMatchObject({ numberOfSales: 0, totalPrice: 0 });
+
+    // One question for the first sale, the same every time: no channel.
+    const firstSaleSqls = prismaMock.$queryRawUnsafe.mock.calls
+      .map((c: any[]) => c[0] as string)
+      .filter(isFirstSaleSql);
+    expect(firstSaleSqls).toHaveLength(4);
+    expect(new Set(firstSaleSqls).size).toBe(1);
+    expect(firstSaleSqls[0]).not.toContain('channel');
+    expect(firstSaleSqls[0]).toContain("p.storeEnvironment <> 'sandbox'");
+  });
+
+  it('leaves the totals as they were', async () => {
+    mockSalesReportQueries({ payments: [september, june] });
+    const before = await mollie.getSalesTotals();
+
+    mockSalesReportQueries({ payments: [september, june], firstSale: new Date('2025-01-03T10:00:00.000Z') });
+    const report = await mollie.getSalesReport('month', 'all', 'both');
+    const after = await mollie.getSalesTotals();
+
+    expect(report).toHaveLength(22); // January 2025 up to October 2026
+    expect(after).toEqual(before);
+  });
+
+  it('dates a sold list on its own day, between the filled days', async () => {
+    mockSalesReportQueries({ firstSale: new Date('2026-10-28T09:00:00.000Z') });
+    prismaMock.companyList.findMany.mockResolvedValue([
+      soldList({ soldAt: new Date('2026-10-30T12:00:00.000Z') }),
+    ]);
+
+    const report = await mollie.getSalesReport('day', 'all', 'both');
+
+    expect(report.map((r: any) => [r.period, r.businessAmount])).toEqual([
+      ['2026-10-31', 0],
+      ['2026-10-30', 1],
+      ['2026-10-29', 0],
+      ['2026-10-28', 0],
+    ]);
+  });
+});
+
+/** A month without a sale, as getSalesReport gives it. */
+function emptyMonth(period: string) {
+  return {
+    period,
+    numberOfSales: 0,
+    totalPrice: 0,
+    totalPriceWithoutTax: 0,
+    boxAmount: 0,
+    totalRefunded: 0,
+    gamesAmount: 0,
+    gamesTotal: 0,
+    gamesExVat: 0,
+    appDesignAmount: 0,
+    appDesignTotal: 0,
+    appDesignExVat: 0,
+    totalProfit: 0,
+    profitAssignedCount: 0,
+    businessAmount: 0,
+    businessBoxes: 0,
+    businessTotal: 0,
+    businessExVat: 0,
+    businessProfit: 0,
+    businessProfitKnownCount: 0,
+  };
+}
 
 describe('getPaymentsByMonth: channel', () => {
   const start = new Date(2026, 8, 1);
