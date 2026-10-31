@@ -56,6 +56,11 @@ vi.mock('../../../src/mollie', () => ({
   default: class {},
 }));
 
+const reportSpy = vi.fn();
+vi.mock('../../../src/orderProgress', () => ({
+  default: { getInstance: () => ({ report: reportSpy }) },
+}));
+
 import GeneratorQueue from '../../../src/generatorQueue';
 
 const queue = GeneratorQueue.getInstance();
@@ -126,6 +131,24 @@ describe('worker processor', () => {
   it('rethrows generator errors so BullMQ can retry', async () => {
     generateSpy.mockRejectedValueOnce(new Error('pdf exploded'));
     await expect(processor(makeJob())).rejects.toThrow('pdf exploded');
+  });
+
+  // The scan app's done screen (src/orderProgress.ts): a retry reports its
+  // own progress, so only the last attempt's failure is an error
+  it('reports an error to whoever watches the order only after the last attempt', async () => {
+    reportSpy.mockClear();
+    generateSpy.mockRejectedValue(new Error('pdf exploded'));
+    const attempt = (attemptsMade: number) =>
+      processor({ ...makeJob(), name: 'generate', attemptsMade, opts: { attempts: 3 } });
+
+    await expect(attempt(0)).rejects.toThrow('pdf exploded');
+    await expect(attempt(1)).rejects.toThrow('pdf exploded');
+    expect(reportSpy).not.toHaveBeenCalled();
+
+    await expect(attempt(2)).rejects.toThrow('pdf exploded');
+    expect(reportSpy).toHaveBeenCalledWith('pay-1', 'error');
+    generateSpy.mockReset();
+    generateSpy.mockResolvedValue(undefined);
   });
 });
 

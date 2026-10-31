@@ -114,6 +114,8 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payments.invoiceCity,
                   payments.invoiceZipcode,
                   payments.invoiceCountrycode,
+                  payments.processedFirstTime,
+                  payments.finalized,
                   users.hash AS userHash,
                   CASE
                     WHEN EXISTS (
@@ -140,6 +142,13 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payment_has_playlist.type,
                   payment_has_playlist.subType,
                   payment_has_playlist.gamesEnabled,
+                  -- The scan app's done screen offers the PDF once it exists
+                  CASE
+                    WHEN payment_has_playlist.filenameDigital IS NOT NULL
+                      AND payment_has_playlist.filenameDigital <> ''
+                      THEN 1
+                    ELSE 0
+                  END AS pdfReady,
                   CASE
                     WHEN payment_has_playlist.amount > 0
                       THEN payment_has_playlist.price / payment_has_playlist.amount

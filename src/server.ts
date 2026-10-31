@@ -447,7 +447,11 @@ class Server {
       };
       if (status && status >= 400 && status < 500) {
         ErrorTracking.getInstance().ignore(error);
-        console.warn(`${status} ${request.method} ${request.url}: ${message}`);
+        // A path a static mount refuses is never a file we serve: traversal
+        // probes, and clients that fetch a whole srcset as one URL (its
+        // "https://" makes the path non-canonical). Answered, not logged.
+        const staticRefusal = status === 403 && !!request.routeOptions?.url?.endsWith('*');
+        if (!staticRefusal) console.warn(`${status} ${request.method} ${request.url}: ${message}`);
         return reply.status(status).send({ error: message });
       }
       // The route pattern, not the URL: paths carry ids and download hashes.

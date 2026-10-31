@@ -193,6 +193,63 @@ describe('Charts.getDailySales', () => {
 });
 
 // ──────────────────────────────────────────────
+// Channel (the reports' Website / App toggle)
+// ──────────────────────────────────────────────
+
+describe('Charts: channel', () => {
+  const appOrder = (alias: string) =>
+    `EXISTS (SELECT 1 FROM payments cp WHERE cp.id = ${alias}.paymentId AND cp.channel = 'app')`;
+
+  it('all: no channel in any chart query', async () => {
+    const svc = makeSvc();
+    await svc.getMovingAverage(90);
+    await svc.getHourlySales(90, undefined, undefined, 'all');
+    await svc.getDailySales(90);
+    for (const [sql] of queryRawUnsafe.mock.calls as any[]) {
+      expect(sql).not.toContain('channel');
+    }
+  });
+
+  it('leaves store test purchases out of every chart', async () => {
+    const svc = makeSvc();
+    await svc.getMovingAverage(90);
+    await svc.getHourlySales(90, undefined, undefined, 'all');
+    await svc.getDailySales(90);
+    for (const [sql] of queryRawUnsafe.mock.calls as any[]) {
+      expect(sql).toMatch(/storeEnvironment <> 'sandbox'/);
+    }
+  });
+
+  it('app: the moving average reads the app orders and what came with them', async () => {
+    const svc = makeSvc();
+    await svc.getMovingAverage(30, undefined, undefined, 'app');
+    const sql: string = (queryRawUnsafe.mock.calls as any[])[0][0];
+    expect(sql).toContain("INTERVAL 30 DAY) AND (p.storeEnvironment IS NULL OR p.storeEnvironment <> 'sandbox') AND p.channel = 'app'");
+    expect(sql).toContain(`DATE(gp.createdAt) = DATE(p.createdAt) AND ${appOrder('gp')}`);
+    // App Designer bought on the account (no order) is the website's: none here.
+    expect(sql.split(`adp.paymentId IS NULL AND ${appOrder('adp')}`)).toHaveLength(3);
+  });
+
+  it('web: the moving average reads the website orders, upgrades and account purchases', async () => {
+    const svc = makeSvc();
+    await svc.getMovingAverage(30, undefined, undefined, 'web');
+    const sql: string = (queryRawUnsafe.mock.calls as any[])[0][0];
+    expect(sql).toContain("INTERVAL 30 DAY) AND (p.storeEnvironment IS NULL OR p.storeEnvironment <> 'sandbox') AND p.channel IS NULL");
+    expect(sql).toContain(`AND NOT ${appOrder('gp')}`);
+    expect(sql.split(`AND NOT ${appOrder('adp')}`)).toHaveLength(3);
+  });
+
+  it('narrows the hourly and daily averages', async () => {
+    const svc = makeSvc();
+    await svc.getHourlySales(undefined, '2024-06-01', '2024-06-30', 'app');
+    await svc.getDailySales(365, undefined, undefined, 'web');
+    const [hourly, daily] = (queryRawUnsafe.mock.calls as any[]).map((c) => c[0] as string);
+    expect(hourly).toContain("BETWEEN '2024-06-01' AND '2024-06-30' AND (storeEnvironment IS NULL OR storeEnvironment <> 'sandbox') AND channel = 'app'");
+    expect(daily).toContain("INTERVAL 365 DAY) AND (storeEnvironment IS NULL OR storeEnvironment <> 'sandbox') AND channel IS NULL");
+  });
+});
+
+// ──────────────────────────────────────────────
 // Singleton
 // ──────────────────────────────────────────────
 

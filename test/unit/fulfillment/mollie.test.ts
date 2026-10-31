@@ -248,7 +248,21 @@ vi.mock('cron', () => ({
   },
 }));
 
+const metaMock = vi.hoisted(() => ({ remember: vi.fn(), sendPurchase: vi.fn() }));
+vi.mock('../../../src/metaConversions', () => ({
+  default: { getInstance: () => metaMock },
+}));
+
+// The stores themselves; parseStoreProof and the error class stay real.
+const storePurchasesMock = vi.hoisted(() => ({ verify: vi.fn(), finish: vi.fn() }));
+vi.mock('../../../src/storePurchases', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  default: { getInstance: () => storePurchasesMock },
+}));
+
 import Mollie from '../../../src/mollie';
+import { StorePurchaseError } from '../../../src/storePurchases';
+import { Prisma } from '@prisma/client';
 import { BOX_PRICE } from '../../../src/config/constants';
 
 const mollie = new Mollie();
@@ -425,6 +439,10 @@ function applyDefaults(): void {
     id: 're_1',
     status: 'pending',
   });
+  metaMock.remember.mockResolvedValue(undefined);
+  metaMock.sendPurchase.mockResolvedValue(undefined);
+  storePurchasesMock.verify.mockRejectedValue(new Error('verify not stubbed'));
+  storePurchasesMock.finish.mockResolvedValue(undefined);
 }
 
 function makeItem(over: Record<string, any> = {}): any {
@@ -1606,11 +1624,20 @@ describe('cleanPayments (abandoned orders are kept for the help mail)', () => {
   it('deletes canceled and expired rows only after 14 days, never failed ones', async () => {
     const before = Date.now();
     await (mollie as any).cleanPayments();
-    const where = prismaMock.payment.findMany.mock.calls[0][0].where;
-    expect(where.status).toEqual({ in: ['expired', 'canceled'] });
-    const keptFor = before - where.updatedAt.lt.getTime();
+    const [abandoned] = prismaMock.payment.findMany.mock.calls[0][0].where.OR;
+    expect(abandoned.status).toEqual({ in: ['expired', 'canceled'] });
+    const keptFor = before - abandoned.updatedAt.lt.getTime();
     expect(Math.round(keptFor / (24 * 60 * 60 * 1000))).toBe(14);
     expect(prismaMock.payment.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('deletes an app store order still open after 30 days', async () => {
+    const before = Date.now();
+    await (mollie as any).cleanPayments();
+    const [, storeOpen] = prismaMock.payment.findMany.mock.calls[0][0].where.OR;
+    expect(storeOpen).toMatchObject({ paymentId: { startsWith: 'store_' }, status: 'open' });
+    const keptFor = before - storeOpen.createdAt.lt.getTime();
+    expect(Math.round(keptFor / (24 * 60 * 60 * 1000))).toBe(30);
   });
 });
 
@@ -2917,6 +2944,14 @@ describe('checkPaymentStatus', () => {
 // ---------------------------------------------------------------------------
 
 describe('createRefund', () => {
+  it('leaves an app store order to Apple or Google', async () => {
+    const result = await mollie.createRefund('store_6f1c2b9e', 14.99);
+
+    expect(result.success).toBe(false);
+    expect(mollieApi.liveClient.refunds.create).not.toHaveBeenCalled();
+    expect(prismaMock.payment.update).not.toHaveBeenCalled();
+  });
+
   it('refunds EUR payments with the exact 2-decimal amount string', async () => {
     prismaMock.payment.findUnique.mockResolvedValue({
       currency: 'EUR',
@@ -3960,5 +3995,493 @@ describe('getPaymentsByMonth: business segment', () => {
     expect(prismaMock.payment.groupBy).not.toHaveBeenCalled();
     expect(report.map((r: any) => r.country)).toEqual(['NL', 'BE']);
     expect(report[0]).toMatchObject({ numberOfSales: 0, businessTotal: 1210 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The reports' Website / App toggle (payments.channel, src/salesChannel.ts)
+// ---------------------------------------------------------------------------
+
+const APP_ORDER = "EXISTS (SELECT 1 FROM payments cp WHERE cp.id = %s.paymentId AND cp.channel = 'app')";
+
+function rawSqls(): string[] {
+  return prismaMock.$queryRawUnsafe.mock.calls.map((c: any[]) => c[0] as string);
+}
+
+describe('getSalesReport: channel', () => {
+  // The orders and the boxes; QRGames and App Designer have their own ledgers.
+  const paymentSqls = () =>
+    rawSqls().filter(
+      (sql) => !sql.includes('FROM games_purchases') && !sql.includes('FROM app_design_purchases')
+    );
+  const ledgerSql = (table: string) => rawSqls().find((sql) => sql.includes(`FROM ${table}`))!;
+
+  it('all: asks exactly what it always did', async () => {
+    await mollie.getSalesReport('month');
+    await mollie.getSalesReport('day', 'digital');
+    await mollie.getSalesReport('month', 'all', 'both', 'all');
+
+    expect(rawSqls().length).toBeGreaterThan(0);
+    for (const sql of rawSqls()) expect(sql).not.toContain('channel');
+    expect(ledgerSql('app_design_purchases')).not.toContain('WHERE');
+  });
+
+  it('web: website orders, and the QRGames and App Designer not bought with an app order', async () => {
+    await mollie.getSalesReport('month', 'all', 'consumer', 'web');
+
+    expect(paymentSqls()).toHaveLength(2);
+    for (const sql of paymentSqls()) expect(sql).toContain('AND p.channel IS NULL');
+    expect(ledgerSql('games_purchases')).toContain(
+      `WHERE gp.createdAt > '2024-12-05' AND NOT ${APP_ORDER.replace('%s', 'gp')}`
+    );
+    expect(ledgerSql('app_design_purchases')).toContain(`WHERE NOT ${APP_ORDER.replace('%s', 'adp')}`);
+  });
+
+  it('app: the app orders, and the QRGames and App Designer bought with them', async () => {
+    await mollie.getSalesReport('day', 'all', 'consumer', 'app');
+
+    expect(paymentSqls()).toHaveLength(2);
+    for (const sql of paymentSqls()) expect(sql).toContain("AND p.channel = 'app'");
+    expect(ledgerSql('games_purchases')).toContain(`AND ${APP_ORDER.replace('%s', 'gp')}`);
+    expect(ledgerSql('games_purchases')).not.toContain('NOT EXISTS');
+    expect(ledgerSql('app_design_purchases')).toContain(`WHERE ${APP_ORDER.replace('%s', 'adp')}`);
+  });
+
+  it('narrows the per-product views too', async () => {
+    await mollie.getSalesReport('month', 'cards', 'consumer', 'app');
+
+    expect(rawSqls()).toHaveLength(2);
+    for (const sql of rawSqls()) expect(sql).toContain("AND p.channel = 'app'");
+  });
+
+  it('leaves the sold company lists as they are', async () => {
+    mockSalesReportQueries({});
+    prismaMock.companyList.findMany.mockResolvedValue([soldList()]);
+
+    const report = await mollie.getSalesReport('month', 'all', 'both', 'app');
+
+    expect(report).toHaveLength(1);
+    expect(report[0]).toMatchObject({ numberOfSales: 0, businessAmount: 1, businessTotal: 1210 });
+  });
+});
+
+describe('getPaymentsByMonth: channel', () => {
+  const start = new Date(2026, 8, 1);
+  const end = new Date(2026, 9, 0, 23, 59, 59);
+
+  // Order 40 was placed in the app, order 41 on the website.
+  beforeEach(() => {
+    prismaMock.payment.groupBy.mockResolvedValue([
+      {
+        countrycode: 'NL',
+        _count: { _all: 1 },
+        _sum: { totalPrice: 13, totalPriceWithoutTax: 10.74 },
+        _max: { taxRate: 21 },
+      },
+    ]);
+    prismaMock.payment.findMany.mockImplementation(async (args: any) =>
+      args?.where?.id?.in ? [{ id: 40 }] : []
+    );
+    prismaMock.gamesPurchase.findMany.mockResolvedValue([
+      { countrycode: 'NL', taxRate: 21, totalPrice: 5, type: 'initial', paymentId: 40 },
+      { countrycode: 'NL', taxRate: 21, totalPrice: 5, type: 'upgrade', paymentId: null },
+      { countrycode: 'NL', taxRate: 21, totalPrice: 5, type: 'initial', paymentId: 41 },
+    ]);
+    prismaMock.appDesignPurchase.findMany.mockResolvedValue([
+      { countrycode: 'NL', paymentId: 40, totalPrice: 9, totalPriceWithoutTax: 7.44, taxRate: 21 },
+      { countrycode: 'DE', paymentId: null, totalPrice: 9, totalPriceWithoutTax: 7.56, taxRate: 19 },
+    ]);
+  });
+
+  const paymentWheres = () => prismaMock.payment.findMany.mock.calls.map(([args]: any[]) => args.where);
+
+  it('all: no channel in any query, and every ledger row', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end);
+
+    expect(prismaMock.payment.groupBy.mock.calls[0][0].where).not.toHaveProperty('channel');
+    for (const where of paymentWheres()) expect(where).not.toHaveProperty('channel');
+    expect(paymentWheres().some((where: any) => where.id)).toBe(false);
+    for (const sql of rawSqls()) expect(sql).not.toContain('channel');
+    expect(prismaMock.gamesPurchase.findMany.mock.calls[0][0].select).toEqual({
+      countrycode: true,
+      taxRate: true,
+      totalPrice: true,
+      type: true,
+    });
+    expect(report.map((r: any) => r.country)).toEqual(['NL', 'DE']);
+    expect(report[0]).toMatchObject({ gamesAmount: 3, gamesTotal: 5, appDesignAmount: 1 });
+  });
+
+  it('app: the app orders, and the QRGames and App Designer that came with them', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end, 'consumer', 'app');
+
+    expect(prismaMock.payment.groupBy.mock.calls[0][0].where).toMatchObject({
+      status: 'paid',
+      channel: 'app',
+    });
+    // The refunds, the playlists per country and the app orders the ledgers name.
+    expect(paymentWheres().find((where: any) => where.refundAmount)).toMatchObject({ channel: 'app' });
+    expect(paymentWheres().find((where: any) => where.countrycode === 'NL')).toMatchObject({
+      channel: 'app',
+    });
+    expect(paymentWheres().find((where: any) => where.id)).toEqual({
+      id: { in: [40, 41] },
+      channel: 'app',
+    });
+    // The boxes and the profit per country.
+    expect(rawSqls()).toHaveLength(2);
+    for (const sql of rawSqls()) expect(sql).toContain("AND p.channel = 'app'");
+    expect(prismaMock.gamesPurchase.findMany.mock.calls[0][0].select).toMatchObject({
+      paymentId: true,
+    });
+
+    expect(report).toHaveLength(1);
+    expect(report[0]).toMatchObject({
+      country: 'NL',
+      numberOfSales: 1,
+      gamesAmount: 1,
+      gamesTotal: 0,
+      appDesignAmount: 1,
+      appDesignTotal: 0,
+    });
+  });
+
+  it('web: website orders, upgrades and App Designer bought on the account', async () => {
+    const report = await mollie.getPaymentsByMonth(start, end, 'consumer', 'web');
+
+    expect(prismaMock.payment.groupBy.mock.calls[0][0].where).toMatchObject({ channel: null });
+    expect(paymentWheres().find((where: any) => where.refundAmount)).toMatchObject({ channel: null });
+    for (const sql of rawSqls()) expect(sql).toContain('AND p.channel IS NULL');
+
+    expect(report.map((r: any) => r.country)).toEqual(['NL', 'DE']);
+    // The upgrade and order 41's QRGames; order 40's App Designer is the app's.
+    expect(report[0]).toMatchObject({ gamesAmount: 2, gamesTotal: 5, appDesignAmount: 0 });
+    expect(report[1]).toMatchObject({ numberOfSales: 0, appDesignAmount: 1, appDesignTotal: 9 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// App store orders (scan app 2.1.0): created open, paid on the store's proof
+// ---------------------------------------------------------------------------
+
+describe('getPaymentUri for an app store order', () => {
+  const storeParams = (over: Record<string, any> = {}) =>
+    makeParams({ store: { platform: 'ios' }, refreshPlaylists: [], ...over });
+
+  it('writes an open store_ order at the store price and never calls Mollie', async () => {
+    const result = await mollie.getPaymentUri(storeParams(), '1.2.3.4');
+
+    expect(result.success).toBe(true);
+    expect(result.data.paymentId).toMatch(/^store_[0-9a-f-]{36}$/);
+    expect(result.data.appAccountToken).toBe(result.data.paymentId.slice('store_'.length));
+    expect(result.data.storeProductId).toBe('deck.500');
+    expect(result.data.paymentUri).toBe('');
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+    expect(mollieApi.testClient.payments.create).not.toHaveBeenCalled();
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+
+    const data = prismaMock.payment.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      paymentId: result.data.paymentId,
+      status: 'open',
+      paymentMethod: 'appstore',
+      channel: 'app',
+      storeProductId: 'deck.500',
+      totalPrice: 13,
+      productPriceWithoutTax: 10.74,
+      gamesFee: 0,
+      appDesignFee: 0,
+      discount: 0,
+    });
+    // ex VAT × the 85% the store pays out
+    expect(data.profit).toBeCloseTo((13 / 1.21) * 0.85, 2);
+    expect(data.PaymentHasPlaylist.create[0]).toMatchObject({ price: 13, type: 'digital' });
+  });
+
+  it('picks the tier that holds the deck and bakes QRGames! into the product', async () => {
+    // The track count is fetched again before pricing.
+    providerMock.getTracks.mockResolvedValue({ success: true, data: { total: 1200 } });
+    const result = await mollie.getPaymentUri(
+      storeParams({
+        store: { platform: 'android' },
+        cart: { items: [makeItem({ numberOfTracks: 1200, gamesEnabled: true })] },
+      }),
+      '1.2.3.4'
+    );
+
+    expect(result.data.storeProductId).toBe('deck.1500.games');
+    const data = prismaMock.payment.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      paymentMethod: 'googleplay',
+      channel: 'app',
+      totalPrice: 35,
+      gamesFee: 5,
+    });
+    expect(data.PaymentHasPlaylist.create[0]).toMatchObject({ price: 30, gamesPrice: 5 });
+    expect(prismaMock.gamesPurchase.create.mock.calls[0][0].data).toMatchObject({
+      pricePerPlaylist: 5,
+      molliePaymentId: result.data.paymentId,
+    });
+  });
+
+  it('refuses codes, printed decks and more than one deck', async () => {
+    const withCode = await mollie.getPaymentUri(
+      storeParams({ cart: { items: [makeItem()], discounts: [{ code: 'GIFT10' }] } }),
+      '1.2.3.4'
+    );
+    const printed = await mollie.getPaymentUri(
+      storeParams({ cart: { items: [makeItem({ type: 'physical' })] } }),
+      '1.2.3.4'
+    );
+    const two = await mollie.getPaymentUri(
+      storeParams({ cart: { items: [makeItem(), makeItem({ playlistId: 'sp2' })] } }),
+      '1.2.3.4'
+    );
+
+    expect(withCode).toEqual({ success: false, error: 'store_discount' });
+    expect(printed).toEqual({ success: false, error: 'store_cart' });
+    expect(two).toEqual({ success: false, error: 'store_cart' });
+    expect(prismaMock.payment.create).not.toHaveBeenCalled();
+    expect(discountMock.calculateDiscounts).not.toHaveBeenCalled();
+  });
+
+  it('never falls back to Mollie for a store platform it does not know', async () => {
+    const result = await mollie.getPaymentUri(storeParams({ store: { platform: 'web' } }), '1.2.3.4');
+
+    expect(result).toEqual({ success: false, error: 'store_platform' });
+    expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
+    expect(mollieApi.testClient.payments.create).not.toHaveBeenCalled();
+    expect(prismaMock.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('writes a browser purchase as an App Store order in development', async () => {
+    vi.stubEnv('ENVIRONMENT', 'development');
+    try {
+      const result = await mollie.getPaymentUri(storeParams({ store: { platform: 'web' } }), '1.2.3.4');
+
+      expect(result.success).toBe(true);
+      expect(result.data.paymentId).toMatch(/^store_/);
+      expect(prismaMock.payment.create.mock.calls[0][0].data.paymentMethod).toBe('appstore');
+      expect(mollieApi.testClient.payments.create).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe('getPaymentUri with returnTo app', () => {
+  it('sends the buyer back to the scan app instead of the site', async () => {
+    await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4');
+
+    const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+    expect(request.redirectUrl).toBe('nl.rickgroenewegen.qrsong://payment');
+    const update = mollieApi.liveClient.payments.update.mock.calls[0][0];
+    expect(update.requestBody.redirectUrl).toBe(
+      'nl.rickgroenewegen.qrsong://payment?paymentId=tr_test123'
+    );
+  });
+
+  it('records the order as placed in the app, paid through Mollie', async () => {
+    await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4');
+
+    const data = prismaMock.payment.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ paymentId: 'tr_test123', channel: 'app' });
+    expect(data).not.toHaveProperty('paymentMethod');
+  });
+
+  it('keeps the site return for everyone else', async () => {
+    await mollie.getPaymentUri(makeParams(), '1.2.3.4');
+
+    const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
+    expect(request.redirectUrl).toMatch(/\/nl\/generate\/check_payment$/);
+  });
+
+  it('leaves the channel of a website order empty', async () => {
+    await mollie.getPaymentUri(makeParams(), '1.2.3.4');
+    await mollie.getPaymentUri(makeParams({ returnTo: 'site' }), '1.2.3.4');
+
+    for (const [args] of prismaMock.payment.create.mock.calls) {
+      expect(args.data).not.toHaveProperty('channel');
+    }
+    expect(prismaMock.payment.create).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('checkPaymentStatus with an app store proof', () => {
+  const TOKEN = '6f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f';
+  const PAYMENT_ID = `store_${TOKEN}`;
+  const proof = { platform: 'ios', productId: 'deck.500', jws: 'header.payload.signature' };
+
+  function storeOrder(over: Record<string, any> = {}) {
+    return {
+      id: 901,
+      status: 'open',
+      clientIp: '1.2.3.4',
+      totalPrice: 14.99,
+      storeProductId: 'deck.500',
+      storeTransactionId: null,
+      user: { hash: 'userhash' },
+      ...over,
+    };
+  }
+
+  function purchase(over: Record<string, any> = {}) {
+    return {
+      platform: 'ios',
+      transactionId: '2000001043762129',
+      productId: 'deck.500',
+      appAccountToken: TOKEN,
+      sandbox: false,
+      price: 14.99,
+      currency: 'EUR',
+      ...over,
+    };
+  }
+
+  // The settle step reads the order first; only an accepted proof goes on
+  // to the status answer, which reads it again.
+  function orderOnly(order: any) {
+    prismaMock.payment.findUnique.mockResolvedValueOnce(order);
+  }
+  function orderThenStatus(order: any, status = 'paid') {
+    orderOnly(order);
+    prismaMock.payment.findUnique.mockResolvedValueOnce({
+      status,
+      user: { userId: 'buyer@example.com', hash: 'userhash' },
+    });
+  }
+
+  beforeEach(() => {
+    prismaMock.payment.findUnique.mockReset();
+    prismaMock.payment.findUnique.mockResolvedValue(null);
+  });
+
+  it('claims the order, starts it and answers paid', async () => {
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase());
+
+    const result = await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+
+    expect(result.data.status).toBe('paid');
+    expect(storePurchasesMock.verify).toHaveBeenCalledWith(proof);
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledWith({
+      where: { paymentId: PAYMENT_ID, status: { not: 'paid' } },
+      data: {
+        status: 'paid',
+        storeTransactionId: '2000001043762129',
+        storeEnvironment: 'production',
+        currency: 'EUR',
+        totalPricePresentment: 14.99,
+        exchangeRate: 1,
+      },
+    });
+    expect(generatorMock.queueGenerate).toHaveBeenCalledWith(PAYMENT_ID, '1.2.3.4', '', false, false, false);
+    expect(cacheMock.del).toHaveBeenCalledWith('playlists:user:userhash');
+    expect(metaMock.sendPurchase).toHaveBeenCalledWith(901);
+    expect(storePurchasesMock.finish).toHaveBeenCalled();
+  });
+
+  it('marks a test purchase sandbox and sends Meta and the promoter nothing', async () => {
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ sandbox: true }));
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([{ playlistId: 7 }]);
+
+    await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+
+    expect(prismaMock.payment.updateMany.mock.calls[0][0].data.storeEnvironment).toBe('sandbox');
+    expect(generatorMock.queueGenerate).toHaveBeenCalled();
+    expect(metaMock.sendPurchase).not.toHaveBeenCalled();
+    expect(promotionalMock.creditPromotionalDiscount).not.toHaveBeenCalled();
+  });
+
+  it('credits the promoter for a real store purchase', async () => {
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ sandbox: false }));
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([{ playlistId: 7 }]);
+
+    await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+
+    expect(promotionalMock.creditPromotionalDiscount).toHaveBeenCalledWith(7, expect.any(Number));
+  });
+
+  it('refuses a purchase of another product or with another token', async () => {
+    orderOnly(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ productId: 'deck.1000' }));
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_product_mismatch',
+    });
+
+    orderOnly(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ appAccountToken: 'someone-else' }));
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_token_mismatch',
+    });
+
+    expect(prismaMock.payment.updateMany).not.toHaveBeenCalled();
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+  });
+
+  it('answers paid again for the same purchase without starting the order twice', async () => {
+    orderThenStatus(storeOrder({ status: 'paid', storeTransactionId: '2000001043762129' }));
+    storePurchasesMock.verify.mockResolvedValue(purchase());
+
+    const result = await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+
+    expect(result.data.status).toBe('paid');
+    expect(prismaMock.payment.updateMany).not.toHaveBeenCalled();
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+    expect(storePurchasesMock.finish).toHaveBeenCalled();
+  });
+
+  it('refuses a second purchase on a paid order, and a purchase that paid another order', async () => {
+    orderOnly(storeOrder({ status: 'paid', storeTransactionId: '1999' }));
+    storePurchasesMock.verify.mockResolvedValue(purchase());
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_already_paid',
+    });
+
+    orderOnly(storeOrder());
+    prismaMock.payment.updateMany.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      })
+    );
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_transaction_used',
+    });
+    expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+  });
+
+  it('passes the store check its own refusal, and needs a store order', async () => {
+    orderOnly(storeOrder());
+    storePurchasesMock.verify.mockRejectedValue(new StorePurchaseError('store_refunded'));
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_refunded',
+    });
+
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, proof)).toEqual({
+      success: false,
+      error: 'store_unknown_order',
+    });
+
+    expect(await mollie.checkPaymentStatus(PAYMENT_ID, { platform: 'ios' })).toEqual({
+      success: false,
+      error: 'store_proof',
+    });
+  });
+
+  it('ignores a proof sent with a Mollie order', async () => {
+    prismaMock.payment.findUnique.mockResolvedValue({ status: 'open', user: {} });
+
+    const result = await mollie.checkPaymentStatus('tr_1', proof);
+
+    expect(result.data.status).toBe('open');
+    expect(storePurchasesMock.verify).not.toHaveBeenCalled();
   });
 });

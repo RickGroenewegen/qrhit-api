@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import PrismaInstance from './prisma';
+import { SalesChannel, channelSql, ledgerChannelSql } from './salesChannel';
+import { notStoreTestSql } from './storeProducts';
 
 class Charts {
   private static instance: Charts;
@@ -46,12 +48,14 @@ class Charts {
    * @param days Number of days to fetch (30, 90, 180, 365)
    * @param startDate Optional custom start date (YYYY-MM-DD)
    * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @param channel Website or scan-app orders only (salesChannel.ts); all by default
    * @returns Array of daily data with moving averages
    */
   public async getMovingAverage(
     days?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     const dateFilter = this.buildDateFilter(days, startDate, endDate, 'p');
 
@@ -84,22 +88,22 @@ class Charts {
           ROUND(SUM(p.totalPrice) + COALESCE((
             SELECT SUM(adp.totalPrice) FROM app_design_purchases adp
             WHERE DATE(adp.createdAt) = DATE(p.createdAt)
-              AND adp.paymentId IS NULL
+              AND adp.paymentId IS NULL${ledgerChannelSql(channel, 'adp')}
           ), 0), 2) as daily_sales,
           ROUND(SUM(p.profit) + COALESCE((
             SELECT SUM(gp.totalPrice) FROM games_purchases gp
-            WHERE DATE(gp.createdAt) = DATE(p.createdAt)
+            WHERE DATE(gp.createdAt) = DATE(p.createdAt)${ledgerChannelSql(channel, 'gp')}
           ), 0) + COALESCE((
             SELECT SUM(adp.totalPriceWithoutTax) FROM app_design_purchases adp
             WHERE DATE(adp.createdAt) = DATE(p.createdAt)
-              AND adp.paymentId IS NULL
+              AND adp.paymentId IS NULL${ledgerChannelSql(channel, 'adp')}
           ), 0), 2) as daily_profit,
           COUNT(*) as payment_count,
           ROUND(AVG(p.totalPrice), 2) as daily_aov
         FROM payments p
         WHERE
           p.status = 'paid'
-          ${dateFilter}
+          ${dateFilter}${notStoreTestSql('p')}${channelSql(channel, 'p')}
         GROUP BY DATE(p.createdAt)
       ) daily_data
       ORDER BY date ASC
@@ -114,12 +118,14 @@ class Charts {
    * @param days Number of days to fetch (30, 90, 180, 365)
    * @param startDate Optional custom start date (YYYY-MM-DD)
    * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @param channel Website or scan-app orders only (salesChannel.ts); all by default
    * @returns Array of hourly data with averages (0-23 hours)
    */
   public async getHourlySales(
     days?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     const dateFilter = this.buildDateFilter(days, startDate, endDate);
 
@@ -132,7 +138,7 @@ class Charts {
       FROM payments
       WHERE
         status = 'paid'
-        ${dateFilter}
+        ${dateFilter}${notStoreTestSql()}${channelSql(channel)}
       GROUP BY HOUR(createdAt)
       ORDER BY hour ASC
     `;
@@ -146,12 +152,14 @@ class Charts {
    * @param days Number of days to fetch (30, 90, 180, 365)
    * @param startDate Optional custom start date (YYYY-MM-DD)
    * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @param channel Website or scan-app orders only (salesChannel.ts); all by default
    * @returns Array of daily data with averages (1=Sunday to 7=Saturday in MySQL)
    */
   public async getDailySales(
     days?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    channel: SalesChannel = 'all'
   ): Promise<any[]> {
     const dateFilter = this.buildDateFilter(days, startDate, endDate);
 
@@ -164,7 +172,7 @@ class Charts {
       FROM payments
       WHERE
         status = 'paid'
-        ${dateFilter}
+        ${dateFilter}${notStoreTestSql()}${channelSql(channel)}
       GROUP BY DAYOFWEEK(createdAt)
       ORDER BY day_of_week ASC
     `;

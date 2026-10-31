@@ -139,7 +139,9 @@ export async function autoResolveStoredYears(
 export async function updateTrackYear(
   deps: DataDeps,
   trackIds: string[],
-  tracks: Track[]
+  tracks: Track[],
+  // Each looked-up track, for an order's progress (src/orderProgress.ts)
+  onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   // Maximum number of concurrent getReleaseDate calls
   const MAX_CONCURRENT_RELEASE_DATE = 3;
@@ -300,6 +302,17 @@ export async function updateTrackYear(
   const queue = [...tracksNeedingYearUpdate];
   let inFlight = 0;
   let nextIndex = 0;
+  let finished = 0;
+  const tell = () => {
+    try {
+      onProgress?.(finished, queue.length);
+    } catch {
+      // Only a report; the lookups go on
+    }
+  };
+  if (queue.length > 0) {
+    tell();
+  }
 
   await new Promise<void>((resolve, reject) => {
     if (queue.length === 0) {
@@ -330,6 +343,8 @@ export async function updateTrackYear(
           })
           .finally(() => {
             inFlight--;
+            finished++;
+            tell();
             launchNext();
           });
       }

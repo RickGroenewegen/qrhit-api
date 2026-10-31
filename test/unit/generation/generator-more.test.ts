@@ -89,6 +89,10 @@ vi.mock('../../../src/musicfetch', async () => {
   const { h } = await import('./harness');
   return { default: { getInstance: () => h.musicfetch } };
 });
+vi.mock('../../../src/orderProgress', async () => {
+  const { h } = await import('./harness');
+  return { default: { getInstance: () => h.progress } };
+});
 vi.mock('cron', async () => {
   const { h } = await import('./harness');
   return {

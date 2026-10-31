@@ -397,6 +397,14 @@ class GeneratorQueue {
               job_id: job.id ?? null,
               payment_id: paymentId,
             });
+            // Only the last attempt: a retry reports its own progress
+            if (
+              job.name !== 'redesignDigital' &&
+              job.attemptsMade + 1 >= (job.opts?.attempts ?? 1)
+            ) {
+              const OrderProgress = (await import('./orderProgress')).default;
+              OrderProgress.getInstance().report(paymentId, 'error');
+            }
             throw error;
           }
         },

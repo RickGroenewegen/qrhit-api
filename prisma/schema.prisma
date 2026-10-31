@@ -175,6 +175,17 @@ model Payment {
   invoiceZipcode           String?
   invoiceCountrycode       String?
   paymentMethod            String?
+  // Orders the scan app paid through the App Store or Google Play
+  // (src/storeProducts.ts): the product the order must be paid with, the
+  // store's transaction once it is, and "sandbox" for a test purchase
+  // (App Review, TestFlight, Play license testers), which the reports skip.
+  storeProductId           String?              @db.VarChar(64)
+  storeTransactionId       String?              @unique @db.VarChar(128)
+  storeEnvironment         String?              @db.VarChar(16)
+  // Where the order was placed: "app" for the scan app (its store purchases
+  // and the printed orders it pays through Mollie), null for the website.
+  // The turnover reports' Website / App toggle (src/salesChannel.ts).
+  channel                  String?              @db.VarChar(8)
   productPriceWithoutTax   Float
   shippingPriceWithoutTax  Float
   productVATPrice          Float
