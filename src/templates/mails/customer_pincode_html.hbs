@@ -1,11 +1,11 @@
 {{#> mail-layout title=(concat productName " - Verification Code") preheader=translations.subject rights=translations.allRightsReserved links=true }}
-<p style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.greeting }} {{ fullname }},</p>
-<p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.intro }}</p>
+<p class="qr-text" style="margin: 0 0 16px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.greeting }} {{ fullname }},</p>
+<p class="qr-text" style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.intro }}</p>
 {{> mail-code eyebrow=translations.yourCode code=pincode note=translations.codeExpires }}
-<p style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.instructions }}</p>
-<p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.ignoreMessage }}</p>
-<p style="margin: 0; font-size: 16px; line-height: 26px; color: #18565e;">
+<p class="qr-text" style="margin: 0 0 24px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.instructions }}</p>
+<p class="qr-muted" style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #3d6d74;">{{ translations.ignoreMessage }}</p>
+<p class="qr-text" style="margin: 0; font-size: 16px; line-height: 26px; color: #18565e;">
     {{ translations.thanks }}<br>
-    <strong style="color: #0b2c31;">{{ translations.team }}</strong>
+    <strong class="qr-strong" style="color: #0b2c31;">{{ translations.team }}</strong>
 </p>
 {{/mail-layout}}

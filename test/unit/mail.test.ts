@@ -167,8 +167,9 @@ beforeAll(() => {
   delete process.env['MAIL_OCTOPUS_API_KEY'];
 
   // Fixture files in the scratch dirs (created by test/setup.ts).
-  fs.mkdirSync(path.join(ASSETS, 'images'), { recursive: true });
-  fs.writeFileSync(path.join(ASSETS, 'images', 'logo.png'), 'fake-logo-png');
+  fs.mkdirSync(path.join(ASSETS, 'images', 'mail'), { recursive: true });
+  fs.writeFileSync(path.join(ASSETS, 'images', 'mail', 'logo.png'), 'fake-logo-png');
+  fs.writeFileSync(path.join(ASSETS, 'images', 'mail', 'logo_dark.png'), 'fake-dark-logo-png');
   fs.mkdirSync(path.join(PUBLIC, 'pdf'), { recursive: true });
   fs.writeFileSync(path.join(PUBLIC, 'pdf', 'voucher-digital.pdf'), 'pdf-d');
   fs.writeFileSync(path.join(PUBLIC, 'pdf', 'voucher-printer.pdf'), 'pdf-p');
@@ -280,6 +281,23 @@ describe('renderRaw', () => {
     const raw = await mail.renderRaw({ ...base, attachments: [] }, false);
     expect(raw).not.toContain('Bcc:');
   });
+
+  it('attaches the dark-mode logo once when the html shows it', async () => {
+    const dark = Buffer.from('fake-dark-logo-png').toString('base64');
+    const raw = await mail.renderRaw({ ...base, html: '<img src="cid:logo_dark">', attachments: [] });
+    expect(raw).toContain('Content-Disposition: inline; filename="logo_dark.png"\nContent-ID: <logo_dark>');
+    expect(raw).toContain(dark);
+
+    const own = await mail.renderRaw({
+      ...base,
+      html: '<img src="cid:logo_dark">',
+      attachments: [{ contentType: 'image/png', filename: 'logo_dark.png', data: 'OWN', isInline: true, cid: 'logo_dark' }],
+    });
+    expect(own.match(/Content-ID: <logo_dark>/g)).toHaveLength(1);
+    expect(own).not.toContain(dark);
+
+    expect(await mail.renderRaw({ ...base, attachments: [] })).not.toContain('logo_dark');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -302,6 +320,20 @@ describe('account & verification mails', () => {
     // Inline logo got swapped to the CID reference
     expect(raw).toContain('<img src="cid:logo"');
     expect(raw).not.toContain('Bcc:');
+  });
+
+  it('a layout mail has a dark mode: both schemes, the media query, Outlook.com rules and the cream logo', async () => {
+    await mail.sendCustomerRegistrationPincode('pin@example.com', 'Pin User', '654321', 'en');
+    const raw = lastRaw();
+    expect(raw).toContain('<meta name="color-scheme" content="light dark">');
+    expect(raw).toMatch(/@media \(prefers-color-scheme: dark\) \{\s*\.qr-bg \{ background-color: #0b2c31 !important; \}/);
+    expect(raw).toContain('[data-ogsc] .qr-text { color: #feefe5 !important; }');
+    expect(raw).toContain('[data-ogsb] .qr-card { background-color: #14484f !important; }');
+    // the cream logo waits hidden for dark mode, and goes along inline
+    expect(raw).toMatch(/<div class="qr-logo-dark" style="display: none;[^"]*">\s*<img src="cid:logo_dark"/);
+    expect(raw).toContain('Content-ID: <logo_dark>');
+    // the text says what colour it is in dark mode
+    expect(raw).toMatch(/<p class="qr-text" style="[^"]*color: #18565e;">/);
   });
 
   it('sendForgotPasswordPincode includes the pincode and subject', async () => {
@@ -602,14 +634,15 @@ describe('order lifecycle mails', () => {
     expect(raw).toContain('filename="logo.png"');
   });
 
-  it('sendBoxInstructionsEmail links the folding video and gift-box page', async () => {
+  it('sendBoxInstructionsEmail links the folding guide and gift-box page', async () => {
     await mail.sendBoxInstructionsEmail(makePayment());
     const raw = lastRaw();
     expect(raw).toContain("Subject: Your gift box: here's how to fold it!");
-    // Handlebars escapes "=" as &#x3D; inside {{ }} interpolations
-    expect(raw).toContain('https://www.youtube.com/watch?v&#x3D;OE3DsOM81Qo');
-    expect(raw).toContain('https://img.youtube.com/vi/OE3DsOM81Qo');
-    expect(raw).toContain('http://localhost:4200/en/gift-box');
+    // the folding video made way for the site's folding guide (0aee0ffd)
+    expect(raw).not.toContain('youtube.com');
+    expect(raw).toContain('href="http://localhost:4200/en/gift-box/how-to-fold"');
+    expect(raw).toContain('src="http://localhost:4200/assets/images/gift-box-fold-guide.jpg"');
+    expect(raw).toContain('href="http://localhost:4200/en/gift-box"');
   });
 
   it('sendFinalizedMail asks to check the cards with the playlist subject', async () => {
@@ -730,6 +763,9 @@ describe('order lifecycle mails', () => {
     const raw = lastRaw();
     expect(raw).toContain('21 september 2026');
     expect(raw).toMatch(/105,00\s*kr/);
+    // the amount is the table's total: the Disco band, the figure in coral
+    expect(raw).toMatch(/<table[^>]*class="qr-tbl"/);
+    expect(raw).toMatch(/class="qr-tbl-total qr-tbl-figure" style="[^"]*background-color: #18565e; color: #f79677;[^"]*">105,00\s*kr</);
   });
 
   it.each([

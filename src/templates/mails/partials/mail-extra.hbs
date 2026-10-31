@@ -2,13 +2,13 @@
       The calm alternative to a coloured band; the mail's own button stays the only button. --}}
 <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 24px; border-collapse: collapse;">
     <tr>
-        <td style="padding: 20px 0 0; border-top: 1px solid #eed2bf;">
-            <p style="margin: 0 0 6px; font-size: 16px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ title }}</p>
-            <p style="margin: 0 0 {{#if note}}8px{{else}}10px{{/if}}; font-size: 14px; line-height: 22px; color: #18565e;">{{ body }}</p>
+        <td class="qr-rule" style="padding: 20px 0 0; border-top: 1px solid #eed2bf;">
+            <p class="qr-strong" style="margin: 0 0 6px; font-size: 16px; line-height: 24px; font-weight: 700; color: #0b2c31;">{{ title }}</p>
+            <p class="qr-text" style="margin: 0 0 {{#if note}}8px{{else}}10px{{/if}}; font-size: 14px; line-height: 22px; color: #18565e;">{{ body }}</p>
             {{#if note}}
-            <p style="margin: 0 0 10px; font-size: 14px; line-height: 22px; font-weight: 600; color: #0b2c31;">{{ note }}</p>
+            <p class="qr-strong" style="margin: 0 0 10px; font-size: 14px; line-height: 22px; font-weight: 600; color: #0b2c31;">{{ note }}</p>
             {{/if}}
-            <a href="{{ href }}" target="_blank" style="font-size: 14px; line-height: 22px; font-weight: 700; color: #18565e; text-decoration: underline;">{{ label }}</a>
+            <a href="{{ href }}" target="_blank" class="qr-link" style="font-size: 14px; line-height: 22px; font-weight: 700; color: #18565e; text-decoration: underline;">{{ label }}</a>
         </td>
     </tr>
 </table>

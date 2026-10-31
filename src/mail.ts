@@ -121,7 +121,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       locale,
@@ -303,7 +303,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses || playlists.length === 0) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
     const locale = payment.locale || 'en';
 
     const mailParams = {
@@ -442,7 +442,7 @@ class Mail {
       ),
     };
     try {
-      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/mail/logo.png`);
       const html = await this.templates.render(`mails/${template}_html`, mailParams);
       const text = await this.templates.render(`mails/${template}_text`, mailParams);
       const subject = decode(this.translation.translate(`${template}.subject`, locale, subjectParams));
@@ -528,7 +528,7 @@ class Mail {
       }),
     };
     try {
-      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/mail/logo.png`);
       const html = await this.templates.render('mails/payment_help_html', mailParams);
       const text = await this.templates.render('mails/payment_help_text', mailParams);
       const subject = decode(this.translation.translate('payment_help.subject', locale));
@@ -594,7 +594,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     // Fetch translations for customer pincode mail
     const translations = await this.translation.getTranslationsByPrefix(
@@ -694,7 +694,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     // Fetch translations for forgot password pincode mail
     const translations = await this.translation.getTranslationsByPrefix(
@@ -1136,7 +1136,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     let numberOfTracks = 0;
 
@@ -1355,7 +1355,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const mailParams = {
       payment,
@@ -1444,7 +1444,7 @@ class Mail {
   async sendBoxInstructionsEmail(payment: Payment): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const giftBoxLink = `${process.env['FRONTEND_URI']}/${payment.locale}/gift-box`;
     const foldGuideLink = `${giftBoxLink}/how-to-fold`;
@@ -1530,7 +1530,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const mailParams = {
       payment,
@@ -1618,7 +1618,7 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       payment.locale,
@@ -1800,7 +1800,7 @@ class Mail {
     };
 
     try {
-      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+      const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/mail/logo.png`);
       const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
       const html = await this.templates.render('mails/app_design_enabled_html', mailParams);
       const text = await this.templates.render('mails/app_design_enabled_text', mailParams);
@@ -1878,7 +1878,7 @@ class Mail {
       }).format(invoice.amountCharged),
     };
 
-    const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/logo.png`);
+    const logoBuffer = await fs.readFile(`${process.env['ASSETS_DIR']}/images/mail/logo.png`);
     const pdfBuffer = await fs.readFile(pdfPath);
     const html = await this.templates.render('mails/upgrade_invoice_html', mailParams);
     const text = await this.templates.render('mails/upgrade_invoice_text', mailParams);
@@ -1920,7 +1920,21 @@ class Mail {
   ): Promise<string> {
     let attachmentString = '';
 
-    for (const attachment of params.attachments) {
+    // mail-layout swaps cid:logo for the cream logo in dark mode; that one is
+    // attached here, once, rather than by every sender
+    const attachments = [...params.attachments];
+    if (params.html.includes('cid:logo_dark') && !attachments.some((a) => a.cid === 'logo_dark')) {
+      const logoDark = await fs.readFile(`${process.env['ASSETS_DIR']}/images/mail/logo_dark.png`);
+      attachments.push({
+        contentType: 'image/png',
+        filename: 'logo_dark.png',
+        data: this.wrapBase64(logoDark.toString('base64')),
+        isInline: true,
+        cid: 'logo_dark',
+      });
+    }
+
+    for (const attachment of attachments) {
       const contentDisposition = attachment.isInline
         ? `Content-Disposition: inline; filename="${attachment.filename}"\nContent-ID: <${attachment.cid}>`
         : `Content-Disposition: attachment; filename="${attachment.filename}"`;
@@ -1974,7 +1988,7 @@ ${params.html}
   async sendReviewEmail(payment: Payment): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const reviewLink = `${process.env['FRONTEND_URI']}/${payment.locale}/review/${payment.paymentId}`;
     const reviewLinkTrustPilot =
@@ -2098,7 +2112,7 @@ ${params.html}
 
     // The voting page is part of the site (/:lang/v/:slug), so every voter
     // gets the QRSong! mail, whatever the list's qrvote flag says.
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
     const templatePrefix = 'mails/qrvote_verification';
     const brandName = process.env['PRODUCT_NAME'];
 
@@ -2560,7 +2574,7 @@ ${params.html}
       return;
     }
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     const correctionLinks = options.correctionLinks ?? [];
     const markerAt =
@@ -2701,7 +2715,7 @@ ${params.html}
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     // Fetch translations for promotional sale mail
     const translations = this.replaceAmountPlaceholder(
@@ -2810,7 +2824,7 @@ ${params.html}
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/mail/logo.png`;
 
     // Fetch translations for promotional approved mail
     const translations = this.replaceAmountPlaceholder(

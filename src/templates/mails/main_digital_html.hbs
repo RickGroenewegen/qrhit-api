@@ -1,10 +1,10 @@
 {{#> mail-layout title=productName preheader=translations.greatNewsMainDigital }}
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.greatNewsMainDigital }}</p>
-<p style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.weHopeYouHaveFunMainDigital }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ payment.fullname }},</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.greatNewsMainDigital }}</p>
+<p class="qr-text" style="margin: 0 0 20px; font-size: 16px; line-height: 26px; color: #18565e;">{{ translations.weHopeYouHaveFunMainDigital }}</p>
 <!-- Order details and your information -->
-<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin: 8px 0 0;">
-    {{> mail-th label=translations.orderData }}
+{{#> mail-table }}
+    {{> mail-th label=translations.orderData first=true }}
     {{> mail-tr label=translations.orderNumber value=orderId }}
     {{#each playlists}}
     {{#if @first}}
@@ -13,13 +13,10 @@
     {{> mail-tr label="" value=this.name }}
     {{/if}}
     {{/each}}
-    <tr>
-        <td style="padding: 11px 14px; border: 1px solid #eed2bf; background-color: #feefe5; font-weight: 700; font-size: 14px; line-height: 20px; color: #0b2c31; width: 40%;">{{ translations.items }}</td>
-        <td style="padding: 11px 14px; border: 1px solid #eed2bf; font-size: 14px; line-height: 20px; color: #18565e;">{{ numberOfTracks }} {{ translations.cards }}</td>
-    </tr>
+    {{> mail-tr label=translations.items value=(concat numberOfTracks " " translations.cards) }}
     {{> mail-th label=translations.yourInformation }}
     {{> mail-tr label=translations.fullname value=fullname }}
     {{> mail-tr label=translations.email value=email }}
-</table>
+{{/mail-table}}
 {{> mail-closing }}
 {{/mail-layout}}
