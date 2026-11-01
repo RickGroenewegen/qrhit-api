@@ -4569,6 +4569,20 @@ describe('checkPaymentStatus with an app store proof', () => {
     expect(promotionalMock.creditPromotionalDiscount).not.toHaveBeenCalled();
   });
 
+  it("matches the token whatever its case: StoreKit hands it back to the app's recovery in capitals", async () => {
+    // The 2.1.0 builds before the fix sent the order id in capitals
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase());
+    await mollie.checkPaymentStatus(`store_${TOKEN.toUpperCase()}`, proof);
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledTimes(1);
+
+    // A JWS whose token is in capitals
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ appAccountToken: TOKEN.toUpperCase() }));
+    await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledTimes(2);
+  });
+
   it('credits the promoter for a real store purchase', async () => {
     orderThenStatus(storeOrder());
     storePurchasesMock.verify.mockResolvedValue(purchase({ sandbox: false }));

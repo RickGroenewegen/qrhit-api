@@ -2454,7 +2454,10 @@ No new routes; two existing ones take optional fields.
 - **`POST /mollie/check` with `store: {platform, productId, jws | purchaseToken}`**
   - It verifies the purchase (`src/storePurchases.ts`).
   - The purchase must be of the stored product and carry the order's
-    token. It claims the row (`status notIn paid`) with
+    token, compared case-blind: StoreKit hands the token back to the app
+    in capitals (`UUID.uuidString`) and the order ids are lower case; the
+    first 2.1.0 builds sent a recovered purchase's order id in capitals.
+    It claims the row (`status notIn paid`) with
     `storeTransactionId` (unique) and `storeEnvironment`, then runs
     `onOrderPaid`, the same side effects the Mollie webhook runs.
   - Sending the same proof again answers paid without doing anything twice,
