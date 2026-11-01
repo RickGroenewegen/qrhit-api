@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "nl.rickgroenewegen.qrsong",
+      "sha256_cert_fingerprints": [
+        "E4:27:83:3B:66:98:95:3B:25:FA:58:16:BD:D9:46:81:DE:92:A7:A4:C6:CB:EE:99:CF:EC:BF:4D:D2:E2:F9:07",
+        "6C:AB:2E:F1:45:6E:E7:CB:0D:FB:F2:33:6B:98:4A:48:1C:AB:AE:CE:F7:CB:7D:69:E6:FE:EC:ED:2A:06:CE:CF"
+      ]
+    }
+  }
+]

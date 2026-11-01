@@ -285,23 +285,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Apple App Site Association
-  fastify.get(
-    '/.well-known/apple-app-site-association',
-    async (_request, reply) => {
-      const filePath = path.join(
-        process.env['APP_ROOT'] as string,
-        '..',
-        'apple-app-site-association'
-      );
+  // The scan app's links: a card scanned with the phone's camera opens the app
+  // when it is installed (iOS universal links, Android App Links), else the
+  // onboarding page. Both files are at the repo root; served as is, no redirect.
+  const appLinkFiles: Record<string, string> = {
+    '/.well-known/apple-app-site-association': 'apple-app-site-association',
+    '/.well-known/assetlinks.json': 'assetlinks.json',
+  };
+  for (const [route, file] of Object.entries(appLinkFiles)) {
+    fastify.get(route, async (_request, reply) => {
+      const filePath = path.join(process.env['APP_ROOT'] as string, '..', file);
       try {
         const fileContent = await fs.readFile(filePath, 'utf-8');
         reply.header('Content-Type', 'application/json').send(fileContent);
       } catch (error) {
         reply.status(404).send({ error: 'File not found' });
       }
-    }
-  );
+    });
+  }
 
   // Robots.txt
   fastify.get('/robots.txt', async (_request, reply) => {
