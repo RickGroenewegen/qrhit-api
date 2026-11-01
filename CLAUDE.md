@@ -2457,8 +2457,48 @@ receipt and pays the VAT. So a store order:
 
 The EUR columns keep the NL storefront price. Apple's JWS adds what the
 buyer paid in their own currency (`currency`, `totalPricePresentment`).
-Refunds come without a webhook (that would need a new route) and show in
-the stores' reports.
+
+**Refunds** (`src/storeRefunds.ts`): a webhook would need a new route
+(Apple's server notifications, Google's real-time developer notifications),
+so a job asks the stores instead, every six hours at :40 (Amsterdam), on
+the main server only and never in development, under a Redis lock.
+- **Google**: `purchases.voidedpurchases.list` for the app, product
+  purchases, the last 30 days (Google's maximum and default), paged by
+  token. A voided purchase matches its order on `storeTransactionId`: the
+  orderId (`GPA.…`). The purchase token itself is stored nowhere; an order
+  paid without an orderId is stored under the token's hash
+  (`purchaseTokenTransactionId`), and that is matched too. The same service
+  account as the purchase check (it needs "View financial data").
+- **Apple**: the App Store Server API's Get Refund History
+  (`AppStoreServerAPIClient.getRefundHistory`, paged by revision), asked
+  with the transaction of every paid, unrefunded `appstore` order of the
+  last 100 days (a buyer can ask for a refund up to 90 days on), the
+  production or sandbox API after the order's `storeEnvironment`. One
+  answer lists all of that buyer's refunds in the app, so orders it settles
+  are not asked again. The signed transactions are verified as in the
+  purchase check, and those with a `revocationDate` matched by
+  `storeTransactionId`. A 404 (an Xcode test purchase) skips the order; any
+  other error ends the Apple half until the next run.
+  It needs an **In-App Purchase key** (App Store Connect → Users and Access
+  → Integrations → In-App Purchase): `APPLE_IAP_KEY_FILE` (the .p8),
+  `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID`. Without them the Apple half
+  logs once and does nothing; Google is still checked.
+- **A refunded order** (orders with `refundedAt` set are never looked at
+  again): every line `blocked`, the blocked set republished once
+  (`Data.republishBlocked`), and only then `refundAmount` = `totalPrice` (a
+  deck is refunded whole), `refundedAt` = the store's time, `refundReason`
+  `Google Play refund: chargeback` / `App Store refund: other` (Google's
+  `voidedReason`, Apple's `revocationReason`) and **`profit` 0**. Should the
+  publish fail, the order is left for the next run. Status stays `paid`, as
+  with a Mollie refund. A Pushover ("📱 APP-REFUND", "Via Google Play" / "Via
+  de App Store", sound `falling`) for a real refund, none for `sandbox`; no
+  mail to the buyer.
+- **Reports**: they net `refundAmount` out of turnover (gross and ex VAT)
+  for every order, store ones included, but never out of `profit`. A store
+  takes back what it paid out, so a refunded store order earned nothing:
+  hence `profit` 0 (it was ex-VAT × 0.85). The tax and OSS report leave store
+  orders out, their refunds too. A Mollie refund still leaves the profit as
+  it was, and the charts never net refunds out of turnover.
 
 **Prices** (`src/storeProducts.ts`):
 - The same as on the website (Rick, 2026-10-31): €13 / €23 / €30 / €33 /
