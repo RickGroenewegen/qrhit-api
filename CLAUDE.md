@@ -2405,6 +2405,26 @@ the browser never ran the pixel.
 - No retry: a failure is logged in red and reported to PostHog
   (`Meta Conversions API: purchase not sent`).
 
+## Blocked order lines
+
+`PaymentHasPlaylist.blocked` stops a line's cards from playing: a scan of
+it answers `b: true` without a link. The set of blocked line ids lives in
+Redis (`blocked_playlists_v1`) and is rebuilt from the database and
+republished on every change (`loadBlocked` with `requirePublish`), so a
+toggle counts from the next scan.
+- **`blockedReason`** (VARCHAR(255), 2026-11-01) says why, for the
+  dashboard: set when blocking (trimmed, cut to 255, empty is null),
+  cleared when unblocking. The column has to exist before a deploy:
+  `ALTER TABLE payment_has_playlist ADD COLUMN blockedReason VARCHAR(255) NULL;`
+- **Admin**: `POST /admin/playlist/:paymentHasPlaylistId/blocked` with
+  `{ blocked: boolean, reason?: string }` (400 when `blocked` is not a
+  boolean or `reason` not a string) answers `{ success: true }`. The order
+  list (`POST /orders`, `Mollie.getPaymentList`) gives every line
+  `blocked` and `blockedReason`.
+- **Store refunds** block every line of the refunded order with the refund
+  and its day, `Google Play refund: chargeback (2026-10-28)`; a line an
+  admin blocked already keeps the admin's reason (see "App store orders").
+
 ## App store orders (scan app 2.1.0)
 
 Since 2.1.0 the scan app sells decks itself. Google rejected 2.0.1 for
@@ -2484,8 +2504,50 @@ receipt and pays the VAT. So a store order:
 
 The EUR columns keep the NL storefront price. Apple's JWS adds what the
 buyer paid in their own currency (`currency`, `totalPricePresentment`).
-Refunds come without a webhook (that would need a new route) and show in
-the stores' reports.
+
+**Refunds** (`src/storeRefunds.ts`): a webhook would need a new route
+(Apple's server notifications, Google's real-time developer notifications),
+so a job asks the stores instead, every six hours at :40 (Amsterdam), on
+the main server only and never in development, under a Redis lock.
+- **Google**: `purchases.voidedpurchases.list` for the app, product
+  purchases, the last 30 days (Google's maximum and default), paged by
+  token. A voided purchase matches its order on `storeTransactionId`: the
+  orderId (`GPA.…`). The purchase token itself is stored nowhere; an order
+  paid without an orderId is stored under the token's hash
+  (`purchaseTokenTransactionId`), and that is matched too. The same service
+  account as the purchase check (it needs "View financial data").
+- **Apple**: the App Store Server API's Get Refund History
+  (`AppStoreServerAPIClient.getRefundHistory`, paged by revision), asked
+  with the transaction of every paid, unrefunded `appstore` order of the
+  last 100 days (a buyer can ask for a refund up to 90 days on), the
+  production or sandbox API after the order's `storeEnvironment`. One
+  answer lists all of that buyer's refunds in the app, so orders it settles
+  are not asked again. The signed transactions are verified as in the
+  purchase check, and those with a `revocationDate` matched by
+  `storeTransactionId`. A 404 (an Xcode test purchase) skips the order; any
+  other error ends the Apple half until the next run.
+  It needs an **In-App Purchase key** (App Store Connect → Users and Access
+  → Integrations → In-App Purchase): `APPLE_IAP_KEY_FILE` (the .p8),
+  `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID`. Without them the Apple half
+  logs once and does nothing; Google is still checked.
+- **A refunded order** (orders with `refundedAt` set are never looked at
+  again): every line `blocked`, with `blockedReason` the refund and its day
+  (`App Store refund: other (2026-10-29)`; a line an admin blocked already
+  keeps the admin's reason), the blocked set republished once
+  (`Data.republishBlocked`), and only then `refundAmount` = `totalPrice` (a
+  deck is refunded whole), `refundedAt` = the store's time, `refundReason`
+  `Google Play refund: chargeback` / `App Store refund: other` (Google's
+  `voidedReason`, Apple's `revocationReason`) and **`profit` 0**. Should the
+  publish fail, the order is left for the next run. Status stays `paid`, as
+  with a Mollie refund. A Pushover ("📱 APP-REFUND", "Via Google Play" / "Via
+  de App Store", sound `falling`) for a real refund, none for `sandbox`; no
+  mail to the buyer.
+- **Reports**: they net `refundAmount` out of turnover (gross and ex VAT)
+  for every order, store ones included, but never out of `profit`. A store
+  takes back what it paid out, so a refunded store order earned nothing:
+  hence `profit` 0 (it was ex-VAT × 0.85). The tax and OSS report leave store
+  orders out, their refunds too. A Mollie refund still leaves the profit as
+  it was, and the charts never net refunds out of turnover.
 
 **Prices** (`src/storeProducts.ts`):
 - The same as on the website (Rick, 2026-10-31): €13 / €23 / €30 / €33 /

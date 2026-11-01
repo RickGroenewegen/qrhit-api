@@ -513,6 +513,18 @@ describe('delegation wrappers', () => {
     );
   });
 
+  it('updatePlaylistBlocked passes the reason on, and republishBlocked requires the publish', async () => {
+    const { data } = await makeData();
+    h.playlists.updatePlaylistBlocked.mockResolvedValueOnce({ success: true });
+
+    await data.updatePlaylistBlocked(5, true, 'Chargeback');
+    expect(h.playlists.updatePlaylistBlocked).toHaveBeenCalledWith(data, 5, true, 'Chargeback');
+
+    h.playlists.loadBlocked.mockResolvedValueOnce(false);
+    await expect(data.republishBlocked()).resolves.toBe(false);
+    expect(h.playlists.loadBlocked).toHaveBeenLastCalledWith(data, { requirePublish: true });
+  });
+
   it('getTracks defaults userId to 0', async () => {
     const { data } = await makeData();
     h.tracks.getTracks.mockResolvedValueOnce(['t']);

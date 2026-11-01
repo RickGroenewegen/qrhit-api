@@ -34,6 +34,10 @@ import { StorePlatform, parseStorePlatform } from './storeProducts';
  * Apple's sandbox against the production API, TestFlight and Play's license
  * testers do too, and none of them are charged. Xcode's local StoreKit
  * testing signs with its own key, so those are accepted in development only.
+ *
+ * Refunds come without a webhook (that would need a new route): the job in
+ * storeRefunds.ts asks both stores every six hours, with the publisher and
+ * the verifiers below, and blocks a refunded order's cards.
  */
 
 export const STORE_BUNDLE_ID = 'nl.rickgroenewegen.qrsong';
@@ -64,6 +68,14 @@ export interface VerifiedPurchase {
   price: number | null;
   currency: string | null;
   purchaseToken?: string;
+}
+
+/**
+ * What a Google purchase is stored under when it has no orderId (see
+ * verifyGoogle): a hash of its token, which itself is not kept.
+ */
+export function purchaseTokenTransactionId(purchaseToken: string): string {
+  return `token_${crypto.createHash('sha256').update(purchaseToken).digest('hex').slice(0, 40)}`;
 }
 
 export class StorePurchaseError extends Error {
@@ -139,7 +151,8 @@ class StorePurchases {
     }
   }
 
-  private appleVerifier(environment: Environment): SignedDataVerifier {
+  /** Also verifies the refunded transactions Apple lists (storeRefunds.ts). */
+  public appleVerifier(environment: Environment): SignedDataVerifier {
     let verifier = this.appleVerifiers.get(environment);
     if (!verifier) {
       const dir = path.join(process.cwd(), 'src', '_data', 'apple');
@@ -192,7 +205,8 @@ class StorePurchases {
     };
   }
 
-  private androidPublisher(): androidpublisher_v3.Androidpublisher {
+  /** Also lists Play's voided purchases (storeRefunds.ts). */
+  public androidPublisher(): androidpublisher_v3.Androidpublisher {
     if (!this.publisher) {
       const keyFile =
         process.env['GOOGLE_PLAY_SERVICE_ACCOUNT_FILE'] || process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'];
@@ -230,9 +244,7 @@ class StorePurchases {
     if (purchase.purchaseState !== 0) throw new StorePurchaseError('store_refunded');
     // License testers' purchases have an orderId as well; the token's hash
     // stands in should one ever come without.
-    const transactionId =
-      purchase.orderId ||
-      `token_${crypto.createHash('sha256').update(proof.purchaseToken!).digest('hex').slice(0, 40)}`;
+    const transactionId = purchase.orderId || purchaseTokenTransactionId(proof.purchaseToken!);
     return {
       platform: 'android',
       transactionId,

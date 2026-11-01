@@ -15,6 +15,7 @@ import {
   updateHowToCardImage,
   resetJudgedStatus,
   updatePlaylistBlocked,
+  blockedReasonValue,
   getPlaylistTrackOrder,
   updatePlaylistTrackOrder,
   mixPlaylistTrackOrder,
@@ -797,6 +798,18 @@ describe('small toggle updaters', () => {
   });
 });
 
+describe('blockedReasonValue', () => {
+  it('trims, cuts to the column and makes nothing null', () => {
+    expect(blockedReasonValue(' App Store refund: other ')).toBe('App Store refund: other');
+    expect(blockedReasonValue('x'.repeat(300))).toBe('x'.repeat(255));
+    expect(blockedReasonValue('   ')).toBeNull();
+    expect(blockedReasonValue('')).toBeNull();
+    expect(blockedReasonValue(null)).toBeNull();
+    expect(blockedReasonValue(undefined)).toBeNull();
+    expect(blockedReasonValue(42)).toBeNull();
+  });
+});
+
 describe('updatePlaylistBlocked', () => {
   it('blocks: rebuilds the set from the DB and writes the Redis array', async () => {
     const { deps, prisma, cache } = makeDeps();
@@ -808,11 +821,37 @@ describe('updatePlaylistBlocked', () => {
     expect(res).toEqual({ success: true });
     expect(prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 5 },
-      data: { blocked: true },
+      data: { blocked: true, blockedReason: null },
     });
     expect(deps.blockedPlaylists.has(5)).toBe(true);
     expect(cache.setArray).toHaveBeenCalledWith(BLOCKED_PLAYLISTS_CACHE_KEY, ['5']);
     expect(cache.del).not.toHaveBeenCalled();
+  });
+
+  it('stores why it is blocked, trimmed', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 5 });
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([{ id: 5 }]);
+
+    await updatePlaylistBlocked(deps, 5, true, '  Chargeback at the bank  ');
+
+    expect(prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 5 },
+      data: { blocked: true, blockedReason: 'Chargeback at the bank' },
+    });
+  });
+
+  it('clears the reason when unblocking, whatever is passed', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 5 });
+    prisma.paymentHasPlaylist.findMany.mockResolvedValue([]);
+
+    await updatePlaylistBlocked(deps, 5, false, 'still a reason');
+
+    expect(prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
+      where: { id: 5 },
+      data: { blocked: false, blockedReason: null },
+    });
   });
 
   it('unblocking the last playlist stores the empty sentinel', async () => {

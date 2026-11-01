@@ -340,8 +340,18 @@ class Data {
     return playlistsModule.resetJudgedStatus(this.deps, paymentHasPlaylistId);
   }
 
-  public async updatePlaylistBlocked(playlistId: number, blocked: boolean) {
-    return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked);
+  public async updatePlaylistBlocked(playlistId: number, blocked: boolean, reason?: string | null) {
+    return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked, reason);
+  }
+
+  /**
+   * Rebuilds the blocked set from the database and publishes it, as
+   * updatePlaylistBlocked does after its change: for a caller that blocked
+   * several lines itself (a refunded store order, storeRefunds.ts). False
+   * when the publish failed, so scans may still see the old set.
+   */
+  public async republishBlocked(): Promise<boolean> {
+    return playlistsModule.loadBlocked(this.deps, { requirePublish: true });
   }
 
   public async getPlaylistTrackOrder(paymentHasPlaylistId: number) {
