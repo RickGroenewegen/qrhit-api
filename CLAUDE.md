@@ -807,6 +807,32 @@ When changing the default artwork again, give the new file a new name (a
 warm Lambda keeps Chromium's image cache between renders) and repeat this
 cutover rather than overwriting the file.
 
+## Design values of 0 (2026-11-01)
+
+The card and box designers (website and scan app) offer 0 for gradient
+degrees and positions, opacities and the box sticker's X/Y, and their previews
+draw it. Until 2026-11-01 the API read it as "not set" (`x || 180`): the
+checkout stored a 0 as the default and the templates printed one as the
+default, so a gradient pointing up printed pointing down. Now:
+
+- Saving: `designInt(value, default, min, max)` (`src/cardDesigns.ts`) keeps 0
+  and gives the default only to `undefined`, `null`, `''` or a non-number. The
+  checkout (`mollie.ts`, design 1 and the box), the reseller API and
+  `sanitizeCardDesign` (designs 2..N, product photos) use it. The other writes
+  (usersuggestions design, box design and upgrade, admin box design, the
+  toolkit) hand the value to Prisma as it came: 0 stays 0, and the Int NOT
+  NULL columns refuse `''` and `null`, so a template never sees them.
+- Printing: every `views/pdf_*.ejs`, `partials/card-design-css.ejs` and
+  `partials/howto_card.ejs` writes these fallbacks as `x ?? y`; in stored
+  templates `| default` keeps a number 0 (`makeEngine`). Kept as `||`:
+  colours, fonts and font sizes ('' falls back) and the box sticker size
+  `boxFrontLogoScale` (no designer offers 0, its slider starts at 10).
+- Every one of these columns has a non-zero default (180, 50, 100) and always
+  had, so a line where nothing was set prints as before. Lines saved through
+  the checkout before the fix hold the default where the customer chose 0 and
+  keep printing it; a 0 in the database was chosen (usersuggestions, toolkit,
+  admin) and now prints.
+
 ## Hitster detector: the designer's screen and finalCheck
 
 A small model of our own (`src/hitsterDetector.ts`,
@@ -1805,8 +1831,9 @@ pictures and fonts. Rick's qrsong toolkit pushes them
   `batchNumber`, `template`, `data`. No e-mail, address or payment. The engine:
   no file system (`templates: {}`), own properties only, strict variables and
   filters, output HTML-escaped like `<%=` (`| raw` opts out), JavaScript
-  truthiness (`jsTruthy`, so `| default` is `||`), LiquidJS's parse, render and
-  memory limits (a loop over 1..1e8 stops in ms).
+  truthiness (`jsTruthy`, so `| default` is `||`, except that a number 0 is
+  kept: see "Design values of 0"), LiquidJS's parse, render and memory limits
+  (a loop over 1..1e8 stops in ms).
 - **The page runs under a Content-Security-Policy** (`cardTemplateCsp`): no
   default source, pictures and fonts from this API and Google Fonts, inline
   styles, and only the script with the response's nonce (the fit script).
