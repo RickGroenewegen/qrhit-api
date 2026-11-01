@@ -10,9 +10,13 @@ import { QRGAMES_UPGRADE_PRICE } from './game';
  * Mollie as on the website.
  *
  * A store product is a fixed thing with a fixed price, so the app sells one
- * deck per order and a product per deck size, with the add-ons baked in:
- * `deck.<maxCards>[.games][.app]`. The `addon.*` products add QRGames! or App
- * Designer to an order that is already paid (a printed one, for instance).
+ * deck per order and a product per deck size: `deck.<maxCards>`, nothing
+ * else. QRGames! is played in an account on the website and App Designer is
+ * the website's, neither of which the app may point to (Rick, 2026-10-31),
+ * so the store sells neither: a store cart with them finds no product
+ * (`requiredDeckProduct`) and is refused. These five are all that exist in
+ * App Store Connect and the Play Console (Rick, 2026-11-01: the `.games`,
+ * `.app` and `addon.*` products that were planned are gone).
  *
  * Prices: the same as on the website (Rick, 2026-10-31). Apple's Small
  * Business Program and Google (US/EEA/UK since 30 June 2026) keep 15%, which
@@ -32,7 +36,7 @@ export type StorePlatform = 'ios' | 'android';
 export interface StoreProduct {
   /** The product id in App Store Connect and the Play Console. */
   id: string;
-  /** The largest deck it pays for; 0 for an add-on. */
+  /** The largest deck it pays for. */
   maxCards: number;
   games: boolean;
   appDesign: boolean;
@@ -63,34 +67,19 @@ export const STORE_PAYMENT_METHOD: Record<StorePlatform, string> = {
   android: 'googleplay',
 };
 
-// A bundle costs what its parts cost, as on the website.
-function inCents(sum: number): number {
-  return Math.round(sum * 100) / 100;
-}
-
 function deckId(maxCards: number, games: boolean, appDesign: boolean): string {
   return `deck.${maxCards}${games ? '.games' : ''}${appDesign ? '.app' : ''}`;
 }
 
-export const STORE_PRODUCTS: StoreProduct[] = [
-  ...STORE_DECK_TIERS.flatMap((tier) =>
-    [false, true].flatMap((games) =>
-      [false, true].map((appDesign) => ({
-        id: deckId(tier.maxCards, games, appDesign),
-        maxCards: tier.maxCards,
-        games,
-        appDesign,
-        priceEur: inCents(
-          tier.priceEur +
-            (games ? STORE_GAMES_PRICE : 0) +
-            (appDesign ? STORE_APP_DESIGN_PRICE : 0)
-        ),
-      }))
-    )
-  ),
-  { id: 'addon.games', maxCards: 0, games: true, appDesign: false, priceEur: STORE_GAMES_PRICE },
-  { id: 'addon.app', maxCards: 0, games: false, appDesign: true, priceEur: STORE_APP_DESIGN_PRICE },
-];
+// `games` and `appDesign` stay in the catalogue (and in /api/pricing, where
+// the 2.1.0 app filters on them), always false.
+export const STORE_PRODUCTS: StoreProduct[] = STORE_DECK_TIERS.map((tier) => ({
+  id: deckId(tier.maxCards, false, false),
+  maxCards: tier.maxCards,
+  games: false,
+  appDesign: false,
+  priceEur: tier.priceEur,
+}));
 
 /**
  * Whether an order was paid through an app store. The store is the seller
@@ -122,8 +111,8 @@ export function parseStorePlatform(value: unknown): StorePlatform | null {
 
 /**
  * The deck product a store order must be paid with: the smallest tier that
- * holds the deck (a playlist longer than MAX_CARDS prints MAX_CARDS cards),
- * with the add-ons the order carries.
+ * holds the deck (a playlist longer than MAX_CARDS prints MAX_CARDS cards).
+ * None for an order with QRGames! or App Designer: the store sells neither.
  */
 export function requiredDeckProduct(
   numberOfTracks: number,
