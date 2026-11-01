@@ -24,7 +24,9 @@ import { StorePlatform, parseStorePlatform } from './storeProducts';
  *
  * Google: the app sends the purchase token, which is looked up with the Play
  * Developer API (`purchases.products.get`) under the service account in
- * GOOGLE_PLAY_SERVICE_ACCOUNT_FILE, and consumed once the order is paid
+ * GOOGLE_PLAY_SERVICE_ACCOUNT_FILE, or else the Merchant Center one in
+ * GOOGLE_SERVICE_ACCOUNT_KEY_FILE (one account in Play Console with the two
+ * permissions does both), and consumed once the order is paid
  * (`purchases.products.consume`). An unconsumed purchase is refunded by
  * Google after three days, and the same product cannot be bought again.
  *
@@ -192,7 +194,8 @@ class StorePurchases {
 
   private androidPublisher(): androidpublisher_v3.Androidpublisher {
     if (!this.publisher) {
-      const keyFile = process.env['GOOGLE_PLAY_SERVICE_ACCOUNT_FILE'];
+      const keyFile =
+        process.env['GOOGLE_PLAY_SERVICE_ACCOUNT_FILE'] || process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'];
       if (!keyFile) throw new StorePurchaseError('store_unavailable', 'GOOGLE_PLAY_SERVICE_ACCOUNT_FILE');
       const auth = new google.auth.GoogleAuth({
         keyFile,
