@@ -340,8 +340,8 @@ class Data {
     return playlistsModule.resetJudgedStatus(this.deps, paymentHasPlaylistId);
   }
 
-  public async updatePlaylistBlocked(playlistId: number, blocked: boolean) {
-    return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked);
+  public async updatePlaylistBlocked(playlistId: number, blocked: boolean, reason?: string | null) {
+    return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked, reason);
   }
 
   /**

@@ -1031,10 +1031,24 @@ export async function mixPlaylistTrackOrder(
   }
 }
 
+/**
+ * A blocked line's reason as stored (`blockedReason`, VARCHAR(255)):
+ * trimmed and cut to fit, null when there is none.
+ */
+export function blockedReasonValue(reason: unknown): string | null {
+  if (typeof reason !== 'string') return null;
+  return reason.trim().slice(0, 255).trim() || null;
+}
+
+/**
+ * Blocks or unblocks one line. Blocking stores why (shown in the
+ * dashboard); unblocking clears the reason.
+ */
 export async function updatePlaylistBlocked(
   deps: DataDeps,
   playlistId: number,
-  blocked: boolean
+  blocked: boolean,
+  reason?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const playlist = await deps.prisma.paymentHasPlaylist.findUnique({
@@ -1046,16 +1060,17 @@ export async function updatePlaylistBlocked(
       return { success: false, error: 'Playlist not found' };
     }
 
+    const blockedReason = blocked ? blockedReasonValue(reason) : null;
     await deps.prisma.paymentHasPlaylist.update({
       where: { id: playlistId },
-      data: { blocked },
+      data: { blocked, blockedReason },
     });
 
     deps.logger.log(
       color.blue.bold(
         `Updated blocked status for playlist ${color.white.bold(
           playlistId
-        )} to ${color.white.bold(blocked)}`
+        )} to ${color.white.bold(blocked)}${blockedReason ? ` (${blockedReason})` : ''}`
       )
     );
 

@@ -2132,6 +2132,8 @@ class Mollie {
             logo: true,
             subType: true,
             blocked: true,
+            // Why the line is blocked (an admin's note, a store refund)
+            blockedReason: true,
             allowDuplicates: true,
             userConfirmedPrinting: true,
             // The "Played" pill: stamped by review.ts at the first card scan

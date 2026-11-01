@@ -845,7 +845,7 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { playlistId } = request.params;
-      const { blocked } = request.body;
+      const { blocked, reason } = request.body;
 
       if (!playlistId) {
         reply.status(400).send({
@@ -863,9 +863,19 @@ export default async function adminRoutes(
         return;
       }
 
+      if (reason !== undefined && reason !== null && typeof reason !== 'string') {
+        reply.status(400).send({
+          success: false,
+          error: 'reason must be a string',
+        });
+        return;
+      }
+
+      // Why it is blocked, shown in the dashboard; unblocking clears it
       const result = await data.updatePlaylistBlocked(
         parseInt(playlistId, 10),
-        blocked
+        blocked,
+        reason
       );
 
       if (result.success) {

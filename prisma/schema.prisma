@@ -786,6 +786,8 @@ model PaymentHasPlaylist {
   // dashboard shows the line as "Played" once it is set.
   firstScannedAt           DateTime?
   blocked                  Boolean                  @default(false)
+  // Why the line is blocked, shown in the dashboard; null when it is not.
+  blockedReason            String?                  @db.VarChar(255)
   // When true the artist+title duplicate filter is skipped for this playlist, so
   // different versions of the same song each get their own card. Set by the
   // customer on the summary page, toggleable by admins afterwards.

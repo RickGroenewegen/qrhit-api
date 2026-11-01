@@ -263,6 +263,24 @@ describe('admin routes — wave 2 coverage', () => {
       });
     });
 
+    it('POST /admin/playlist/:id/blocked — stores the reason, and unblocking clears it', async () => {
+      const line = () =>
+        prisma().paymentHasPlaylist.findUnique({
+          where: { id: phpId },
+          select: { blocked: true, blockedReason: true },
+        });
+      const block = (payload: object) =>
+        app.inject({ method: 'POST', url: `/admin/playlist/${phpId}/blocked`, headers, payload });
+
+      expect((await block({ blocked: true, reason: 7 })).statusCode).toBe(400);
+
+      expect((await block({ blocked: true, reason: '  Chargeback  ' })).statusCode).toBe(200);
+      expect(await line()).toEqual({ blocked: true, blockedReason: 'Chargeback' });
+
+      expect((await block({ blocked: false })).statusCode).toBe(200);
+      expect(await line()).toEqual({ blocked: false, blockedReason: null });
+    });
+
     it('blocking takes effect on the very next scan, and unblocking too', async () => {
       // The scan endpoint reads the shared Redis set on every request, so
       // the toggle must be visible without any restart or sync tick. The

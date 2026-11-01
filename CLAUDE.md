@@ -2378,6 +2378,26 @@ the browser never ran the pixel.
 - No retry: a failure is logged in red and reported to PostHog
   (`Meta Conversions API: purchase not sent`).
 
+## Blocked order lines
+
+`PaymentHasPlaylist.blocked` stops a line's cards from playing: a scan of
+it answers `b: true` without a link. The set of blocked line ids lives in
+Redis (`blocked_playlists_v1`) and is rebuilt from the database and
+republished on every change (`loadBlocked` with `requirePublish`), so a
+toggle counts from the next scan.
+- **`blockedReason`** (VARCHAR(255), 2026-11-01) says why, for the
+  dashboard: set when blocking (trimmed, cut to 255, empty is null),
+  cleared when unblocking. The column has to exist before a deploy:
+  `ALTER TABLE payment_has_playlist ADD COLUMN blockedReason VARCHAR(255) NULL;`
+- **Admin**: `POST /admin/playlist/:paymentHasPlaylistId/blocked` with
+  `{ blocked: boolean, reason?: string }` (400 when `blocked` is not a
+  boolean or `reason` not a string) answers `{ success: true }`. The order
+  list (`POST /orders`, `Mollie.getPaymentList`) gives every line
+  `blocked` and `blockedReason`.
+- **Store refunds** block every line of the refunded order with the refund
+  and its day, `Google Play refund: chargeback (2026-10-28)`; a line an
+  admin blocked already keeps the admin's reason (see "App store orders").
+
 ## App store orders (scan app 2.1.0)
 
 Since 2.1.0 the scan app sells decks itself. Google rejected 2.0.1 for
@@ -2484,7 +2504,9 @@ the main server only and never in development, under a Redis lock.
   `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID`. Without them the Apple half
   logs once and does nothing; Google is still checked.
 - **A refunded order** (orders with `refundedAt` set are never looked at
-  again): every line `blocked`, the blocked set republished once
+  again): every line `blocked`, with `blockedReason` the refund and its day
+  (`App Store refund: other (2026-10-29)`; a line an admin blocked already
+  keeps the admin's reason), the blocked set republished once
   (`Data.republishBlocked`), and only then `refundAmount` = `totalPrice` (a
   deck is refunded whole), `refundedAt` = the store's time, `refundReason`
   `Google Play refund: chargeback` / `App Store refund: other` (Google's
