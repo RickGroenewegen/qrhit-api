@@ -50,6 +50,7 @@ import aiCostRoutes from './routes/aiCostRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
 import AbandonedPayments from './abandonedPayments';
+import StoreRefunds from './storeRefunds';
 import AppTheme from './apptheme';
 import TrackEnrichment from './trackEnrichment';
 
@@ -302,6 +303,10 @@ class Server {
       // The help mail after an abandoned payment (hourly cron; production
       // main server only)
       AbandonedPayments.getInstance();
+
+      // Refunds of the scan app's store orders block their cards (every six
+      // hours; production main server only)
+      StoreRefunds.getInstance();
     } else {
       this.workerId = parseInt(process.env['WORKER_ID'] as string);
       this.startServer();
