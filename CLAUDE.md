@@ -2474,6 +2474,14 @@ No new routes; two existing ones take optional fields.
   no links to the website (Google Play's payments policy). Until 2026-11-01
   the redirect was the app's URL scheme itself: Safari asked "Open in
   QRSong!?" and Chrome often did nothing.
+- **Discount codes from the app** (printed orders only: store orders refuse
+  them, `store_discount`): `POST /discount/:code/0` and `/discount/validate`
+  with `app: true`. The app cannot run reCAPTCHA, so instead the e-mail is
+  required (`emailRequired`), which makes a general code's
+  `oncePerCustomer` limit apply at once, and wrong codes are counted in
+  Redis per address and per e-mail: 10 an hour each, then `tooManyAttempts`
+  (`AppCodeCheck` in `src/discount.ts`). Payment creation checks every code
+  again with the buyer's e-mail, as for the website.
 - Either one writes `channel = 'app'` on the order, for the reports'
   Website / App toggle (see "Turnover and profit").
 
