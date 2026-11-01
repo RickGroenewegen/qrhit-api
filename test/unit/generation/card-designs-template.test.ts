@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import ejs from 'ejs';
 import fs from 'fs/promises';
+import { readdirSync } from 'fs';
 import path from 'path';
 import { deckDesigns, designIndexForCard, sanitizeCardDesign } from '../../../src/cardDesigns';
 
@@ -86,7 +87,8 @@ async function render(template: string, designs: any[], startIndex = 0): Promise
       subdir: 'sub',
       payment: {},
       playlist: { name: 'P' },
-      php,
+      // deckDesigns puts the order line first, as the route does
+      php: designs[0],
       tracks,
       designs,
       cardDesigns: cardDesignIndexes.map((k) => designs[k]),
@@ -96,12 +98,14 @@ async function render(template: string, designs: any[], startIndex = 0): Promise
       emptyPages: 0,
       batchNumber: '55',
       startIndex,
-      howtoTranslations: null,
+      howtoTranslations: designs[0].addHowToCard ? HOWTO : null,
       ...helpers,
     },
     { filename: file }
   );
 }
+
+const HOWTO = { title: 'How to play', rulesTitle: 'Rules', rule1: '1', rule2: '2', rule3: '3', rule4: '4', rule5: '5' };
 
 /** Each card element's design class suffix, in document order. */
 function cardClasses(html: string, side: 'front' | 'back', template: string): string[] {
@@ -163,5 +167,81 @@ describe('card templates with alternating designs', () => {
     expect(html).toMatch(/\.card-front\.d1::before \{ background: none; background-image: url\('https:\/\/api\.test\/public\/background\/two\.png'\);/);
     // A solid design clears design 1's artwork instead of inheriting it.
     expect(html).toMatch(/\.card-front\.d2::before \{ background: none; opacity: 1; \}/);
+  });
+});
+
+/**
+ * A design's 0 is a choice the designers offer: a gradient pointing up (0°),
+ * colours meeting at the edge (position 0), a transparent picture. The
+ * templates used `x || 180`, so a 0 printed as the default while the preview
+ * showed the 0. Every pdf_*.ejs card template, the consumer ones and the
+ * company ones, now writes these fallbacks as `x ?? y`.
+ */
+describe('a design value of 0', () => {
+  // Front: from #aa0000 at 0% to #00aa00 at 50%; back: #0000aa to #aaaa00.
+  const zeroDesign = {
+    backgroundFrontType: 'solid',
+    backgroundFrontColor: '#aa0000',
+    useFrontGradient: true,
+    gradientFrontColor: '#00aa00',
+    gradientFrontDegrees: 0,
+    gradientFrontPosition: 0,
+    backgroundBackType: 'solid',
+    backgroundBackColor: '#0000aa',
+    useGradient: true,
+    gradientBackgroundColor: '#aaaa00',
+    gradientDegrees: 0,
+    gradientPosition: 0,
+  };
+  const zero = { ...php, ...zeroDesign };
+  const FRONT_UP = 'linear-gradient(0deg, #aa0000 0%, #00aa00 50%)';
+  const BACK_UP = 'linear-gradient(0deg, #0000aa 0%, #aaaa00 50%)';
+
+  const COMPANY_TEMPLATES = readdirSync(VIEWS)
+    .map((file) => /^pdf_(.+)\.ejs$/.exec(file)?.[1])
+    .filter((name): name is string => !!name && !TEMPLATES.includes(name))
+    .filter((name) => !/^(bingo|box_insert|complete)/.test(name));
+
+  for (const template of TEMPLATES) {
+    it(`pdf_${template}.ejs draws 0° and position 0 for design 1 and for an extra design`, async () => {
+      const extra = sanitizeCardDesign({
+        ...zeroDesign,
+        backgroundFrontColor: '#110000',
+        gradientFrontColor: '#001100',
+        backgroundBackColor: '#000011',
+        gradientBackgroundColor: '#111100',
+      });
+      const html = await render(template, deckDesigns(zero, [extra]));
+      expect(html).toContain(FRONT_UP);
+      expect(html).toContain(BACK_UP);
+      expect(html).toContain('linear-gradient(0deg, #110000 0%, #001100 50%)');
+      expect(html).toContain('linear-gradient(0deg, #000011 0%, #111100 50%)');
+    });
+  }
+
+  it('finds the company templates', () => {
+    expect(COMPANY_TEMPLATES).toEqual(expect.arrayContaining(['klomp', 'schneiders', 'steinkemper', 'gebo', 'kramp', 'ahaieee']));
+  });
+
+  for (const template of COMPANY_TEMPLATES) {
+    it(`pdf_${template}.ejs draws 0° and position 0, the how-to card included`, async () => {
+      const html = await render(template, deckDesigns({ ...zero, addHowToCard: 1 }));
+      expect(html).toContain(BACK_UP);
+      // pdf_bird and pdf_facta draw the front from their own artwork.
+      if (!['bird', 'facta'].includes(template)) expect(html).toContain(FRONT_UP);
+    });
+  }
+
+  it('prints a 0 opacity as 0 in pdf_ahaieee.ejs, as every other template already did', async () => {
+    const html = (await render('ahaieee', deckDesigns({ ...php, frontOpacity: 0 }))).replace(/\s+/g, ' ');
+    expect(html).toMatch(/\.card-front::before \{[^}]*opacity: 0;/);
+  });
+
+  it('keeps the defaults for a design that never set them', async () => {
+    const unset = { ...zero };
+    for (const key of ['gradientFrontDegrees', 'gradientFrontPosition', 'gradientDegrees'] as const) delete (unset as any)[key];
+    const html = await render('printer', deckDesigns({ ...unset, gradientPosition: 50 }));
+    expect(html).toContain('linear-gradient(180deg, #aa0000 0%, #00aa00 100%)');
+    expect(html).toContain('linear-gradient(180deg, #0000aa 0%, #aaaa00 100%)');
   });
 });

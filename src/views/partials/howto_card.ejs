@@ -6,7 +6,7 @@ if (php.backgroundBackType === 'solid') {
         const secondStop = Math.min(100, php.gradientPosition + 50);
         const bgColor = php.backgroundBackColor || '#ffffff';
         const gradColor = php.gradientBackgroundColor || '#ffffff';
-        const degrees = php.gradientDegrees || 180;
+        const degrees = php.gradientDegrees ?? 180;
         howtoCardBackStyle += ` background: linear-gradient(${degrees}deg, ${bgColor} ${firstStop}%, ${gradColor} ${secondStop}%);`;
     } else {
         howtoCardBackStyle += ` background-color: ${php.backgroundBackColor || '#ffffff'};`;

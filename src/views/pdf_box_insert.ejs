@@ -143,26 +143,26 @@ for (let i = 0; i < insertCount; i++) {
     <div class="background">
         <% if (php.boxFrontBackgroundType === 'image' && php.boxFrontBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxFrontBackground %>"
-                 style="opacity: <%= (php.boxFrontOpacity || 100) / 100 %>;" />
+                 style="opacity: <%= (php.boxFrontOpacity ?? 100) / 100 %>;" />
         <% } %>
         <% if (php.boxFrontBackgroundType === 'solid') { %>
             <% if (php.boxFrontUseFrontGradient) { %>
-                <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees || 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition || 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%);"></div>
+                <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees ?? 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition ?? 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%);"></div>
             <% } else { %>
                 <div class="background-color" style="background-color: <%= php.boxFrontBackgroundColor || '#ffffff' %>;"></div>
             <% } %>
         <% } else if (!php.boxFrontBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/background_brand.png" alt="Card Background"
-                 style="opacity: <%= (php.boxFrontOpacity || 100) / 100 %>;" />
+                 style="opacity: <%= (php.boxFrontOpacity ?? 100) / 100 %>;" />
         <% } %>
         <% if (php.boxFrontBackgroundType === 'image' && php.boxFrontBackground && php.boxFrontUseFrontGradient) { %>
-            <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees || 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition || 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
+            <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees ?? 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition ?? 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
         <% } %>
     </div>
     <div class="content">
         <% if (php.boxFrontLogo) { %>
             <img class="logo-image" src="<%= process.env['API_URI'] %>/public/logo/<%= php.boxFrontLogo %>"
-                 style="max-width: <%= (php.boxFrontLogoScale || 50) %>%; max-height: <%= (php.boxFrontLogoScale || 50) %>%; position: absolute; left: <%= (php.boxFrontLogoPositionX || 50) %>%; top: <%= (php.boxFrontLogoPositionY || 50) %>%; transform: translate(-50%, -50%); object-fit: contain;" />
+                 style="max-width: <%= (php.boxFrontLogoScale || 50) %>%; max-height: <%= (php.boxFrontLogoScale || 50) %>%; position: absolute; left: <%= (php.boxFrontLogoPositionX ?? 50) %>%; top: <%= (php.boxFrontLogoPositionY ?? 50) %>%; transform: translate(-50%, -50%); object-fit: contain;" />
         <% } %>
         <% if (php.boxFrontEmoji) { %>
             <div class="emoji"><%= php.boxFrontEmoji %></div>
@@ -175,20 +175,20 @@ for (let i = 0; i < insertCount; i++) {
     <div class="background">
         <% if (php.boxBackBackgroundType === 'image' && php.boxBackBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxBackBackground %>"
-                 style="opacity: <%= (php.boxBackOpacity || 50) / 100 %>;" />
+                 style="opacity: <%= (php.boxBackOpacity ?? 50) / 100 %>;" />
         <% } %>
         <% if (php.boxBackBackgroundType === 'solid') { %>
             <% if (php.boxBackUseGradient) { %>
-                <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees || 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition || 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%);"></div>
+                <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees ?? 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition ?? 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%);"></div>
             <% } else { %>
                 <div class="background-color" style="background-color: <%= php.boxBackBackgroundColor || '#ffffff' %>;"></div>
             <% } %>
         <% } else if (!php.boxBackBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/background_brand.png" alt="Card Background"
-                 style="opacity: <%= (php.boxBackOpacity || 50) / 100 %>;" />
+                 style="opacity: <%= (php.boxBackOpacity ?? 50) / 100 %>;" />
         <% } %>
         <% if (php.boxBackBackgroundType === 'image' && php.boxBackBackground && php.boxBackUseGradient) { %>
-            <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees || 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition || 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
+            <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees ?? 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition ?? 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
         <% } %>
     </div>
     <div class="content">

@@ -41,7 +41,7 @@ const cssSelector = (pattern, k) => pattern.split('{d}').join('d' + k);
                 const secondStop = Math.min(100, d.gradientPosition + 50);
                 const bgColor = d.backgroundBackColor || '#ffffff';
                 const gradColor = d.gradientBackgroundColor || '#ffffff';
-                const degrees = d.gradientDegrees || 180;
+                const degrees = d.gradientDegrees ?? 180;
             %>
             background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
             <% } else if (d.backgroundBackColor) { %>

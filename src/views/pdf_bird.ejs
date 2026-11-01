@@ -176,7 +176,7 @@ function birdFit(track) {
                 const secondStop = Math.min(100, php.gradientPosition + 50);
                 const bgColor = php.backgroundBackColor || '#ffffff';
                 const gradColor = php.gradientBackgroundColor || '#ffffff';
-                const degrees = php.gradientDegrees || 180;
+                const degrees = php.gradientDegrees ?? 180;
             %>
             background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
             <% } else if (php.backgroundBackColor) { %>

@@ -50,7 +50,7 @@
                 const secondStop = Math.min(100, php.gradientPosition + 50);
                 const bgColor = php.backgroundBackColor || '#ffffff';
                 const gradColor = php.gradientBackgroundColor || '#ffffff';
-                const degrees = php.gradientDegrees || 180;
+                const degrees = php.gradientDegrees ?? 180;
             %>
             background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
             <% } else if (php.backgroundBackColor) { %>
@@ -131,7 +131,7 @@
   <%- include('partials/howto_card') %>
 <% } %>
 <% tracks.forEach((track, index) => { %>
-    <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+    <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees ?? 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition ?? 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition ?? 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
         <% if (php.logo && php.logo.length) { %>
             <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
         <% } %>
