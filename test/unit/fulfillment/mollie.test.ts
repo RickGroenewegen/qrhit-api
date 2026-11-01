@@ -4445,14 +4445,14 @@ describe('getPaymentUri for an app store order', () => {
 });
 
 describe('getPaymentUri with returnTo app', () => {
-  it('sends the buyer back to the scan app instead of the site', async () => {
+  it("sends the buyer back to the scan app's return page instead of the site", async () => {
     await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4');
 
     const request = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
-    expect(request.redirectUrl).toBe('nl.rickgroenewegen.qrsong://payment');
+    expect(request.redirectUrl).toBe(`${process.env['API_URI']}/payment-complete`);
     const update = mollieApi.liveClient.payments.update.mock.calls[0][0];
     expect(update.requestBody.redirectUrl).toBe(
-      'nl.rickgroenewegen.qrsong://payment?paymentId=tr_test123'
+      `${process.env['API_URI']}/payment-complete?paymentId=tr_test123`
     );
   });
 

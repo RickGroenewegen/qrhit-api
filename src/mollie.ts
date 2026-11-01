@@ -9,6 +9,7 @@ import {
 } from './data/shared/shared-data.generated';
 import { Payment, Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
+import { APP_PAYMENT_RETURN_PATH } from './appPaymentReturn';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
@@ -105,12 +106,6 @@ import { randomUUID } from 'crypto';
 // How long a canceled or expired order stays before the nightly cleanup
 // deletes it, so the help mail's link can still pay it
 export const ABANDONED_KEEP_DAYS = 14;
-
-// Where Mollie sends a buyer back to the scan app (`returnTo: 'app'` on
-// POST /mollie/payment): the app's own URL scheme. Mollie accepts custom
-// schemes for redirectUrl, and a banking app often does not hand a
-// universal link back to the app it came from.
-export const APP_PAYMENT_RETURN_URL = 'nl.rickgroenewegen.qrsong://payment';
 
 // An app store order (store_…) still open after this long was never paid:
 // the buyer closed the store's sheet. Nothing reminds them of it. A purchase
@@ -2535,11 +2530,12 @@ class Mollie {
       // orders it pays through Mollie. Recorded on the row (`channel`) for
       // the reports' Website / App toggle; the website's orders leave it null.
       const placedInApp = !!params.store || params.returnTo === 'app';
-      // Where Mollie sends the buyer back: the site, or the scan app.
+      // Where Mollie sends the buyer back: the site, or the scan app's return
+      // page, an app link (appPaymentReturn.ts)
       const returnUrl = (molliePaymentRef?: string) => {
         const query = molliePaymentRef ? `?paymentId=${molliePaymentRef}` : '';
         return params.returnTo === 'app'
-          ? `${APP_PAYMENT_RETURN_URL}${query}`
+          ? `${process.env['API_URI']}${APP_PAYMENT_RETURN_PATH}${query}`
           : `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment${query}`;
       };
 

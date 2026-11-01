@@ -7,7 +7,8 @@
           { "/": "/qr/pdf-showcase/*", "exclude": true },
           { "/": "/qr/*" },
           { "/": "/qr2/*" },
-          { "/": "/qr_url2" }
+          { "/": "/qr_url2" },
+          { "/": "/payment-complete" }
         ]
       }
     ]
