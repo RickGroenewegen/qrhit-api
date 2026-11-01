@@ -1,10 +1,14 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "7CNC4K97KZ.nl.rickgroenewegen.qrsong",
-        "paths": [ "/qr/*" ]
+        "appIDs": ["7CNC4K97KZ.nl.rickgroenewegen.qrsong"],
+        "components": [
+          { "/": "/qr/pdf-showcase/*", "exclude": true },
+          { "/": "/qr/*" },
+          { "/": "/qr2/*" },
+          { "/": "/qr_url2" }
+        ]
       }
     ]
   }
