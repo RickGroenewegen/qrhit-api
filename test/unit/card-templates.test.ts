@@ -196,9 +196,29 @@ describe('renderCards', () => {
 
   it('follows JavaScript truthiness, as the EJS templates did', () => {
     const php = { ...sampleDesign(), background: '', gradientDegrees: 0 };
-    expect(front("{% if design.background %}yes{% else %}no{% endif %}|{{ design.gradientDegrees | default: 180 }}", { php, designs: [php] })).toBe(
-      'no|180'
+    expect(front("{% if design.background %}yes{% else %}no{% endif %}|{% if design.gradientDegrees %}yes{% else %}no{% endif %}", { php, designs: [php] })).toBe(
+      'no|no'
     );
+  });
+
+  it('keeps a design 0 through `default`, like the EJS templates\' `x ?? y`, and falls back on an empty value', () => {
+    const php = {
+      ...sampleDesign(),
+      gradientDegrees: 0,
+      gradientFrontPosition: 0,
+      frontOpacity: 0,
+      fontColor: '',
+      backgroundBackColor: null,
+      gradientPosition: undefined,
+    };
+    expect(
+      front(
+        "{{ design.gradientDegrees | default: 180 }}|{{ design.gradientFrontPosition | default: 50 }}|{{ design.frontOpacity | default: 100 }}|{{ design.fontColor | default: '#000000' }}|{{ design.backgroundBackColor | default: '#ffffff' }}|{{ design.gradientPosition | default: 50 }}",
+        { php, designs: [php] }
+      )
+    ).toBe('0|0|0|#000000|#ffffff|50');
+    // A gradient pointing up, as the reference templates write it.
+    expect(front('linear-gradient({{ design.gradientDegrees | default: 180 }}deg)', { php, designs: [php] })).toBe('linear-gradient(0deg)');
   });
 
   it('cannot reach the prototype, the file system or unknown names', () => {
