@@ -90,6 +90,11 @@ vi.mock('../../src/cache', () => ({
       get: async (k: string) => cacheStoreMock.get(k) ?? null,
       set: async (k: string, v: string) => { cacheStoreMock.set(k, v); },
       del: async (k: string) => { cacheStoreMock.delete(k); },
+      increment: async (k: string) => {
+        const n = Number(cacheStoreMock.get(k) ?? 0) + 1;
+        cacheStoreMock.set(k, String(n));
+        return n;
+      },
       executeCommand: vi.fn(async () => true), // always acquire lock
     }),
   },
@@ -413,6 +418,60 @@ describe('Discount.reserveReleasedUsesAgain (the help mail resumes an order)', (
 // ──────────────────────────────────────────────
 // checkDiscount
 // ──────────────────────────────────────────────
+
+describe('Discount.checkDiscount from the scan app', () => {
+  const app = { ip: '203.0.113.7' };
+
+  it('needs the e-mail, and no reCAPTCHA', async () => {
+    const svc = makeSvc();
+    expect(await svc.checkDiscount('CODE', '', false, { app })).toEqual({ success: false, message: 'emailRequired' });
+    expect(await svc.checkDiscount('CODE', '', false, { app, email: 'not-an-address' })).toEqual({
+      success: false,
+      message: 'emailRequired',
+    });
+    expect(verifyRecaptcha).not.toHaveBeenCalled();
+  });
+
+  it('checks a code with the e-mail', async () => {
+    discountCodeStore.set('APP10', { id: 7, code: 'APP10', amount: 10, digital: false, startDate: null, endDate: null });
+    prismaMock.discountCodedUses.aggregate.mockResolvedValueOnce({ _sum: { amount: 0 } });
+    const svc = makeSvc();
+    const res = await svc.checkDiscount('app10', '', false, { app, email: 'buyer@example.com' });
+    expect(res.success).toBe(true);
+    expect(verifyRecaptcha).not.toHaveBeenCalled();
+  });
+
+  it('stops after the hour\'s wrong codes, per address and per e-mail', async () => {
+    discountCodeStore.set('REAL', { id: 8, code: 'REAL', amount: 10, digital: false, startDate: null, endDate: null });
+    const svc = makeSvc();
+    for (let i = 0; i < 10; i++) {
+      const res = await svc.checkDiscount(`GUESS${i}`, '', false, { app, email: `guess${i}@example.com` });
+      expect(res.message).toBe('discountCodeNotFound');
+    }
+    // The address is spent, whatever the e-mail and the code
+    expect(await svc.checkDiscount('REAL', '', false, { app, email: 'other@example.com' })).toEqual({
+      success: false,
+      message: 'tooManyAttempts',
+    });
+    for (let i = 0; i < 10; i++) {
+      await svc.checkDiscount(`MORE${i}`, '', false, { app: { ip: `198.51.100.${i}` }, email: 'same+try@example.com' });
+    }
+    // And the e-mail (its + tag ignored) from another address
+    expect(await svc.checkDiscount('REAL', '', false, { app: { ip: '192.0.2.1' }, email: 'same@example.com' })).toEqual({
+      success: false,
+      message: 'tooManyAttempts',
+    });
+  });
+
+  it('does not count a code that is right', async () => {
+    discountCodeStore.set('GOOD', { id: 9, code: 'GOOD', amount: 10, digital: false, startDate: null, endDate: null });
+    prismaMock.discountCodedUses.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    const svc = makeSvc();
+    for (let i = 0; i < 12; i++) {
+      expect((await svc.checkDiscount('GOOD', '', false, { app, email: 'buyer@example.com' })).success).toBe(true);
+    }
+  });
+});
 
 describe('Discount.checkDiscount', () => {
   it('reports a recaptcha failure instead of throwing', async () => {

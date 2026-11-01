@@ -28,7 +28,9 @@ export default async function discountRoutes(
   // which sends digital=1 because it does not know the order type yet). This
   // is the only check route: the bare POST /discount/:code went on 2025-04-10
   // (54b56454), and the gift-card page kept calling it, answered by a 404,
-  // until October 2026.
+  // until October 2026. `app: true` is the scan app, which cannot run
+  // reCAPTCHA: it needs the e-mail and is limited in wrong codes instead
+  // (Discount `AppCodeCheck`).
   fastify.post('/discount/:code/:digital', async (request: any, reply: any) => {
     const body = request.body || {};
     const result = await discount.checkDiscount(
@@ -40,6 +42,7 @@ export default async function discountRoutes(
         email: body.email || null,
         countrycode: body.countrycode || undefined,
         fast: !!body.fast,
+        app: body.app === true ? { ip: request.clientIp } : undefined,
       }
     );
     reply.send(result);
@@ -67,6 +70,7 @@ export default async function discountRoutes(
       email: body.email || null,
       countrycode: body.countrycode || undefined,
       fast: !!body.fast,
+      app: body.app === true ? { ip: request.clientIp } : undefined,
     });
     reply.send(result);
   });

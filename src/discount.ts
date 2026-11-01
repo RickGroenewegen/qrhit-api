@@ -150,6 +150,26 @@ interface CodeParams {
  * Only used for the usage limit. The address stored on the Payment, invoiced
  * and mailed to is always the one the customer actually typed.
  */
+/**
+ * The scan app checks codes without reCAPTCHA, which its WebView cannot run
+ * (no site key for the app's origin). Instead the buyer's e-mail is required,
+ * so a general code's once-per-customer limit always applies, and wrong codes
+ * are counted per address and per e-mail: guessing codes from a script stops
+ * after a few. Payment creation checks every code again as always.
+ */
+export interface AppCodeCheck {
+  /** The caller's address (ipPlugin's spoof-resistant `clientIp`). */
+  ip: string;
+}
+
+/** Wrong codes the app may try in an hour, per address and per e-mail. */
+export const APP_FAILED_CHECKS_PER_HOUR = 10;
+
+const APP_FAILED_CHECK_KEY = 'discount_app_failed';
+
+/** An address the checkout would take (the app's own check is the same). */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export function normalizeEmailForLimit(email: string | null | undefined): string | null {
   const trimmed = (email || '').trim().toLowerCase();
   if (!trimmed) return null;
@@ -1256,16 +1276,81 @@ class Discount {
       email?: string | null;
       countrycode?: string;
       fast?: boolean;
+      app?: AppCodeCheck;
     } = {}
   ): Promise<any> {
     try {
-      // verifyRecaptcha fails closed, so an unreachable Google or a missing
-      // secret would otherwise turn every coupon attempt into a raw 500.
-      const { isHuman } = await this.utils.verifyRecaptcha(token);
-      if (!isHuman) {
-        return { success: false, message: 'recaptchaFailed' };
-      }
+      const refused = await this.checkGate(token, opts);
+      if (refused) return refused;
 
+      const result = await this.checkCode(code, digital, opts);
+      if (opts.app && !result.success && result.message !== 'errorCheckingDiscountCode') {
+        await this.countAppFailures(opts.app, opts.email, 1);
+      }
+      return result;
+    } catch (error: any) {
+      return { success: false, message: 'errorCheckingDiscountCode', error };
+    }
+  }
+
+  /**
+   * In front of every code check: reCAPTCHA on the website; in the scan app,
+   * which cannot run it, the buyer's e-mail and a limit on wrong codes
+   * (`AppCodeCheck`). Null lets the check through. verifyRecaptcha fails
+   * closed, so an unreachable Google or a missing secret refuses here instead
+   * of turning every attempt into a raw 500.
+   */
+  private async checkGate(
+    token: string,
+    opts: { email?: string | null; app?: AppCodeCheck }
+  ): Promise<{ success: false; message: string } | null> {
+    if (!opts.app) {
+      const { isHuman } = await this.utils.verifyRecaptcha(token);
+      return isHuman ? null : { success: false, message: 'recaptchaFailed' };
+    }
+    if (!EMAIL_SHAPE.test(String(opts.email || '').trim())) {
+      return { success: false, message: 'emailRequired' };
+    }
+    for (const key of this.appFailureKeys(opts.app, opts.email)) {
+      const failures = Number(await this.cache.get(key)) || 0;
+      if (failures >= APP_FAILED_CHECKS_PER_HOUR) {
+        return { success: false, message: 'tooManyAttempts' };
+      }
+    }
+    return null;
+  }
+
+  private appFailureKeys(app: AppCodeCheck, email: string | null | undefined): string[] {
+    return [
+      `${APP_FAILED_CHECK_KEY}:ip:${app.ip || 'unknown'}`,
+      `${APP_FAILED_CHECK_KEY}:email:${normalizeEmailForLimit(email)}`,
+    ];
+  }
+
+  /** The hour's count of wrong codes, from the first one on. */
+  private async countAppFailures(
+    app: AppCodeCheck,
+    email: string | null | undefined,
+    failures: number
+  ): Promise<void> {
+    for (const key of this.appFailureKeys(app, email)) {
+      for (let i = 0; i < failures; i++) {
+        await this.cache.increment(key, 60 * 60);
+      }
+    }
+  }
+
+  private async checkCode(
+    code: string,
+    digital: boolean,
+    opts: {
+      cart?: CartLike;
+      email?: string | null;
+      countrycode?: string;
+      fast?: boolean;
+    }
+  ): Promise<any> {
+    try {
       const normalized = String(code || '').trim().toUpperCase();
 
       if (opts.cart && Array.isArray(opts.cart.items)) {
@@ -1356,13 +1441,16 @@ class Discount {
   public async validateCart(
     cart: CartLike,
     token: string,
-    opts: { email?: string | null; countrycode?: string; fast?: boolean } = {}
+    opts: {
+      email?: string | null;
+      countrycode?: string;
+      fast?: boolean;
+      app?: AppCodeCheck;
+    } = {}
   ): Promise<any> {
     try {
-      const { isHuman } = await this.utils.verifyRecaptcha(token);
-      if (!isHuman) {
-        return { success: false, message: 'recaptchaFailed' };
-      }
+      const refused = await this.checkGate(token, opts);
+      if (refused) return refused;
       const base = await this.baseForCart(cart, opts);
       const ev = await this.evaluateDiscounts(
         cart,
@@ -1380,6 +1468,10 @@ class Discount {
           amountLeft: f.amountLeft ?? 0,
         })),
       ];
+      // Any code can be put in the cart, so wrong ones count here too
+      if (opts.app && ev.failed.length > 0) {
+        await this.countAppFailures(opts.app, opts.email, ev.failed.length);
+      }
       return {
         success: true,
         ok: ev.ok,
