@@ -4373,30 +4373,36 @@ describe('getPaymentUri for an app store order', () => {
     expect(data.PaymentHasPlaylist.create[0]).toMatchObject({ price: 13, type: 'digital' });
   });
 
-  it('picks the tier that holds the deck and bakes QRGames! into the product', async () => {
+  it('picks the tier that holds the deck', async () => {
     // The track count is fetched again before pricing.
     providerMock.getTracks.mockResolvedValue({ success: true, data: { total: 1200 } });
     const result = await mollie.getPaymentUri(
       storeParams({
         store: { platform: 'android' },
-        cart: { items: [makeItem({ numberOfTracks: 1200, gamesEnabled: true })] },
+        cart: { items: [makeItem({ numberOfTracks: 1200 })] },
       }),
       '1.2.3.4'
     );
 
-    expect(result.data.storeProductId).toBe('deck.1500.games');
+    expect(result.data.storeProductId).toBe('deck.1500');
     const data = prismaMock.payment.create.mock.calls[0][0].data;
     expect(data).toMatchObject({
       paymentMethod: 'googleplay',
       channel: 'app',
-      totalPrice: 35,
-      gamesFee: 5,
+      totalPrice: 30,
+      gamesFee: 0,
     });
-    expect(data.PaymentHasPlaylist.create[0]).toMatchObject({ price: 30, gamesPrice: 5 });
-    expect(prismaMock.gamesPurchase.create.mock.calls[0][0].data).toMatchObject({
-      pricePerPlaylist: 5,
-      molliePaymentId: result.data.paymentId,
-    });
+    expect(data.PaymentHasPlaylist.create[0]).toMatchObject({ price: 30 });
+  });
+
+  it('refuses a deck with QRGames!, which the store does not sell', async () => {
+    const result = await mollie.getPaymentUri(
+      storeParams({ cart: { items: [makeItem({ gamesEnabled: true })] } }),
+      '1.2.3.4'
+    );
+
+    expect(result).toEqual({ success: false, error: 'store_cart' });
+    expect(prismaMock.payment.create).not.toHaveBeenCalled();
   });
 
   it('refuses codes, printed decks and more than one deck', async () => {

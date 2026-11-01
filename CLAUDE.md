@@ -2571,13 +2571,14 @@ the main server only and never in development, under a Redis lock.
 
 **Prices** (`src/storeProducts.ts`):
 - The same as on the website (Rick, 2026-10-31): €13 / €23 / €30 / €33 /
-  €39, QRGames! €5, App Designer €9, a bundle the sum of its parts. The
-  store's 15% (Apple Small Business Program; Google from 30 June 2026) is
-  the cost of selling in the app: an app sale earns about 12% less than a
-  web sale.
-- Products: `deck.<500|1000|1500|2500|3000>[.games][.app]` and
-  `addon.games` / `addon.app`. `GET /api/pricing` lists them as
-  `storeProducts`.
+  €39. The store's 15% (Apple Small Business Program; Google from 30 June
+  2026) is the cost of selling in the app: an app sale earns about 12% less
+  than a web sale.
+- Products: `deck.<500|1000|1500|2500|3000>`, nothing else (Rick,
+  2026-11-01; only these five exist in App Store Connect and the Play
+  Console). The app sells no QRGames! or App Designer, so a store cart with
+  either finds no product and is refused (`store_cart`). `GET /api/pricing`
+  lists them as `storeProducts`, `games` / `appDesign` always false.
 - A price changed here must change in App Store Connect and the Play
   Console too.
 - Open `store_` orders older than `STORE_OPEN_KEEP_DAYS` (30) go with the
