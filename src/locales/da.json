@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Kan du ikke installere appen lige nu?",
   "mail.boxInstructionsGuideText": "Vores foldeguide viser hvert trin i en kort animation, og du kan gå frem og tilbage i dit eget tempo:",
   "mail.boxInstructionsGuideButton": "Åbn foldeguiden",
-  "mail.boxInstructionsGuideImageAlt": "Foldeguiden: gaveæsken foldet trin for trin i en animation"
+  "mail.boxInstructionsGuideImageAlt": "Foldeguiden: gaveæsken foldet trin for trin i en animation",
+  "mail.correctionExtras": "I rettelsesformularen kan du også give dine kort dine egne korte linjer, under kunstneren og under titlen: en personlig besked, landet, filmen en sang er fra.",
+  "paymentComplete.pageTitle": "QRSong! betaling",
+  "paymentComplete.paidTitle": "Betalt, tak!",
+  "paymentComplete.paidBody": "Din bestilling er modtaget. Gå tilbage til appen for at se den; vi holder dig opdateret på e-mail.",
+  "paymentComplete.openTitle": "Venter på din betaling",
+  "paymentComplete.openBody": "Din bank bekræfter betalingen. Siden opdaterer sig selv.",
+  "paymentComplete.canceledTitle": "Betalingen blev annulleret",
+  "paymentComplete.canceledBody": "Der er ikke trukket noget. Din bestilling venter stadig i appen, klar til betaling.",
+  "paymentComplete.failedTitle": "Betalingen gik ikke igennem",
+  "paymentComplete.failedBody": "Der er ikke trukket noget. Gå tilbage til appen for at prøve igen.",
+  "paymentComplete.unknownTitle": "Næsten færdig",
+  "paymentComplete.unknownBody": "Gå tilbage til appen for at se, hvordan det går med din bestilling.",
+  "paymentComplete.backToApp": "Tilbage til appen",
+  "paymentComplete.hint": "Åbner appen ikke? Åbn QRSong! selv: din bestilling venter der."
 }

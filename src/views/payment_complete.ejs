@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#18565e">
+    <meta name="robots" content="noindex">
+    <title><%= t.pageTitle %></title>
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Inter:wght@400;600;700&display=swap">
+    <style>
+        /* The scan app's create flow (qrhit-app create/brand.scss): cream page,
+           Disco teal band, Pop coral button with a hard offset shadow */
+        :root {
+            --disco: #18565e;
+            --disco-900: #0b2c31;
+            --pop: #f79677;
+            --pop-100: #fde3d9;
+            --cream: #feefe5;
+            --cream-50: #fff8f3;
+            --muted: #3d6d74;
+            --display: 'Archivo', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+            background: var(--cream);
+            color: var(--disco);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+            border: 2.5px solid var(--disco-900);
+            border-radius: 24px;
+            background: var(--cream-50);
+            box-shadow: 6px 6px 0 var(--disco-900);
+            text-align: center;
+        }
+
+        .band {
+            padding: 22px 24px 20px;
+            border-bottom: 2.5px solid var(--disco-900);
+            background: var(--disco);
+        }
+
+        .band img {
+            display: block;
+            width: 150px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .body {
+            padding: 30px 24px 28px;
+        }
+
+        .sign {
+            display: grid;
+            place-items: center;
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 20px;
+            border: 2.5px solid var(--disco-900);
+            border-radius: 50%;
+            background: var(--pop);
+            color: var(--disco-900);
+            box-shadow: 4px 4px 0 var(--disco-900);
+            font-family: var(--display);
+            font-size: 36px;
+            font-weight: 900;
+            line-height: 1;
+            transform: rotate(-6deg);
+        }
+
+        .sign.quiet {
+            background: var(--pop-100);
+        }
+
+        /* Waiting: a record turning, as on the app's loading screens */
+        .sign.record {
+            background:
+                radial-gradient(circle, var(--pop) 0 22%, var(--disco-900) 23% 25%, transparent 26%),
+                repeating-radial-gradient(circle, #1d2b2e 0 3px, #263a3e 3px 5px);
+            animation: turn 1.8s linear infinite;
+        }
+
+        @keyframes turn {
+            to {
+                transform: rotate(354deg);
+            }
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-family: var(--display);
+            font-stretch: 125%;
+            font-weight: 900;
+            font-size: 24px;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+            color: var(--disco-900);
+        }
+
+        p {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 26px;
+            padding: 15px 28px;
+            border: 2.5px solid var(--disco-900);
+            border-radius: 999px;
+            background: var(--pop);
+            color: var(--disco-900);
+            box-shadow: 4px 4px 0 var(--disco-900);
+            font-family: var(--display);
+            font-stretch: 125%;
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .back:active {
+            box-shadow: 1px 1px 0 var(--disco-900);
+            transform: translate(3px, 3px);
+        }
+
+        .hint {
+            margin-top: 20px;
+            font-size: 13px;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sign.record {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="band">
+            <img src="/assets/images/logo_white.png" alt="QRSong!" width="3334" height="669">
+        </div>
+        <div class="body">
+            <% if (status === 'paid') { %>
+                <div class="sign" aria-hidden="true">✓</div>
+                <h1><%= t.paidTitle %></h1>
+                <p><%= t.paidBody %></p>
+            <% } else if (status === 'open') { %>
+                <div class="sign record" aria-hidden="true"></div>
+                <h1><%= t.openTitle %></h1>
+                <p><%= t.openBody %></p>
+            <% } else if (status === 'canceled') { %>
+                <div class="sign quiet" aria-hidden="true">×</div>
+                <h1><%= t.canceledTitle %></h1>
+                <p><%= t.canceledBody %></p>
+            <% } else if (status === 'failed') { %>
+                <div class="sign quiet" aria-hidden="true">!</div>
+                <h1><%= t.failedTitle %></h1>
+                <p><%= t.failedBody %></p>
+            <% } else { %>
+                <div class="sign" aria-hidden="true">♪</div>
+                <h1><%= t.unknownTitle %></h1>
+                <p><%= t.unknownBody %></p>
+            <% } %>
+            <a class="back" href="<%= back %>"><%= t.backToApp %></a>
+            <p class="hint"><%= t.hint %></p>
+        </div>
+    </main>
+
+    <% if (status === 'open') { %>
+    <script>
+        // The webhook writes the verdict: ask again until it has
+        setTimeout(function () {
+            window.location.reload();
+        }, 3000);
+    </script>
+    <% } %>
+    <script>
+        // Android's Chrome opens an app's URL scheme reliably in the intent://
+        // form. The fallback keeps the buyer on this page when the app does
+        // not take it (instead of Chrome sending them to the Play Store).
+        (function () {
+            if (!/android/i.test(navigator.userAgent)) return;
+            var scheme = 'nl.rickgroenewegen.qrsong://';
+            var fallback = encodeURIComponent(window.location.href);
+            var links = document.querySelectorAll('.back');
+            for (var i = 0; i < links.length; i++) {
+                var href = links[i].getAttribute('href');
+                if (href.indexOf(scheme) !== 0) continue;
+                links[i].setAttribute(
+                    'href',
+                    'intent://' + href.slice(scheme.length) +
+                        '#Intent;scheme=nl.rickgroenewegen.qrsong;package=nl.rickgroenewegen.qrsong;' +
+                        'S.browser_fallback_url=' + fallback + ';end'
+                );
+            }
+        })();
+    </script>
+</body>
+</html>

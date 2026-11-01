@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Etkö pysty asentamaan sovellusta juuri nyt?",
   "mail.boxInstructionsGuideText": "Taitto-ohjeemme näyttää jokaisen vaiheen lyhyenä animaationa, ja voit siirtyä eteen- ja taaksepäin omaan tahtiisi:",
   "mail.boxInstructionsGuideButton": "Avaa taitto-ohje",
-  "mail.boxInstructionsGuideImageAlt": "Taitto-opas: lahjarasia taiteltuna vaihe vaiheelta animaationa"
+  "mail.boxInstructionsGuideImageAlt": "Taitto-opas: lahjarasia taiteltuna vaihe vaiheelta animaationa",
+  "mail.correctionExtras": "Korjauslomakkeella voit myös lisätä korteillesi omia lyhyitä rivejä artistin ja kappaleen nimen alle: henkilökohtaisen viestin, maan tai elokuvan, josta biisi on.",
+  "paymentComplete.pageTitle": "QRSong! -maksu",
+  "paymentComplete.paidTitle": "Maksettu, kiitos!",
+  "paymentComplete.paidBody": "Tilauksesi on vastaanotettu. Palaa sovellukseen nähdäksesi sen; pidämme sinut ajan tasalla sähköpostitse.",
+  "paymentComplete.openTitle": "Odotetaan maksuasi",
+  "paymentComplete.openBody": "Pankkisi vahvistaa maksua. Sivu päivittyy itsestään.",
+  "paymentComplete.canceledTitle": "Maksu peruttu",
+  "paymentComplete.canceledBody": "Mitään ei veloitettu. Tilauksesi odottaa yhä sovelluksessa valmiina maksettavaksi.",
+  "paymentComplete.failedTitle": "Maksu ei mennyt läpi",
+  "paymentComplete.failedBody": "Mitään ei veloitettu. Palaa sovellukseen ja yritä uudelleen.",
+  "paymentComplete.unknownTitle": "Melkein valmista",
+  "paymentComplete.unknownBody": "Palaa sovellukseen katsomaan, miten tilauksesi etenee.",
+  "paymentComplete.backToApp": "Takaisin sovellukseen",
+  "paymentComplete.hint": "Eikö sovellus aukea? Avaa QRSong! itse: tilauksesi odottaa siellä."
 }

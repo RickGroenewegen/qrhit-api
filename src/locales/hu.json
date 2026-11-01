@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Most nem tudod telepíteni az appot?",
   "mail.boxInstructionsGuideText": "A hajtogatási útmutatónk minden lépést egy rövid animációban mutat be, és a saját tempódban léphetsz előre-hátra:",
   "mail.boxInstructionsGuideButton": "Hajtogatási útmutató megnyitása",
-  "mail.boxInstructionsGuideImageAlt": "Hajtogatási útmutató: az ajándékdoboz lépésről lépésre hajtogatva, animációban"
+  "mail.boxInstructionsGuideImageAlt": "Hajtogatási útmutató: az ajándékdoboz lépésről lépésre hajtogatva, animációban",
+  "mail.correctionExtras": "A javítási űrlapon saját rövid sorokat is adhatsz a kártyáidhoz, az előadó és a cím alá: egy személyes üzenetet, az országot, a filmet, amelyből a dal származik.",
+  "paymentComplete.pageTitle": "QRSong! fizetés",
+  "paymentComplete.paidTitle": "Kifizetve, köszi!",
+  "paymentComplete.paidBody": "Megkaptuk a rendelésed. Térj vissza az appba, hogy megnézd; e-mailben tájékoztatunk.",
+  "paymentComplete.openTitle": "Várjuk a fizetésedet",
+  "paymentComplete.openBody": "A bankod most erősíti meg a fizetést. Az oldal magától frissül.",
+  "paymentComplete.canceledTitle": "Fizetés megszakítva",
+  "paymentComplete.canceledBody": "Nem vontunk le semmit. A rendelésed még ott vár az appban, fizetésre készen.",
+  "paymentComplete.failedTitle": "A fizetés nem sikerült",
+  "paymentComplete.failedBody": "Nem vontunk le semmit. Menj vissza az appba, és próbáld újra.",
+  "paymentComplete.unknownTitle": "Mindjárt kész",
+  "paymentComplete.unknownBody": "Térj vissza az appba, és nézd meg, hogy áll a rendelésed.",
+  "paymentComplete.backToApp": "Vissza az appba",
+  "paymentComplete.hint": "Nem nyílik meg az app? Nyisd meg magad a QRSong!-ot: ott vár a rendelésed."
 }

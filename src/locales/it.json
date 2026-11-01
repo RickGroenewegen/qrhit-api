@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Non riesci a installare l'app adesso?",
   "mail.boxInstructionsGuideText": "La nostra guida al piegamento mostra ogni passaggio con una breve animazione, e puoi andare avanti e indietro al tuo ritmo:",
   "mail.boxInstructionsGuideButton": "Apri la guida al piegamento",
-  "mail.boxInstructionsGuideImageAlt": "La guida alla piegatura: la scatola regalo piegata passo passo in un'animazione"
+  "mail.boxInstructionsGuideImageAlt": "La guida alla piegatura: la scatola regalo piegata passo passo in un'animazione",
+  "mail.correctionExtras": "Nel modulo di correzione puoi anche aggiungere alle tue carte delle brevi righe tutte tue, sotto l'artista e sotto il titolo: un messaggio personale, il paese, il film da cui viene una canzone.",
+  "paymentComplete.pageTitle": "Pagamento QRSong!",
+  "paymentComplete.paidTitle": "Pagato, grazie!",
+  "paymentComplete.paidBody": "Il tuo ordine è arrivato. Torna all'app per vederlo; ti terremo aggiornato via e-mail.",
+  "paymentComplete.openTitle": "In attesa del tuo pagamento",
+  "paymentComplete.openBody": "La tua banca sta confermando il pagamento. Questa pagina si aggiorna da sola.",
+  "paymentComplete.canceledTitle": "Pagamento annullato",
+  "paymentComplete.canceledBody": "Non è stato addebitato nulla. Il tuo ordine ti aspetta ancora nell'app, pronto da pagare.",
+  "paymentComplete.failedTitle": "Il pagamento non è andato a buon fine",
+  "paymentComplete.failedBody": "Non è stato addebitato nulla. Torna all'app per riprovare.",
+  "paymentComplete.unknownTitle": "Ci siamo quasi",
+  "paymentComplete.unknownBody": "Torna all'app per vedere come procede il tuo ordine.",
+  "paymentComplete.backToApp": "Torna all'app",
+  "paymentComplete.hint": "L'app non si apre? Apri QRSong! tu stesso: il tuo ordine ti aspetta lì."
 }

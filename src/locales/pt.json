@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Não dá para instalar o app agora?",
   "mail.boxInstructionsGuideText": "Nosso guia de dobra mostra cada passo em uma animação curta, e você pode avançar e voltar no seu próprio ritmo:",
   "mail.boxInstructionsGuideButton": "Abrir o guia de dobra",
-  "mail.boxInstructionsGuideImageAlt": "O guia de dobra: a caixa de presente dobrada passo a passo em uma animação"
+  "mail.boxInstructionsGuideImageAlt": "O guia de dobra: a caixa de presente dobrada passo a passo em uma animação",
+  "mail.correctionExtras": "É também no formulário de correção que você coloca nas suas cartas linhas curtas suas, abaixo do artista e abaixo do título: uma mensagem pessoal, o país, o filme de onde vem uma música.",
+  "paymentComplete.pageTitle": "Pagamento QRSong!",
+  "paymentComplete.paidTitle": "Pago, obrigado!",
+  "paymentComplete.paidBody": "Seu pedido foi recebido. Volte ao app para vê-lo; vamos te manter informado por e-mail.",
+  "paymentComplete.openTitle": "Aguardando seu pagamento",
+  "paymentComplete.openBody": "Seu banco está confirmando o pagamento. Esta página se atualiza sozinha.",
+  "paymentComplete.canceledTitle": "Pagamento cancelado",
+  "paymentComplete.canceledBody": "Nada foi cobrado. Seu pedido continua te esperando no app, pronto para pagar.",
+  "paymentComplete.failedTitle": "O pagamento não foi concluído",
+  "paymentComplete.failedBody": "Nada foi cobrado. Volte ao app para tentar de novo.",
+  "paymentComplete.unknownTitle": "Quase lá",
+  "paymentComplete.unknownBody": "Volta à app para veres como está a tua encomenda.",
+  "paymentComplete.backToApp": "Voltar à app",
+  "paymentComplete.hint": "O app não abre? Abra o QRSong! você mesmo: seu pedido está te esperando lá."
 }

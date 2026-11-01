@@ -2462,9 +2462,18 @@ No new routes; two existing ones take optional fields.
     it has finished the transaction.
   - A purchase used for another order answers `store_transaction_used`.
 - **`returnTo: 'app'` on `POST /mollie/payment`** (printed orders):
-  `redirectUrl` becomes `nl.rickgroenewegen.qrsong://payment?paymentId=…`
-  (`APP_PAYMENT_RETURN_URL`). Mollie accepts custom schemes, and a banking
-  app often does not hand a universal link back.
+  `redirectUrl` becomes `${API_URI}/payment-complete?paymentId=…`
+  (`src/appPaymentReturn.ts`, as the camera app's `/payment-complete`). The
+  path is in `apple-app-site-association` and the app's Android App Link
+  filter, so from Safari or Chrome, where a banking app leaves the buyer
+  after iDEAL, it opens the app. Where it stays in the browser (the app's
+  own checkout sheet, which the app closes itself once paid) the page shows
+  the payment's status from the row, a button back to the app
+  (`nl.rickgroenewegen.qrsong://payment`, `intent://` on Android) and
+  reloads every 3 s while the payment is open. Texts `paymentComplete.*`;
+  no links to the website (Google Play's payments policy). Until 2026-11-01
+  the redirect was the app's URL scheme itself: Safari asked "Open in
+  QRSong!?" and Chrome often did nothing.
 - Either one writes `channel = 'app'` on the order, for the reports'
   Website / App toggle (see "Turnover and profit").
 

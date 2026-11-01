@@ -43,6 +43,7 @@ import {
 } from '../priceTokens';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
 import PrismaInstance from '../prisma';
+import { registerAppPaymentReturn } from '../appPaymentReturn';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { STORE_PRODUCTS } from '../storeProducts';
 import path from 'path';
@@ -303,6 +304,9 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       }
     });
   }
+
+  // Mollie's way back to the scan app after a printed order: an app link
+  registerAppPaymentReturn(fastify);
 
   // Robots.txt
   fastify.get('/robots.txt', async (_request, reply) => {

@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Kannst du die App gerade nicht installieren?",
   "mail.boxInstructionsGuideText": "Unsere Faltanleitung zeigt jeden Schritt in einer kurzen Animation, und du kannst in deinem eigenen Tempo vor- und zurückgehen:",
   "mail.boxInstructionsGuideButton": "Faltanleitung öffnen",
-  "mail.boxInstructionsGuideImageAlt": "Die Faltanleitung: die Geschenkbox Schritt für Schritt gefaltet als Animation"
+  "mail.boxInstructionsGuideImageAlt": "Die Faltanleitung: die Geschenkbox Schritt für Schritt gefaltet als Animation",
+  "mail.correctionExtras": "Im Korrekturformular gibst du deinen Karten auch eigene kurze Zeilen mit, unter dem Künstler und unter dem Titel: eine persönliche Nachricht, das Land, den Film, aus dem ein Song stammt.",
+  "paymentComplete.pageTitle": "QRSong! Zahlung",
+  "paymentComplete.paidTitle": "Bezahlt, danke!",
+  "paymentComplete.paidBody": "Deine Bestellung ist da. Geh zurück zur App, um sie zu sehen; wir halten dich per E-Mail auf dem Laufenden.",
+  "paymentComplete.openTitle": "Wir warten auf deine Zahlung",
+  "paymentComplete.openBody": "Deine Bank bestätigt die Zahlung. Diese Seite aktualisiert sich von selbst.",
+  "paymentComplete.canceledTitle": "Zahlung abgebrochen",
+  "paymentComplete.canceledBody": "Es wurde nichts abgebucht. Deine Bestellung wartet noch in der App und kann bezahlt werden.",
+  "paymentComplete.failedTitle": "Die Zahlung hat nicht geklappt",
+  "paymentComplete.failedBody": "Es wurde nichts abgebucht. Geh zurück zur App, um es nochmal zu versuchen.",
+  "paymentComplete.unknownTitle": "Fast geschafft",
+  "paymentComplete.unknownBody": "Geh zurück zur App, um zu sehen, wie es um deine Bestellung steht.",
+  "paymentComplete.backToApp": "Zurück zur App",
+  "paymentComplete.hint": "Öffnet sich die App nicht? Öffne QRSong! selbst: Deine Bestellung wartet dort."
 }

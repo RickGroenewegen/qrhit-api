@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Kun je de app nu even niet installeren?",
   "mail.boxInstructionsGuideText": "Onze vouwgids laat elke stap zien in een korte animatie, en je kunt in je eigen tempo heen en weer gaan:",
   "mail.boxInstructionsGuideButton": "Open de vouwgids",
-  "mail.boxInstructionsGuideImageAlt": "De vouwhandleiding: de cadeaudoos stap voor stap gevouwen in een animatie"
+  "mail.boxInstructionsGuideImageAlt": "De vouwhandleiding: de cadeaudoos stap voor stap gevouwen in een animatie",
+  "mail.correctionExtras": "In het correctieformulier geef je je kaarten ook eigen korte regels mee, onder de artiest en onder de titel: een persoonlijk bericht, het land, de film waar een nummer uit komt.",
+  "paymentComplete.pageTitle": "QRSong! betaling",
+  "paymentComplete.paidTitle": "Betaald, bedankt!",
+  "paymentComplete.paidBody": "Je bestelling is binnen. Ga terug naar de app om hem te bekijken; we houden je per e-mail op de hoogte.",
+  "paymentComplete.openTitle": "Wachten op je betaling",
+  "paymentComplete.openBody": "Je bank bevestigt de betaling. Deze pagina werkt zichzelf bij.",
+  "paymentComplete.canceledTitle": "Betaling geannuleerd",
+  "paymentComplete.canceledBody": "Er is niets afgeschreven. Je bestelling staat nog klaar in de app, klaar om te betalen.",
+  "paymentComplete.failedTitle": "De betaling is niet gelukt",
+  "paymentComplete.failedBody": "Er is niets afgeschreven. Ga terug naar de app om het opnieuw te proberen.",
+  "paymentComplete.unknownTitle": "Bijna klaar",
+  "paymentComplete.unknownBody": "Ga terug naar de app om te zien hoe het met je bestelling gaat.",
+  "paymentComplete.backToApp": "Terug naar de app",
+  "paymentComplete.hint": "Opent de app niet? Open QRSong! dan zelf: je bestelling staat daar klaar."
 }
