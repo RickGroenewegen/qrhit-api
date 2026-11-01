@@ -10,9 +10,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import jsonwebtoken from 'jsonwebtoken';
 
 const playMock = vi.hoisted(() => ({ get: vi.fn(), consume: vi.fn() }));
+const keyFiles = vi.hoisted(() => [] as string[]);
 vi.mock('googleapis', () => ({
   google: {
-    auth: { GoogleAuth: class {} },
+    auth: {
+      GoogleAuth: class {
+        constructor(options: { keyFile: string }) {
+          keyFiles.push(options.keyFile);
+        }
+      },
+    },
     androidpublisher: () => ({ purchases: { products: playMock } }),
   },
 }));
@@ -163,6 +170,23 @@ describe('Google', () => {
     expect(await refusal(store.verify(proof))).toBe('store_pending');
     playMock.get.mockResolvedValue({ data: { purchaseState: 1 } });
     expect(await refusal(store.verify(proof))).toBe('store_refunded');
+  });
+
+  it("uses the Merchant Center account when the Play one isn't set", async () => {
+    const saved = process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'];
+    delete process.env['GOOGLE_PLAY_SERVICE_ACCOUNT_FILE'];
+    process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'] = '/keys/merchant.json';
+    (store as any).publisher = undefined;
+    keyFiles.length = 0;
+    try {
+      playMock.get.mockResolvedValue({ data: { purchaseState: 2 } });
+      await refusal(store.verify(proof));
+      expect(keyFiles).toEqual(['/keys/merchant.json']);
+    } finally {
+      process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'] = saved;
+      if (saved === undefined) delete process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'];
+      (store as any).publisher = undefined;
+    }
   });
 
   it('tells an unknown token from Google being unreachable', async () => {

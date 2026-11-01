@@ -2428,8 +2428,11 @@ No new routes; two existing ones take optional fields.
   and the signature proves it. Xcode's local StoreKit testing is unsigned,
   so it is accepted only with `ENVIRONMENT=development`.
 - **Google**: `purchases.products.get` under the service account in
-  `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` (Play Console → Users and permissions:
-  "View financial data" and "Manage orders"), then `consume` once paid.
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE`, or when that is unset the Merchant
+  Center one in `GOOGLE_SERVICE_ACCOUNT_KEY_FILE`, which production uses
+  (Play Console → Users and permissions: "View financial data" and "Manage
+  orders and subscriptions" on the app, nothing more), then `consume` once
+  paid.
   An unconsumed purchase is refunded after three days, and the app consumes
   it too in case the server's call failed.
 - **Web**: `ng serve` has no store. With `ENVIRONMENT=development` a
