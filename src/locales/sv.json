@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Kan du inte installera appen just nu?",
   "mail.boxInstructionsGuideText": "Vår vikguide visar varje steg i en kort animation, och du kan gå fram och tillbaka i din egen takt:",
   "mail.boxInstructionsGuideButton": "Öppna vikguiden",
-  "mail.boxInstructionsGuideImageAlt": "Vikguiden: presentlådan vikt steg för steg i en animation"
+  "mail.boxInstructionsGuideImageAlt": "Vikguiden: presentlådan vikt steg för steg i en animation",
+  "mail.correctionExtras": "I korrigeringsformuläret ger du också dina kort egna korta rader, under artisten och under titeln: ett personligt meddelande, landet, filmen en låt kommer från.",
+  "paymentComplete.pageTitle": "QRSong! betalning",
+  "paymentComplete.paidTitle": "Betalt, tack!",
+  "paymentComplete.paidBody": "Din beställning är lagd. Gå tillbaka till appen för att se den; vi håller dig uppdaterad via e-post.",
+  "paymentComplete.openTitle": "Väntar på din betalning",
+  "paymentComplete.openBody": "Din bank bekräftar betalningen. Sidan uppdateras automatiskt.",
+  "paymentComplete.canceledTitle": "Betalningen avbröts",
+  "paymentComplete.canceledBody": "Inget har dragits. Din beställning väntar fortfarande i appen, redo att betalas.",
+  "paymentComplete.failedTitle": "Betalningen gick inte igenom",
+  "paymentComplete.failedBody": "Inget har dragits. Gå tillbaka till appen och försök igen.",
+  "paymentComplete.unknownTitle": "Nästan klart",
+  "paymentComplete.unknownBody": "Gå tillbaka till appen för att se hur det går med din beställning.",
+  "paymentComplete.backToApp": "Tillbaka till appen",
+  "paymentComplete.hint": "Öppnas inte appen? Öppna QRSong! själv: din beställning väntar där."
 }

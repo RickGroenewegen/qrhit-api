@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Nie możesz teraz zainstalować aplikacji?",
   "mail.boxInstructionsGuideText": "Nasza instrukcja składania pokazuje każdy krok w krótkiej animacji, a ty możesz przechodzić w przód i w tył we własnym tempie:",
   "mail.boxInstructionsGuideButton": "Otwórz instrukcję składania",
-  "mail.boxInstructionsGuideImageAlt": "Instrukcja składania: pudełko prezentowe składane krok po kroku w animacji"
+  "mail.boxInstructionsGuideImageAlt": "Instrukcja składania: pudełko prezentowe składane krok po kroku w animacji",
+  "mail.correctionExtras": "W formularzu korekty możesz też dodać do kart własne krótkie linijki, pod wykonawcą i pod tytułem: osobistą wiadomość, kraj, film, z którego pochodzi piosenka.",
+  "paymentComplete.pageTitle": "Płatność QRSong!",
+  "paymentComplete.paidTitle": "Opłacone, dzięki!",
+  "paymentComplete.paidBody": "Twoje zamówienie jest już u nas. Wróć do aplikacji, żeby je zobaczyć; będziemy informować Cię e-mailem.",
+  "paymentComplete.openTitle": "Czekamy na twoją płatność",
+  "paymentComplete.openBody": "Twój bank potwierdza płatność. Ta strona odświeży się sama.",
+  "paymentComplete.canceledTitle": "Płatność anulowana",
+  "paymentComplete.canceledBody": "Nic nie zostało pobrane. Twoje zamówienie wciąż czeka w aplikacji, gotowe do opłacenia.",
+  "paymentComplete.failedTitle": "Płatność nie przeszła",
+  "paymentComplete.failedBody": "Nic nie zostało pobrane. Wróć do aplikacji, aby spróbować ponownie.",
+  "paymentComplete.unknownTitle": "Prawie gotowe",
+  "paymentComplete.unknownBody": "Wróć do aplikacji, żeby sprawdzić, co z twoim zamówieniem.",
+  "paymentComplete.backToApp": "Wróć do aplikacji",
+  "paymentComplete.hint": "Aplikacja się nie otwiera? Otwórz QRSong! sam: twoje zamówienie już tam czeka."
 }

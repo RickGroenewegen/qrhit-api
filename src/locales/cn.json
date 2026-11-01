@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "现在没法安装应用？",
   "mail.boxInstructionsGuideText": "我们的折叠指南用简短动画展示每一步，你可以按自己的节奏前进或后退：",
   "mail.boxInstructionsGuideButton": "打开折叠指南",
-  "mail.boxInstructionsGuideImageAlt": "折叠指南：用动画一步步展示礼盒的折法"
+  "mail.boxInstructionsGuideImageAlt": "折叠指南：用动画一步步展示礼盒的折法",
+  "mail.correctionExtras": "在更正表单里，你还可以在艺人名下方和歌名下方给卡片加上自己的短句：一句个人留言、国家，或歌曲出自的电影。",
+  "paymentComplete.pageTitle": "QRSong! 付款",
+  "paymentComplete.paidTitle": "已付款，谢谢！",
+  "paymentComplete.paidBody": "你的订单已提交。返回应用即可查看；我们会通过电子邮件随时通知你。",
+  "paymentComplete.openTitle": "正在等待你的付款",
+  "paymentComplete.openBody": "你的银行正在确认付款。此页面会自动更新。",
+  "paymentComplete.canceledTitle": "付款已取消",
+  "paymentComplete.canceledBody": "没有扣款。你的订单仍在应用中等着你，随时可以付款。",
+  "paymentComplete.failedTitle": "付款未成功",
+  "paymentComplete.failedBody": "没有扣款。返回应用再试一次吧。",
+  "paymentComplete.unknownTitle": "马上就好",
+  "paymentComplete.unknownBody": "回到应用查看你的订单进度吧。",
+  "paymentComplete.backToApp": "返回应用",
+  "paymentComplete.hint": "应用打不开？自己打开 QRSong! 吧：你的订单就在那里等你。"
 }

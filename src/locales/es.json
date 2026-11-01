@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "¿No puedes instalar la app ahora mismo?",
   "mail.boxInstructionsGuideText": "Nuestra guía de plegado muestra cada paso en una breve animación, y puedes avanzar y retroceder a tu ritmo:",
   "mail.boxInstructionsGuideButton": "Abrir la guía de plegado",
-  "mail.boxInstructionsGuideImageAlt": "La guía de plegado: la caja regalo plegada paso a paso en una animación"
+  "mail.boxInstructionsGuideImageAlt": "La guía de plegado: la caja regalo plegada paso a paso en una animación",
+  "mail.correctionExtras": "En el formulario de corrección también puedes añadir a tus cartas líneas cortas propias, debajo del artista y debajo del título: un mensaje personal, el país, la película de la que sale una canción.",
+  "paymentComplete.pageTitle": "Pago de QRSong!",
+  "paymentComplete.paidTitle": "¡Pagado, gracias!",
+  "paymentComplete.paidBody": "Tu pedido ya está dentro. Vuelve a la app para verlo; te mantendremos al tanto por e-mail.",
+  "paymentComplete.openTitle": "Esperando tu pago",
+  "paymentComplete.openBody": "Tu banco está confirmando el pago. Esta página se actualiza sola.",
+  "paymentComplete.canceledTitle": "Pago cancelado",
+  "paymentComplete.canceledBody": "No se ha cobrado nada. Tu pedido sigue esperándote en la app, listo para pagar.",
+  "paymentComplete.failedTitle": "El pago no se ha completado",
+  "paymentComplete.failedBody": "No se ha cobrado nada. Vuelve a la app para intentarlo de nuevo.",
+  "paymentComplete.unknownTitle": "Ya casi está",
+  "paymentComplete.unknownBody": "Vuelve a la app para ver cómo va tu pedido.",
+  "paymentComplete.backToApp": "Volver a la app",
+  "paymentComplete.hint": "¿No se abre la app? Abre QRSong! tú mismo: tu pedido te espera allí."
 }

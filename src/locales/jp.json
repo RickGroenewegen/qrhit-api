@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "今すぐアプリをインストールできない？",
   "mail.boxInstructionsGuideText": "折り方ガイドでは、各ステップを短いアニメーションで紹介。自分のペースで進んだり戻ったりできます：",
   "mail.boxInstructionsGuideButton": "折り方ガイドを開く",
-  "mail.boxInstructionsGuideImageAlt": "折り方ガイド：ギフトボックスの折り方をアニメーションで一つずつ紹介"
+  "mail.boxInstructionsGuideImageAlt": "折り方ガイド：ギフトボックスの折り方をアニメーションで一つずつ紹介",
+  "mail.correctionExtras": "修正フォームでは、アーティスト名の下とタイトルの下に、自分だけの短い一文を入れることもできるよ。たとえば個人的なメッセージ、国名、曲が使われた映画など。",
+  "paymentComplete.pageTitle": "QRSong! のお支払い",
+  "paymentComplete.paidTitle": "お支払い完了、ありがとう！",
+  "paymentComplete.paidBody": "ご注文を受け付けました。アプリに戻って確認してね。最新情報はメールでお知らせします。",
+  "paymentComplete.openTitle": "お支払いを待っています",
+  "paymentComplete.openBody": "銀行が支払いを確認中です。このページは自動で更新されます。",
+  "paymentComplete.canceledTitle": "支払いがキャンセルされました",
+  "paymentComplete.canceledBody": "料金は請求されていません。ご注文はアプリに残っているので、いつでもお支払いできます。",
+  "paymentComplete.failedTitle": "お支払いが完了しませんでした",
+  "paymentComplete.failedBody": "料金は請求されていません。アプリに戻って、もう一度お試しください。",
+  "paymentComplete.unknownTitle": "あと少し",
+  "paymentComplete.unknownBody": "アプリに戻って注文の状況をチェックしてね。",
+  "paymentComplete.backToApp": "アプリに戻る",
+  "paymentComplete.hint": "アプリが開かない？自分でQRSong!を開いてね。注文はそこで待ってるよ。"
 }

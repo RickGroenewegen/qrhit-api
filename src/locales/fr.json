@@ -611,5 +611,19 @@
   "countdown.noTimeToInstall": "Impossible d'installer l'appli maintenant ?",
   "mail.boxInstructionsGuideText": "Notre guide de pliage montre chaque étape en courte animation, et tu peux avancer ou revenir en arrière à ton rythme :",
   "mail.boxInstructionsGuideButton": "Ouvrir le guide de pliage",
-  "mail.boxInstructionsGuideImageAlt": "Le guide de pliage : la boîte cadeau pliée étape par étape en animation"
+  "mail.boxInstructionsGuideImageAlt": "Le guide de pliage : la boîte cadeau pliée étape par étape en animation",
+  "mail.correctionExtras": "C'est aussi dans le formulaire de correction que tu ajoutes tes propres petites lignes sur tes cartes, sous l'artiste et sous le titre : un message perso, le pays, le film d'où vient une chanson.",
+  "paymentComplete.pageTitle": "Paiement QRSong!",
+  "paymentComplete.paidTitle": "Payé, merci !",
+  "paymentComplete.paidBody": "Ta commande est bien reçue. Retourne dans l'appli pour la voir ; on te tient au courant par e-mail.",
+  "paymentComplete.openTitle": "En attente de ton paiement",
+  "paymentComplete.openBody": "Ta banque confirme le paiement. Cette page se met à jour toute seule.",
+  "paymentComplete.canceledTitle": "Paiement annulé",
+  "paymentComplete.canceledBody": "Rien n'a été débité. Ta commande t'attend toujours dans l'appli, prête à être payée.",
+  "paymentComplete.failedTitle": "Le paiement n'est pas passé",
+  "paymentComplete.failedBody": "Rien n'a été débité. Retourne dans l'appli pour réessayer.",
+  "paymentComplete.unknownTitle": "Presque fini",
+  "paymentComplete.unknownBody": "Retourne dans l'appli pour voir où en est ta commande.",
+  "paymentComplete.backToApp": "Retour à l'appli",
+  "paymentComplete.hint": "L'appli ne s'ouvre pas ? Ouvre QRSong! toi-même : ta commande t'y attend."
 }
