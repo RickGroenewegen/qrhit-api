@@ -128,7 +128,7 @@
                 const secondStop = Math.min(100, php.gradientPosition + 50);
                 const bgColor = php.backgroundBackColor || '#ffffff';
                 const gradColor = php.gradientBackgroundColor || '#ffffff';
-                const degrees = php.gradientDegrees || 180;
+                const degrees = php.gradientDegrees ?? 180;
             %>
             background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
             <% } else if (php.backgroundBackColor) { %>
@@ -207,7 +207,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                 rowIndices.forEach(function(i) { %>
                     <% if (i !== null) { %>
                         <% const cd = designOfCard(i); %>
-                        <div class="card front<%= designClassOf(i) %>" style="<%= !eco && cd.backgroundFrontType === 'solid' ? (cd.useFrontGradient ? 'background: linear-gradient(' + (cd.gradientFrontDegrees || 180) + 'deg, ' + (cd.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (cd.gradientFrontPosition || 50) - 50) + '%, ' + (cd.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (cd.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (cd.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+                        <div class="card front<%= designClassOf(i) %>" style="<%= !eco && cd.backgroundFrontType === 'solid' ? (cd.useFrontGradient ? 'background: linear-gradient(' + (cd.gradientFrontDegrees ?? 180) + 'deg, ' + (cd.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (cd.gradientFrontPosition ?? 50) - 50) + '%, ' + (cd.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (cd.gradientFrontPosition ?? 50) + 50) + '%);' : 'background: ' + (cd.backgroundFrontColor || '#ffffff') + ';') : '' %>">
                             <% if (!eco && cd.backgroundFrontType !== 'solid') { %>
                                 <% if (cd.background && cd.background.length) { %>
                                     <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= cd.background %>" alt="Card Background">

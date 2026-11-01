@@ -79,6 +79,47 @@ describe('pdf_box_insert.ejs backgrounds', () => {
     expect(html).not.toContain(BRAND_ARTWORK);
   });
 
+  // The box designers (website and app) let a customer put the gradient at
+  // 0°, its colours meeting at 0, the sticker in a corner (0%) and the back
+  // picture at opacity 0; `x || 180` printed those as the defaults.
+  it('prints a chosen 0 as 0, not as the default', async () => {
+    const html = await render({
+      boxFrontBackgroundType: 'solid',
+      boxFrontUseFrontGradient: true,
+      boxFrontBackgroundColor: '#18565e',
+      boxFrontGradientColor: '#0b2c31',
+      boxFrontGradientDegrees: 0,
+      boxFrontGradientPosition: 0,
+      boxFrontLogo: 'sticker.png',
+      boxFrontLogoScale: 40,
+      boxFrontLogoPositionX: 0,
+      boxFrontLogoPositionY: 0,
+      boxBackBackgroundType: 'image',
+      boxBackBackground: 'back.png',
+      boxBackOpacity: 0,
+      boxBackUseGradient: true,
+      boxBackBackgroundColor: '#f79677',
+      boxBackGradientColor: '#dd6a45',
+      boxBackGradientDegrees: 0,
+      boxBackGradientPosition: 0,
+    });
+
+    expect(html).toContain('linear-gradient(0deg, #18565e 0%, #0b2c31 100%)');
+    expect(html).toContain('linear-gradient(0deg, #f79677 0%, #dd6a45 100%)');
+    expect(html).toContain('max-width: 40%; max-height: 40%; position: absolute; left: 0%; top: 0%;');
+    expect(html).toMatch(/back\.png"\s+style="opacity: 0;"/);
+  });
+
+  it('prints a 0 front opacity as 0', async () => {
+    const html = await render({ boxFrontBackgroundType: 'image', boxFrontBackground: 'front.png', boxFrontOpacity: 0 });
+    expect(html).toMatch(/front\.png"\s+style="opacity: 0;"/);
+  });
+
+  it('keeps the default logo size for a scale of 0, which no designer offers', async () => {
+    const html = await render({ boxFrontLogo: 'sticker.png', boxFrontLogoScale: 0 });
+    expect(html).toContain('max-width: 50%; max-height: 50%; position: absolute; left: 50%; top: 50%;');
+  });
+
   it('repeats the front/back pair once per insert', async () => {
     const html = await render({ boxQuantity: 2, amount: 3 }, 0);
 

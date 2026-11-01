@@ -455,12 +455,26 @@ function makeEngine(name: string, assets: Record<string, string>, apiUri: string
     ownPropertyOnly: true,
     outputEscape: 'escape',
     // Conditions follow JavaScript, as in the pdf_*.ejs templates: '' and 0
-    // are false, and `x | default: y` is `x || y`.
+    // are false. `x | default: y` is `x || y` except that a number 0 stays
+    // 0 (registered below).
     jsTruthy: true,
     cache: false,
     parseLimit: 1_000_000,
     renderLimit: 2_000,
     memoryLimit: 50_000_000,
+  });
+  // A design's 0 is a choice: a gradient pointing up (0°), colours meeting
+  // at the edge, a transparent picture. Under jsTruthy the built-in
+  // `default` read it as "not set", so `design.gradientDegrees | default:
+  // 180` printed 180 where the designer showed 0. The pdf_*.ejs templates
+  // write these fallbacks as `x ?? y`; this keeps a number 0 the same way
+  // and leaves everything else ('', null, false, an empty list) to the
+  // built-in filter, so a colour or font size of '' still falls back.
+  const builtInDefault = engine.filters['default'];
+  const defaultHandler =
+    typeof builtInDefault === 'function' ? builtInDefault : builtInDefault.handler;
+  engine.registerFilter('default', function (this: any, value: unknown, ...args: any[]) {
+    return value === 0 ? value : defaultHandler.call(this, value, ...args);
   });
   engine.registerFilter('asset', (file: unknown) => {
     const stored = assets[String(file)];

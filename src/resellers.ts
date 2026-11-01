@@ -12,6 +12,7 @@ import { CartItem } from './interfaces/CartItem';
 import { BACKGROUNDS, getBackgroundsWithUrls } from './backgrounds';
 import { FONTS } from './fonts';
 import { PRINTER_TYPE } from './config/constants';
+import { designInt } from './cardDesigns';
 
 class Resellers {
   private static instance: Resellers;
@@ -338,18 +339,20 @@ class Resellers {
       backgroundFrontColor: design.backgroundFrontColor || '#ffffff',
       useFrontGradient: design.useFrontGradient || false,
       gradientFrontColor: design.gradientFrontColor || '#ffffff',
-      gradientFrontDegrees: design.gradientFrontDegrees || 180,
-      gradientFrontPosition: design.gradientFrontPosition || 50,
+      // 0 is a choice here (the schema allows 0..360 and 0..100); designInt
+      // keeps it and gives the default only to a missing value.
+      gradientFrontDegrees: designInt(design.gradientFrontDegrees, 180, 0, 360),
+      gradientFrontPosition: designInt(design.gradientFrontPosition, 50, 0, 100),
       backgroundBackType: design.backgroundBackType || 'image',
       backgroundBack: resolvedBackgroundBack,
       backgroundBackColor: design.backgroundBackColor || '#ffffff',
       fontColor: design.fontColor || '#000000',
       useGradient: design.useGradient || false,
       gradientBackgroundColor: design.gradientBackgroundColor || '#ffffff',
-      gradientDegrees: design.gradientDegrees || 180,
-      gradientPosition: design.gradientPosition || 50,
-      frontOpacity: design.frontOpacity !== undefined ? design.frontOpacity : 100,
-      backOpacity: design.backOpacity !== undefined ? design.backOpacity : 50,
+      gradientDegrees: designInt(design.gradientDegrees, 180, 0, 360),
+      gradientPosition: designInt(design.gradientPosition, 50, 0, 100),
+      frontOpacity: designInt(design.frontOpacity, 100, 0, 100),
+      backOpacity: designInt(design.backOpacity, 50, 0, 100),
       printerType: PRINTER_TYPE.RESELLER,
       gamesEnabled: false,
       gamesPrice: 0,
