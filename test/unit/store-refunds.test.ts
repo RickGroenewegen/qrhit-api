@@ -16,6 +16,7 @@ const h = vi.hoisted(() => {
   const db = { payments: [] as any[], lines: [] as any[] };
   const matches = (row: any, where: any): boolean =>
     Object.entries(where).every(([field, condition]: [string, any]) => {
+      if (field === 'OR') return condition.some((alternative: any) => matches(row, alternative));
       const value = row[field];
       if (condition === null) return value === null;
       if (condition && typeof condition === 'object' && !(condition instanceof Date)) {
@@ -180,9 +181,9 @@ describe('Google Play', () => {
   it('refunds a voided order, blocks its lines and tells Rick', async () => {
     h.db.payments = [order()];
     h.db.lines = [
-      { id: 11, paymentId: 1, blocked: false },
-      { id: 12, paymentId: 1, blocked: false },
-      { id: 13, paymentId: 2, blocked: false },
+      { id: 11, paymentId: 1, blocked: false, blockedReason: null },
+      { id: 12, paymentId: 1, blocked: false, blockedReason: null },
+      { id: 13, paymentId: 2, blocked: false, blockedReason: null },
     ];
     h.voidedList
       .mockResolvedValueOnce({ data: { voidedPurchases: [voided({ orderId: 'GPA.other' })], tokenPagination: { nextPageToken: 'page-2' } } })
@@ -203,11 +204,30 @@ describe('Google Play', () => {
       refundReason: 'Google Play refund: chargeback',
       profit: 0,
     });
-    expect(h.db.lines.map((l) => l.blocked)).toEqual([true, true, false]);
+    expect(h.db.lines.map((l) => [l.blocked, l.blockedReason])).toEqual([
+      [true, 'Google Play refund: chargeback (2026-10-28)'],
+      [true, 'Google Play refund: chargeback (2026-10-28)'],
+      [false, null],
+    ]);
     expect(h.republishBlocked).toHaveBeenCalledTimes(1);
     expect(pushes()).toHaveLength(1);
     expect(pushes()[0].args[0].title).toContain('APP-REFUND');
     expect(pushes()[0].args[0].message).toMatch(/^Via Google Play: .*€ 13,00.*100012345/);
+  });
+
+  it("keeps the reason of a line an admin had blocked already", async () => {
+    h.db.payments = [order()];
+    h.db.lines = [
+      { id: 11, paymentId: 1, blocked: true, blockedReason: 'Shared on a forum' },
+      { id: 12, paymentId: 1, blocked: true, blockedReason: null },
+    ];
+    h.voidedList.mockResolvedValue({ data: { voidedPurchases: [voided()] } });
+
+    expect(await job.run()).toEqual({ google: 1, apple: 0 });
+    expect(h.db.lines.map((l) => l.blockedReason)).toEqual([
+      'Shared on a forum',
+      'Google Play refund: chargeback (2026-10-28)',
+    ]);
   });
 
   it('matches an order stored under its token hash', async () => {
@@ -224,7 +244,7 @@ describe('Google Play', () => {
       order({ refundedAt: earlier, refundAmount: 13, refundReason: 'Google Play refund: other' }),
       order({ id: 2, orderId: '100012346', storeTransactionId: 'GPA.3300-0000-0000-00002' }),
     ];
-    h.db.lines = [{ id: 21, paymentId: 2, blocked: false }];
+    h.db.lines = [{ id: 21, paymentId: 2, blocked: false, blockedReason: null }];
     h.voidedList.mockResolvedValue({
       data: { voidedPurchases: [voided(), voided({ orderId: 'GPA.3300-0000-0000-00002', purchaseToken: 'token-2' })] },
     });
@@ -240,7 +260,7 @@ describe('Google Play', () => {
 
   it('ignores a voided purchase no order knows', async () => {
     h.db.payments = [order()];
-    h.db.lines = [{ id: 11, paymentId: 1, blocked: false }];
+    h.db.lines = [{ id: 11, paymentId: 1, blocked: false, blockedReason: null }];
     h.voidedList.mockResolvedValue({ data: { voidedPurchases: [voided({ orderId: 'GPA.unknown', purchaseToken: 'other' })] } });
 
     expect(await job.run()).toEqual({ google: 0, apple: 0 });
@@ -252,7 +272,7 @@ describe('Google Play', () => {
 
   it('refunds and blocks a test purchase without a Pushover', async () => {
     h.db.payments = [order({ storeEnvironment: 'sandbox' })];
-    h.db.lines = [{ id: 11, paymentId: 1, blocked: false }];
+    h.db.lines = [{ id: 11, paymentId: 1, blocked: false, blockedReason: null }];
     h.voidedList.mockResolvedValue({ data: { voidedPurchases: [voided()] } });
 
     expect(await job.run()).toEqual({ google: 1, apple: 0 });
@@ -263,7 +283,7 @@ describe('Google Play', () => {
 
   it('leaves the order for the next run when the blocked list could not be published', async () => {
     h.db.payments = [order()];
-    h.db.lines = [{ id: 11, paymentId: 1, blocked: false }];
+    h.db.lines = [{ id: 11, paymentId: 1, blocked: false, blockedReason: null }];
     h.voidedList.mockResolvedValue({ data: { voidedPurchases: [voided()] } });
     h.republishBlocked.mockResolvedValueOnce(false);
 
@@ -301,9 +321,9 @@ describe('App Store', () => {
       appleOrder({ id: 3, orderId: '100012347', storeTransactionId: '2000001043762300', createdAt: older }),
     ];
     h.db.lines = [
-      { id: 11, paymentId: 1, blocked: false },
-      { id: 21, paymentId: 2, blocked: false },
-      { id: 31, paymentId: 3, blocked: false },
+      { id: 11, paymentId: 1, blocked: false, blockedReason: null },
+      { id: 21, paymentId: 2, blocked: false, blockedReason: null },
+      { id: 31, paymentId: 3, blocked: false, blockedReason: null },
     ];
     // The first order's buyer bought the second too and had both refunded,
     // over two pages; the third order is someone else's.
@@ -330,7 +350,11 @@ describe('App Store', () => {
     });
     expect(h.db.payments[1].refundReason).toBe('App Store refund: other');
     expect(h.db.payments[2].refundedAt).toBeNull();
-    expect(h.db.lines.map((l) => l.blocked)).toEqual([true, true, false]);
+    expect(h.db.lines.map((l) => [l.blocked, l.blockedReason])).toEqual([
+      [true, 'App Store refund: issue with the purchase (2026-10-29)'],
+      [true, 'App Store refund: other (2026-10-29)'],
+      [false, null],
+    ]);
     expect(pushes()).toHaveLength(2);
     expect(pushes()[0].args[0].message).toMatch(/^Via de App Store: /);
   });

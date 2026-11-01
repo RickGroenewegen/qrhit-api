@@ -17,6 +17,7 @@ import Data from './data';
 import PushoverClient from './pushover';
 import StorePurchases, { STORE_BUNDLE_ID, purchaseTokenTransactionId } from './storePurchases';
 import { STORE_PAYMENT_METHOD } from './storeProducts';
+import { blockedReasonValue } from './data/playlists';
 
 /**
  * Refunds of the scan app's store orders (2.1.0).
@@ -39,7 +40,8 @@ import { STORE_PAYMENT_METHOD } from './storeProducts';
  *   (APPLE_IAP_KEY_FILE, APPLE_IAP_KEY_ID, APPLE_IAP_ISSUER_ID); without one
  *   only Google is checked.
  *
- * A refunded order gets its lines blocked, so the cards no longer play, and
+ * A refunded order gets its lines blocked, so the cards no longer play (with
+ * the refund as `blockedReason`, which the dashboard shows), and
  * `refundAmount` (all of it: a deck is refunded whole), `refundedAt` (the
  * store's time) and `refundReason`. Its profit goes to 0: the reports take
  * refundAmount off the turnover but never off the profit, and the store
@@ -112,6 +114,14 @@ export function googleRefundReason(voidedReason: number | null | undefined): str
 
 export function appleRefundReason(revocationReason: number | null | undefined): string {
   return `App Store refund: ${APPLE_REASONS[revocationReason ?? -1] ?? `reason ${revocationReason}`}`;
+}
+
+/**
+ * Why a refunded order's lines are blocked, as the dashboard shows it: the
+ * refund and its day, e.g. 'Google Play refund: chargeback (2026-10-28)'.
+ */
+export function storeRefundBlockedReason(refund: StoreRefund): string {
+  return blockedReasonValue(`${refund.reason} (${refund.refundedAt.toISOString().slice(0, 10)})`)!;
 }
 
 export interface StoreRefundCounts {
@@ -375,9 +385,11 @@ class StoreRefunds {
    * tries again. True when this run handled it.
    */
   private async refundOrder(order: StoreOrder, refund: StoreRefund): Promise<boolean> {
+    // The dashboard shows why a line is blocked. A line an admin blocked
+    // already keeps the admin's reason.
     const lines = await this.prisma.paymentHasPlaylist.updateMany({
-      where: { paymentId: order.id },
-      data: { blocked: true },
+      where: { paymentId: order.id, OR: [{ blocked: false }, { blockedReason: null }] },
+      data: { blocked: true, blockedReason: storeRefundBlockedReason(refund) },
     });
     if (!(await Data.getInstance().republishBlocked())) {
       this.log(
