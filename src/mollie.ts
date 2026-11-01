@@ -4310,7 +4310,12 @@ class Mollie {
     if (purchase.productId !== order.storeProductId) {
       return { success: false, error: 'store_product_mismatch' };
     }
-    if (purchase.appAccountToken !== paymentId.slice('store_'.length)) {
+    // Case-blind: StoreKit hands the token back in capitals (UUID.uuidString),
+    // our order ids are lower case, and a JWS may carry either
+    if (
+      purchase.appAccountToken?.toLowerCase() !==
+      paymentId.slice('store_'.length).toLowerCase()
+    ) {
       return { success: false, error: 'store_token_mismatch' };
     }
     if (order.status === 'paid') {

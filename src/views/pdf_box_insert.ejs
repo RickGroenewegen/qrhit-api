@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <title>Box Insert - QRSong!</title>
+<%
+// The message's font, written unescaped below: escaping turned the quotes of
+// "Fira Sans" into &#34;, which a style sheet does not decode, so the
+// declaration was dropped. The pattern (cardDesigns.ts FONT_FAMILY) keeps it
+// a font list.
+const boxFont = /^[A-Za-z0-9 ,"'._-]{1,120}$/.test(php.boxBackSelectedFont || '')
+    ? php.boxBackSelectedFont
+    : 'Arial, sans-serif';
+%>
 <style>
     @media print {
         @page {
@@ -90,7 +99,7 @@
         padding: 15mm;
         text-align: center;
         font-size: <%= parseFloat(php.boxBackSelectedFontSize || '14') * 1.47 %>px;
-        font-family: <%= php.boxBackSelectedFont || 'Arial, sans-serif' %>;
+        font-family: <%- boxFont %>;
         line-height: 1.5;
         word-wrap: break-word;
         white-space: pre-wrap;
@@ -106,7 +115,6 @@
 <%
 // Font embedding for box back text
 let boxFontStyles = '';
-const boxFont = php.boxBackSelectedFont || 'Arial, sans-serif';
 if (boxFont && boxFont !== 'Arial, sans-serif') {
     let fontName = boxFont.split(',')[0].trim().replace(/["']/g, '');
     // Weight variants lead with a private alias, so the family to request from

@@ -128,4 +128,15 @@ describe('pdf_box_insert.ejs backgrounds', () => {
     expect(artwork).toHaveLength(12);
     expect(html).toContain('Insert 6 of 6');
   });
+
+  it('prints the message in a quoted font family, which escaping used to drop', async () => {
+    const html = await render({ boxBackSelectedFont: '"Fira Sans", Arial, sans-serif', boxBackText: 'Hi' });
+    expect(html).toContain('font-family: "Fira Sans", Arial, sans-serif;');
+  });
+
+  it('keeps anything but a font list out of the style sheet', async () => {
+    const html = await render({ boxBackSelectedFont: 'x;}</style><script>alert(1)</script>' });
+    expect(html).not.toContain('<script>alert');
+    expect(html).toContain('font-family: Arial, sans-serif;');
+  });
 });
