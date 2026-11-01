@@ -19,6 +19,7 @@ import {
   MAX_EXTRA_DESIGNS,
   deckDesigns,
   designIndexForCard,
+  designInt,
   extraDesignRows,
   getExtraDesigns,
   pickCardDesign,
@@ -190,6 +191,59 @@ describe('sanitizeCardDesign', () => {
   it('strips markup from the emoji and caps its length', () => {
     expect(sanitizeCardDesign({ emoji: '<b>x</b>' }).emoji).toBe('bx/b');
     expect(sanitizeCardDesign({ emoji: 'x'.repeat(100) }).emoji).toHaveLength(32);
+  });
+
+  it('keeps a chosen 0: a gradient pointing up, colours meeting at the edge, a transparent picture', () => {
+    const design = sanitizeCardDesign({
+      gradientFrontDegrees: 0,
+      gradientFrontPosition: 0,
+      frontOpacity: 0,
+      gradientDegrees: '0',
+      gradientPosition: 0,
+      backOpacity: 0,
+    });
+    expect(design.gradientFrontDegrees).toBe(0);
+    expect(design.gradientFrontPosition).toBe(0);
+    expect(design.frontOpacity).toBe(0);
+    expect(design.gradientDegrees).toBe(0);
+    expect(design.gradientPosition).toBe(0);
+    expect(design.backOpacity).toBe(0);
+  });
+});
+
+/**
+ * designInt is how the checkout (mollie.ts, which cannot be loaded in a test:
+ * its constructor starts a cron) and the reseller API store design 1's and
+ * the box's numbers. Before it they used `x || 180`, which stored a chosen 0
+ * as the default.
+ */
+describe('designInt', () => {
+  it('keeps 0, as a number or a string', () => {
+    expect(designInt(0, 180, 0, 360)).toBe(0);
+    expect(designInt('0', 180, 0, 360)).toBe(0);
+    expect(designInt(-0, 50, 0, 100)).toBe(0);
+  });
+
+  it('gives the default to a missing value', () => {
+    for (const missing of [undefined, null, '', '   ']) {
+      expect(designInt(missing, 180, 0, 360)).toBe(180);
+      expect(designInt(missing, 50, 0, 100)).toBe(50);
+    }
+  });
+
+  it('gives the default to anything that is not a number', () => {
+    for (const garbage of [NaN, Infinity, 'abc', '12px', true, false, {}, [], [5]]) {
+      expect(designInt(garbage, 100, 0, 100)).toBe(100);
+    }
+  });
+
+  it('keeps any other number, whole and within the range', () => {
+    expect(designInt(90, 180, 0, 360)).toBe(90);
+    expect(designInt('45', 180, 0, 360)).toBe(45);
+    expect(designInt(360, 180, 0, 360)).toBe(360);
+    expect(designInt(12.6, 50, 0, 100)).toBe(13);
+    expect(designInt(250, 100, 0, 100)).toBe(100);
+    expect(designInt(-5, 50, 0, 100)).toBe(0);
   });
 });
 

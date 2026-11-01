@@ -56,6 +56,7 @@ import UpgradeInvoices, {
 import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
   CARD_DESIGN_SELECT,
+  designInt,
   extraDesignRows,
   sanitizeExtraDesigns,
 } from './cardDesigns';
@@ -3039,8 +3040,11 @@ class Mollie {
             backgroundFrontColor: item.backgroundFrontColor || '#ffffff',
             useFrontGradient: this.utils.parseBoolean(item.useFrontGradient),
             gradientFrontColor: item.gradientFrontColor || '#ffffff',
-            gradientFrontDegrees: item.gradientFrontDegrees || 180,
-            gradientFrontPosition: item.gradientFrontPosition || 50,
+            // Numbers where 0 is a choice (a gradient pointing up, colours
+            // meeting at the edge, a transparent picture): designInt keeps
+            // 0 and gives the default only to a missing value.
+            gradientFrontDegrees: designInt(item.gradientFrontDegrees, 180, 0, 360),
+            gradientFrontPosition: designInt(item.gradientFrontPosition, 50, 0, 100),
             // Back side
             backgroundBackType: item.backgroundBackType || 'image',
             backgroundBack: item.backgroundBack || '',
@@ -3048,12 +3052,11 @@ class Mollie {
             fontColor: item.fontColor || '#000000',
             useGradient: this.utils.parseBoolean(item.useGradient),
             gradientBackgroundColor: item.gradientBackgroundColor || '#ffffff',
-            gradientDegrees: item.gradientDegrees || 180,
-            gradientPosition: item.gradientPosition || 50,
+            gradientDegrees: designInt(item.gradientDegrees, 180, 0, 360),
+            gradientPosition: designInt(item.gradientPosition, 50, 0, 100),
             // Opacity
-            frontOpacity:
-              item.frontOpacity !== undefined ? item.frontOpacity : 100,
-            backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
+            frontOpacity: designInt(item.frontOpacity, 100, 0, 100),
+            backOpacity: designInt(item.backOpacity, 50, 0, 100),
             ...(extraDesigns.length
               ? { extraDesigns: { create: extraDesignRows(extraDesigns) } }
               : {}),
@@ -3078,12 +3081,12 @@ class Mollie {
               item.boxFrontUseFrontGradient
             ),
             boxFrontGradientColor: item.boxFrontGradientColor || '#ffffff',
-            boxFrontGradientDegrees: item.boxFrontGradientDegrees || 180,
-            boxFrontGradientPosition: item.boxFrontGradientPosition || 50,
+            boxFrontGradientDegrees: designInt(item.boxFrontGradientDegrees, 180, 0, 360),
+            boxFrontGradientPosition: designInt(item.boxFrontGradientPosition, 50, 0, 100),
             boxFrontLogo: item.boxFrontLogo || '',
             boxFrontLogoScale: item.boxFrontLogoScale ?? 50,
-            boxFrontLogoPositionX: item.boxFrontLogoPositionX ?? 50,
-            boxFrontLogoPositionY: item.boxFrontLogoPositionY ?? 50,
+            boxFrontLogoPositionX: designInt(item.boxFrontLogoPositionX, 50, 0, 100),
+            boxFrontLogoPositionY: designInt(item.boxFrontLogoPositionY, 50, 0, 100),
             boxFrontEmoji: item.boxFrontEmoji || '',
             // Box back design
             boxBackBackgroundType: item.boxBackBackgroundType || 'solid',
@@ -3092,9 +3095,9 @@ class Mollie {
             boxBackFontColor: item.boxBackFontColor || '#000000',
             boxBackUseGradient: this.utils.parseBoolean(item.boxBackUseGradient),
             boxBackGradientColor: item.boxBackGradientColor || '#ffffff',
-            boxBackGradientDegrees: item.boxBackGradientDegrees || 180,
-            boxBackGradientPosition: item.boxBackGradientPosition || 50,
-            boxBackOpacity: item.boxBackOpacity !== undefined ? item.boxBackOpacity : 50,
+            boxBackGradientDegrees: designInt(item.boxBackGradientDegrees, 180, 0, 360),
+            boxBackGradientPosition: designInt(item.boxBackGradientPosition, 50, 0, 100),
+            boxBackOpacity: designInt(item.boxBackOpacity, 50, 0, 100),
             boxBackText: item.boxBackText || '',
             boxBackSelectedFont: item.boxBackSelectedFont || 'Arial, sans-serif',
             boxBackSelectedFontSize: item.boxBackFontSize ? `${item.boxBackFontSize}px` : (item.boxBackSelectedFontSize || '14px'),

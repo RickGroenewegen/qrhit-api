@@ -129,7 +129,15 @@ function color(value: unknown, fallback: string): string {
     : fallback;
 }
 
-function int(value: unknown, fallback: number, min: number, max: number): number {
+/**
+ * A numeric design value (gradient degrees or position, an opacity, a logo
+ * position) as it is stored: a whole number within min..max. 0 is a real
+ * choice (a gradient pointing up, colours meeting at the edge, a transparent
+ * picture) and stays 0; only a missing value (undefined, null, '') or one
+ * that is not a number gets the fallback, the column's default. `x || 180`
+ * read a chosen 0 as "not set" and printed the default instead.
+ */
+export function designInt(value: unknown, fallback: number, min: number, max: number): number {
   if (typeof value === 'string' && value.trim() === '') return fallback;
   const parsed = typeof value === 'string' ? Number(value) : value;
   if (typeof parsed !== 'number' || !Number.isFinite(parsed)) return fallback;
@@ -184,18 +192,18 @@ export function sanitizeCardDesign(input: unknown): CardDesign {
     backgroundFrontColor: color(d['backgroundFrontColor'], '#ffffff'),
     useFrontGradient: bool(d['useFrontGradient']),
     gradientFrontColor: color(d['gradientFrontColor'], '#ffffff'),
-    gradientFrontDegrees: int(d['gradientFrontDegrees'], 180, 0, 360),
-    gradientFrontPosition: int(d['gradientFrontPosition'], 50, 0, 100),
-    frontOpacity: int(d['frontOpacity'], 100, 0, 100),
+    gradientFrontDegrees: designInt(d['gradientFrontDegrees'], 180, 0, 360),
+    gradientFrontPosition: designInt(d['gradientFrontPosition'], 50, 0, 100),
+    frontOpacity: designInt(d['frontOpacity'], 100, 0, 100),
     backgroundBackType: oneOf(d['backgroundBackType'], ['solid', 'image'], 'image'),
     backgroundBack: filename(d['backgroundBack']),
     backgroundBackColor: color(d['backgroundBackColor'], '#ffffff'),
     fontColor: color(d['fontColor'], '#000000'),
     useGradient: bool(d['useGradient']),
     gradientBackgroundColor: color(d['gradientBackgroundColor'], '#ffffff'),
-    gradientDegrees: int(d['gradientDegrees'], 180, 0, 360),
-    gradientPosition: int(d['gradientPosition'], 50, 0, 100),
-    backOpacity: int(d['backOpacity'], 50, 0, 100),
+    gradientDegrees: designInt(d['gradientDegrees'], 180, 0, 360),
+    gradientPosition: designInt(d['gradientPosition'], 50, 0, 100),
+    backOpacity: designInt(d['backOpacity'], 50, 0, 100),
     sameAsFront: bool(d['sameAsFront']),
   };
 }

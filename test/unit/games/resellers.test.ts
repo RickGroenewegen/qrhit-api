@@ -323,6 +323,43 @@ describe('createOrder', () => {
     );
   });
 
+  it('stores a chosen 0 as 0 and the defaults for what was not sent', async () => {
+    recognizedPlaylist();
+    const result = await resellers.createOrder(resellerUser, {
+      playlistUrl: 'http://spotify',
+      design: {
+        gradientFrontDegrees: 0,
+        gradientFrontPosition: 0,
+        frontOpacity: 0,
+        gradientDegrees: 0,
+        gradientPosition: 0,
+        backOpacity: 0,
+      },
+    });
+    expect(result.success).toBe(true);
+    const php = h.prisma.payment.create.mock.calls[0][0].data.PaymentHasPlaylist.create[0];
+    expect(php).toMatchObject({
+      gradientFrontDegrees: 0,
+      gradientFrontPosition: 0,
+      frontOpacity: 0,
+      gradientDegrees: 0,
+      gradientPosition: 0,
+      backOpacity: 0,
+    });
+
+    h.prisma.payment.create.mockClear();
+    recognizedPlaylist();
+    await resellers.createOrder(resellerUser, { playlistUrl: 'http://spotify', design: {} });
+    expect(h.prisma.payment.create.mock.calls[0][0].data.PaymentHasPlaylist.create[0]).toMatchObject({
+      gradientFrontDegrees: 180,
+      gradientFrontPosition: 50,
+      frontOpacity: 100,
+      gradientDegrees: 180,
+      gradientPosition: 50,
+      backOpacity: 50,
+    });
+  });
+
   it('resolves numeric media IDs to stored filenames', async () => {
     recognizedPlaylist();
     h.prisma.resellerMedia.findFirst
