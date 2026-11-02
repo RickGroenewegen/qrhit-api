@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
+import { isIPv6 } from 'net';
 import AIPlaylistGenerator, { aiPlaylistJobKey } from '../aiPlaylist';
 import AIPlaylistSuggestions from '../aiPlaylistSuggestions';
 import AIPlaylistSpotifySuggestions from '../aiPlaylistSpotifySuggestions';
@@ -11,7 +12,9 @@ import { color, white } from 'console-log-colors';
 const MIN_TRACKS = 25;
 const MAX_TRACKS = 500;
 const MAX_PROMPT_LEN = 250;
-const DAILY_LIMIT_PER_IP = 5;
+const DAILY_LIMIT = 5;
+// The id the website keeps per browser (a UUID in localStorage).
+const CLIENT_ID_PATTERN = /^[A-Za-z0-9-]{16,64}$/;
 // How long a job's prompt is kept for the progress page's suggestions.
 const JOB_TTL_SECONDS = 30 * 60;
 
@@ -19,13 +22,52 @@ function isDev(): boolean {
   return process.env['ENVIRONMENT'] === 'development';
 }
 
-function dailyKeyForIp(ip: string): string {
+function parseClientId(value: unknown): string {
+  return typeof value === 'string' && CLIENT_ID_PATTERN.test(value) ? value : '';
+}
+
+/**
+ * An IPv6 address counts by its /64: a home or phone connection gets a whole
+ * /64, and the device moves to a new temporary address within it from time
+ * to time, each with a fresh quota (2026-10-29: 5 playlists, then 5 more from
+ * the same connection on a new address). IPv4, also mapped into IPv6, counts
+ * as the address itself.
+ */
+function addressKey(ip: string): string {
+  const address = ip.split('%')[0].toLowerCase();
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(address);
+  if (mapped) return mapped[1];
+  if (!isIPv6(address)) return ip;
+  const [head, tail] = address.split('::');
+  const groups = head ? head.split(':') : [];
+  if (tail !== undefined) {
+    const tailGroups = tail ? tail.split(':') : [];
+    // An IPv4 tail ("::1.2.3.4") holds two groups.
+    const tailSize = tailGroups.reduce((n, g) => n + (g.includes('.') ? 2 : 1), 0);
+    groups.push(...Array(8 - groups.length - tailSize).fill('0'), ...tailGroups);
+  }
+  const prefix = groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16));
+  return `${prefix.join(':')}::/64`;
+}
+
+/**
+ * The counters of the daily limit: the address, and the browser (the id the
+ * form sends; the status check may come without). The address alone let one person make 29 playlists in a
+ * day (2026-10-26): iCloud Private Relay gives Safari a new one every few
+ * requests. Clearing the site's data drops the browser id, so it only holds
+ * people who were not trying to get round the limit, which is most of them.
+ */
+function dailyKeys(ip: string, clientId: string): string[] {
   const d = new Date();
   const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(
     2,
     '0'
   )}${String(d.getUTCDate()).padStart(2, '0')}`;
-  return `aiPlaylist:rate:${ip}:${ymd}`;
+  const keys = [`aiPlaylist:rate:${addressKey(ip)}:${ymd}`];
+  if (clientId) {
+    keys.push(`aiPlaylist:rate:client:${clientId}:${ymd}`);
+  }
+  return keys;
 }
 
 function parseLocale(value: unknown): string {
@@ -48,6 +90,7 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
       trackCount?: unknown;
       captchaToken?: unknown;
       locale?: unknown;
+      clientId?: unknown;
     };
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
     const trackCount =
@@ -57,6 +100,7 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
     const captchaToken =
       typeof body.captchaToken === 'string' ? body.captchaToken : '';
     const locale = parseLocale(body.locale);
+    const clientId = parseClientId(body.clientId);
 
     if (!prompt || prompt.length > MAX_PROMPT_LEN) {
       return reply.status(400).send({
@@ -72,6 +116,15 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
       });
     }
 
+    // Only the website's form generates, and it always sends its browser id
+    // (Rick, 2026-11-02: not for other applications to call directly). A
+    // request without one gets the captcha's refusal, which names nothing.
+    if (!clientId) {
+      return reply
+        .status(400)
+        .send({ success: false, error: 'reCAPTCHA verification failed' });
+    }
+
     // reCAPTCHA v3 — match the pattern used by /contact and the public
     // chat init route. Each AI run costs real OpenAI tokens, so we want
     // a soft bot gate before we kick off the job.
@@ -80,34 +133,45 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         .status(400)
         .send({ success: false, error: 'reCAPTCHA verification failed' });
     }
-    const { isHuman } = await utils.verifyRecaptcha(captchaToken);
+    // The token must be one the form asked for this action.
+    const { isHuman } = await utils.verifyRecaptcha(captchaToken, 0.5, 'aiPlaylistGenerate');
     if (!isHuman) {
       return reply
         .status(400)
         .send({ success: false, error: 'reCAPTCHA verification failed' });
     }
 
-    // Per-IP daily generation limit. Bypassed in development and for
-    // TRUSTED_IPS so local testing / office IPs aren't capped. Bumps the
-    // counter atomically with INCR; if it lands over the limit we DECR
-    // it back so the rejected attempt doesn't count.
+    // Daily generation limit, per address and per browser (dailyKeys).
+    // Bypassed in development and for TRUSTED_IPS so local testing / office
+    // IPs aren't capped. Bumps each counter atomically with INCR; if one
+    // lands over the limit we DECR them all back so the rejected attempt
+    // doesn't count.
     const ip = utils.getClientIp(request);
     const rateLimitExempt = isDev() || utils.isTrustedIp(ip);
+    // Returned so the form can update its counter without a follow-up GET.
+    let remaining: number | null = null;
     if (!rateLimitExempt) {
-      const key = dailyKeyForIp(ip);
+      const keys = dailyKeys(ip, clientId);
       try {
-        const used = parseInt(await cache.executeCommand('incr', key), 10);
-        if (used === 1) {
-          await cache.executeCommand('expire', key, 24 * 3600);
+        let used = 0;
+        for (const key of keys) {
+          const count = parseInt(await cache.executeCommand('incr', key), 10);
+          if (count === 1) {
+            await cache.executeCommand('expire', key, 24 * 3600);
+          }
+          used = Math.max(used, count);
         }
-        if (used > DAILY_LIMIT_PER_IP) {
-          await cache.executeCommand('decr', key);
+        if (used > DAILY_LIMIT) {
+          for (const key of keys) {
+            await cache.executeCommand('decr', key);
+          }
           return reply.status(429).send({
             success: false,
             error: 'Daily AI generation limit reached',
-            data: { used: DAILY_LIMIT_PER_IP, limit: DAILY_LIMIT_PER_IP, remaining: 0 },
+            data: { used: DAILY_LIMIT, limit: DAILY_LIMIT, remaining: 0 },
           });
         }
+        remaining = DAILY_LIMIT - used;
       } catch (err) {
         logger.log(
           color.yellow.bold(`[AI] Rate-limit check failed (allowing through): ${err}`)
@@ -124,21 +188,6 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         )}" trackCount=${white.bold(trackCount.toString())}`
       )
     );
-
-    // Compute remaining for the response so the form can update its
-    // counter without a follow-up GET.
-    let remaining: number | null = null;
-    if (!rateLimitExempt) {
-      try {
-        const used = parseInt(
-          (await cache.executeCommand('get', dailyKeyForIp(ip))) || '0',
-          10
-        );
-        remaining = Math.max(0, DAILY_LIMIT_PER_IP - used);
-      } catch {
-        remaining = null;
-      }
-    }
 
     // The progress page asks for matching featured playlists by job id, and
     // it can get there before the background run has written anything.
@@ -164,7 +213,7 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         jobId,
         rateLimit: rateLimitExempt
           ? null
-          : { remaining, limit: DAILY_LIMIT_PER_IP, enforced: true },
+          : { remaining, limit: DAILY_LIMIT, enforced: true },
       },
     });
 
@@ -220,8 +269,9 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
   fastify.get('/ai-playlist/suggestions/:jobId', suggestForJob(suggestions));
   fastify.get('/ai-playlist/spotify-suggestions/:jobId', suggestForJob(spotifySuggestions));
 
-  // Per-IP daily quota status — the form polls this on init so it can
-  // show "X of 25 daily generations used" under the char counter.
+  // Daily quota status — the form polls this on init (with its browser id
+  // as `clientId`) so it can show "X of 5 playlists left today" under the
+  // char counter. The fuller of the two counters is what is left.
   fastify.get('/ai-playlist/rate-limit-status', async (request: any, reply: any) => {
     const ip = utils.getClientIp(request);
     const exempt = isDev() || utils.isTrustedIp(ip);
@@ -231,17 +281,17 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         data: {
           enforced: false,
           used: 0,
-          limit: DAILY_LIMIT_PER_IP,
-          remaining: DAILY_LIMIT_PER_IP,
+          limit: DAILY_LIMIT,
+          remaining: DAILY_LIMIT,
         },
       });
     }
     let used = 0;
     try {
-      used = parseInt(
-        (await cache.executeCommand('get', dailyKeyForIp(ip))) || '0',
-        10
-      );
+      for (const key of dailyKeys(ip, parseClientId(request.query?.clientId))) {
+        const count = parseInt((await cache.executeCommand('get', key)) || '0', 10);
+        used = Math.max(used, count);
+      }
     } catch {
       used = 0;
     }
@@ -250,8 +300,8 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
       data: {
         enforced: true,
         used,
-        limit: DAILY_LIMIT_PER_IP,
-        remaining: Math.max(0, DAILY_LIMIT_PER_IP - used),
+        limit: DAILY_LIMIT,
+        remaining: Math.max(0, DAILY_LIMIT - used),
       },
     });
   });
