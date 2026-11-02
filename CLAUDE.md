@@ -617,6 +617,17 @@ steps: an LLM names keywords (mostly artists), every keyword is a
 `LIKE` search on `tracks` (50 random rows each), and an LLM picks from the
 candidates in batches of 100. Two things sit on top of that since 2026-09-30.
 
+**Who may generate** (`routes/aiPlaylistRoutes.ts`): the website's form only.
+`/ai-playlist/generate` needs a reCAPTCHA v3 token and the form's browser id
+(`clientId`, a random id in localStorage; without storage one per visit), and
+answers a missing id with the captcha's own refusal, so the response names
+nothing to fix (Rick, 2026-11-02). Five a day, counted per address and per
+browser id; the fuller counter decides. An IPv6 address counts by its /64,
+because devices move to a new temporary address within it (5 + 5 from one
+connection, 2026-10-29). The browser id is there for iCloud Private Relay,
+which hands Safari a new address every few requests (one person made 29 in a
+day on 20 addresses, 2026-10-26).
+
 **Who gets how many songs** (`aiPlaylistBalance.ts`). Nothing used to count
 per artist, so whoever had the most songs in the catalogue dominated:
 "klassik" delivered 13 Beethoven pieces out of 75, and a customer who wrote

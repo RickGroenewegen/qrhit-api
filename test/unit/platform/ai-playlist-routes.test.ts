@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterAll, beforeAll } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
+import { randomUUID } from 'crypto';
 
 /**
  * The AI playlist routes on a bare Fastify instance, with the generator, both
@@ -12,6 +13,8 @@ const h = vi.hoisted(() => {
   return {
     store,
     counters,
+    ip: '203.0.113.7',
+    verifyRecaptcha: vi.fn(async () => ({ isHuman: true })),
     run: vi.fn(async () => {}),
     getSnapshot: vi.fn(),
     suggest: vi.fn(),
@@ -34,8 +37,8 @@ vi.mock('../../../src/aiPlaylistSpotifySuggestions', () => ({
 
 vi.mock('../../../src/utils', () => ({
   default: class {
-    verifyRecaptcha = async () => ({ isHuman: true });
-    getClientIp = () => '203.0.113.7';
+    verifyRecaptcha = h.verifyRecaptcha;
+    getClientIp = () => h.ip;
     isTrustedIp = () => false;
   },
 }));
@@ -87,6 +90,7 @@ afterAll(async () => {
 beforeEach(() => {
   h.store.clear();
   h.counters.clear();
+  h.ip = '203.0.113.7';
   h.run.mockClear();
   h.suggest.mockReset().mockResolvedValue([{ id: 1, slug: 'eighties' }]);
   h.spotifySuggest.mockReset().mockResolvedValue([{ id: 'sp1', name: 'Schlager' }]);
@@ -97,7 +101,7 @@ async function startJob(prompt: string, locale: string): Promise<string> {
   const res = await app.inject({
     method: 'POST',
     url: '/ai-playlist/generate',
-    payload: { prompt, trackCount: 75, captchaToken: 'ok', locale },
+    payload: { prompt, trackCount: 75, captchaToken: 'ok', locale, clientId: randomUUID() },
   });
   return res.json().data.jobId;
 }
@@ -121,6 +125,82 @@ describe('POST /ai-playlist/generate', () => {
     // Starting a job looks nothing up by itself.
     expect(h.suggest).not.toHaveBeenCalled();
     expect(h.spotifySuggest).not.toHaveBeenCalled();
+  });
+});
+
+describe('the daily limit', () => {
+  const CLIENT = '0f8b6a2e-4c1d-4e5f-9a7b-3c2d1e0f9a8b';
+
+  // Each call a new browser unless one is given; null sends none.
+  function generate(ip: string, clientId: string | null = randomUUID()) {
+    h.ip = ip;
+    return app.inject({
+      method: 'POST',
+      url: '/ai-playlist/generate',
+      payload: { prompt: 'Kpop', trackCount: 75, captchaToken: 'ok', locale: 'en', clientId },
+    });
+  }
+
+  async function status(ip: string, clientId?: string) {
+    h.ip = ip;
+    const query = clientId ? `?clientId=${clientId}` : '';
+    const res = await app.inject({ method: 'GET', url: `/ai-playlist/rate-limit-status${query}` });
+    return res.json().data;
+  }
+
+  it('counts an IPv6 connection by its /64, however the address is written', async () => {
+    const sameConnection = [
+      '2a01:112f:811:eb00:54e8:f268:7436:4ac7',
+      '2a01:112f:811:eb00:28ee:346a:19c0:dd18',
+      '2a01:112f:0811:EB00::1',
+      '2a01:112f:811:eb00::',
+      '2a01:112f:811:eb00:5d8e:c985:e5bf:daeb',
+    ];
+    for (const ip of sameConnection) {
+      expect((await generate(ip)).statusCode).toBe(200);
+    }
+
+    const refused = await generate('2a01:112f:811:eb00:ffff:1:2:3');
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json().data).toEqual({ used: 5, limit: 5, remaining: 0 });
+
+    // Another connection has its own five, and so does IPv4.
+    expect((await generate('2a01:112f:811:eb01::1')).statusCode).toBe(200);
+    expect((await generate('::ffff:198.51.100.4')).statusCode).toBe(200);
+    expect((await status('198.51.100.4')).used).toBe(1);
+  });
+
+  it('counts the browser across addresses that keep changing', async () => {
+    for (let i = 1; i <= 5; i++) {
+      const res = await generate(`198.51.100.${i}`, CLIENT);
+      expect(res.statusCode).toBe(200);
+      expect(res.json().data.rateLimit.remaining).toBe(5 - i);
+    }
+    expect(await status('198.51.100.99', CLIENT)).toMatchObject({ used: 5, remaining: 0 });
+
+    // A new address with the same browser is refused, and the refusal does
+    // not use up the new address.
+    expect((await generate('198.51.100.6', CLIENT)).statusCode).toBe(429);
+    expect((await status('198.51.100.6')).used).toBe(0);
+
+  });
+
+  it('refuses a request without a browser id as a failed captcha, and counts nothing', async () => {
+    h.run.mockClear();
+    for (const clientId of [null, '', 'x'.repeat(65), 'not an id!']) {
+      const res = await generate('198.51.100.7', clientId);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ success: false, error: 'reCAPTCHA verification failed' });
+    }
+    expect(h.run).not.toHaveBeenCalled();
+    expect((await status('198.51.100.7')).used).toBe(0);
+  });
+
+  it('counts an address by itself, whatever browser ids it sends', async () => {
+    for (let i = 1; i <= 5; i++) {
+      expect((await generate('203.0.113.9', `${CLIENT.slice(0, -1)}${i}`)).statusCode).toBe(200);
+    }
+    expect((await generate('203.0.113.9', `${CLIENT.slice(0, -1)}6`)).statusCode).toBe(429);
   });
 });
 
