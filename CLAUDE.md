@@ -618,7 +618,8 @@ steps: an LLM names keywords (mostly artists), every keyword is a
 candidates in batches of 100. Two things sit on top of that since 2026-09-30.
 
 **Who may generate** (`routes/aiPlaylistRoutes.ts`): the website's form only.
-`/ai-playlist/generate` needs a reCAPTCHA v3 token and the form's browser id
+`/ai-playlist/generate` needs a reCAPTCHA v3 token made for its action
+(`aiPlaylistGenerate`, so one from another form does not pass) and the form's browser id
 (`clientId`, a random id in localStorage; without storage one per visit), and
 answers a missing id with the captcha's own refusal, so the response names
 nothing to fix (Rick, 2026-11-02). Five a day, counted per address and per

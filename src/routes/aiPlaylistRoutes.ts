@@ -133,7 +133,8 @@ export default async function aiPlaylistRoutes(fastify: FastifyInstance) {
         .status(400)
         .send({ success: false, error: 'reCAPTCHA verification failed' });
     }
-    const { isHuman } = await utils.verifyRecaptcha(captchaToken);
+    // The token must be one the form asked for this action.
+    const { isHuman } = await utils.verifyRecaptcha(captchaToken, 0.5, 'aiPlaylistGenerate');
     if (!isHuman) {
       return reply
         .status(400)

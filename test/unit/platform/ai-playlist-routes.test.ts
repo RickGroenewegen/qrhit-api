@@ -122,6 +122,8 @@ describe('POST /ai-playlist/generate', () => {
       trackCount: 75,
       locale: 'de',
     });
+    // With a token the form asked for this action.
+    expect(h.verifyRecaptcha).toHaveBeenCalledWith('ok', 0.5, 'aiPlaylistGenerate');
     // Starting a job looks nothing up by itself.
     expect(h.suggest).not.toHaveBeenCalled();
     expect(h.spotifySuggest).not.toHaveBeenCalled();

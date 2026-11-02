@@ -144,6 +144,17 @@ describe('verifyRecaptcha', () => {
     });
   });
 
+  it('rejects a token made for another action when an action is asked', async () => {
+    axiosPost.mockResolvedValue({ data: { success: true, score: 0.9, action: 'contact' } });
+    expect((await utils.verifyRecaptcha('tok', 0.5, 'aiPlaylistGenerate')).isHuman).toBe(false);
+    expect((await utils.verifyRecaptcha('tok')).isHuman).toBe(true);
+
+    axiosPost.mockResolvedValue({
+      data: { success: true, score: 0.9, action: 'aiPlaylistGenerate' },
+    });
+    expect((await utils.verifyRecaptcha('tok', 0.5, 'aiPlaylistGenerate')).isHuman).toBe(true);
+  });
+
   it('rejects when Google says success=false (score null)', async () => {
     axiosPost.mockResolvedValue({ data: { success: false } });
     expect(await utils.verifyRecaptcha('tok')).toEqual({
