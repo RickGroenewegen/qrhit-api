@@ -142,6 +142,9 @@ describe('getFeaturedPlaylists', () => {
     expect(query).toContain('g.name_nl as genreName');
     expect(query).toContain("FIND_IN_SET('nl', playlists.featuredLocale) > 0");
     expect(query).toContain('playlists.featured = 1');
+    // A playlist whose source is gone (the nightly link check) stays featured
+    // but leaves the list and, through it, the related rows.
+    expect(query).toContain('playlists.linkBroken = 0');
     expect(query).toContain(
       '(playlists.promotionalActive = 0 OR playlists.promotionalAccepted = 1)'
     );
@@ -367,6 +370,31 @@ describe('searchFeaturedPlaylists', () => {
       userEmail: 'p@x',
       userDisplayName: 'P',
     });
+  });
+
+  it('returns the link check fields for the Featured page', async () => {
+    const { deps, prisma } = makeDeps();
+    const brokenAt = new Date('2026-11-02T01:15:00Z');
+    const checkedAt = new Date('2026-11-03T01:16:00Z');
+    prisma.playlist.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        approvedRow(1, { linkBroken: true, linkBrokenAt: brokenAt, linkCheckedAt: checkedAt }),
+        approvedRow(2, { linkBroken: false, linkBrokenAt: null, linkCheckedAt: null }),
+      ]);
+    prisma.playlist.count.mockResolvedValue(2);
+
+    const result = await searchFeaturedPlaylists(deps);
+
+    const select = prisma.playlist.findMany.mock.calls[1][0].select;
+    expect(select).toMatchObject({ linkBroken: true, linkBrokenAt: true, linkCheckedAt: true });
+    expect(result.approved.data[0]).toMatchObject({
+      id: 1,
+      linkBroken: true,
+      linkBrokenAt: brokenAt,
+      linkCheckedAt: checkedAt,
+    });
+    expect(result.approved.data[1]).toMatchObject({ id: 2, linkBroken: false, linkBrokenAt: null });
   });
 
   it('maps pending playlists with promotional title and user info', async () => {

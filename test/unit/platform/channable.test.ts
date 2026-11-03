@@ -340,6 +340,14 @@ describe('market gating', () => {
     expect(where).not.toHaveProperty('markedForMerchantCenter');
     expect(where).toMatchObject({ featured: true, promotionalActive: true });
   });
+
+  it('leaves out a featured playlist whose source is gone (linkBroken)', async () => {
+    await seedAiImage();
+    await channable.generateFeed();
+
+    const where = h.prisma.playlist.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({ featured: true, linkBroken: false });
+  });
 });
 
 describe('row contents', () => {

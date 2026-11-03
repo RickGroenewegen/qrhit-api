@@ -242,11 +242,15 @@ export class ChannableService {
     // selecting all of them overflows MariaDB's sort_buffer_size.
     // Note there is no markedForMerchantCenter filter here — a feed is a full
     // snapshot, and that flag belongs to the Google sync.
+    // linkBroken: the source playlist is gone on its music service (the
+    // nightly link check, src/linkCheck); it stays featured but is not sold
+    // through the feed.
     const sortedPlaylistIds = await this.prisma.playlist.findMany({
       where: {
         featured: true,
         slug: { not: '' },
         promotionalActive: true,
+        linkBroken: false,
       },
       orderBy: { score: 'desc' },
       select: { id: true },

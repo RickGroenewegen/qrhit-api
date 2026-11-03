@@ -123,8 +123,13 @@ export async function getFeaturedPlaylists(
     WHERE
       playlists.featured = 1
       AND playlists.featuredHidden = 0
+      AND playlists.linkBroken = 0
       AND (playlists.promotionalActive = 0 OR playlists.promotionalAccepted = 1)
   `;
+    // linkBroken: the source playlist is gone on its music service (the
+    // nightly link check, src/linkCheck). Its product page stays, but the
+    // list and the related rows (which read this list) no longer send anyone
+    // to it.
 
     // Add locale condition (skip if skipLocaleFilter is true to return all playlists)
     if (!skipLocaleFilter && locale) {
@@ -288,7 +293,8 @@ export async function getRelatedFeaturedPlaylists(
  * getFeaturedPlaylists, preserving the given id order. Reused by the occasion
  * landing pages and the seasonal /playlists row so playlist-card renders them
  * unchanged. Takes prisma + utils directly (no DataDeps) so CalendarService can
- * call it.
+ * call it. A playlist whose source is gone (`linkBroken`, src/linkCheck) is
+ * left out, as in the featured list.
  */
 export async function projectPlaylistsByIds(
   prisma: any,
@@ -335,6 +341,7 @@ export async function projectPlaylistsByIds(
     FROM playlists
     LEFT JOIN genres g ON playlists.genreId = g.id
     WHERE playlists.id IN (${idList})
+      AND playlists.linkBroken = 0
   `;
 
   let rows: any[] = await prisma.$queryRawUnsafe(query);
@@ -503,6 +510,9 @@ export async function searchFeaturedPlaylists(
           featuredHidden: true,
           featuredLocale: true,
           unfeaturedAt: true,
+          linkBroken: true,
+          linkBrokenAt: true,
+          linkCheckedAt: true,
           promotionalActive: true,
           promotionalAccepted: true,
           promotionalTitle: true,
@@ -582,6 +592,11 @@ export async function searchFeaturedPlaylists(
           featuredHidden: p.featuredHidden,
           featuredLocale: p.featuredLocale,
           unfeaturedAt: p.unfeaturedAt,
+          // The nightly link check (src/linkCheck): the source playlist is
+          // gone, so the row is out of the feeds and the public lists.
+          linkBroken: p.linkBroken,
+          linkBrokenAt: p.linkBrokenAt,
+          linkCheckedAt: p.linkCheckedAt,
           isPromotional: p.promotionalActive && p.promotionalAccepted,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,

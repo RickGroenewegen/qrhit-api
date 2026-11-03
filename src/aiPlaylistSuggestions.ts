@@ -226,6 +226,7 @@ class AIPlaylistSuggestions {
       LEFT JOIN genres g ON p.genreId = g.id
       WHERE p.featured = 1
         AND p.featuredHidden = 0
+        AND p.linkBroken = 0
         AND (p.promotionalActive = 0 OR p.promotionalAccepted = 1)
       ORDER BY p.score DESC, p.id
     `);

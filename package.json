@@ -25,7 +25,8 @@
     "studio-catalogue": "tsx scripts/studio-catalogue.ts",
     "price-tokens": "tsx scripts/price-tokens.ts",
     "fix-blog-slugs": "tsx scripts/fix-blog-slugs.ts",
-    "pnb-harness": "tsx scripts/pnb-harness/index.ts"
+    "pnb-harness": "tsx scripts/pnb-harness/index.ts",
+    "link-check": "tsx scripts/featured-link-check.ts"
   },
   "keywords": [],
   "author": "",

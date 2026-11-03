@@ -378,12 +378,16 @@ export class MerchantCenterService {
       // Only playlists flagged as needing a Merchant Center sync are picked up.
       // The flag is set whenever a featured playlist is edited via the dashboard
       // and cleared again after a successful upload below.
+      // linkBroken (the nightly link check, src/linkCheck) keeps a playlist
+      // whose source is gone out of the upload and, below, out of the
+      // products the cleanup keeps, so its products are taken down.
       const sortedPlaylistIds = await this.prisma.playlist.findMany({
         where: {
           featured: true,
           slug: { not: '' },
           markedForMerchantCenter: true,
           promotionalActive: true,
+          linkBroken: false,
         },
         orderBy: {
           score: 'desc',
@@ -493,6 +497,7 @@ export class MerchantCenterService {
             featured: true,
             slug: { not: '' },
             promotionalActive: true,
+            linkBroken: false,
           },
           select: {
             id: true,
@@ -1210,6 +1215,7 @@ export class MerchantCenterService {
         featured: true,
         slug: { not: '' },
         promotionalActive: true,
+        linkBroken: false,
       },
       select: {
         id: true,

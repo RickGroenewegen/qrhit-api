@@ -569,6 +569,17 @@ model Playlist {
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
 
+  // The nightly link check (src/linkCheck): true once the music service said
+  // on two nights that the source playlist is gone (deleted or private). The
+  // playlist stays featured and its product page keeps working, but it is
+  // left out of the product feeds and the public playlist lists. The first
+  // check that finds the playlist again clears it.
+  linkBroken    Boolean   @default(false)
+  linkBrokenAt  DateTime?
+  // When the check last got a definite answer (there, or gone). Written with
+  // raw SQL so `updatedAt`, the sitemap's lastmod, does not move every night.
+  linkCheckedAt DateTime?
+
   productPhoto ProductPhoto?
 
   @@index([playlistId])

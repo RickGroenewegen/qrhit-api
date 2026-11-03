@@ -927,13 +927,15 @@ describe('uploadFeaturedPlaylists', () => {
 
     await merchantCenter.uploadFeaturedPlaylists();
 
-    // Query shape for the sync candidates.
+    // Query shape for the sync candidates. A playlist whose source is gone
+    // (linkBroken, the nightly link check) is not uploaded.
     expect(h.prisma.playlist.findMany).toHaveBeenNthCalledWith(1, {
       where: {
         featured: true,
         slug: { not: '' },
         markedForMerchantCenter: true,
         promotionalActive: true,
+        linkBroken: false,
       },
       orderBy: { score: 'desc' },
       select: { id: true },
@@ -1482,7 +1484,7 @@ describe('generateAllFeaturedAIProductImages', () => {
         failed: 1,
       });
       expect(h.prisma.playlist.findMany).toHaveBeenCalledWith({
-        where: { featured: true, slug: { not: '' }, promotionalActive: true },
+        where: { featured: true, slug: { not: '' }, promotionalActive: true, linkBroken: false },
         select: { id: true, playlistId: true, name: true },
         orderBy: { score: 'desc' },
       });

@@ -2060,6 +2060,56 @@ in the admin overview (badge "Removed", restore button →
 `/admin/featured/search` query is `featured = true OR unfeaturedAt IS NOT NULL`
 for that reason.
 
+## Featured link check (`linkBroken`)
+
+Every night at 02:15 (Amsterdam, cluster primary of the main server, never in
+development) `src/linkCheck` asks each featured playlist's music service
+whether the source playlist still exists (Rick, 2026-11-03). One that is gone
+on two nights gets `playlists.linkBroken = true` (and `linkBrokenAt`). It
+stays **featured** and its product page keeps working; Rick did not want a
+Spotify hiccup to unfeature the catalogue. The first check that finds it
+again clears the flag. `linkCheckedAt` is the last definite answer.
+
+| what | where |
+|---|---|
+| what counts as gone, per service | `src/linkCheck/probes.ts` |
+| the rules: second look, strikes, pacing, cap, writes, the Pushover | `src/linkCheck/run.ts` |
+| cron, lock, wiring (tokens, Redis strikes, caches, feed rebuild) | `src/linkCheck/index.ts` |
+| by hand | `npm run link-check` (dry run), `-- --write`, `-- --write --force` |
+
+- **Gone** is only the service's own answer about the playlist: Spotify Web
+  API 404 with its `error` object; for Spotify's own playlists (`37i9dQZ…`,
+  which the Web API always 404s for us) our scraper's 404 `Playlist not found
+  (NotFound)`; Deezer's `DataException "no data"` (code 800, sent with a
+  200); Apple Music 404 with `errors` in every storefront tried (the list's
+  own, nl, us); Tidal 404 with a JSON:API `errors` list; YouTube Music's
+  empty browse page (no `contents`, `noindex`) that names our browse id.
+  429, 5xx, no answer, our token refused: unknown, change nothing.
+- **Two nights**: a gone answer is asked again 5 s later; a confirmed one
+  is a strike in Redis (`featuredLinkGone:<id>`, 60 h). A confirmed gone at
+  least 12 h after the strike marks the playlist. A "there" deletes it.
+- **Pacing**: one service at a time, sequential, 1 to 3 s between playlists
+  (`CHANNEL_DELAY_MS`). A Retry-After up to 120 s is waited out once; a longer
+  one, a second 429 or five transient answers in a row stop that service for
+  the night, and its gone answers of the run count for nothing.
+- **Cap**: more than 5 to mark, or more than 10% of the featured playlists,
+  marks none and keeps the strikes; Rick gets the list by Pushover. After a
+  look, `npm run link-check -- --write --force` marks them.
+- **Pushover**: one per run when something was marked, came back, or the
+  cap held. First strikes and stopped services are only logged.
+- **Where the flag counts**: `getFeaturedPlaylists` (the `/featured` list,
+  the related rows, the playlist suggestions), `projectPlaylistsByIds` (the
+  occasion pages and seasonal rows), the playlist suggestions' catalogue, the
+  Channable feed and the Merchant Center upload, cleanup and AI image pass.
+  Not in the sitemap, the product page or anything an order uses. A change
+  drops those list caches and rebuilds the Channable feed.
+- `linkCheckedAt` is written with raw SQL: a Prisma update would move
+  `updatedAt`, the sitemap's lastmod, on every featured playlist every night.
+- `POST /admin/featured/search` returns `linkBroken`, `linkBrokenAt` and
+  `linkCheckedAt` per approved row for the Featured page.
+- The cover repair (above) still unfeatures on a single `playlistNotFound`
+  when the cover is dead too; the link check never unfeatures.
+
 ## Product page descriptions (SEO)
 
 `description_<locale>` on a featured playlist is the product page's intro,
@@ -2319,6 +2369,9 @@ Two modules publish the same catalogue:
   `POST /admin/merchant-center/upload-featured`.
 - `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron).
   This is how products reach Merchant Center now.
+
+Both leave out a featured playlist whose source is gone (`linkBroken`, see
+"Featured link check").
 
 The agency running the Merchant Center asked for the feed to go through
 Channable first. The 1 AM image cron stays on: the Channable feed reads its
