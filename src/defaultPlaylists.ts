@@ -1,7 +1,7 @@
-import QRCode from 'qrcode';
 import type { DefaultPlaylist } from '@prisma/client';
 import PrismaInstance from './prisma';
 import type Translation from './translation';
+import { qrSvg } from './qrSvg';
 
 /**
  * The default playlists we offer companies and resellers (2026-10-16): about
@@ -484,33 +484,8 @@ export interface DefaultPlaylistsView {
   layout: typeof BROCHURE_LAYOUT;
 }
 
-/**
- * A Spotify link as an inline SVG QR code, with a quiet zone of four modules
- * on a white square: crisp at any print size, no file or request needed.
- */
-export function qrSvg(text: string): string {
-  const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
-  const size = qr.modules.size;
-  const quiet = 4;
-  const total = size + quiet * 2;
-  let path = '';
-  for (let y = 0; y < size; y++) {
-    let x = 0;
-    while (x < size) {
-      if (!qr.modules.get(y, x)) {
-        x++;
-        continue;
-      }
-      const start = x;
-      while (x < size && qr.modules.get(y, x)) x++;
-      path += `M${start + quiet} ${y + quiet}h${x - start}v1h-${x - start}z`;
-    }
-  }
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges" aria-hidden="true">` +
-    `<rect width="${total}" height="${total}" fill="#ffffff"/><path fill="#18565E" d="${path}"/></svg>`
-  );
-}
+/** The brochure's QR codes (src/qrSvg.ts); the gift voucher imports it from here too. */
+export { qrSvg };
 
 /** Width of a theme's text column with all three size tiles (see the view's CSS). */
 const INFO_MM_ALL_SIZES = 69;

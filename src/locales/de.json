@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Zurück zur App",
   "paymentComplete.hint": "Öffnet sich die App nicht? Öffne QRSong! selbst: Deine Bestellung wartet dort.",
   "mail.boxInstructionsIntroOne": "Deine Bestellung enthält eine Geschenkbox. Damit sie in perfektem Zustand ankommt, wird sie flach verschickt. Das Falten ist ganz einfach und dauert nur ein paar Minuten.",
-  "mail.boxInstructionsIntroMany": "Deine Bestellung enthält {{count}} Geschenkboxen. Damit sie in perfektem Zustand ankommen, werden die Boxen flach verschickt. Eine Box zu falten ist ganz einfach und dauert nur ein paar Minuten."
+  "mail.boxInstructionsIntroMany": "Deine Bestellung enthält {{count}} Geschenkboxen. Damit sie in perfektem Zustand ankommen, werden die Boxen flach verschickt. Eine Box zu falten ist ganz einfach und dauert nur ein paar Minuten.",
+  "howto.ruleApp": "Scanne den QR-Code auf der Vorderseite dieser Karte mit deiner Handykamera und lade dir die kostenlose QRSong! App herunter.",
+  "howto.scanCaption": "Scan mich und lade die kostenlose QRSong! App herunter"
 }

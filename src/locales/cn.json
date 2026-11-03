@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "返回应用",
   "paymentComplete.hint": "应用打不开？自己打开 QRSong! 吧：你的订单就在那里等你。",
   "mail.boxInstructionsIntroOne": "你的订单包含一个礼盒。为了让它完好无损地送达，我们会以平板形式寄出。折叠成型很简单，只需几分钟。",
-  "mail.boxInstructionsIntroMany": "你的订单包含 {{count}} 个礼盒。为了让它们完好无损地送达，礼盒会以平板形式寄出。折叠一个礼盒很简单，只需几分钟。"
+  "mail.boxInstructionsIntroMany": "你的订单包含 {{count}} 个礼盒。为了让它们完好无损地送达，礼盒会以平板形式寄出。折叠一个礼盒很简单，只需几分钟。",
+  "howto.ruleApp": "用手机相机扫描这张卡片正面的二维码，下载免费的 QRSong! 应用。",
+  "howto.scanCaption": "扫我，下载免费的 QRSong! 应用"
 }

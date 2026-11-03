@@ -167,6 +167,8 @@
 	"howto.rule3": "Guess the year and place the card left (earlier) or right (later) in your timeline.",
 	"howto.rule4": "Flip the card. Does the year match your timeline? Keep it. Wrong? Remove it.",
 	"howto.rule5": "First player to build a timeline of 10 cards wins!",
+	"howto.ruleApp": "Scan the QR code on the front of this card with your phone's camera and download the free QRSong! app.",
+	"howto.scanCaption": "Scan me and download the free QRSong! app",
 	"verification.subject": "Verify Your Hitlist Submission",
 	"verification.title": "Verify Your Hitlist Submission",
 	"verification.hello": "Hello",

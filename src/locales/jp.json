@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "アプリに戻る",
   "paymentComplete.hint": "アプリが開かない？自分でQRSong!を開いてね。注文はそこで待ってるよ。",
   "mail.boxInstructionsIntroOne": "ご注文にはギフトボックスが1つ入っています。きれいな状態で届くよう、平らな状態で発送します。組み立ては簡単で、数分で終わります。",
-  "mail.boxInstructionsIntroMany": "ご注文にはギフトボックスが{{count}}個入っています。きれいな状態で届くよう、平らな状態で発送します。1箱の組み立ては簡単で、数分で終わります。"
+  "mail.boxInstructionsIntroMany": "ご注文にはギフトボックスが{{count}}個入っています。きれいな状態で届くよう、平らな状態で発送します。1箱の組み立ては簡単で、数分で終わります。",
+  "howto.ruleApp": "このカードの表面のQRコードをスマホのカメラでスキャンして、無料のQRSong!アプリをダウンロードしよう。",
+  "howto.scanCaption": "スキャンして無料のQRSong!アプリをダウンロード"
 }

@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Voltar à app",
   "paymentComplete.hint": "O app não abre? Abra o QRSong! você mesmo: seu pedido está te esperando lá.",
   "mail.boxInstructionsIntroOne": "Seu pedido inclui uma caixa de presente. Para que ela chegue em perfeito estado, é enviada plana. Montá-la é fácil e leva só alguns minutos.",
-  "mail.boxInstructionsIntroMany": "Seu pedido inclui {{count}} caixas de presente. Para que cheguem em perfeito estado, as caixas são enviadas planas. Montar uma caixa é fácil e leva só alguns minutos."
+  "mail.boxInstructionsIntroMany": "Seu pedido inclui {{count}} caixas de presente. Para que cheguem em perfeito estado, as caixas são enviadas planas. Montar uma caixa é fácil e leva só alguns minutos.",
+  "howto.ruleApp": "Escaneia o código QR na frente desta carta com a câmera do teu celular e baixa o app grátis QRSong!.",
+  "howto.scanCaption": "Escaneia-me e baixa o app grátis QRSong!"
 }

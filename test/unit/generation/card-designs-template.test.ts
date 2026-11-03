@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import { readdirSync } from 'fs';
 import path from 'path';
 import { deckDesigns, designIndexForCard, sanitizeCardDesign } from '../../../src/cardDesigns';
+import { howtoQrSvg } from '../../../src/howtoCard';
 
 /**
  * Renders the consumer card templates straight through EJS with alternating
@@ -99,13 +100,25 @@ async function render(template: string, designs: any[], startIndex = 0): Promise
       batchNumber: '55',
       startIndex,
       howtoTranslations: designs[0].addHowToCard ? HOWTO : null,
+      // the partial refuses a how-to card without its QR code (src/howtoCard.ts)
+      howtoQrSvg: designs[0].addHowToCard ? howtoQrSvg() : null,
       ...helpers,
     },
     { filename: file }
   );
 }
 
-const HOWTO = { title: 'How to play', rulesTitle: 'Rules', rule1: '1', rule2: '2', rule3: '3', rule4: '4', rule5: '5' };
+const HOWTO = {
+  title: 'How to play',
+  scanCaption: 'Scan me',
+  rulesTitle: 'Rules',
+  ruleApp: 'App',
+  rule1: '1',
+  rule2: '2',
+  rule3: '3',
+  rule4: '4',
+  rule5: '5',
+};
 
 /** Each card element's design class suffix, in document order. */
 function cardClasses(html: string, side: 'front' | 'back', template: string): string[] {
