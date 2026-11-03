@@ -1558,6 +1558,16 @@ validates changes; built 2026-10-13.
   both are known.
 - `GET /business/state/:listId` adds the board fields for admins only: the
   note is internal and `companyadmin` users can call that route.
+- **`customerOrderNumber`** (2026-11-03, VarChar(64)): the customer's own
+  order number, a reseller's purchase order (Staat & Co "OR.26.02509",
+  BigSmile "IORD…"). Set on the list's Settings tab (`PUT .../info`,
+  trimmed, empty = null), on the card as `customerOrderNumber`, and in the
+  admin-only part of `GET /business/state/:listId`. The printer order mail
+  (`getOrderEmail`) then asks for it on the packing slip ("Belangrijk: graag
+  ordernummer … op de pakbon vermelden."); the toolkit's Schneiders mail and
+  the accountant's `sales-invoice` (invoice reference) read it too.
+  Production needs the column before the deploy:
+  `ALTER TABLE company_lists ADD COLUMN customerOrderNumber VARCHAR(64) NULL;`
 - **One-time backfill** after the first deploy:
   `npx tsx scripts/backfill-order-status.ts` (report) and `--write`: a sold
   list goes to Agreed, a list with a quotation to Sent offer, the rest stays

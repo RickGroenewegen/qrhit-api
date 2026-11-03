@@ -413,6 +413,19 @@ describe('getOrderEmail', () => {
     expect(d.text).not.toContain('[LEVERDATUM]');
   });
 
+  it('asks for the customer\'s order number on the packing slip', async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue(
+      baseList({ customerOrderNumber: ' OR.26.02509 ' })
+    );
+    const d = (await business.getOrderEmail(1, 2)).data;
+    expect(d.text).toContain(
+      'Adres 2: 3 stuks\n\nRick Groenewegen\nPrinsenhof 1\n2171XZ Sassenheim\nNederland\n\nBelangrijk: graag ordernummer OR.26.02509 op de pakbon vermelden.\n\nGr,'
+    );
+    expect(d.html).toContain(
+      '<p><strong>Belangrijk:</strong> graag ordernummer <strong>OR.26.02509</strong> op de pakbon vermelden.</p>'
+    );
+  });
+
   it('builds a complete Schneider order mail without warnings', async () => {
     h.prisma.companyList.findUnique.mockResolvedValue(baseList());
     const res = await business.getOrderEmail(1, 2);
@@ -437,6 +450,9 @@ describe('getOrderEmail', () => {
     expect(d.text).toContain('Adres 2: 3 stuks');
     expect(d.text).toContain('Rick Groenewegen\nPrinsenhof 1');
     expect(d.text).toContain('Acme & Zn\nt.a.v. Magazijn & Co\nStraatweg 1\n1234AB Stad');
+
+    // No customer order number, no packing slip line
+    expect(d.text).not.toContain('pakbon');
 
     // HTML escapes ampersands
     expect(d.html).toContain('Magazijn &amp; Co');

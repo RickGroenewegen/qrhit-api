@@ -548,7 +548,7 @@ class Business {
           desiredDeliveryDate: true,
           deliveryAsap: true,
           ...(options.includeOrderBoard
-            ? { orderStatus: true, contactUserId: true, orderNote: true }
+            ? { orderStatus: true, contactUserId: true, orderNote: true, customerOrderNumber: true }
             : {}),
         };
         // Add all description fields for each locale
@@ -1147,6 +1147,9 @@ class Business {
       const addressCountText =
         numberWords[addresses.length] || String(addresses.length);
 
+      // The customer's own order number (their PO) goes on the packing slip.
+      const customerOrderNumber: string = (list.customerOrderNumber || '').trim();
+
       // Build text + html versions of the mail body
       const textParts: string[] = [];
       textParts.push('Goedendag,');
@@ -1172,6 +1175,11 @@ class Business {
           ].join('\n')}`
         );
       });
+      if (customerOrderNumber) {
+        textParts.push(
+          `Belangrijk: graag ordernummer ${customerOrderNumber} op de pakbon vermelden.`
+        );
+      }
       textParts.push('Gr,\nRick Groenewegen');
       const text = textParts.join('\n\n');
 
@@ -1210,6 +1218,13 @@ class Business {
           `<p>${[address.name, ...address.lines].map(esc).join('<br>')}</p>`
         );
       });
+      if (customerOrderNumber) {
+        htmlParts.push(
+          `<p><strong>Belangrijk:</strong> graag ordernummer <strong>${esc(
+            customerOrderNumber
+          )}</strong> op de pakbon vermelden.</p>`
+        );
+      }
       htmlParts.push('<p>Gr,<br>Rick Groenewegen</p>');
       const html = htmlParts.join('\n');
 

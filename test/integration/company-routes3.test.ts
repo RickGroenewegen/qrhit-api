@@ -354,6 +354,24 @@ describe('company routes — wave 3 coverage', () => {
       expect(res.statusCode).toBe(409);
     });
 
+    it('trims the customer order number, empties it to null and refuses a long one', async () => {
+      const put = (customerOrderNumber: unknown) =>
+        app.inject({
+          method: 'PUT',
+          url: `/business/companies/${companyId}/lists/${listId}/info`,
+          headers: adminHeaders,
+          payload: { customerOrderNumber },
+        });
+      const set = await put('  OR.26.02509 ');
+      expect(set.statusCode).toBe(200);
+      expect(set.json().list.customerOrderNumber).toBe('OR.26.02509');
+      const cleared = await put('   ');
+      expect(cleared.statusCode).toBe(200);
+      expect(cleared.json().list.customerOrderNumber).toBeNull();
+      expect((await put('x'.repeat(65))).statusCode).toBe(400);
+      expect((await put(12345)).statusCode).toBe(400);
+    });
+
     it('200 — updates status and name', async () => {
       const res = await app.inject({
         method: 'PUT',

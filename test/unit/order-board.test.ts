@@ -50,6 +50,7 @@ function list(over: Record<string, any> = {}): any {
     sold: false,
     desiredDeliveryDate: null,
     deliveryAsap: false,
+    customerOrderNumber: null,
     orderStatus: 'interest',
     orderStatusAt: null,
     orderPosition: 0,
@@ -89,6 +90,11 @@ describe('toBoardCard', () => {
     expect(card.boxes).toBe(120);
     expect(card.cardsPerBox).toBe(192);
     expect(card.isReseller).toBe(false);
+  });
+
+  it('carries the customer\'s order number', () => {
+    expect(toBoardCard(list()).customerOrderNumber).toBeNull();
+    expect(toBoardCard(list({ customerOrderNumber: 'OR.26.02509' })).customerOrderNumber).toBe('OR.26.02509');
   });
 
   it('survives a broken calculation', () => {

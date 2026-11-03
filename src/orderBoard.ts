@@ -62,6 +62,7 @@ export const BOARD_LIST_SELECT = {
   sold: true,
   desiredDeliveryDate: true,
   deliveryAsap: true,
+  customerOrderNumber: true,
   orderStatus: true,
   orderStatusAt: true,
   orderPosition: true,
@@ -116,6 +117,8 @@ export interface BoardCard {
   sold: boolean;
   desiredDeliveryDate: Date | null;
   deliveryAsap: boolean;
+  /** The customer's own order number (their PO), on the packing slip and invoice. */
+  customerOrderNumber: string | null;
   createdAt: Date;
 }
 
@@ -175,6 +178,7 @@ export function toBoardCard(list: BoardList): BoardCard {
     sold: list.sold,
     desiredDeliveryDate: list.desiredDeliveryDate,
     deliveryAsap: list.deliveryAsap,
+    customerOrderNumber: list.customerOrderNumber,
     createdAt: list.createdAt,
   };
 }
