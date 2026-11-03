@@ -19,7 +19,7 @@
     {{> mail-tr label="" value=this.name }}
     {{/if}}
     {{/each}}
-    {{> mail-tr label=translations.items value=(concat numberOfTracks " " translations.cards) }}
+    {{> mail-tr label=translations.items value=(concat cardCount " " translations.cards) }}
     {{#if hasBox}}
     {{> mail-tr label=translations.giftBoxIncluded value=(concat boxQuantity "x") }}
     {{/if}}

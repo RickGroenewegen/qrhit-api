@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Melkein valmista",
   "paymentComplete.unknownBody": "Palaa sovellukseen katsomaan, miten tilauksesi etenee.",
   "paymentComplete.backToApp": "Takaisin sovellukseen",
-  "paymentComplete.hint": "Eikö sovellus aukea? Avaa QRSong! itse: tilauksesi odottaa siellä."
+  "paymentComplete.hint": "Eikö sovellus aukea? Avaa QRSong! itse: tilauksesi odottaa siellä.",
+  "mail.boxInstructionsIntroOne": "Tilaukseesi kuuluu yksi lahjarasia. Jotta se saapuu täydellisessä kunnossa, se lähetetään litteänä. Sen taittaminen on helppoa ja vie vain muutaman minuutin.",
+  "mail.boxInstructionsIntroMany": "Tilaukseesi kuuluu {{count}} lahjarasiaa. Jotta ne saapuvat täydellisessä kunnossa, rasiat lähetetään litteinä. Rasian taittaminen on helppoa ja vie vain muutaman minuutin."
 }

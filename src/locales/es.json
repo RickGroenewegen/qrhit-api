@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Ya casi está",
   "paymentComplete.unknownBody": "Vuelve a la app para ver cómo va tu pedido.",
   "paymentComplete.backToApp": "Volver a la app",
-  "paymentComplete.hint": "¿No se abre la app? Abre QRSong! tú mismo: tu pedido te espera allí."
+  "paymentComplete.hint": "¿No se abre la app? Abre QRSong! tú mismo: tu pedido te espera allí.",
+  "mail.boxInstructionsIntroOne": "Tu pedido incluye una caja regalo. Para que llegue en perfecto estado, se envía plana. Montarla es fácil y solo lleva unos minutos.",
+  "mail.boxInstructionsIntroMany": "Tu pedido incluye {{count}} cajas regalo. Para que lleguen en perfecto estado, las cajas se envían planas. Montar una caja es fácil y solo lleva unos minutos."
 }

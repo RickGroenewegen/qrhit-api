@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Fast geschafft",
   "paymentComplete.unknownBody": "Geh zurück zur App, um zu sehen, wie es um deine Bestellung steht.",
   "paymentComplete.backToApp": "Zurück zur App",
-  "paymentComplete.hint": "Öffnet sich die App nicht? Öffne QRSong! selbst: Deine Bestellung wartet dort."
+  "paymentComplete.hint": "Öffnet sich die App nicht? Öffne QRSong! selbst: Deine Bestellung wartet dort.",
+  "mail.boxInstructionsIntroOne": "Deine Bestellung enthält eine Geschenkbox. Damit sie in perfektem Zustand ankommt, wird sie flach verschickt. Das Falten ist ganz einfach und dauert nur ein paar Minuten.",
+  "mail.boxInstructionsIntroMany": "Deine Bestellung enthält {{count}} Geschenkboxen. Damit sie in perfektem Zustand ankommen, werden die Boxen flach verschickt. Eine Box zu falten ist ganz einfach und dauert nur ein paar Minuten."
 }

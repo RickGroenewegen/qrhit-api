@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Mindjárt kész",
   "paymentComplete.unknownBody": "Térj vissza az appba, és nézd meg, hogy áll a rendelésed.",
   "paymentComplete.backToApp": "Vissza az appba",
-  "paymentComplete.hint": "Nem nyílik meg az app? Nyisd meg magad a QRSong!-ot: ott vár a rendelésed."
+  "paymentComplete.hint": "Nem nyílik meg az app? Nyisd meg magad a QRSong!-ot: ott vár a rendelésed.",
+  "mail.boxInstructionsIntroOne": "A rendelésed egy ajándékdobozt tartalmaz. Hogy tökéletes állapotban érkezzen, laposan küldjük. Az összehajtása egyszerű, és csak pár percet vesz igénybe.",
+  "mail.boxInstructionsIntroMany": "A rendelésed {{count}} ajándékdobozt tartalmaz. Hogy tökéletes állapotban érkezzenek, a dobozokat laposan küldjük. Egy doboz összehajtása egyszerű, és csak pár percet vesz igénybe."
 }

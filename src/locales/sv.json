@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Nästan klart",
   "paymentComplete.unknownBody": "Gå tillbaka till appen för att se hur det går med din beställning.",
   "paymentComplete.backToApp": "Tillbaka till appen",
-  "paymentComplete.hint": "Öppnas inte appen? Öppna QRSong! själv: din beställning väntar där."
+  "paymentComplete.hint": "Öppnas inte appen? Öppna QRSong! själv: din beställning väntar där.",
+  "mail.boxInstructionsIntroOne": "Din beställning innehåller en presentask. För att den ska komma fram i perfekt skick skickas den platt. Att vika ihop den är enkelt och tar bara några minuter.",
+  "mail.boxInstructionsIntroMany": "Din beställning innehåller {{count}} presentaskar. För att de ska komma fram i perfekt skick skickas askarna platta. Att vika ihop en ask är enkelt och tar bara några minuter."
 }

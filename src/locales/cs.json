@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Skoro hotovo",
   "paymentComplete.unknownBody": "Vrať se do aplikace a podívej se, jak je na tom tvoje objednávka.",
   "paymentComplete.backToApp": "Zpět do aplikace",
-  "paymentComplete.hint": "Aplikace se neotevírá? Otevři QRSong! sám: tvoje objednávka tam čeká."
+  "paymentComplete.hint": "Aplikace se neotevírá? Otevři QRSong! sám: tvoje objednávka tam čeká.",
+  "mail.boxInstructionsIntroOne": "Tvoje objednávka obsahuje jednu dárkovou krabičku. Aby dorazila v perfektním stavu, posíláme ji naplocho. Složit ji je snadné a zabere to jen pár minut.",
+  "mail.boxInstructionsIntroMany": "Tvoje objednávka obsahuje dárkové krabičky ({{count}} ks). Aby dorazily v perfektním stavu, posíláme je naplocho. Složit krabičku je snadné a zabere to jen pár minut."
 }
