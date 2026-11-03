@@ -769,6 +769,21 @@ export default async function companyRoutes(
         }
       }
 
+      // The customer's own order number (their PO): trimmed, empty = none.
+      if (body.customerOrderNumber !== undefined) {
+        const value = body.customerOrderNumber;
+        if (value !== null && typeof value !== 'string') {
+          reply.status(400).send({ error: 'customerOrderNumber must be a string or null' });
+          return;
+        }
+        const number = (value ?? '').trim();
+        if (number.length > 64) {
+          reply.status(400).send({ error: 'customerOrderNumber is at most 64 characters' });
+          return;
+        }
+        updateData['customerOrderNumber'] = number || null;
+      }
+
       for (const field of numberFields) {
         if (body[field] !== undefined) {
           if (body[field] === null) {

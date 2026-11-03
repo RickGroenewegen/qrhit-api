@@ -1384,6 +1384,9 @@ model CompanyList {
   deliveryCity            String?
   deliveryCountrycode     String?
   deliveryPhone           String?
+  // The customer's own order number (their purchase order, e.g. a reseller's
+  // "OR.26.02509"): on the printer's packing slip and on our invoice.
+  customerOrderNumber     String?   @db.VarChar(64)
   musicWishes             String?   @db.Text
   designResponsibility    String?
   gameExplanation         String?
