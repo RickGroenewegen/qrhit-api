@@ -1481,7 +1481,7 @@
         {
             "slug": "account-features",
             "title": "What can I do with a QRSong! account?",
-            "description": "Once you have an account (created automatically after your first order) you can: view your full order history, re-download digital PDFs of all your card sets, re-download invoices, re-open the correction form for orders still in review, manage your saved playlists and designs, host QRGames (Music Quiz, Music Bingo, Music Timeline) for any playlist you've enabled them on, place new orders without re-entering your details, give a set to someone else with a gift voucher, and update your password and email preferences. Sets received as a gift show under 'Gifts for you'.",
+            "description": "Once you have an account (created automatically after your first order) you can: view your full order history, re-download digital PDFs of all your card sets, re-download invoices, re-open the correction form for orders still in review, manage your saved playlists and designs, host QRGames (Music Quiz, Music Bingo, Music Timeline) for any playlist you've enabled them on, place new orders without re-entering your details, give a set to someone else with a gift voucher, order a set again or order cards for another playlist in the design of a set ('Order again', 'New playlist in this design'), and update your password and email preferences. Sets received as a gift show under 'Gifts for you'.",
             "tags": [
                 "account features",
                 "what can I do",
@@ -1489,6 +1489,28 @@
                 "my account",
                 "re-download",
                 "order history"
+            ]
+        },
+        {
+            "slug": "same-design-new-order",
+            "title": "Can I order more cards in the same design as an earlier order, for example extra cards for a set I already have?",
+            "description": "Yes, from My account (https://www.qrsong.io/[lang]/my-account), where every card set you ordered or received as a gift (not gift cards or business orders) has two options. 'Order again' orders the same playlist again: the card overview opens with the same card type and every card in the earlier design, and for printed cards the gift box comes back on in its earlier design too. 'New playlist in this design' is for a different playlist, such as a second playlist with extra songs to add to a set you already have: it opens step 1, where a window shows the cards of that order and tells you the order you make now gets that design. Choose any playlist, from any music service (your own link, one of our playlists or one made with AI). On the card overview its cards show in the earlier design: the same front and back, colours, fonts, logo and QR code style, alternating designs, eco mode and double-sided printing, and the same card type (printed cards, printed sheets or digital) is preselected. You can still pick another card type, and change the design in the card designer. The gift box design of that order is ready, but no box is added on its own: extra cards for an existing set seldom need one, so switch the box on in the extras if you want it. QRGames is not switched on either. Choose 'Not in this design' in the window to start with the standard design instead. The design is kept for that visit only: if you close the browser tab, start again from My account. Songs that are already in your earlier set are not filtered out, so leave them out of the new playlist if you don't want them twice.",
+            "tags": [
+                "order again",
+                "reorder",
+                "same design",
+                "new playlist in this design",
+                "extra cards",
+                "more cards",
+                "add cards to my set",
+                "expand my set",
+                "second playlist",
+                "nachbestellen",
+                "Erneut bestellen",
+                "gleiches Design",
+                "opnieuw bestellen",
+                "zelfde ontwerp",
+                "bijbestellen"
             ]
         },
         {
