@@ -13,6 +13,7 @@ import Data from '../data';
 import Charts from '../charts';
 import Push from '../push';
 import WebPush from '../webPush';
+import PushStatsService from '../pushStats';
 import Printer from '../printer';
 import Utils from '../utils';
 import Mollie from '../mollie';
@@ -239,6 +240,16 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (_request: any, _reply: any) => {
       return { success: true, ...(await push.getAudience()) };
+    }
+  );
+
+  // The Broadcasts page's statistics: devices per platform, new ones per
+  // month, and the ones each live broadcast found unreachable (pushStats.ts)
+  fastify.get(
+    '/push/stats',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply: any) => {
+      return { success: true, ...(await PushStatsService.getInstance().get()) };
     }
   );
 
