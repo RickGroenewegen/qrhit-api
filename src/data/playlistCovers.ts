@@ -1,5 +1,5 @@
 import { color } from 'console-log-colors';
-import { CACHE_KEY_FEATURED_PLAYLISTS, unfeaturePlaylist } from './featuredPlaylists';
+import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
 import { DataDeps } from './types';
 
 /**
@@ -17,6 +17,12 @@ import { DataDeps } from './types';
  * `repairFeaturedPlaylistCovers` is the nightly sweep for covers nobody looked
  * up: it asks the CDN (a HEAD per cover, no music service quota) and only
  * re-fetches the playlists whose cover is actually gone.
+ *
+ * A playlist the service says is gone is only reported (`gone`), never taken
+ * out of featured: one wrong answer from Spotify would have removed it for
+ * good. The nightly link check (src/linkCheck) flags it `linkBroken` after two
+ * nights in a row, which takes it off the site and the feeds and brings it
+ * back when it returns (Rick, 2026-11-03).
  */
 
 const CHECK_CONCURRENCY = 8;
@@ -44,8 +50,8 @@ export interface CoverRepairResult {
   checked: number;
   dead: number;
   repaired: number;
-  /** Slugs taken out of the catalogue because the playlist is gone. */
-  unfeatured: string[];
+  /** Slugs the service says no longer exist; left to the nightly link check. */
+  gone: string[];
   /** Slugs still showing a dead cover; these need a custom image. */
   unresolved: string[];
 }
@@ -121,7 +127,7 @@ export async function repairFeaturedPlaylistCovers(
   await Promise.all(Array.from({ length: CHECK_CONCURRENCY }, worker));
 
   let repaired = 0;
-  const unfeatured: string[] = [];
+  const gone: string[] = [];
   const unresolved: string[] = [];
 
   // One at a time: each of these is a real call to the music service.
@@ -143,10 +149,9 @@ export async function repairFeaturedPlaylistCovers(
       await syncFeaturedPlaylistCover(deps, playlist, fresh);
       repaired++;
     } else if (lookup.gone) {
-      // A dead cover on a playlist the service no longer knows: the owner
-      // deleted it, and a product page for it sells cards nobody can play.
-      const removed = await unfeaturePlaylist(deps, playlist.playlistId);
-      (removed.success ? unfeatured : unresolved).push(playlist.slug);
+      // A dead cover on a playlist the service no longer knows. The link
+      // check decides whether it is really gone; nothing changes here.
+      gone.push(playlist.slug);
     } else {
       unresolved.push(playlist.slug);
     }
@@ -167,10 +172,10 @@ export async function repairFeaturedPlaylistCovers(
       )
     );
   }
-  if (unfeatured.length > 0) {
+  if (gone.length > 0) {
     deps.logger.log(
       color.yellow.bold(
-        `Removed from featured, playlist gone on Spotify: ${color.white.bold(unfeatured.join(', '))}`
+        `Playlist gone on Spotify, left to the link check: ${color.white.bold(gone.join(', '))}`
       )
     );
   }
@@ -184,5 +189,5 @@ export async function repairFeaturedPlaylistCovers(
     );
   }
 
-  return { checked: candidates.length, dead: dead.length, repaired, unfeatured, unresolved };
+  return { checked: candidates.length, dead: dead.length, repaired, gone, unresolved };
 }

@@ -2039,7 +2039,10 @@ re-fetched; a dead cover on another service (Apple Music's signed artwork URLs
 expire) is reported as unresolved and needs a custom image uploaded.
 
 When the re-fetch says the playlist itself is gone (`playlistNotFound`), the
-sweep unfeatures it, see the next section.
+sweep only reports it (`gone`, in the log and the bulk action's answer) and
+changes nothing: the nightly link check (see "Featured link check") flags it
+after two nights in a row. Until 2026-11-03 the sweep unfeatured it on that
+one answer; Rick did not want one Spotify hiccup to remove a playlist.
 
 ## Removing a featured playlist ("unfeature")
 
@@ -2141,8 +2144,8 @@ reset on the Featured page. `linkCheckedAt` is the last definite answer.
   would move `updatedAt`, the sitemap's lastmod.
 - `POST /admin/featured/search` returns `linkBroken`, `linkBrokenAt` and
   `linkCheckedAt` per approved row for the Featured page.
-- The cover repair (above) still unfeatures on a single `playlistNotFound`
-  when the cover is dead too; the link check never unfeatures.
+- Nothing unfeatures automatically any more: the cover repair (above) only
+  reports a gone playlist and leaves it to this check (2026-11-03).
 
 ## Product page descriptions (SEO)
 
@@ -2406,16 +2409,19 @@ Two modules publish the same catalogue:
   the cluster primary for that cron: until 2026-11-03 nothing loaded the
   module there, so the cron was never set up and the feed stayed as built on
   2026-09-10. After a deploy the pm2 log says "Setting up Channable feed
-  build at 5 AM". (Merchant Center's 1 AM cron has the same problem and is
-  left for Rick to decide.)
-  This is how products reach Merchant Center now.
+  build at 5 AM".
+  This is the only way products reach Google (Rick, 2026-11-03: "only
+  Channable"). `MerchantCenterService` is deliberately not started at boot,
+  so neither its push nor its 1 AM AI image cron runs; do not start it.
 
 Both leave out a featured playlist whose source is gone (`linkBroken`, see
 "Featured link check").
 
 The agency running the Merchant Center asked for the feed to go through
-Channable first. The 1 AM image cron stays on: the Channable feed reads its
-images (see below).
+Channable first. The 1 AM AI image cron never ran in production either
+(nothing loads `merchantcenter.ts` in the primary) and stays off: the feed's
+first image is the product photo, and a playlist without any image is left
+out of the feed (see below).
 
 **Channable has no API to push products into.** Its API only covers orders,
 offers, returns and shipments — `POST .../offers` can update stock and price on
