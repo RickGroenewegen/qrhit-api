@@ -10,7 +10,7 @@ That only happens when the songs were picked for them. A gift card is still the 
 
 ## How it works
 
-1. **Order the cards as usual**, in your own name, delivered to you. Pick a playlist or paste your own, [design the cards](/[lang]/blog/how-to-personalize-your-qrsong-cards), add a [gift box](/[lang]/blog/meet-the-qrsong-gift-box) if you like. Nothing in the order mentions the gift.
+1. **Order the cards as usual**, in your own name, delivered to you. Pick a playlist or paste your own, [design the cards](/[lang]/blog/[post:3]), add a [gift box](/[lang]/blog/[post:14]) if you like. Nothing in the order mentions the gift.
 2. **Make the voucher in My account.** On the set, choose *Give as a gift*. Type who it is for, the name it is from, a short message, and the language it should be printed in. You can put several sets of the same order on one voucher.
 3. **Print it or tuck it in.** The voucher is an A5 PDF with their name, your message, a QR code and a code to type. Print it, fold it into the box, slide it into a card.
 4. **They redeem it** by scanning the code or going to qrsong.io/redeem. They log in, or make a free account with an e-mail address, a code we send and a password. The set moves into their account, next to any playlists they already have.
@@ -23,7 +23,7 @@ Everything that belongs to the set:
 
 - **The cards in your design.** They were printed that way, so that is how they stay.
 - **The PDF**, for cards to print yourself, which they can download again from their own account.
-- **[QRGames](/[lang]/blog/introducing-qrgames-for-qrsong-cards), if you added it.** Music Bingo, Music Trivia and Music Timeline for that playlist, hosted from their account. It is an add-on of [price:games] per playlist; when they open the voucher's link, they see whether it comes with the set.
+- **[QRGames](/[lang]/blog/[post:13]), if you added it.** Music Bingo, Music Trivia and Music Timeline for that playlist, hosted from their account. It is an add-on of [price:games] per playlist; when they open the voucher's link, they see whether it comes with the set.
 - **Your app design, if you made one.** With [App Designer](/[lang]/app-designer) the free QRSong! app switches to your design as soon as the first card is scanned. That keeps working on their cards after the gift is redeemed.
 
 What does not go along is App Designer itself. It is an upgrade on your account, and it stays there, along with your order and your invoice. They get the design you made for these cards; if they want to change it, they can get App Designer themselves.
