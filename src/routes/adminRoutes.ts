@@ -49,6 +49,7 @@ import { TidalProvider } from '../providers';
 import CalendarService from '../calendarService';
 import Settings from '../settings';
 import SeoDescriptions from '../seoDescriptions';
+import PaymentTurnover, { PaymentTurnoverError } from '../paymentTurnover';
 import { parseSalesSegment } from '../businessSales';
 import { parseSalesChannel } from '../salesChannel';
 import {
@@ -5246,6 +5247,49 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to create refund.',
+        });
+      }
+    }
+  );
+
+  // Book a paid printed order's ex-VAT turnover and profit again from what
+  // was paid, at the rate it was charged, with the printer step's own
+  // formula (src/paymentTurnover.ts): for a row booked wrong before a fix,
+  // e.g. order 100009253 (reverse charge booked at 19%). Recompute only, no
+  // amounts from the caller. Body { dryRun?: boolean }: a dry run answers the
+  // same before → after and writes nothing. The qrsong toolkit's
+  // `order turnover` calls it.
+  fastify.post(
+    '/admin/payment/:paymentId/recompute-turnover',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+      const dryRun = request.body?.dryRun;
+      if (dryRun !== undefined && typeof dryRun !== 'boolean') {
+        return reply
+          .status(400)
+          .send({ success: false, error: 'dryRun must be a boolean' });
+      }
+      try {
+        const result = await PaymentTurnover.getInstance().recompute(paymentId, {
+          dryRun: dryRun === true,
+        });
+        return reply.send({ success: true, ...result });
+      } catch (error: any) {
+        if (error instanceof PaymentTurnoverError) {
+          return reply
+            .status(error.status)
+            .send({ success: false, error: error.message });
+        }
+        logger.log(
+          color.red.bold('Recomputing the turnover of ') +
+            color.white.bold(paymentId) +
+            color.red.bold(' failed: ') +
+            color.white.bold(error?.message || String(error))
+        );
+        return reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to recompute the turnover',
         });
       }
     }

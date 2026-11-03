@@ -1365,6 +1365,30 @@ separate printer order whose ex-VAT price `createBoxUpgradeOrder` books as
 `payments.extraPrintCost` (off the profit at once, and again in every
 recompute).
 
+**Correcting one booked order** (2026-11-02): fixing the formula left the
+rows it had booked wrong, and order 100009253 held up the October 2026 tax
+report invoice until it was put right with SQL by hand.
+`POST /admin/payment/:paymentId/recompute-turnover` (admin only,
+`src/paymentTurnover.ts`, the qrsong toolkit's `order turnover`) books one
+paid printed order's `totalPriceWithoutTax` and `profit` again with the
+printer step's own formula, which lives in `src/printers/paymentFigures.ts`
+and is shared with `setPaymentInfo` in printenbindV2.ts (keep it there):
+ex VAT = `totalPrice` at `paymentTaxRate`, profit = ex VAT − `printApiPrice`
+− boxes × `BOX_UNIT_COST` − `extraPrintCost`. It never takes amounts from
+the caller, uses the stored print cost (Print&Bind is not asked; the
+"update payments" pass asks it again for every printed order at once) and
+leaves `totalVATPrice` alone, as `setPaymentInfo` does (the reports take the
+VAT as `totalPrice − totalPriceWithoutTax`). It refuses (409) an unpaid
+payment, one without a print cost (`printApiPrice` 0: a physical order is
+booked when it goes to the printer, a digital one keeps checkout's figures),
+and a reverse-charge payment whose rate does not come out at 0%. Body
+`{ dryRun?: boolean }`; the answer is `before`/`after`, the rate and its
+source, print cost, boxes and `extraPrintCost`, and after a write the row
+read back (`readBack`). The write only lands while the row still holds what
+was read (409 otherwise, e.g. an upgrade webhook in between); a row that is
+right already is not written. Tests: test/unit/printers/paymentFigures and
+paymentTurnover.
+
 Purchases made after an order get their own invoice, mailed on its own with
 the PDF attached: App Designer and QRGames (on the account), extra cards and
 gift boxes (on an order). `src/upgradeInvoice.ts` does all of it; the
