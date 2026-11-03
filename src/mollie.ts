@@ -2093,6 +2093,9 @@ class Mollie {
         paymentMethod: true,
         // "sandbox" for a store test purchase (App Review, TestFlight)
         storeEnvironment: true,
+        // 'app' for an order the scan app placed (salesChannel.ts), so the
+        // list can mark the ones it paid through Mollie
+        channel: true,
         // The discount codes on the order, with what each took off (incl.
         // VAT). A released use belongs to a checkout that was never paid.
         discount: true,
