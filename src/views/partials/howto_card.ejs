@@ -19,14 +19,26 @@ const howtoNumberColor = php.howToCardNumberColor || php.backgroundBackColor || 
 <div class="card-back" style="position: relative; overflow: hidden;">
     <img class="background-image-back" style="opacity: 1;" src="<%= process.env['API_URI'] %>/public/background/<%= php.howToCardImage %>" alt="How to play">
 </div>
-<% } else { %>
+<% } else {
+    // Our own front: the title, a QR code to www.qrsong.io/how-to, where the
+    // app is downloaded (src/howtoCard.ts makes it), and a caption under it.
+    // The code sits on a white plate on top of its own quiet zone, so it scans
+    // on any background. Every view that includes this passes howtoQrSvg.
+    if (typeof howtoQrSvg === 'undefined' || !howtoQrSvg) {
+        throw new Error('howto_card: howtoQrSvg is missing (src/howtoCard.ts, howtoCardView)');
+    }
+%>
 <div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
     <% } %>
-    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1; padding: 8mm;">
-        <div style="font-size: 7mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; text-align: center; line-height: 1.2;">
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1; box-sizing: border-box; padding: 5mm;">
+        <div style="font-size: 6mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; text-align: center; line-height: 1.15;">
             <%= howtoTranslations.title %>
+        </div>
+        <div class="howto-qr" style="width: 18mm; height: 18mm; padding: 1mm; margin-top: 3mm; background: #ffffff; border-radius: 1.6mm; flex-shrink: 0;"><%- howtoQrSvg %></div>
+        <div class="howto-scan-caption" style="max-width: 38mm; margin-top: 2mm; font-size: 2.4mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; text-align: center; line-height: 1.25;">
+            <%= howtoTranslations.scanCaption %>
         </div>
     </div>
 </div>
@@ -37,41 +49,33 @@ const howtoNumberColor = php.howToCardNumberColor || php.backgroundBackColor || 
 <div class="card-back" style="position: relative; overflow: hidden;">
     <img class="background-image-back" style="opacity: 1;" src="<%= process.env['API_URI'] %>/public/background/<%= php.howToCardRulesImage %>" alt="Rules">
 </div>
-<% } else { %>
+<% } else {
+    // Step 1 is getting the app with the QR code on the front, then the
+    // rules of the game; the last one, who wins, in bold.
+    const howtoSteps = [
+        howtoTranslations.ruleApp,
+        howtoTranslations.rule1,
+        howtoTranslations.rule2,
+        howtoTranslations.rule3,
+        howtoTranslations.rule4,
+        howtoTranslations.rule5,
+    ];
+%>
 <!-- How-To Card - Back (uses same styling as regular card backs) -->
 <div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
     <% } %>
-    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; width: 100%; position: relative; z-index: 1; box-sizing: border-box; padding: 8mm;">
+    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; width: 100%; position: relative; z-index: 1; box-sizing: border-box; padding: 5mm;">
         <div style="font-size: 2.6mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; margin-bottom: 1.2mm;">
             <%= howtoTranslations.rulesTitle %>
         </div>
-
-        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
-            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">1</div>
-            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule1 %></div>
+        <% howtoSteps.forEach((step, i) => { const last = i === howtoSteps.length - 1; %>
+        <div class="howto-step" style="display: flex; align-items: flex-start;<%= last ? '' : ' margin-bottom: 0.9mm;' %>">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;"><%= i + 1 %></div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;<%= last ? ' font-weight: bold;' : '' %>"><%= step %></div>
         </div>
-
-        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
-            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">2</div>
-            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule2 %></div>
-        </div>
-
-        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
-            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">3</div>
-            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule3 %></div>
-        </div>
-
-        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
-            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">4</div>
-            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule4 %></div>
-        </div>
-
-        <div style="display: flex; align-items: flex-start;">
-            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= howtoNumberColor %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">5</div>
-            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3; font-weight: bold;"><%= howtoTranslations.rule5 %></div>
-        </div>
+        <% }); %>
     </div>
 </div>
 <% } %>

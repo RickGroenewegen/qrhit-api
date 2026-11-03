@@ -147,11 +147,15 @@ export async function fixtureImage(w: number, h: number, a: string, b: string, l
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-export function howtoTranslations(): Record<string, string> {
-  const en = JSON.parse(readFileSync(path.join(REPO, 'src/locales/en.json'), 'utf8'));
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(en)) if (k.startsWith('howto.')) out[k.slice(6)] = String(v);
-  return out;
+/** The how-to card's copy in a language (English for any key it lacks), as howtoCardView gives it. */
+export function howtoTranslations(locale = 'en'): Record<string, string> {
+  const read = (code: string): Record<string, string> => {
+    const all = JSON.parse(readFileSync(path.join(REPO, `src/locales/${code}.json`), 'utf8'));
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(all)) if (k.startsWith('howto.')) out[k.slice(6)] = String(v);
+    return out;
+  };
+  return locale === 'en' ? read('en') : { ...read('en'), ...read(locale) };
 }
 
 // ------------------------------------------------------------------ templates

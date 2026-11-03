@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Torna all'app",
   "paymentComplete.hint": "L'app non si apre? Apri QRSong! tu stesso: il tuo ordine ti aspetta lì.",
   "mail.boxInstructionsIntroOne": "Il tuo ordine include una scatola regalo. Per farla arrivare in perfette condizioni, la spediamo piatta. Piegarla è facile e richiede solo pochi minuti.",
-  "mail.boxInstructionsIntroMany": "Il tuo ordine include {{count}} scatole regalo. Per farle arrivare in perfette condizioni, le spediamo piatte. Piegare una scatola è facile e richiede solo pochi minuti."
+  "mail.boxInstructionsIntroMany": "Il tuo ordine include {{count}} scatole regalo. Per farle arrivare in perfette condizioni, le spediamo piatte. Piegare una scatola è facile e richiede solo pochi minuti.",
+  "howto.ruleApp": "Scansiona il codice QR sul fronte di questa carta con la fotocamera del telefono e scarica l'app gratuita QRSong!.",
+  "howto.scanCaption": "Scansionami e scarica l'app gratuita QRSong!"
 }

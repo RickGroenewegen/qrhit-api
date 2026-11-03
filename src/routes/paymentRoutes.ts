@@ -12,6 +12,7 @@ import {
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
+import { howtoCardView } from '../howtoCard';
 import GoogleFonts from '../googleFonts';
 import { forcedPrinterTemplate, isMultiCardTemplate } from '../pdf';
 import CardTemplates, { CardTemplateError, isFileTemplate, sendStoredPage, TEMPLATE_NAME } from '../cardTemplates';
@@ -592,14 +593,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         ? forcedTemplate
         : requestedTemplate;
 
-    // Load how-to card translations if enabled
-    let howtoTranslations: Record<string, string> | null = null;
-    if (php.addHowToCard) {
-      howtoTranslations = await translation.getTranslationsByPrefix(
-        php.addHowToCardLocale || 'en',
-        'howto'
-      );
-    }
+    // The how-to card's copy and QR code, when the line has one (src/howtoCard.ts).
+    const { howtoTranslations, howtoQrSvg } = await howtoCardView(translation, php);
 
     // Alternating card designs (src/cardDesigns.ts). Card numbers run over
     // the whole deck, so a chunk that starts at startIndex continues the
@@ -630,6 +625,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       batchNumber,
       startIndex,
       howtoTranslations,
+      howtoQrSvg,
       getYearFontSize,
       // Admin-chosen fonts outside fonts.ts get their weights from the
       // Google catalogue; the fixed list resolves as before.

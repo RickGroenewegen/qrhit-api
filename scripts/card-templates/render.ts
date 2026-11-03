@@ -33,6 +33,7 @@ import {
 } from '../../src/cardTemplates';
 import { getFontWeight, getGoogleFontName, getGoogleFontWeights, getYearFontSize } from '../../src/fonts';
 import { CHROME, howtoTranslations, loadTemplate, Page, printPdf, rasterise, startServer, VIEWS } from './harness';
+import { howtoQrSvg } from '../../src/howtoCard';
 
 const run = promisify(execFile);
 const argv = process.argv.slice(2);
@@ -108,7 +109,8 @@ async function main() {
       php,
       designs: [php],
       startIndex: 0,
-      howtoTranslations: howtoTranslations(),
+      howtoTranslations: howtoTranslations(php.addHowToCardLocale || 'en'),
+      howtoQrSvg: howtoQrSvg(),
       getYearFontSize,
       getGoogleFontWeights,
       getGoogleFontName,

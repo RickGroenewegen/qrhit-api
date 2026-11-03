@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Wróć do aplikacji",
   "paymentComplete.hint": "Aplikacja się nie otwiera? Otwórz QRSong! sam: twoje zamówienie już tam czeka.",
   "mail.boxInstructionsIntroOne": "Twoje zamówienie zawiera jedno pudełko prezentowe. Aby dotarło w idealnym stanie, wysyłamy je na płasko. Złożenie go jest proste i zajmuje tylko kilka minut.",
-  "mail.boxInstructionsIntroMany": "Twoje zamówienie zawiera pudełka prezentowe ({{count}} szt.). Aby dotarły w idealnym stanie, wysyłamy je na płasko. Złożenie pudełka jest proste i zajmuje tylko kilka minut."
+  "mail.boxInstructionsIntroMany": "Twoje zamówienie zawiera pudełka prezentowe ({{count}} szt.). Aby dotarły w idealnym stanie, wysyłamy je na płasko. Złożenie pudełka jest proste i zajmuje tylko kilka minut.",
+  "howto.ruleApp": "Zeskanuj kod QR z przodu tej karty aparatem w telefonie i pobierz darmową aplikację QRSong!.",
+  "howto.scanCaption": "Zeskanuj mnie i pobierz darmową aplikację QRSong!"
 }

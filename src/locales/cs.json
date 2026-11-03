@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Zpět do aplikace",
   "paymentComplete.hint": "Aplikace se neotevírá? Otevři QRSong! sám: tvoje objednávka tam čeká.",
   "mail.boxInstructionsIntroOne": "Tvoje objednávka obsahuje jednu dárkovou krabičku. Aby dorazila v perfektním stavu, posíláme ji naplocho. Složit ji je snadné a zabere to jen pár minut.",
-  "mail.boxInstructionsIntroMany": "Tvoje objednávka obsahuje dárkové krabičky ({{count}} ks). Aby dorazily v perfektním stavu, posíláme je naplocho. Složit krabičku je snadné a zabere to jen pár minut."
+  "mail.boxInstructionsIntroMany": "Tvoje objednávka obsahuje dárkové krabičky ({{count}} ks). Aby dorazily v perfektním stavu, posíláme je naplocho. Složit krabičku je snadné a zabere to jen pár minut.",
+  "howto.ruleApp": "Naskenuj QR kód na přední straně této karty fotoaparátem v mobilu a stáhni si zdarma aplikaci QRSong!.",
+  "howto.scanCaption": "Naskenuj mě a stáhni si zdarma aplikaci QRSong!"
 }

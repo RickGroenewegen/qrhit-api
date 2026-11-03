@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Tilbage til appen",
   "paymentComplete.hint": "Åbner appen ikke? Åbn QRSong! selv: din bestilling venter der.",
   "mail.boxInstructionsIntroOne": "Din bestilling indeholder én gaveæske. For at den kommer frem i perfekt stand, sendes den fladt. Det er nemt at folde den, og det tager kun et par minutter.",
-  "mail.boxInstructionsIntroMany": "Din bestilling indeholder {{count}} gaveæsker. For at de kommer frem i perfekt stand, sendes æskerne fladt. Det er nemt at folde en æske, og det tager kun et par minutter."
+  "mail.boxInstructionsIntroMany": "Din bestilling indeholder {{count}} gaveæsker. For at de kommer frem i perfekt stand, sendes æskerne fladt. Det er nemt at folde en æske, og det tager kun et par minutter.",
+  "howto.ruleApp": "Scan QR-koden på forsiden af dette kort med din telefons kamera, og download den gratis QRSong!-app.",
+  "howto.scanCaption": "Scan mig og download den gratis QRSong!-app"
 }

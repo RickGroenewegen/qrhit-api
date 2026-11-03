@@ -43,6 +43,7 @@ import {
   TRACKS,
   VIEWS,
 } from './harness';
+import { howtoQrSvg } from '../../src/howtoCard';
 
 // ------------------------------------------------------------------ arguments
 
@@ -133,6 +134,7 @@ async function main() {
             batchNumber: '12345',
             startIndex: 0,
             howtoTranslations: howto,
+            howtoQrSvg: howtoQrSvg(),
             getYearFontSize,
             getGoogleFontWeights,
             getGoogleFontName,

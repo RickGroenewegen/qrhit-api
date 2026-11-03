@@ -18,6 +18,7 @@ import { getFontWeight, getGoogleFontName, getYearFontSize } from '../fonts';
 import GoogleFonts from '../googleFonts';
 import { resolveQrSubDir } from '../qrPaths';
 import Translation from '../translation';
+import { howtoCardView } from '../howtoCard';
 import PrismaInstance from '../prisma';
 import Data from '../data';
 import PDF from '../pdf';
@@ -227,9 +228,7 @@ export default async function cardTemplateRoutes(fastify: FastifyInstance, getAu
         subdir = await resolveQrSubDir(line.payment.qrSubDir, line.id);
       }
       const cardDesignIndexes = tracks.map((_: any, i: number) => designIndexForCard(designs.length, i));
-      const howtoTranslations = php.addHowToCard
-        ? await translation.getTranslationsByPrefix(php.addHowToCardLocale || 'en', 'howto')
-        : null;
+      const { howtoTranslations, howtoQrSvg } = await howtoCardView(translation, php);
       await sendStoredPage(
         reply,
         template,
@@ -248,6 +247,7 @@ export default async function cardTemplateRoutes(fastify: FastifyInstance, getAu
           php,
           designs,
           howtoTranslations,
+          howtoQrSvg,
           getYearFontSize,
           getGoogleFontWeights: await GoogleFonts.getInstance().weightsHelperForFonts(
             designs.map((design: any) => design.selectedFont)

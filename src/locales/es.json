@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Volver a la app",
   "paymentComplete.hint": "¿No se abre la app? Abre QRSong! tú mismo: tu pedido te espera allí.",
   "mail.boxInstructionsIntroOne": "Tu pedido incluye una caja regalo. Para que llegue en perfecto estado, se envía plana. Montarla es fácil y solo lleva unos minutos.",
-  "mail.boxInstructionsIntroMany": "Tu pedido incluye {{count}} cajas regalo. Para que lleguen en perfecto estado, las cajas se envían planas. Montar una caja es fácil y solo lleva unos minutos."
+  "mail.boxInstructionsIntroMany": "Tu pedido incluye {{count}} cajas regalo. Para que lleguen en perfecto estado, las cajas se envían planas. Montar una caja es fácil y solo lleva unos minutos.",
+  "howto.ruleApp": "Escanea el código QR de la parte delantera de esta carta con la cámara de tu móvil y descarga la app gratuita QRSong!.",
+  "howto.scanCaption": "Escanéame y descarga la app gratuita QRSong!"
 }

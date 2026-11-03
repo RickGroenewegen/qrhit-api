@@ -627,5 +627,7 @@
   "paymentComplete.backToApp": "Terug naar de app",
   "paymentComplete.hint": "Opent de app niet? Open QRSong! dan zelf: je bestelling staat daar klaar.",
   "mail.boxInstructionsIntroOne": "Je bestelling bevat één cadeaubox. Zodat hij in perfecte staat aankomt, versturen we hem plat. In elkaar vouwen is makkelijk en duurt maar een paar minuten.",
-  "mail.boxInstructionsIntroMany": "Je bestelling bevat {{count}} cadeauboxen. Zodat ze in perfecte staat aankomen, versturen we de boxen plat. Een box in elkaar vouwen is makkelijk en duurt maar een paar minuten."
+  "mail.boxInstructionsIntroMany": "Je bestelling bevat {{count}} cadeauboxen. Zodat ze in perfecte staat aankomen, versturen we de boxen plat. Een box in elkaar vouwen is makkelijk en duurt maar een paar minuten.",
+  "howto.ruleApp": "Scan de QR-code op de voorkant van deze kaart met de camera van je telefoon en download de gratis QRSong! app.",
+  "howto.scanCaption": "Scan mij en download de gratis QRSong! app"
 }
