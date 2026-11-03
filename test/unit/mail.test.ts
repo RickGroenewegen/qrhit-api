@@ -52,6 +52,7 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
   },
   payment: { findFirst: vi.fn(), update: vi.fn() },
+  paymentHasPlaylist: { findMany: vi.fn() },
   appDesignPurchase: { findUnique: vi.fn() },
 }));
 vi.mock('../../src/prisma', () => ({
@@ -571,6 +572,28 @@ describe('sendEmail (order confirmation)', () => {
     expect(raw).toContain('50'); // 42 + 8 tracks
   });
 
+  it('physical order of several sets counts the cards and boxes of every set', async () => {
+    // Order 100009603: 45 sets of 139 cards, one box per set, said
+    // "139 cards" and "1x" gift box.
+    await mail.sendEmail('main_physical', makePayment(), [
+      makePlaylist({ numberOfTracks: 139, amount: 45, boxEnabled: true, boxQuantity: 1 }),
+    ]);
+    const raw = lastRaw();
+    expect(raw).toContain('45 × 139');
+    expect(raw).toContain('45x');
+    expect(raw).not.toContain(': 1x');
+  });
+
+  it('physical order with several lines adds up the cards of all their sets', async () => {
+    await mail.sendEmail('main_physical', makePayment(), [
+      makePlaylist({ amount: 2, boxEnabled: true, boxQuantity: 1 }),
+      makePlaylist({ playlistId: 'pl_2', name: 'Second', numberOfTracks: 8, amount: 1, boxEnabled: true, boxQuantity: 1 }),
+    ]);
+    const raw = lastRaw();
+    expect(raw).toContain('92'); // 2 × 42 + 8 cards
+    expect(raw).toContain('3x'); // 2 + 1 boxes
+  });
+
   it('voucher_digital attaches the voucher PDF', async () => {
     await mail.sendEmail(
       'voucher_digital',
@@ -643,6 +666,28 @@ describe('order lifecycle mails', () => {
     expect(raw).toContain('href="http://localhost:4200/en/gift-box/how-to-fold"');
     expect(raw).toContain('src="http://localhost:4200/assets/images/gift-box-fold-guide.jpg"');
     expect(raw).toContain('href="http://localhost:4200/en/gift-box"');
+    // no order lines to count: the general intro
+    expect(raw).toContain('one or more gift boxes');
+  });
+
+  it('sendBoxInstructionsEmail says how many boxes there are to fold', async () => {
+    // Order 100009603: 45 sets with one box each
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      { boxEnabled: true, boxQuantity: 1, amount: 45 },
+    ]);
+    await mail.sendBoxInstructionsEmail(makePayment());
+    expect(prismaMock.paymentHasPlaylist.findMany).toHaveBeenCalledWith({
+      where: { paymentId: 1 },
+      select: { boxEnabled: true, boxQuantity: true, amount: true },
+    });
+    expect(lastRaw()).toContain('Your order includes 45 gift boxes.');
+
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      { boxEnabled: true, boxQuantity: 1, amount: 1 },
+      { boxEnabled: false, boxQuantity: 0, amount: 3 },
+    ]);
+    await mail.sendBoxInstructionsEmail(makePayment());
+    expect(lastRaw()).toContain('Your order includes one gift box.');
   });
 
   it('sendFinalizedMail asks to check the cards with the playlist subject', async () => {

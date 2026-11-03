@@ -11337,5 +11337,39 @@
     "hu",
     "fi",
     "cs"
+  ],
+  "mail.boxInstructionsIntroOne": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no",
+    "da",
+    "hu",
+    "fi",
+    "cs"
+  ],
+  "mail.boxInstructionsIntroMany": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no",
+    "da",
+    "hu",
+    "fi",
+    "cs"
   ]
 }

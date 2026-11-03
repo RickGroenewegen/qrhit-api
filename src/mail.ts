@@ -22,6 +22,20 @@ import type {
 } from './finalCheck';
 
 const prisma = PrismaInstance.getInstance();
+
+/** Gift boxes of an order: boxes per set (boxQuantity) × sets (amount), per line. */
+function giftBoxCount(
+  lines: { boxEnabled?: boolean | null; boxQuantity?: number | null; amount?: number | null }[]
+): number {
+  return lines.reduce(
+    (sum, p) =>
+      p.boxEnabled && (p.boxQuantity ?? 0) > 0
+        ? sum + (p.boxQuantity ?? 0) * Math.max(1, Number(p.amount) || 1)
+        : sum,
+    0
+  );
+}
+
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
 interface MailParams {
@@ -1145,6 +1159,22 @@ class Mail {
       numberOfTracks += playlist.numberOfTracks;
     }
 
+    // A line is `amount` sets of its cards, each set with `boxQuantity` boxes.
+    // The physical confirmation counts every set: one line of 45 sets reads
+    // "45 × 139" cards and 45 boxes, several lines the cards of all their
+    // sets. Order 100009603 (45 sets) said "139 cards" and "1x" gift box.
+    const setsOf = (p: any) => Math.max(1, Number(p.amount) || 1);
+    const cardCount =
+      playlists.length === 1 && setsOf(playlists[0]) > 1
+        ? `${setsOf(playlists[0])} × ${playlists[0].numberOfTracks}`
+        : String(
+            playlists.reduce(
+              (sum: number, p: any) => sum + p.numberOfTracks * setsOf(p),
+              0
+            )
+          );
+    const boxQuantity = giftBoxCount(playlists as any[]);
+
     // A set given away (src/gift.ts) is mailed to whoever holds it now, in
     // their name and language, with their own links and without anything of
     // the order (number, address) that would tell them what it cost
@@ -1220,8 +1250,9 @@ class Mail {
       ),
       bingoDownloadUrl,
       hasBingo: !!bingoDownloadUrl,
-      hasBox: playlists.some((p: any) => p.boxEnabled && p.boxQuantity > 0),
-      boxQuantity: playlists.reduce((sum: number, p: any) => sum + (p.boxEnabled ? (p.boxQuantity || 0) : 0), 0),
+      cardCount,
+      hasBox: boxQuantity > 0,
+      boxQuantity,
       // Gift cards are the voucher_* templates.
       ...(await this.appDesignMailParams(payment, !orderType.startsWith('voucher'))),
     };
@@ -1452,16 +1483,41 @@ class Mail {
     // _scripts/encode-fold-steps.mjs under a name that never changes
     const foldGuideImage = `${process.env['FRONTEND_URI']}/assets/images/gift-box-fold-guide.jpg`;
 
+    const translations = await this.translation.getTranslationsByPrefix(
+      payment.locale,
+      'mail'
+    );
+
+    // Say how many boxes come flat (boxes per set × sets, every line): an
+    // order of 45 sets gets 45 boxes to fold. When the lines cannot be read
+    // the intro stays the general "one or more gift boxes".
+    let boxes = 0;
+    try {
+      boxes = giftBoxCount(
+        await prisma.paymentHasPlaylist.findMany({
+          where: { paymentId: payment.id },
+          select: { boxEnabled: true, boxQuantity: true, amount: true },
+        })
+      );
+    } catch {
+      // keep the general intro
+    }
+    if (translations && boxes > 0) {
+      translations.boxInstructionsIntro =
+        boxes === 1
+          ? this.translation.translate('mail.boxInstructionsIntroOne', payment.locale)
+          : this.translation.translate('mail.boxInstructionsIntroMany', payment.locale, {
+              count: boxes,
+            });
+    }
+
     const mailParams = {
       payment,
       foldGuideLink,
       foldGuideImage,
       giftBoxLink,
       productName: process.env['PRODUCT_NAME'],
-      translations: await this.translation.getTranslationsByPrefix(
-        payment.locale,
-        'mail'
-      ),
+      translations,
       currentYear: new Date().getFullYear(),
     };
 
@@ -1647,7 +1703,8 @@ class Mail {
       bingoDownloadUrl,
       hasBingo: !!bingoDownloadUrl,
       hasBox: !!playlist.boxEnabled && (playlist.boxQuantity || 0) > 0,
-      boxQuantity: playlist.boxQuantity || 0,
+      // boxQuantity is per set: the line's total is that times its sets
+      boxQuantity: giftBoxCount([playlist]),
       // From now on the set can be given as a gift (src/gift.ts)
       showGiftHint: playlist.type !== 'giftcard',
       ...(await this.appDesignMailParams(payment, true)),

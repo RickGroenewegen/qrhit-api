@@ -625,5 +625,7 @@
   "paymentComplete.unknownTitle": "Nesten ferdig",
   "paymentComplete.unknownBody": "Gå tilbake til appen for å se hvordan det går med bestillingen din.",
   "paymentComplete.backToApp": "Tilbake til appen",
-  "paymentComplete.hint": "Åpner ikke appen seg? Åpne QRSong! selv: bestillingen din venter der."
+  "paymentComplete.hint": "Åpner ikke appen seg? Åpne QRSong! selv: bestillingen din venter der.",
+  "mail.boxInstructionsIntroOne": "Bestillingen din inneholder én gaveeske. For at den skal komme frem i perfekt stand, sendes den flat. Å brette den sammen er enkelt og tar bare noen minutter.",
+  "mail.boxInstructionsIntroMany": "Bestillingen din inneholder {{count}} gaveesker. For at de skal komme frem i perfekt stand, sendes eskene flate. Å brette sammen en eske er enkelt og tar bare noen minutter."
 }
