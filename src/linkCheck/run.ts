@@ -1,6 +1,8 @@
 import { color, white } from 'console-log-colors';
 import {
+  GoneKind,
   LinkProbeResult,
+  ProbeOptions,
   SERVICE_LABELS,
   isSpotifyOwnedPlaylist,
   playlistLink,
@@ -24,6 +26,11 @@ import {
  * - More than five playlists (or 10% of the featured ones) to mark in one
  *   night marks none: that is a broken service or a broken us, not a
  *   catalogue that died overnight. Rick gets the list instead.
+ * - A refusal (a private playlist, or our access) is told apart with a
+ *   control: the last playlist of the same service that answered "there" in
+ *   this run. One refused before any playlist answered is asked again at the
+ *   end of its service, when there is a control. Private goes through the
+ *   same two nights, cap and recovery as not found.
  *
  * Nothing is written until every playlist has been asked, and a dry run
  * writes nothing at all (no flag, no strike, no notification).
@@ -58,13 +65,16 @@ export interface LinkCheckNotice {
 
 export interface LinkCheckDeps {
   loadPlaylists(): Promise<LinkCheckPlaylist[]>;
-  probe(playlist: LinkCheckPlaylist): Promise<LinkProbeResult>;
+  probe(playlist: LinkCheckPlaylist, options?: ProbeOptions): Promise<LinkProbeResult>;
   strikes: StrikeStore;
   markBroken(ids: number[], at: Date): Promise<void>;
   clearBroken(ids: number[]): Promise<void>;
   markChecked(ids: number[], at: Date): Promise<void>;
-  /** Drops the cached lists and rebuilds the feed after a flag changed. */
-  afterFlagChange(): Promise<void>;
+  /**
+   * After a flag changed: drops the product page answers and playlist caches
+   * of those playlists and the cached lists, rebuilds the sitemap and the feed.
+   */
+  afterFlagChange(changed: { playlistId: string; slug: string }[]): Promise<void>;
   notify(notice: LinkCheckNotice): Promise<void>;
   sleep(ms: number): Promise<void>;
   now(): Date;
@@ -88,6 +98,8 @@ export interface LinkCheckEntry {
   reason: string;
   /** For a gone playlist: when it was first found gone. */
   since?: string;
+  /** For a gone playlist: not found, or private. */
+  kind?: GoneKind;
 }
 
 export interface LinkCheckReport {
@@ -190,7 +202,7 @@ function paint(level: Level) {
   };
 }
 
-function entry(playlist: LinkCheckPlaylist, reason: string, since?: string): LinkCheckEntry {
+function entry(playlist: LinkCheckPlaylist, result: LinkProbeResult, since?: string): LinkCheckEntry {
   return {
     id: playlist.id,
     playlistId: playlist.playlistId,
@@ -198,8 +210,9 @@ function entry(playlist: LinkCheckPlaylist, reason: string, since?: string): Lin
     slug: playlist.slug,
     name: playlist.name,
     link: playlistLink(playlist.serviceType, playlist.playlistId),
-    reason,
+    reason: result.reason,
     ...(since ? { since } : {}),
+    ...(result.verdict === 'gone' && result.goneKind ? { kind: result.goneKind } : {}),
   };
 }
 
@@ -210,8 +223,13 @@ interface Asked {
 }
 
 /** One question, with a 429 waited out once when the service asks for a short wait. */
-async function ask(deps: LinkCheckDeps, playlist: LinkCheckPlaylist, channel: string): Promise<Asked> {
-  const result = await deps.probe(playlist);
+async function ask(
+  deps: LinkCheckDeps,
+  playlist: LinkCheckPlaylist,
+  channel: string,
+  options: ProbeOptions
+): Promise<Asked> {
+  const result = await deps.probe(playlist, options);
   if (!result.rateLimited) return { result };
 
   const wait = result.retryAfterSeconds ?? LINK_CHECK_RULES.defaultBackoffSeconds;
@@ -220,7 +238,7 @@ async function ask(deps: LinkCheckDeps, playlist: LinkCheckPlaylist, channel: st
   }
   deps.log(paint('warn')`${label(channel)} answers 429, waiting ${wait} s before asking again`);
   await deps.sleep(wait * 1000 + 500);
-  const again = await deps.probe(playlist);
+  const again = await deps.probe(playlist, options);
   if (again.rateLimited) {
     return { result: again, stop: `${label(channel)} still answers 429 after waiting ${wait} s` };
   }
@@ -231,12 +249,17 @@ async function ask(deps: LinkCheckDeps, playlist: LinkCheckPlaylist, channel: st
  * A gone answer is asked once more before it is believed: a 404 can be a bad
  * second at the service. Only two gone answers make a gone.
  */
-async function askAndConfirm(deps: LinkCheckDeps, playlist: LinkCheckPlaylist, channel: string): Promise<Asked> {
-  const first = await ask(deps, playlist, channel);
+async function askAndConfirm(
+  deps: LinkCheckDeps,
+  playlist: LinkCheckPlaylist,
+  channel: string,
+  options: ProbeOptions
+): Promise<Asked> {
+  const first = await ask(deps, playlist, channel, options);
   if (first.stop || first.result.verdict !== 'gone') return first;
 
   await deps.sleep(LINK_CHECK_RULES.confirmDelayMs);
-  const second = await ask(deps, playlist, channel);
+  const second = await ask(deps, playlist, channel, options);
   if (second.result.verdict === 'gone' && !second.stop) return first;
   if (second.result.verdict === 'available') return second;
   return {
@@ -296,21 +319,45 @@ export async function runLinkCheck(deps: LinkCheckDeps, options: LinkCheckOption
     const asked: { playlist: LinkCheckPlaylist; result: LinkProbeResult }[] = [];
     let inARow = 0;
     let stop: string | undefined;
+    // The last playlist of this service that answered "there": the control
+    // that tells a private playlist from our own access being refused.
+    let control: string | null = null;
+    // Refused before there was a control: asked again at the end.
+    const deferred: number[] = [];
 
-    for (let i = 0; i < list.length; i++) {
-      const playlist = list[i];
-      const answer = await askAndConfirm(deps, playlist, channel);
-      asked.push({ playlist, result: answer.result });
+    const take = (index: number, answer: Asked): boolean => {
+      asked[index].result = answer.result;
+      if (answer.result.verdict === 'available') control = asked[index].playlist.playlistId;
       if (answer.stop) {
         stop = answer.stop;
-        break;
+        return false;
       }
       inARow = answer.result.transient ? inARow + 1 : 0;
       if (inARow >= LINK_CHECK_RULES.maxTransientInARow) {
         stop = `${inARow} answers in a row without a definite answer, the last: ${answer.result.reason}`;
-        break;
+        return false;
       }
+      return true;
+    };
+
+    for (let i = 0; i < list.length; i++) {
+      const playlist = list[i];
+      const answer = await askAndConfirm(deps, playlist, channel, { controlPlaylistId: control });
+      asked.push({ playlist, result: answer.result });
+      if (answer.result.needsControl) deferred.push(asked.length - 1);
+      if (!take(asked.length - 1, answer)) break;
       if (i < list.length - 1) await deps.sleep(delay);
+    }
+
+    if (!stop && deferred.length > 0 && control) {
+      deps.log(
+        paint('info')`Asking ${deferred.length} refused ${label(channel)} playlists again, with a control`
+      );
+      for (const index of deferred) {
+        await deps.sleep(delay);
+        const answer = await askAndConfirm(deps, asked[index].playlist, channel, { controlPlaylistId: control });
+        if (!take(index, answer)) break;
+      }
     }
 
     if (stop) {
@@ -347,27 +394,27 @@ export async function runLinkCheck(deps: LinkCheckDeps, options: LinkCheckOption
       report.available++;
       checkedIds.push(playlist.id);
       clearStrikes.push(playlist.id);
-      if (playlist.linkBroken) report.recovered.push(entry(playlist, result.reason));
+      if (playlist.linkBroken) report.recovered.push(entry(playlist, result));
     } else if (result.verdict === 'gone') {
       report.gone++;
       checkedIds.push(playlist.id);
       if (playlist.linkBroken) {
-        report.stillBroken.push(entry(playlist, result.reason));
+        report.stillBroken.push(entry(playlist, result));
         continue;
       }
       const strike = await deps.strikes.get(playlist.id);
       const strikeAt = strike ? Date.parse(strike.firstAt) : NaN;
       if (!strike || !Number.isFinite(strikeAt)) {
-        report.firstStrikes.push(entry(playlist, result.reason));
+        report.firstStrikes.push(entry(playlist, result));
         newStrikes.push({ id: playlist.id, strike: { firstAt: at.toISOString(), reason: result.reason } });
       } else if (at.getTime() - strikeAt >= LINK_CHECK_RULES.minStrikeGapMs) {
-        due.push({ playlist, strike, entry: entry(playlist, result.reason, strike.firstAt) });
+        due.push({ playlist, strike, entry: entry(playlist, result, strike.firstAt) });
       } else {
-        report.waiting.push(entry(playlist, result.reason, strike.firstAt));
+        report.waiting.push(entry(playlist, result, strike.firstAt));
       }
     } else {
       report.unknown++;
-      report.unknowns.push(entry(playlist, result.reason));
+      report.unknowns.push(entry(playlist, result));
     }
   }
   report.checked = checkedIds.length;
@@ -405,7 +452,7 @@ export async function runLinkCheck(deps: LinkCheckDeps, options: LinkCheckOption
       await deps.strikes.clear(id);
     }
     if (report.flagged.length > 0 || report.recovered.length > 0) {
-      await deps.afterFlagChange();
+      await deps.afterFlagChange([...report.flagged, ...report.recovered]);
     }
   }
 
@@ -430,7 +477,7 @@ export async function runLinkCheck(deps: LinkCheckDeps, options: LinkCheckOption
     deps.log(paint('warn')`${e.name} (${e.slug}) gone again, first seen at ${e.since}: waits for another night`);
   }
   for (const e of report.stillBroken) {
-    deps.log(paint('info')`${e.name} (${e.slug}, ${label(e.serviceType)}) still gone`);
+    deps.log(paint('info')`${e.name} (${e.slug}, ${label(e.serviceType)}) still gone: ${e.reason}`);
   }
   for (const e of report.unknowns) {
     deps.log(paint('warn')`${e.name} (${e.slug}, ${label(e.serviceType)}) no definite answer: ${e.reason}`);
@@ -501,7 +548,10 @@ export function buildNotification(report: LinkCheckReport): LinkCheckNotice | nu
     );
   } else if (report.flagged.length > 0 || report.recovered.length > 0) {
     const parts: string[] = [];
-    if (report.flagged.length > 0) parts.push(`${report.flagged.length} broken`);
+    const privates = report.flagged.filter((e) => e.kind === 'private').length;
+    if (report.flagged.length > 0) {
+      parts.push(`${report.flagged.length} broken${privates > 0 ? ` (${privates} private)` : ''}`);
+    }
     if (report.recovered.length > 0) parts.push(`${report.recovered.length} working again`);
     title = `Featured links: ${parts.join(', ')}`;
   } else {

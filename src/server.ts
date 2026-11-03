@@ -47,6 +47,7 @@ import productPhotoRoutes from './routes/productPhotoRoutes';
 import ProductPhotoQueue from './productPhotoQueue';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import aiCostRoutes from './routes/aiCostRoutes';
+import linkCheckRoutes from './routes/linkCheckRoutes';
 import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
 import AbandonedPayments from './abandonedPayments';
@@ -180,6 +181,7 @@ class Server {
     await appThemeRoutes(this.fastify, getAuthHandler);
     await defaultPlaylistRoutes(this.fastify, getAuthHandler);
     await productPhotoRoutes(this.fastify, getAuthHandler);
+    await linkCheckRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -312,6 +314,15 @@ class Server {
       // Featured playlists whose source playlist is gone leave the feeds and
       // the public lists (nightly at 02:15; production main server only)
       FeaturedLinkCheck.getInstance();
+
+      // The Channable feed build at 05:00 (main server only). Its cron is set
+      // up in the constructor, and nothing else loads the module in this
+      // process: from 2026-09-10 to 11-03 the feed was never rebuilt.
+      import('./channable')
+        .then(({ ChannableService }) => ChannableService.getInstance())
+        .catch((error) =>
+          this.logger.log(color.red.bold(`Could not start the Channable feed build: ${error?.message || error}`))
+        );
     } else {
       this.workerId = parseInt(process.env['WORKER_ID'] as string);
       this.startServer();

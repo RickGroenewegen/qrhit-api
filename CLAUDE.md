@@ -2064,30 +2064,47 @@ for that reason.
 
 Every night at 02:15 (Amsterdam, cluster primary of the main server, never in
 development) `src/linkCheck` asks each featured playlist's music service
-whether the source playlist still exists (Rick, 2026-11-03). One that is gone
-on two nights gets `playlists.linkBroken = true` (and `linkBrokenAt`). It
-stays **featured** and its product page keeps working; Rick did not want a
-Spotify hiccup to unfeature the catalogue. The first check that finds it
-again clears the flag. `linkCheckedAt` is the last definite answer.
+whether the source playlist still exists and is public (Rick, 2026-11-03).
+One that is gone (deleted, or private) on two nights gets
+`playlists.linkBroken = true` (and `linkBrokenAt`). It stays **featured**
+(Rick did not want a Spotify hiccup to unfeature the catalogue), but it
+leaves the feeds, the lists and the sitemap, and its **product page is a
+404**. The first check that finds it again clears the flag, and so does the
+reset on the Featured page. `linkCheckedAt` is the last definite answer.
 
 | what | where |
 |---|---|
-| what counts as gone, per service | `src/linkCheck/probes.ts` |
-| the rules: second look, strikes, pacing, cap, writes, the Pushover | `src/linkCheck/run.ts` |
-| cron, lock, wiring (tokens, Redis strikes, caches, feed rebuild) | `src/linkCheck/index.ts` |
+| what counts as gone or private, per service | `src/linkCheck/probes.ts` |
+| the rules: control, second look, strikes, pacing, cap, writes, the Pushover | `src/linkCheck/run.ts` |
+| cron, lock, wiring (tokens, Redis strikes, caches, sitemap, feed), the reset | `src/linkCheck/index.ts` |
+| the reset route | `src/routes/linkCheckRoutes.ts` |
 | by hand | `npm run link-check` (dry run), `-- --write`, `-- --write --force` |
 
-- **Gone** is only the service's own answer about the playlist: Spotify Web
-  API 404 with its `error` object; for Spotify's own playlists (`37i9dQZ…`,
-  which the Web API always 404s for us) our scraper's 404 `Playlist not found
-  (NotFound)`; Deezer's `DataException "no data"` (code 800, sent with a
-  200); Apple Music 404 with `errors` in every storefront tried (the list's
-  own, nl, us); Tidal 404 with a JSON:API `errors` list; YouTube Music's
-  empty browse page (no `contents`, `noindex`) that names our browse id.
-  429, 5xx, no answer, our token refused: unknown, change nothing.
+- **Not found** is only the service's own answer about the playlist: Spotify
+  Web API 404 with its `error` object; for Spotify's own playlists
+  (`37i9dQZ…`, which the Web API always 404s for us) our scraper's 404
+  `Playlist not found (NotFound)`; Deezer's `DataException "no data"` (code
+  800, sent with a 200); Apple Music 404 with `errors` in every storefront
+  tried (the list's own, nl, us); Tidal 404 with a JSON:API `errors` list.
+  YouTube Music's empty browse page (no `contents`, `noindex`, naming our
+  browse id) is the same for deleted and private: "Not found or private".
+  429, 5xx, no answer: unknown, change nothing.
+- **Private** (Rick: report those too) answers like our own access being
+  refused: Spotify 401/403 with its `error` object, Deezer's permission error
+  (code 200, in a 200), Tidal 403 with a JSON:API `errors` list. It counts
+  only when a **control** request with the same access, for the last playlist
+  of that service that answered "there" in this run, still reads; when the
+  control fails too it is our side (unknown, transient, counts towards the
+  stop). A playlist refused before any control is asked again at the end of
+  its service. A private Apple Music playlist is simply not in the catalog
+  (404, not found).
+- Every gone reason starts with `Not found:`, `Private:` or `Not found or
+  private:`, in the log, the strike and the Pushover; the title counts the
+  private ones ("2 broken (1 private)").
 - **Two nights**: a gone answer is asked again 5 s later; a confirmed one
   is a strike in Redis (`featuredLinkGone:<id>`, 60 h). A confirmed gone at
   least 12 h after the strike marks the playlist. A "there" deletes it.
+  Private and not found follow the same rules.
 - **Pacing**: one service at a time, sequential, 1 to 3 s between playlists
   (`CHANNEL_DELAY_MS`). A Retry-After up to 120 s is waited out once; a longer
   one, a second 429 or five transient answers in a row stop that service for
@@ -2100,11 +2117,28 @@ again clears the flag. `linkCheckedAt` is the last definite answer.
 - **Where the flag counts**: `getFeaturedPlaylists` (the `/featured` list,
   the related rows, the playlist suggestions), `projectPlaylistsByIds` (the
   occasion pages and seasonal rows), the playlist suggestions' catalogue, the
-  Channable feed and the Merchant Center upload, cleanup and AI image pass.
-  Not in the sitemap, the product page or anything an order uses. A change
-  drops those list caches and rebuilds the Channable feed.
-- `linkCheckedAt` is written with raw SQL: a Prisma update would move
-  `updatedAt`, the sitemap's lastmod, on every featured playlist every night.
+  Channable feed, the Merchant Center upload, cleanup and AI image pass, the
+  sitemap (`createSiteMap`), and the product page: `getProductPageLocale`
+  answers `exists: false` (so `GET /product-page/:slug` is a 404), and
+  `POST /spotify/playlists` and `/spotify/playlists/tracks` with `slug: 1`
+  (how the product page loads every service's playlist) answer
+  `playlistNotFound` like an unknown slug, from that same 10-minute cache,
+  before any playlist cache. Not in anything an order uses.
+- **A flag change** (marked, recovered, reset) drops that playlist's
+  `productPageLocales_<slug>` and by-id/by-slug playlist caches (not its
+  tracks), the list caches, rebuilds the sitemap and the Channable feed. The
+  nightly run waits for the feed; the reset does not. CloudFront may still
+  hold the old page HTML for its own cache time.
+- **Reset** (the Featured page's undo): `POST
+  /admin/featured/:playlistId/link-broken/reset`, admin, no body,
+  `:playlistId` the service's id like the other `/admin/featured/:playlistId`
+  routes. It clears `linkBroken`/`linkBrokenAt` and sets
+  `markedForMerchantCenter` with raw SQL, deletes the strike (so it needs two
+  new nights in a row again), refreshes as above when it was broken, and
+  answers `{ success: true, linkBroken, linkBrokenAt, linkCheckedAt }`, 404
+  `{ success: false, error: 'Playlist not found' }`.
+- `linkCheckedAt` and the reset are written with raw SQL: a Prisma update
+  would move `updatedAt`, the sitemap's lastmod.
 - `POST /admin/featured/search` returns `linkBroken`, `linkBrokenAt` and
   `linkCheckedAt` per approved row for the Featured page.
 - The cover repair (above) still unfeatures on a single `playlistNotFound`
@@ -2367,7 +2401,13 @@ Two modules publish the same catalogue:
   API, and generates the AI product images (1 AM cron). Its 4 AM sync cron was
   switched off on 2026-10-19 at Rick's request; the push now only runs from
   `POST /admin/merchant-center/upload-featured`.
-- `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron).
+- `src/channable.ts` writes a CSV feed for Channable to import (5 AM cron,
+  server time, on the main server). `server.ts` starts `ChannableService` in
+  the cluster primary for that cron: until 2026-11-03 nothing loaded the
+  module there, so the cron was never set up and the feed stayed as built on
+  2026-09-10. After a deploy the pm2 log says "Setting up Channable feed
+  build at 5 AM". (Merchant Center's 1 AM cron has the same problem and is
+  left for Rick to decide.)
   This is how products reach Merchant Center now.
 
 Both leave out a featured playlist whose source is gone (`linkBroken`, see

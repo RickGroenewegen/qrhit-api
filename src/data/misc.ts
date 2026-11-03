@@ -594,13 +594,16 @@ export async function createSiteMap(
 
   // Get featured playlists with non-empty slugs. A promotional submission
   // that has not been approved yet is not a product page anyone should be
-  // sent to, so it waits for the approval (which rebuilds the sitemap).
+  // sent to, so it waits for the approval (which rebuilds the sitemap). Nor
+  // is one whose source is gone (`linkBroken`, src/linkCheck): its product
+  // page is a 404, and the link check rebuilds the sitemap when that changes.
   const featuredPlaylists = await deps.prisma.playlist.findMany({
     where: {
       featured: true,
       slug: {
         not: '',
       },
+      linkBroken: false,
       OR: [{ promotionalActive: false }, { promotionalAccepted: true }],
     },
     select: {

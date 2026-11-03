@@ -14,9 +14,28 @@ import axios from 'axios';
  * definite but not understood (an unexpected 4xx, a Spotify-owned playlist
  * the Web API cannot see) is "unknown" and not transient: it changes nothing
  * and does not stop the run.
+ *
+ * A private playlist (Rick, 2026-11-03: report those too) answers like our
+ * own access being refused: Spotify 401/403, Deezer's permission error (code
+ * 200), Tidal 403. Such a refusal is "gone, private" only when a control
+ * request with the same access, for a playlist of the same service that
+ * answered "there" earlier in the run, still works: then the refusal is about
+ * this playlist. When the control fails too it is our side, "unknown" and
+ * transient. Without a control yet the answer is `needsControl`, and the run
+ * asks again once it has one.
  */
 
 export type LinkVerdict = 'available' | 'gone' | 'unknown';
+
+/** Why a playlist is gone: the reason text starts with its label. */
+export type GoneKind = 'not-found' | 'private' | 'not-found-or-private';
+
+export const GONE_LABELS: Record<GoneKind, string> = {
+  'not-found': 'Not found',
+  private: 'Private',
+  // YouTube's page is the same for a deleted and a private playlist.
+  'not-found-or-private': 'Not found or private',
+};
 
 export interface LinkProbeResult {
   verdict: LinkVerdict;
@@ -28,6 +47,21 @@ export interface LinkProbeResult {
   rateLimited?: boolean;
   /** Seconds from the 429's Retry-After (or the service's documented window). */
   retryAfterSeconds?: number;
+  /** For a gone answer: not found, or private. */
+  goneKind?: GoneKind;
+  /**
+   * The service refused this playlist and no control was given, so private
+   * and our own access cannot be told apart yet: ask again with a control.
+   */
+  needsControl?: boolean;
+}
+
+export interface ProbeOptions {
+  /**
+   * A playlist id of the same service that answered "there" earlier in this
+   * run: the control that tells a private playlist from our access failing.
+   */
+  controlPlaylistId?: string | null;
 }
 
 export interface HttpRequest {
@@ -134,8 +168,8 @@ function available(reason: string): LinkProbeResult {
   return { verdict: 'available', transient: false, reason };
 }
 
-function gone(reason: string): LinkProbeResult {
-  return { verdict: 'gone', transient: false, reason };
+function gone(kind: GoneKind, said: string): LinkProbeResult {
+  return { verdict: 'gone', transient: false, goneKind: kind, reason: `${GONE_LABELS[kind]}: ${said}` };
 }
 
 function unknown(reason: string, transient: boolean): LinkProbeResult {
@@ -173,7 +207,57 @@ function isObject(value: unknown): value is Record<string, any> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-async function probeSpotify(id: string, ctx: ProbeContext): Promise<LinkProbeResult> {
+/**
+ * A refusal is a private playlist only when the same access still reads the
+ * control playlist; when the control fails too, it is our side.
+ *
+ * @param refused what the service said about the playlist
+ * @param readsControl asks the control playlist with the same access
+ * @param transientWithoutControl how the refusal counted before there was a
+ *   control rule (Spotify, Tidal: our credentials, transient; Deezer: not)
+ */
+async function privateOrOurs(
+  service: string,
+  refused: string,
+  controlPlaylistId: string | null | undefined,
+  readsControl: (controlId: string) => Promise<HttpResponse & { ok: boolean }>,
+  transientWithoutControl: boolean
+): Promise<LinkProbeResult> {
+  if (!controlPlaylistId) {
+    return {
+      verdict: 'unknown',
+      transient: transientWithoutControl,
+      needsControl: true,
+      reason: `${refused}: private, or our access (no ${service} playlist read yet to tell)`,
+    };
+  }
+  const control = await readsControl(controlPlaylistId);
+  if (control.ok) {
+    return gone(
+      'private',
+      `${refused}, while the same access reads another ${service} playlist (${controlPlaylistId})`
+    );
+  }
+  // Deezer puts its errors in a 200 (code 4 is its quota); the others use the status.
+  const deezerCode = isObject(control.body) && isObject(control.body.error) ? control.body.error.code : undefined;
+  if (control.status === 429 || deezerCode === 4) {
+    return {
+      verdict: 'unknown',
+      transient: true,
+      rateLimited: true,
+      retryAfterSeconds: deezerCode === 4 ? 5 : parseRetryAfter(control.headers['retry-after']),
+      reason: `${refused}, and a rate limit for the control playlist`,
+    };
+  }
+  const said =
+    control.status === 0 ? 'no answer' : deezerCode !== undefined ? `error code ${deezerCode}` : `${control.status}`;
+  return unknown(
+    `${refused}, and ${said} for a playlist it read earlier (${controlPlaylistId}): our access, not the playlist`,
+    true
+  );
+}
+
+async function probeSpotify(id: string, ctx: ProbeContext, options: ProbeOptions): Promise<LinkProbeResult> {
   if (isSpotifyOwnedPlaylist(id)) {
     return probeSpotifyScraper(id, ctx);
   }
@@ -181,19 +265,35 @@ async function probeSpotify(id: string, ctx: ProbeContext): Promise<LinkProbeRes
   if (!token) {
     return unknown('no Spotify access token (Spotify needs re-authorising)', true);
   }
-  const response = await ctx.http({
-    method: 'GET',
-    url: `https://api.spotify.com/v1/playlists/${encodeURIComponent(id)}?fields=id`,
-    headers: { Authorization: `Bearer ${token}` },
-    timeoutMs: TIMEOUT_MS,
-  });
-  if (response.status === 200 && isObject(response.body) && response.body.id) {
+  const read = async (playlistId: string) => {
+    const response = await ctx.http({
+      method: 'GET',
+      url: `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}?fields=id`,
+      headers: { Authorization: `Bearer ${token}` },
+      timeoutMs: TIMEOUT_MS,
+    });
+    return { ...response, ok: response.status === 200 && isObject(response.body) && !!response.body.id };
+  };
+  const response = await read(id);
+  if (response.ok) {
     return available('Spotify answers 200');
   }
-  // {"error":{"status":404,"message":"Resource not found"}}; a 404 without
-  // Spotify's error object came from something in between, not Spotify.
-  if (response.status === 404 && isObject(response.body) && isObject(response.body.error)) {
-    return gone(`Spotify answers 404 "${response.body.error.message || 'Not found'}"`);
+  // Spotify's own error object, {"error":{"status":404,"message":"Resource
+  // not found"}}; without it the answer came from something in between.
+  const spotifyError = isObject(response.body) && isObject(response.body.error) ? response.body.error : null;
+  if (response.status === 404 && spotifyError) {
+    return gone('not-found', `Spotify answers 404 "${spotifyError.message || 'Not found'}"`);
+  }
+  // A private playlist: 401/403 with Spotify's error object, the same answer
+  // as our token being refused, so a control request decides.
+  if ((response.status === 401 || response.status === 403) && spotifyError) {
+    return privateOrOurs(
+      'Spotify',
+      `Spotify answers ${response.status} "${spotifyError.message || 'Forbidden'}"`,
+      options.controlPlaylistId,
+      read,
+      true
+    );
   }
   return otherwise(response, 'Spotify');
 }
@@ -224,34 +324,45 @@ async function probeSpotifyScraper(id: string, ctx: ProbeContext): Promise<LinkP
     response.body.success === false &&
     /^Playlist not found \(NotFound\)/.test(String(response.body.error || ''))
   ) {
-    return gone(`Spotify (scraper) answers "${response.body.error}"`);
+    return gone('not-found', `Spotify (scraper) answers "${response.body.error}"`);
   }
   return otherwise(response, 'Spotify scraper');
 }
 
 /**
  * Deezer answers 200 with an error object. Code 800 (DataException "no data")
- * is a playlist it does not have. Codes 4 (quota: 50 requests per 5 seconds)
- * and 700 (service busy) are a bad minute.
+ * is a playlist it does not have. Code 200 (OAuthException, "permission") is
+ * one we may not see: private, when the control playlist still reads (we ask
+ * without a token, so it is never about a user of ours). Codes 4 (quota: 50
+ * requests per 5 seconds) and 700 (service busy) are a bad minute.
  * https://developers.deezer.com/api/errors
  */
-async function probeDeezer(id: string, ctx: ProbeContext): Promise<LinkProbeResult> {
+async function probeDeezer(id: string, ctx: ProbeContext, options: ProbeOptions): Promise<LinkProbeResult> {
   if (!/^\d+$/.test(id)) {
     return unknown(`"${id}" is not a Deezer playlist id`, false);
   }
-  const response = await ctx.http({
-    method: 'GET',
-    url: `https://api.deezer.com/playlist/${id}?country=NL`,
-    timeoutMs: TIMEOUT_MS,
-  });
+  const read = async (playlistId: string) => {
+    const response = await ctx.http({
+      method: 'GET',
+      url: `https://api.deezer.com/playlist/${encodeURIComponent(playlistId)}?country=NL`,
+      timeoutMs: TIMEOUT_MS,
+    });
+    const ok =
+      response.status === 200 && isObject(response.body) && !response.body.error && !!response.body.id;
+    return { ...response, ok };
+  };
+  const response = await read(id);
   if (response.status === 200 && isObject(response.body)) {
     const error = response.body.error;
-    if (!error && response.body.id) {
+    if (response.ok) {
       return available('Deezer answers 200');
     }
     if (isObject(error)) {
       const said = `Deezer answers ${error.type || 'error'} "${error.message || ''}" (code ${error.code})`;
-      if (error.code === 800) return gone(said);
+      if (error.code === 800) return gone('not-found', said);
+      if (error.code === 200) {
+        return privateOrOurs('Deezer', said, options.controlPlaylistId, read, false);
+      }
       if (error.code === 4) {
         return { verdict: 'unknown', transient: true, rateLimited: true, retryAfterSeconds: 5, reason: said };
       }
@@ -288,30 +399,42 @@ async function probeAppleMusic(target: LinkTarget, ctx: ProbeContext): Promise<L
     }
     return otherwise(response, 'Apple Music');
   }
-  return gone(`Apple Music answers 404 in storefront${storefronts.length > 1 ? 's' : ''} ${storefronts.join(', ')}`);
+  return gone(
+    'not-found',
+    `Apple Music answers 404 in storefront${storefronts.length > 1 ? 's' : ''} ${storefronts.join(', ')}`
+  );
 }
 
 /**
- * Tidal's API is JSON:API: a missing playlist is a 404 with an `errors` list.
+ * Tidal's API is JSON:API: a missing playlist is a 404 with an `errors` list,
+ * one we may not see a 403 with one (private, when the control still reads).
  * Asked with countryCode=US, as TidalProvider asks for the product page.
  */
-async function probeTidal(id: string, ctx: ProbeContext): Promise<LinkProbeResult> {
+async function probeTidal(id: string, ctx: ProbeContext, options: ProbeOptions): Promise<LinkProbeResult> {
   const token = await ctx.tokens.tidal();
   if (!token) {
     return unknown('no Tidal access token (Tidal needs connecting again)', true);
   }
-  const response = await ctx.http({
-    method: 'GET',
-    url: `https://openapi.tidal.com/v2/playlists/${encodeURIComponent(id)}?countryCode=US`,
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.api+json' },
-    timeoutMs: TIMEOUT_MS,
-  });
-  if (response.status === 200 && isObject(response.body?.data)) {
+  const read = async (playlistId: string) => {
+    const response = await ctx.http({
+      method: 'GET',
+      url: `https://openapi.tidal.com/v2/playlists/${encodeURIComponent(playlistId)}?countryCode=US`,
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.api+json' },
+      timeoutMs: TIMEOUT_MS,
+    });
+    return { ...response, ok: response.status === 200 && isObject(response.body?.data) };
+  };
+  const response = await read(id);
+  if (response.ok) {
     return available('Tidal answers 200');
   }
-  if (response.status === 404 && Array.isArray(response.body?.errors)) {
-    const detail = response.body.errors[0]?.detail || response.body.errors[0]?.code || 'Not found';
-    return gone(`Tidal answers 404 "${detail}"`);
+  const errors = Array.isArray(response.body?.errors) ? response.body.errors : null;
+  const detail = (fallback: string) => errors?.[0]?.detail || errors?.[0]?.code || fallback;
+  if (response.status === 404 && errors) {
+    return gone('not-found', `Tidal answers 404 "${detail('Not found')}"`);
+  }
+  if (response.status === 403 && errors) {
+    return privateOrOurs('Tidal', `Tidal answers 403 "${detail('Forbidden')}"`, options.controlPlaylistId, read, true);
   }
   return otherwise(response, 'Tidal');
 }
@@ -364,24 +487,30 @@ async function probeYouTubeMusic(id: string, ctx: ProbeContext): Promise<LinkPro
     }
     const noindex = body.microformat?.microformatDataRenderer?.noindex === true;
     if (!body.header && (noindex || hasErrorAlert(body)) && answeredBrowseId(body) === browseId) {
-      return gone('YouTube Music answers an empty playlist page (no contents, noindex)');
+      return gone('not-found-or-private', 'YouTube Music answers an empty playlist page (no contents, noindex)');
     }
     return unknown('YouTube Music answers a page the check does not recognise', false);
   }
   return otherwise(response, 'YouTube Music');
 }
 
-export async function probeLink(target: LinkTarget, ctx: ProbeContext): Promise<LinkProbeResult> {
+export async function probeLink(
+  target: LinkTarget,
+  ctx: ProbeContext,
+  options: ProbeOptions = {}
+): Promise<LinkProbeResult> {
   try {
     switch (target.serviceType) {
       case 'spotify':
-        return await probeSpotify(target.playlistId, ctx);
+        return await probeSpotify(target.playlistId, ctx, options);
       case 'deezer':
-        return await probeDeezer(target.playlistId, ctx);
+        return await probeDeezer(target.playlistId, ctx, options);
       case 'apple_music':
+        // A private Apple Music playlist is not in the catalog at all: a 404
+        // like a deleted one, so there is no refusal to control.
         return await probeAppleMusic(target, ctx);
       case 'tidal':
-        return await probeTidal(target.playlistId, ctx);
+        return await probeTidal(target.playlistId, ctx, options);
       case 'youtube_music':
         return await probeYouTubeMusic(target.playlistId, ctx);
       default:

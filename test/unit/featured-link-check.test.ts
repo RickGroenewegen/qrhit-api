@@ -4,6 +4,7 @@ import {
   HttpResponse,
   LinkProbeResult,
   ProbeContext,
+  ProbeOptions,
   parseRetryAfter,
   probeLink,
 } from '../../src/linkCheck/probes';
@@ -68,7 +69,8 @@ describe('probeLink: Spotify', () => {
     expect(result).toEqual({
       verdict: 'gone',
       transient: false,
-      reason: 'Spotify answers 404 "Resource not found"',
+      goneKind: 'not-found',
+      reason: 'Not found: Spotify answers 404 "Resource not found"',
     });
   });
 
@@ -102,6 +104,82 @@ describe('probeLink: Spotify', () => {
     const result = await probeLink(target('spotify', 'abc'), ctx);
     expect(result).toMatchObject({ verdict: 'unknown', transient: true });
     expect(requests).toHaveLength(0);
+  });
+
+  const forbidden = (status = 403, message = 'Forbidden') => res(status, { error: { status, message } });
+
+  it('cannot tell a private playlist from our token without a control, and says so', async () => {
+    const { ctx, requests } = makeCtx([forbidden()]);
+    const result = await probeLink(target('spotify', 'priv'), ctx);
+    expect(result).toEqual({
+      verdict: 'unknown',
+      transient: true,
+      needsControl: true,
+      reason: 'Spotify answers 403 "Forbidden": private, or our access (no Spotify playlist read yet to tell)',
+    });
+    expect(requests).toHaveLength(1);
+  });
+
+  it('reads a 403 as private when the same token still reads the control playlist', async () => {
+    const { ctx, requests } = makeCtx([forbidden(), res(200, { id: 'ctrl' })]);
+    const result = await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' });
+    expect(result).toEqual({
+      verdict: 'gone',
+      transient: false,
+      goneKind: 'private',
+      reason:
+        'Private: Spotify answers 403 "Forbidden", while the same access reads another Spotify playlist (ctrl)',
+    });
+    expect(requests.map((r) => r.url)).toEqual([
+      'https://api.spotify.com/v1/playlists/priv?fields=id',
+      'https://api.spotify.com/v1/playlists/ctrl?fields=id',
+    ]);
+    // The control goes out with the very same token.
+    expect(requests[1].headers).toEqual(requests[0].headers);
+  });
+
+  it('reads a 401 the same way', async () => {
+    const { ctx } = makeCtx([forbidden(401, 'Permissions missing'), res(200, { id: 'ctrl' })]);
+    expect(await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' })).toMatchObject({
+      verdict: 'gone',
+      goneKind: 'private',
+    });
+  });
+
+  it('reads a 403 as ours when the control fails too: unknown and transient', async () => {
+    const { ctx } = makeCtx([forbidden(), forbidden()]);
+    const result = await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' });
+    expect(result).toEqual({
+      verdict: 'unknown',
+      transient: true,
+      reason:
+        'Spotify answers 403 "Forbidden", and 403 for a playlist it read earlier (ctrl): our access, not the playlist',
+    });
+  });
+
+  it('counts a control without an answer as ours', async () => {
+    const { ctx } = makeCtx([forbidden(), { status: 0, headers: {}, body: null, error: 'ETIMEDOUT' }]);
+    const result = await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' });
+    expect(result).toMatchObject({ verdict: 'unknown', transient: true });
+    expect(result.reason).toContain('no answer for a playlist it read earlier');
+  });
+
+  it('reads a 429 on the control as a rate limit', async () => {
+    const { ctx } = makeCtx([forbidden(), res(429, null, { 'retry-after': '3' })]);
+    expect(await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' })).toMatchObject({
+      verdict: 'unknown',
+      rateLimited: true,
+      retryAfterSeconds: 3,
+    });
+  });
+
+  it('does not control a 403 that is not from Spotify', async () => {
+    const { ctx, requests } = makeCtx([res(403, '<html>Forbidden</html>')]);
+    expect(await probeLink(target('spotify', 'priv'), ctx, { controlPlaylistId: 'ctrl' })).toMatchObject({
+      verdict: 'unknown',
+      transient: true,
+    });
+    expect(requests).toHaveLength(1);
   });
 
   it('asks the scraper, not the Web API, about a Spotify-owned playlist', async () => {
@@ -145,7 +223,8 @@ describe('probeLink: Deezer', () => {
     expect(await probeLink(target('deezer', '98765432109876'), ctx)).toEqual({
       verdict: 'gone',
       transient: false,
-      reason: 'Deezer answers DataException "no data" (code 800)',
+      goneKind: 'not-found',
+      reason: 'Not found: Deezer answers DataException "no data" (code 800)',
     });
   });
 
@@ -159,9 +238,47 @@ describe('probeLink: Deezer', () => {
     });
   });
 
-  it('does not read a permission error as gone', async () => {
-    const { ctx } = makeCtx([res(200, { error: { type: 'OAuthException', message: 'x', code: 200 } })]);
-    expect(await probeLink(target('deezer', '1'), ctx)).toMatchObject({ verdict: 'unknown', transient: false });
+  const permission = () =>
+    res(200, { error: { type: 'OAuthException', message: 'You are not allowed to see this playlist', code: 200 } });
+
+  it('does not read a permission error as gone without a control', async () => {
+    const { ctx, requests } = makeCtx([permission()]);
+    expect(await probeLink(target('deezer', '1'), ctx)).toMatchObject({
+      verdict: 'unknown',
+      transient: false,
+      needsControl: true,
+    });
+    expect(requests).toHaveLength(1);
+  });
+
+  it('reads a permission error as private when the control playlist still reads', async () => {
+    const { ctx, requests } = makeCtx([permission(), res(200, { id: 908622995, title: 'x' })]);
+    const result = await probeLink(target('deezer', '1'), ctx, { controlPlaylistId: '908622995' });
+    expect(result).toEqual({
+      verdict: 'gone',
+      transient: false,
+      goneKind: 'private',
+      reason:
+        'Private: Deezer answers OAuthException "You are not allowed to see this playlist" (code 200), ' +
+        'while the same access reads another Deezer playlist (908622995)',
+    });
+    expect(requests[1].url).toBe('https://api.deezer.com/playlist/908622995?country=NL');
+  });
+
+  it('reads a permission error as ours when the control fails too', async () => {
+    const { ctx } = makeCtx([permission(), permission()]);
+    const result = await probeLink(target('deezer', '1'), ctx, { controlPlaylistId: '908622995' });
+    expect(result).toMatchObject({ verdict: 'unknown', transient: true });
+    expect(result.reason).toContain('error code 200 for a playlist it read earlier');
+  });
+
+  it('reads the quota on the control as a rate limit', async () => {
+    const { ctx } = makeCtx([permission(), res(200, { error: { type: 'Exception', message: 'Quota', code: 4 } })]);
+    expect(await probeLink(target('deezer', '1'), ctx, { controlPlaylistId: '2' })).toMatchObject({
+      verdict: 'unknown',
+      rateLimited: true,
+      retryAfterSeconds: 5,
+    });
   });
 
   it('asks nothing for an id that is not a Deezer id', async () => {
@@ -180,7 +297,8 @@ describe('probeLink: Apple Music', () => {
     expect(result).toEqual({
       verdict: 'gone',
       transient: false,
-      reason: 'Apple Music answers 404 in storefronts nl, us',
+      goneKind: 'not-found',
+      reason: 'Not found: Apple Music answers 404 in storefronts nl, us',
     });
     expect(requests.map((r) => r.url)).toEqual([
       'https://api.music.apple.com/v1/catalog/nl/playlists/pl.u-abc',
@@ -208,7 +326,7 @@ describe('probeLink: Tidal', () => {
     const { ctx, requests } = makeCtx([res(404, { errors: [{ code: 'NOT_FOUND', detail: 'Playlist not found' }] })]);
     expect(await probeLink(target('tidal', 'uuid-1'), ctx)).toMatchObject({
       verdict: 'gone',
-      reason: 'Tidal answers 404 "Playlist not found"',
+      reason: 'Not found: Tidal answers 404 "Playlist not found"',
     });
     expect(requests[0].url).toBe('https://openapi.tidal.com/v2/playlists/uuid-1?countryCode=US');
   });
@@ -216,6 +334,27 @@ describe('probeLink: Tidal', () => {
   it('is there on a 200 with data', async () => {
     const { ctx } = makeCtx([res(200, { data: { id: 'uuid-1', type: 'playlists' } })]);
     expect(await probeLink(target('tidal', 'uuid-1'), ctx)).toMatchObject({ verdict: 'available' });
+  });
+
+  it('reads a JSON:API 403 as private when the control still reads', async () => {
+    const { ctx } = makeCtx([
+      res(403, { errors: [{ code: 'FORBIDDEN', detail: 'Access denied' }] }),
+      res(200, { data: { id: 'uuid-ctrl', type: 'playlists' } }),
+    ]);
+    expect(await probeLink(target('tidal', 'uuid-1'), ctx, { controlPlaylistId: 'uuid-ctrl' })).toMatchObject({
+      verdict: 'gone',
+      goneKind: 'private',
+      reason: 'Private: Tidal answers 403 "Access denied", while the same access reads another Tidal playlist (uuid-ctrl)',
+    });
+  });
+
+  it('reads a 403 as ours when the control fails too', async () => {
+    const forbidden = () => res(403, { errors: [{ code: 'FORBIDDEN' }] });
+    const { ctx } = makeCtx([forbidden(), forbidden()]);
+    expect(await probeLink(target('tidal', 'uuid-1'), ctx, { controlPlaylistId: 'uuid-ctrl' })).toMatchObject({
+      verdict: 'unknown',
+      transient: true,
+    });
   });
 });
 
@@ -241,7 +380,11 @@ describe('probeLink: YouTube Music', () => {
         microformat: { microformatDataRenderer: { noindex: true } },
       }),
     ]);
-    expect(await probeLink(target('youtube_music', 'PLzzz'), ctx)).toMatchObject({ verdict: 'gone' });
+    expect(await probeLink(target('youtube_music', 'PLzzz'), ctx)).toMatchObject({
+      verdict: 'gone',
+      goneKind: 'not-found-or-private',
+      reason: expect.stringMatching(/^Not found or private: /),
+    });
   });
 
   it('does not read an empty page for another browse id (a consent or bot page) as gone', async () => {
@@ -305,18 +448,21 @@ function pl(id: number, over: Partial<LinkCheckPlaylist> = {}): LinkCheckPlaylis
 }
 
 /** answers: per playlist id, one answer for every question or a queue. */
+type Answer = LinkProbeResult | LinkProbeResult[] | ((options: ProbeOptions) => LinkProbeResult);
+
 function makeRun(
   playlists: LinkCheckPlaylist[],
-  answers: Record<number, LinkProbeResult | LinkProbeResult[]> = {},
+  answers: Record<number, Answer> = {},
   strikes: Record<number, Strike> = {}
 ) {
   const store = new Map<number, Strike>(Object.entries(strikes).map(([k, v]) => [Number(k), v]));
   const asked: number[] = [];
   const deps = {
     loadPlaylists: vi.fn(async () => playlists),
-    probe: vi.fn(async (p: LinkCheckPlaylist) => {
+    probe: vi.fn(async (p: LinkCheckPlaylist, options: ProbeOptions = {}) => {
       asked.push(p.id);
       const a = answers[p.id] ?? THERE;
+      if (typeof a === 'function') return a(options);
       if (Array.isArray(a)) return a.length > 1 ? a.shift()! : a[0];
       return a;
     }),
@@ -332,7 +478,7 @@ function makeRun(
     markBroken: vi.fn(async () => {}),
     clearBroken: vi.fn(async () => {}),
     markChecked: vi.fn(async () => {}),
-    afterFlagChange: vi.fn(async () => {}),
+    afterFlagChange: vi.fn(async (_changed: { playlistId: string; slug: string }[]) => {}),
     notify: vi.fn(async () => {}),
     sleep: vi.fn(async () => {}),
     now: () => NOW,
@@ -367,7 +513,11 @@ describe('runLinkCheck', () => {
     expect(ids(report.flagged)).toEqual([1]);
     expect(deps.markBroken).toHaveBeenCalledWith([1], NOW);
     expect(store.has(1)).toBe(false);
+    // The product page answer, the playlist caches and the sitemap of exactly this one.
     expect(deps.afterFlagChange).toHaveBeenCalledTimes(1);
+    expect(deps.afterFlagChange).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 1, playlistId: 'sp1', slug: 'list-1' }),
+    ]);
     expect(deps.markChecked).toHaveBeenCalledWith([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], NOW);
 
     expect(deps.notify).toHaveBeenCalledTimes(1);
@@ -573,6 +723,96 @@ describe('runLinkCheck', () => {
     expect(channelOf({ serviceType: 'spotify', playlistId: '37i9dQZF1DXcBWIGoYBM5M' })).toBe('spotify-scraper');
     expect(channelOf({ serviceType: 'spotify', playlistId: '4rOoJ6Egrf8K2IrywzwOMk' })).toBe('spotify');
     expect(channelOf({ serviceType: 'apple_music', playlistId: 'pl.abc' })).toBe('apple_music');
+  });
+
+  // A refusal: private when the control reads, ours when it does not.
+  const PRIVATE: LinkProbeResult = {
+    verdict: 'gone',
+    transient: false,
+    goneKind: 'private',
+    reason: 'Private: Spotify answers 403 "Forbidden", while the same access reads another Spotify playlist (sp2)',
+  };
+  const refusedUnlessControlled = (options: ProbeOptions): LinkProbeResult =>
+    options.controlPlaylistId
+      ? PRIVATE
+      : {
+          verdict: 'unknown',
+          transient: true,
+          needsControl: true,
+          reason: 'Spotify answers 403 "Forbidden": private, or our access (no Spotify playlist read yet to tell)',
+        };
+
+  it('passes the last playlist of the service that answered "there" as the control', async () => {
+    const { deps } = makeRun([pl(1), pl(2), pl(3, { serviceType: 'deezer', playlistId: '3' })], {
+      2: refusedUnlessControlled,
+    });
+    await runLinkCheck(deps, { dryRun: false });
+    const calls = deps.probe.mock.calls.map(([p, o]) => [p.id, o?.controlPlaylistId ?? null]);
+    // 2 is asked twice (the confirm look), both times with 1 as the control;
+    // Deezer starts without one: a control is per service.
+    expect(calls).toEqual([
+      [1, null],
+      [2, 'sp1'],
+      [2, 'sp1'],
+      [3, null],
+    ]);
+  });
+
+  it('asks a playlist refused before any control again at the end, then counts it private', async () => {
+    const playlists = Array.from({ length: 10 }, (_, i) => pl(i + 1));
+    const { deps, store } = makeRun(playlists, { 1: refusedUnlessControlled }, { 1: LAST_NIGHT });
+    const report = await runLinkCheck(deps, { dryRun: false });
+
+    const calls = deps.probe.mock.calls.map(([p, o]) => [p.id, o?.controlPlaylistId ?? null]);
+    expect(calls[0]).toEqual([1, null]);
+    expect(calls.slice(-2)).toEqual([
+      [1, 'sp10'],
+      [1, 'sp10'],
+    ]);
+    // Private goes through the same two nights: last night's strike makes it due.
+    expect(ids(report.flagged)).toEqual([1]);
+    expect(report.flagged[0]).toMatchObject({ kind: 'private', reason: expect.stringMatching(/^Private: /) });
+    expect(store.has(1)).toBe(false);
+
+    const notice = deps.notify.mock.calls[0][0] as { title: string; message: string };
+    expect(notice.title).toBe('Featured links: 1 broken (1 private)');
+    expect(notice.message).toContain('Private: Spotify answers 403 "Forbidden"');
+    const logged = deps.log.mock.calls.map(([line]) => String(line)).join('\n');
+    expect(logged).toContain('Private: Spotify answers 403');
+  });
+
+  it('starts a private playlist on its first night, like a deleted one', async () => {
+    const { deps } = makeRun([pl(1), pl(2)], { 2: refusedUnlessControlled });
+    const report = await runLinkCheck(deps, { dryRun: false });
+    expect(ids(report.firstStrikes)).toEqual([2]);
+    expect(report.firstStrikes[0].kind).toBe('private');
+    expect(report.flagged).toEqual([]);
+  });
+
+  it('leaves a refusal unknown when no playlist of the service answers "there"', async () => {
+    const { deps } = makeRun([pl(1), pl(2)], { 1: refusedUnlessControlled, 2: refusedUnlessControlled });
+    const report = await runLinkCheck(deps, { dryRun: false });
+    expect(report.gone).toBe(0);
+    expect(ids(report.unknowns)).toEqual([1, 2]);
+    expect(report.unknowns[0].reason).toContain('no Spotify playlist read yet to tell');
+    expect(deps.probe).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts a refusal whose control fails as ours, towards stopping the service', async () => {
+    const OURS: LinkProbeResult = {
+      verdict: 'unknown',
+      transient: true,
+      reason: 'Spotify answers 403 "Forbidden", and 403 for a playlist it read earlier (sp1): our access, not the playlist',
+    };
+    const playlists = Array.from({ length: 8 }, (_, i) => pl(i + 1));
+    const answers: Record<number, Answer> = {};
+    for (let id = 2; id <= 8; id++) answers[id] = OURS;
+    const { deps } = makeRun(playlists, answers);
+    const report = await runLinkCheck(deps, { dryRun: false });
+    expect(report.stopped).toEqual([
+      { channel: 'spotify', reason: expect.stringContaining('our access'), skipped: 2 },
+    ]);
+    expect(report.gone).toBe(0);
   });
 
   it('writes nothing when a strike cannot be read', async () => {

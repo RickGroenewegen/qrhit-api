@@ -46,6 +46,7 @@ import {
   updatePromotionalPlaylist,
   acceptPromotionalPlaylist,
   declinePromotionalPlaylist,
+  getProductPageLocale,
   CACHE_KEY_FEATURED_PLAYLISTS,
 } from '../../../src/data/featuredPlaylists';
 
@@ -230,6 +231,24 @@ describe('getFeaturedPlaylists', () => {
     expect(result).toEqual([{ id: 9, name: 'cached' }]);
     expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
     expect(cache.set).not.toHaveBeenCalled();
+  });
+});
+
+describe('getProductPageLocale', () => {
+  it('does not know a playlist whose source is gone (linkBroken): its product page is a 404', async () => {
+    const { deps, prisma, cache } = makeDeps();
+    (deps.translate as any).allLocales = ['en', 'nl', 'de'];
+    prisma.playlist.findFirst.mockResolvedValueOnce(null);
+
+    const info = await getProductPageLocale(deps, 'dead-list');
+
+    expect(prisma.playlist.findFirst).toHaveBeenCalledWith({
+      where: { slug: 'dead-list', featured: true, linkBroken: false },
+      select: { featuredLocale: true },
+    });
+    expect(info.exists).toBe(false);
+    // Under the key the link check drops when the flag changes.
+    expect(cache.set).toHaveBeenCalledWith('productPageLocales_dead-list', expect.any(String), 600);
   });
 });
 

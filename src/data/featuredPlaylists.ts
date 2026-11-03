@@ -11,11 +11,15 @@ import { DataDeps } from './types';
 import { productPhotoFeatured, queueProductPhoto } from '../productPhoto/triggers';
 
 export const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v4_';
-const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocales_';
+/** Plus the slug: getProductPageLocale's answer. The link check drops it when a flag changes. */
+export const CACHE_KEY_PRODUCT_PAGE_LOCALE = 'productPageLocales_';
 const PRODUCT_PAGE_LOCALE_TTL = 600;
 
 export interface ProductPageLocale {
-  /** False when no featured playlist carries this slug. */
+  /**
+   * False when no featured playlist carries this slug, or the one that does
+   * is gone on its music service (`linkBroken`): its product page is a 404.
+   */
   exists: boolean;
   /**
    * The locales the product page is indexable in (its own plus `en`), or
@@ -41,8 +45,10 @@ export async function getProductPageLocale(
     return JSON.parse(cached) as ProductPageLocale;
   }
 
+  // linkBroken (the nightly link check, src/linkCheck): the source playlist
+  // is gone, so the product page is a 404 until a check finds it again.
   const playlist = await deps.prisma.playlist.findFirst({
-    where: { slug, featured: true },
+    where: { slug, featured: true, linkBroken: false },
     select: { featuredLocale: true },
   });
   const result: ProductPageLocale = {
