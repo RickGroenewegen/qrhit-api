@@ -78,6 +78,7 @@ vi.mock('../../../src/aiTasks', () => ({
 vi.mock('../../../src/translation', () => ({
   default: class {
     allLocales = ['en', 'nl'];
+    isValidLocale = (l: string) => ['en', 'nl', 'de'].includes(l);
   },
 }));
 vi.mock('../../../src/data', () => ({
@@ -228,6 +229,9 @@ describe('Promotional.getPromotionalSetup', () => {
         shareDesign: false,
         design: null,
         sampleTrack: null,
+        // Submitted without the question (older submission): written for them.
+        keepDescription: false,
+        descriptionLocale: null,
       },
     });
     expect(h.prisma.playlistHasTrack.findFirst).not.toHaveBeenCalled();
@@ -289,6 +293,41 @@ describe('Promotional.getPromotionalSetup', () => {
 
     expect(res.data?.shareDesign).toBe(false);
     expect(res.data?.sampleTrack).toBeNull();
+  });
+
+  it('asks (null) which text to use before the first submit, then reports the answer and its language', async () => {
+    const row = {
+      id: 2,
+      name: 'PName',
+      slug: 'pslug',
+      image: 'img.png',
+      customImage: null,
+      design: null,
+      promotionalTitle: null,
+      promotionalDescription: null,
+      promotionalActive: 0,
+      promotionalAccepted: 0,
+      promotionalDeclined: 0,
+      promotionalKeepDescription: false, // the column default, not an answer
+      promotionalDescriptionLocale: null,
+    };
+    h.prisma.discountCode.findFirst.mockResolvedValue(null);
+
+    h.prisma.playlist.findFirst.mockResolvedValueOnce({ ...row });
+    const first = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+    expect(first.data?.keepDescription).toBeNull();
+    expect(first.data?.descriptionLocale).toBeNull();
+
+    h.prisma.playlist.findFirst.mockResolvedValueOnce({
+      ...row,
+      promotionalTitle: 'T',
+      promotionalDescription: 'Weihnachtslieder',
+      promotionalKeepDescription: true,
+      promotionalDescriptionLocale: 'de',
+    });
+    const later = await promotional.getPromotionalSetup('pay_1', 'uhash', 'pl_1');
+    expect(later.data?.keepDescription).toBe(true);
+    expect(later.data?.descriptionLocale).toBe('de');
   });
 
   it('defaults active=true on first-time setup and falls back to the playlistId share link', async () => {
@@ -369,6 +408,10 @@ describe('Promotional.savePromotionalSetup', () => {
         promotionalUserId: 7,
         // Not stated in the request: the customer's design stays private.
         promotionalShareDesign: false,
+        // Not stated either: a description is written for them, as before
+        // the question existed.
+        promotionalKeepDescription: false,
+        promotionalDescriptionLocale: null,
         featured: true,
         name: 'Best QRSong! Mix', // hitster -> QRSong!
         slug: 'best-qrsong-mix',
@@ -398,6 +441,41 @@ describe('Promotional.savePromotionalSetup', () => {
       h.prisma.playlist.update.mock.calls[0][0].data.promotionalShareDesign
     ).toBe(true);
     expect(h.clearPlaylistCache).toHaveBeenCalledWith('pl_1', undefined);
+  });
+
+  it('keeps the customer text only on an explicit true, with the language they named', async () => {
+    await promotional.savePromotionalSetup('pay_1', 'uhash', 'pl_1', {
+      ...saveData,
+      keepDescription: true,
+      descriptionLocale: 'nl',
+    });
+    const data = h.prisma.playlist.update.mock.calls[0][0].data;
+    expect(data.promotionalKeepDescription).toBe(true);
+    expect(data.promotionalDescriptionLocale).toBe('nl');
+    // The admin's switch is never written by the customer's form.
+    expect(data).not.toHaveProperty('preserveDescription');
+  });
+
+  it('leaves the language to the model when the one sent is not a site language', async () => {
+    await promotional.savePromotionalSetup('pay_1', 'uhash', 'pl_1', {
+      ...saveData,
+      keepDescription: true,
+      descriptionLocale: 'xx',
+    });
+    const data = h.prisma.playlist.update.mock.calls[0][0].data;
+    expect(data.promotionalKeepDescription).toBe(true);
+    expect(data.promotionalDescriptionLocale).toBeNull();
+  });
+
+  it('stores no language when a description is to be written for them', async () => {
+    await promotional.savePromotionalSetup('pay_1', 'uhash', 'pl_1', {
+      ...saveData,
+      keepDescription: false,
+      descriptionLocale: 'nl',
+    });
+    const data = h.prisma.playlist.update.mock.calls[0][0].data;
+    expect(data.promotionalKeepDescription).toBe(false);
+    expect(data.promotionalDescriptionLocale).toBeNull();
   });
 
   it('appends -2 when the base slug is taken by another playlist', async () => {
@@ -891,10 +969,12 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     expect(res).toEqual({ success: true });
     expect(h.seoGenerate).not.toHaveBeenCalled();
     // Brand-sanitized, and told the final (sanitized) name to leave alone.
+    // No language named by the customer: the model names it.
     expect(h.translateLiterally).toHaveBeenCalledWith(
       'Een prachtige QRSong! lijst',
       'QRSong! Hits',
-      ['en', 'nl']
+      ['en', 'nl'],
+      null
     );
     // The language it is written in gets the customer's text itself.
     expect(h.prisma.playlist.update).toHaveBeenCalledTimes(2);
@@ -938,6 +1018,116 @@ describe('Promotional.acceptPromotionalPlaylist', () => {
     expect(h.translateText).not.toHaveBeenCalled();
     expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
     expect(outbound.calls('Mail', 'sendPromotionalApprovedEmail')).toHaveLength(1);
+  });
+
+  describe("the customer's choice on the form", () => {
+    it('keeps their text as written in the language they named, and switches keeping on', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...PLAYLIST,
+        promotionalDescription: 'Weihnachtslieder:\n- Crooner\n- Pop',
+        promotionalKeepDescription: true,
+        promotionalDescriptionLocale: 'de',
+        preserveDescription: false,
+      });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: 'de',
+        translations: { en: 'Christmas songs:\n- Crooner\n- Pop', nl: 'Kerstliedjes:\n- Crooner\n- Pop' },
+      });
+
+      const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+      expect(res).toEqual({ success: true });
+      expect(h.seoGenerate).not.toHaveBeenCalled();
+      // From now on the admin's switch says "kept", so "Translate
+      // description" and the SEO bulk action leave the text alone.
+      expect(h.prisma.playlist.update.mock.calls[0][0].data).toMatchObject({
+        promotionalAccepted: true,
+        preserveDescription: true,
+      });
+      expect(h.translateLiterally).toHaveBeenCalledWith(
+        'Weihnachtslieder:\n- Crooner\n- Pop',
+        'QRSong! Hits',
+        ['en', 'nl'],
+        'de'
+      );
+      // Not one of the site locales in this test: every locale gets its
+      // translation, and nothing gets an SEO rewrite.
+      expect(h.prisma.playlist.update.mock.calls[1][0].data).toEqual({
+        seoDescriptionGenerated: false,
+        markedForMerchantCenter: true,
+        description_en: 'Christmas songs:\n- Crooner\n- Pop',
+        description_nl: 'Kerstliedjes:\n- Crooner\n- Pop',
+      });
+    });
+
+    it('puts the text unchanged on its own locale', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...PLAYLIST,
+        promotionalDescription: 'Onze kerstlijst',
+        promotionalKeepDescription: true,
+        promotionalDescriptionLocale: 'nl',
+      });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: 'nl',
+        translations: { en: 'Our Christmas list' },
+      });
+
+      await promotional.acceptPromotionalPlaylist('pl_1');
+
+      expect(h.prisma.playlist.update.mock.calls[1][0].data).toMatchObject({
+        description_en: 'Our Christmas list',
+        description_nl: 'Onze kerstlijst',
+      });
+    });
+
+    it('has one written when they chose that, also with a language stored', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...PLAYLIST,
+        promotionalKeepDescription: false,
+        promotionalDescriptionLocale: 'nl',
+      });
+
+      await promotional.acceptPromotionalPlaylist('pl_1');
+
+      expect(h.translateLiterally).not.toHaveBeenCalled();
+      expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
+      expect(h.prisma.playlist.update.mock.calls[0][0].data).not.toHaveProperty(
+        'preserveDescription'
+      );
+    });
+
+    it('has one written when the text they wanted to keep is empty, and leaves keeping off', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...PLAYLIST,
+        promotionalDescription: ' ',
+        promotionalKeepDescription: true,
+        promotionalDescriptionLocale: 'nl',
+      });
+
+      await promotional.acceptPromotionalPlaylist('pl_1');
+
+      expect(h.translateLiterally).not.toHaveBeenCalled();
+      expect(h.seoGenerate).toHaveBeenCalledWith('pl_1');
+      expect(h.prisma.playlist.update.mock.calls[0][0].data).not.toHaveProperty(
+        'preserveDescription'
+      );
+    });
+
+    it('keeps the approval and keeping on when the translation fails, so "Translate description" retries word for word', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...PLAYLIST,
+        promotionalKeepDescription: true,
+        promotionalDescriptionLocale: 'nl',
+      });
+      h.translateLiterally.mockResolvedValue({ sourceLocale: 'nl', translations: {} });
+
+      const res = await promotional.acceptPromotionalPlaylist('pl_1');
+
+      expect(res).toEqual({ success: true });
+      expect(h.seoGenerate).not.toHaveBeenCalled();
+      expect(h.prisma.playlist.update).toHaveBeenCalledTimes(1);
+      expect(h.prisma.playlist.update.mock.calls[0][0].data.preserveDescription).toBe(true);
+    });
   });
 });
 
@@ -1014,7 +1204,8 @@ describe('Promotional.translateDescription', () => {
       expect(h.translateLiterally).toHaveBeenCalledWith(
         'Over 500 orchestral works',
         'Symphony!',
-        ['en', 'nl']
+        ['en', 'nl'],
+        null
       );
       expect(h.prisma.playlist.update).toHaveBeenCalledWith({
         where: { playlistId: 'pl_1' },
@@ -1041,6 +1232,58 @@ describe('Promotional.translateDescription', () => {
       const data = h.prisma.playlist.update.mock.calls[0][0].data;
       expect(data.description_en).toBe('Over 500 orchestral works');
       expect(data.description_nl).toBe('Over 500 orchestral works');
+    });
+
+    it('passes on the language the customer named for their text', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...KEPT,
+        promotionalDescription: 'Meer dan 500 orkestwerken',
+        promotionalDescriptionLocale: 'nl',
+      });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: 'nl',
+        translations: { en: 'Over 500 orchestral works' },
+      });
+
+      const res = await promotional.translateDescription('pl_1');
+
+      expect(res).toEqual({ success: true, literal: { sourceLocale: 'nl' } });
+      expect(h.translateLiterally.mock.calls[0][3]).toBe('nl');
+      expect(h.prisma.playlist.update.mock.calls[0][0].data).toMatchObject({
+        description_en: 'Over 500 orchestral works',
+        description_nl: 'Meer dan 500 orkestwerken',
+      });
+    });
+
+    it('does not claim that language for description_en when there is no customer text', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...KEPT,
+        promotionalDescription: null,
+        promotionalDescriptionLocale: 'nl',
+      });
+      h.translateLiterally.mockResolvedValue({
+        sourceLocale: 'en',
+        translations: { nl: 'SEO-tekst van eerder' },
+      });
+
+      await promotional.translateDescription('pl_1');
+
+      expect(h.translateLiterally.mock.calls[0][0]).toBe('SEO copy from before');
+      expect(h.translateLiterally.mock.calls[0][3]).toBeNull();
+    });
+
+    it('writes nothing when the language is known but nothing was translated', async () => {
+      h.prisma.playlist.findUnique.mockResolvedValue({
+        ...KEPT,
+        promotionalDescriptionLocale: 'en',
+      });
+      h.translateLiterally.mockResolvedValue({ sourceLocale: 'en', translations: {} });
+
+      expect(await promotional.translateDescription('pl_1')).toEqual({
+        success: false,
+        error: 'The model returned no translation',
+      });
+      expect(h.prisma.playlist.update).not.toHaveBeenCalled();
     });
 
     it('writes nothing when the model returns nothing', async () => {

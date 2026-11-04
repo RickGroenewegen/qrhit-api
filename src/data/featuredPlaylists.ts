@@ -391,6 +391,23 @@ function designFields(p: {
   };
 }
 
+/**
+ * The customer's answer on the form to which text goes on the product page:
+ * their own as written (`keepDescription`, in `descriptionLocale`) or one we
+ * write from the playlist. Approval follows it (or the admin's
+ * `preserveDescription` switch); shown on the Featured page so the admin
+ * sees it before approving.
+ */
+function customerDescriptionFields(p: {
+  promotionalKeepDescription: boolean;
+  promotionalDescriptionLocale: string | null;
+}) {
+  return {
+    keepDescription: p.promotionalKeepDescription,
+    descriptionLocale: p.promotionalDescriptionLocale,
+  };
+}
+
 export async function searchFeaturedPlaylists(
   deps: DataDeps,
   searchTerm: string = '',
@@ -439,6 +456,8 @@ export async function searchFeaturedPlaylists(
         promotionalShareDesign: true,
         featuredDesignHidden: true,
         preserveDescription: true,
+        promotionalKeepDescription: true,
+        promotionalDescriptionLocale: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -465,6 +484,7 @@ export async function searchFeaturedPlaylists(
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
           ...designFields(p),
+          ...customerDescriptionFields(p),
         };
       })
     );
@@ -526,6 +546,8 @@ export async function searchFeaturedPlaylists(
           promotionalUserId: true,
           baseEventsTagged: true,
           preserveDescription: true,
+          promotionalKeepDescription: true,
+          promotionalDescriptionLocale: true,
         },
         orderBy: { [safeColumn]: safeDirection },
         skip: offset,
@@ -610,6 +632,7 @@ export async function searchFeaturedPlaylists(
           baseEvents: baseEventsMap.get(p.id) || [],
           baseEventsTagged: p.baseEventsTagged,
           ...designFields(p),
+          ...customerDescriptionFields(p),
         };
       })
     );

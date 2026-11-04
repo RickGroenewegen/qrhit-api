@@ -529,6 +529,19 @@ model Playlist {
   // re-saving the featured playlist form cannot switch a vetoed design back
   // on, and an admin never shows a design the customer kept to themselves.
   featuredDesignHidden   Boolean              @default(false)
+  // The customer's answer on the featured playlist form to "which text goes
+  // on the product page": their own description as written (true) or one we
+  // write from the playlist (false: the default, and what every submission
+  // from before the question got). Read once, at approval, which then keeps
+  // the text and switches preserveDescription on. Not preserveDescription
+  // itself: savePromotionalSetup writes this on every save and would
+  // overwrite the admin's switch.
+  promotionalKeepDescription   Boolean      @default(false)
+  // The language the customer says that text is written in (a site locale),
+  // only when they keep it. Its description_<locale> gets the text
+  // unchanged and every other locale is translated from it. Null: the model
+  // names the language, as for a description an admin chose to keep.
+  promotionalDescriptionLocale String?      @db.VarChar(10)
   tracks                 PlaylistHasTrack[]
   Payment                PaymentHasPlaylist[]
   UserSuggestion         UserSuggestion[]
@@ -563,7 +576,9 @@ model Playlist {
   // While true, approval and "Translate description" translate
   // promotionalDescription word for word (the language it is written in gets
   // it unchanged) and the SEO bulk action skips the row. Writing an SEO
-  // description for the row by hand switches it off again.
+  // description for the row by hand switches it off again. Approval also
+  // switches it on when the customer chose to keep their text
+  // (promotionalKeepDescription).
   preserveDescription Boolean @default(false)
 
   // Merchant Center sync flag - set to true on any change, cleared after upload

@@ -435,6 +435,9 @@ describe('searchFeaturedPlaylists', () => {
           design: { backgroundImage: 'wedding.png' },
           promotionalShareDesign: false,
           featuredDesignHidden: false,
+          // They want their own text on the product page, written in German.
+          promotionalKeepDescription: true,
+          promotionalDescriptionLocale: 'de',
         },
       ])
       .mockResolvedValueOnce([]);
@@ -461,8 +464,20 @@ describe('searchFeaturedPlaylists', () => {
         shareDesign: false,
         designHidden: false,
         design: { backgroundImage: 'wedding.png' },
+        // and their answer on the description, which approval follows
+        keepDescription: true,
+        descriptionLocale: 'de',
       },
     ]);
+    const select = prisma.playlist.findMany.mock.calls[0][0].select;
+    expect(select).toMatchObject({
+      promotionalKeepDescription: true,
+      promotionalDescriptionLocale: true,
+    });
+    expect(prisma.playlist.findMany.mock.calls[1][0].select).toMatchObject({
+      promotionalKeepDescription: true,
+      promotionalDescriptionLocale: true,
+    });
   });
 
   it('returns the safe default shape on errors', async () => {

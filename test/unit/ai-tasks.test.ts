@@ -380,6 +380,62 @@ describe('AiTasks.translateLiterally', () => {
       translations: {},
     });
   });
+
+  describe('with the language the customer named', () => {
+    it('does not ask for the language and translates into the other locales only', async () => {
+      createMock.mockResolvedValueOnce(
+        toolCallResponse('translateLiterallyFrom', {
+          translations: { en: ' Hello there ', fr: 'Bonjour', de: 'not asked for' },
+        })
+      );
+
+      expect(
+        await gpt.translateLiterally('Hallo daar', 'Symphony!', ['en', 'nl', 'fr'], 'nl')
+      ).toEqual({
+        sourceLocale: 'nl',
+        translations: { en: 'Hello there', fr: 'Bonjour' },
+      });
+
+      const payload = createMock.mock.calls[0][0];
+      const schema = payload.response_format.json_schema.schema;
+      expect(payload.response_format.json_schema.name).toBe('translateLiterallyFrom');
+      expect(schema.properties.sourceLanguage).toBeUndefined();
+      expect(schema.properties.translations.required).toEqual(['en', 'fr']);
+      expect(payload.messages[1].content).toContain('wrote in Dutch');
+      expect(payload.messages[1].content).toContain('"Symphony!"');
+      expect(payload.messages[1].content).toContain('Keep the paragraphs, line breaks');
+    });
+
+    it('names that language even when the model gives nothing usable', async () => {
+      createMock.mockResolvedValueOnce(toolCallResponse('translateLiterallyFrom', null, '}'));
+      expect(await gpt.translateLiterally('Hallo', 'P', ['en', 'nl'], 'nl')).toEqual({
+        sourceLocale: 'nl',
+        translations: {},
+      });
+    });
+
+    it('calls nothing when that language is the only locale asked for', async () => {
+      expect(await gpt.translateLiterally('Hallo', 'P', ['nl'], 'nl')).toEqual({
+        sourceLocale: 'nl',
+        translations: {},
+      });
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it('lets the model name the language when the one given is not a site language', async () => {
+      createMock.mockResolvedValueOnce(
+        toolCallResponse('translateLiterally', {
+          sourceLanguage: 'nl',
+          translations: { en: 'Hi', nl: 'Hoi' },
+        })
+      );
+      const result = await gpt.translateLiterally('Hoi', 'P', ['en', 'nl'], 'xx');
+      expect(result.sourceLocale).toBe('nl');
+      expect(createMock.mock.calls[0][0].response_format.json_schema.name).toBe(
+        'translateLiterally'
+      );
+    });
+  });
 });
 
 describe('AiTasks.translateMessage', () => {

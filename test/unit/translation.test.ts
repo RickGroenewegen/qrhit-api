@@ -259,7 +259,12 @@ describe('translateEmptyFields', () => {
 
     await translation.translateEmptyFields(['da', 'hu']);
 
-    expect(translateLiterallyMock).toHaveBeenCalledWith('Min far elsker dem', '80s Hits', ['da', 'hu']);
+    expect(translateLiterallyMock).toHaveBeenCalledWith(
+      'Min far elsker dem',
+      '80s Hits',
+      ['da', 'hu'],
+      null
+    );
     expect(prismaMock.playlist.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: {
@@ -267,6 +272,34 @@ describe('translateEmptyFields', () => {
         description_hu: 'Apám imádja őket',
         markedForMerchantCenter: true,
       },
+    });
+  });
+
+  it('tells the translator the language the customer named for their kept text', async () => {
+    prismaMock.playlist.findMany.mockResolvedValue([
+      playlistRow({
+        preserveDescription: true,
+        description_en: 'My dad loves these',
+        promotionalDescription: 'Mein Vater liebt sie',
+        promotionalDescriptionLocale: 'de',
+      }),
+    ]);
+    translateLiterallyMock.mockResolvedValue({
+      sourceLocale: 'de',
+      translations: { da: 'Min far elsker dem', hu: 'Apám imádja őket' },
+    });
+
+    await translation.translateEmptyFields(['da', 'hu']);
+
+    expect(translateLiterallyMock).toHaveBeenCalledWith(
+      'Mein Vater liebt sie',
+      '80s Hits',
+      ['da', 'hu'],
+      'de'
+    );
+    expect(prismaMock.playlist.update.mock.calls[0][0].data).toMatchObject({
+      description_da: 'Min far elsker dem',
+      description_hu: 'Apám imádja őket',
     });
   });
 

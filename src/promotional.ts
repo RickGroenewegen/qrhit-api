@@ -116,6 +116,13 @@ class Promotional {
       design: unknown | null;
       /** One track of the playlist to print on the preview cards. */
       sampleTrack: { artist: string; name: string; year: number | null } | null;
+      /**
+       * Their own description on the product page (true) or one we write
+       * (false); null until they have submitted the form.
+       */
+      keepDescription: boolean | null;
+      /** The language they said their description is in, when kept. */
+      descriptionLocale: string | null;
     };
     error?: string;
   }> {
@@ -142,6 +149,8 @@ class Promotional {
           promotionalAccepted: true,
           promotionalDeclined: true,
           promotionalShareDesign: true,
+          promotionalKeepDescription: true,
+          promotionalDescriptionLocale: true,
         },
       });
 
@@ -206,6 +215,10 @@ class Promotional {
           // gave: null tells the form this is the first time, and it starts
           // on its own default.
           shareDesign: hasSubmitted ? !!playlist.promotionalShareDesign : null,
+          // Their own text on the product page (true) or one we write
+          // (false); null before the first submit, like shareDesign.
+          keepDescription: hasSubmitted ? !!playlist.promotionalKeepDescription : null,
+          descriptionLocale: playlist.promotionalDescriptionLocale ?? null,
           design: playlist.design ?? null,
           sampleTrack: firstTrack?.track
             ? {
@@ -241,6 +254,14 @@ class Promotional {
        * or messages, so a request that does not say reads as "no".
        */
       shareDesign?: boolean;
+      /**
+       * Whether the product page keeps the customer's description as they
+       * wrote it, instead of one we write from the playlist. Only an
+       * explicit true keeps it. Read at approval (acceptPromotionalPlaylist).
+       */
+      keepDescription?: boolean;
+      /** The language that description is written in, when it is kept. */
+      descriptionLocale?: string;
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -260,6 +281,8 @@ class Promotional {
       const sanitizedName = this.sanitizeBrandName(data.title);
       const slug = await this.generateUniqueSlug(sanitizedName, playlistId);
 
+      const keepDescription = data.keepDescription === true;
+
       // Build update data
       const updateData: Record<string, any> = {
         promotionalTitle: data.title,
@@ -268,6 +291,15 @@ class Promotional {
         promotionalLocale: data.locale || 'en',
         promotionalUserId: ownership.userId,
         promotionalShareDesign: data.shareDesign === true,
+        promotionalKeepDescription: keepDescription,
+        // Only a site language is believed; anything else (or nothing) is
+        // left to the model, which names the language at approval.
+        promotionalDescriptionLocale:
+          keepDescription &&
+          data.descriptionLocale &&
+          this.translation.isValidLocale(data.descriptionLocale)
+            ? data.descriptionLocale
+            : null,
         featured: data.active,
         name: sanitizedName,
         slug,
@@ -720,14 +752,16 @@ class Promotional {
   /**
    * The translation for a kept description (playlists.preserveDescription):
    * word for word into every locale, and the language the text is written in
-   * gets the text itself. Also marks the row as not SEO-written, which is
-   * what it now is. Throws when the model returns nothing, so nothing is
-   * written.
+   * gets the text itself. That language is the one the customer named on
+   * the form (`knownSourceLocale`, promotionalDescriptionLocale), else the
+   * model names it. Also marks the row as not SEO-written, which is what it
+   * now is. Throws when the model returns nothing, so nothing is written.
    */
   private async translateLiterallyToAllLocales(
     playlistId: string,
     playlistName: string,
-    description: string
+    description: string,
+    knownSourceLocale?: string | null
   ): Promise<{ data: Record<string, unknown>; sourceLocale: string | null }> {
     const original = this.sanitizeBrandName(description.trim());
 
@@ -741,9 +775,12 @@ class Promotional {
     const { sourceLocale, translations } = await this.aiTasks.translateLiterally(
       original,
       playlistName,
-      allLocales
+      allLocales,
+      knownSourceLocale
     );
-    if (!sourceLocale && Object.keys(translations).length === 0) {
+    // Nothing translated: with the language known that would put the
+    // original into every locale, so it counts as no answer either way.
+    if (Object.keys(translations).length === 0) {
       throw new Error('The model returned no translation');
     }
 
@@ -808,11 +845,11 @@ class Promotional {
 
   /**
    * Accept a promotional playlist:
-   * 1. Translate the promotional description to all locales
-   * 2. Update all description_[locale] fields
-   * 3. Set promotionalAccepted = 1
-   * 4. Clear featured playlists cache
-   * 5. Send approval email to user
+   * 1. Set promotionalAccepted = 1 (and name/slug from the customer's title)
+   * 2. Fill description_[locale]: the customer's own text when it is kept
+   *    (their choice on the form or the admin's switch), else SEO copy
+   * 3. Clear featured playlists cache
+   * 4. Send approval email to user
    */
   public async acceptPromotionalPlaylist(
     playlistId: string
@@ -833,6 +870,8 @@ class Promotional {
           promotionalLocale: true,
           promotionalUserId: true,
           preserveDescription: true,
+          promotionalKeepDescription: true,
+          promotionalDescriptionLocale: true,
         },
       });
 
@@ -842,6 +881,13 @@ class Promotional {
 
       const description = playlist.promotionalDescription || '';
       const sourceLocale = playlist.promotionalLocale || 'en';
+      // The customer's text stays when the admin switched on "Keep this
+      // description" or the customer chose it on the form. There is no
+      // admin veto before approval: "Write SEO description" afterwards
+      // switches keeping off. An empty text has nothing to keep.
+      const keepDescription =
+        (playlist.preserveDescription || playlist.promotionalKeepDescription) &&
+        !!description.trim();
 
       // Helper to fetch email data for approval notification
       // Takes newSlug parameter in case the slug was updated during approval
@@ -901,6 +947,13 @@ class Promotional {
         promotionalAccepted: true,
         markedForMerchantCenter: true,
       };
+      // From here on the admin's switch is the one that counts: "Translate
+      // description", the SEO bulk action and a new language read only it.
+      // Set before the translation, so "Translate description" retries word
+      // for word when it fails.
+      if (keepDescription && !playlist.preserveDescription) {
+        updateData.preserveDescription = true;
+      }
       if (playlist.promotionalTitle) {
         const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
         updateData.name = sanitizedName;
@@ -928,14 +981,16 @@ class Promotional {
       // description, and the row keeps seoDescriptionGenerated = false so the
       // bulk action picks it up later.
       //
-      // Unless an admin switched on "Keep this description" before approving:
-      // then the customer's text is the product page copy, word for word.
-      if (playlist.preserveDescription && description.trim()) {
+      // Unless the customer's text is kept (see keepDescription): then it is
+      // the product page copy, unchanged in its own language and translated
+      // word for word into the others.
+      if (keepDescription) {
         try {
           const { data } = await this.translateLiterallyToAllLocales(
             playlistId,
             updateData.name ?? playlist.name,
-            description
+            description,
+            playlist.promotionalDescriptionLocale ?? null
           );
           await this.prisma.playlist.update({ where: { playlistId }, data });
           await Data.getInstance().clearPlaylistCache(playlistId);
@@ -1035,6 +1090,7 @@ class Promotional {
           id: true,
           name: true,
           promotionalDescription: true,
+          promotionalDescriptionLocale: true,
           description_en: true,
           preserveDescription: true,
         },
@@ -1055,7 +1111,9 @@ class Promotional {
         const { data, sourceLocale } = await this.translateLiterallyToAllLocales(
           playlistId,
           playlist.name,
-          original
+          original,
+          // Only the customer's own text is in the language they named.
+          playlist.promotionalDescription ? playlist.promotionalDescriptionLocale ?? null : null
         );
         await this.prisma.playlist.update({ where: { playlistId }, data });
         await Data.getInstance().clearPlaylistCache(playlistId);

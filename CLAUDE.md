@@ -2220,7 +2220,26 @@ the raw Spotify description). `src/seoDescriptions.ts` replaces both:
   `AiTasks.translateLiterally` names the language `promotionalDescription` is
   written in and translates it word for word, and that locale gets the text
   itself. The bulk action skips the row; "Write SEO description" on it
-  switches keeping off. The Edit form's description is always
+  switches keeping off.
+- **The customer chooses too** (2026-11-04, after support #272: the writer
+  turned a German list of sub-genres into "Crooner-Klassikern"). The featured
+  playlist form asks "your own text as written, or one we write from the
+  playlist" (`promotionalKeepDescription`, default false, so older
+  submissions get SEO copy as before) and, for their own text, its language
+  (`promotionalDescriptionLocale`, a site locale; null leaves it to the
+  model). Approval keeps the text when the admin's switch **or** the
+  customer's answer says so (and the text is not empty), and then switches
+  `preserveDescription` on, so everything after approval reads only the
+  admin's switch. There is no admin veto before approval: approve, then
+  "Write SEO description". The form never writes `preserveDescription`
+  itself (`savePromotionalSetup` runs on every save, the same reason as
+  `featuredDesignHidden`). With a language given, `translateLiterally` does
+  not ask the model for it: that locale gets the text unchanged and the
+  others are translated from it (approval, "Translate description" and a
+  new language alike; only for `promotionalDescription`, never for
+  `description_en`). The Featured page rows carry the answer as
+  `keepDescription` / `descriptionLocale`. Changing the answer after
+  approval changes nothing by itself. The Edit form's description is always
   `promotionalDescription`, so saving it never touches the page copy of a
   kept row, and otherwise only when the text was actually changed (a new
   name or slug used to put the raw customer text over the English SEO copy).

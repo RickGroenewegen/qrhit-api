@@ -297,6 +297,7 @@ class Translation {
           playlistId: true,
           name: true,
           promotionalDescription: true,
+          promotionalDescriptionLocale: true,
           preserveDescription: true,
           seoDescriptionGenerated: true,
         },
@@ -434,6 +435,7 @@ class Translation {
       name: string;
       description_en: string;
       promotionalDescription: string | null;
+      promotionalDescriptionLocale?: string | null;
       preserveDescription: boolean;
       seoDescriptionGenerated: boolean;
     },
@@ -446,7 +448,9 @@ class Translation {
       const { sourceLocale, translations } = await aiTasks.translateLiterally(
         original,
         playlist.name,
-        locales
+        locales,
+        // The language the customer named for their own text, as on approval.
+        playlist.promotionalDescription ? playlist.promotionalDescriptionLocale ?? null : null
       );
       return Object.fromEntries(
         locales

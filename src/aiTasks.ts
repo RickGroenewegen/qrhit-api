@@ -475,12 +475,21 @@ ${text}`,
    * written in (`sourceLocale`, null when it is none of `locales`), so the
    * caller can store the original there unchanged; whatever the model returns
    * for that locale is not meant to be used.
+   *
+   * `knownSourceLocale` is the language the customer said the text is in
+   * (playlists.promotionalDescriptionLocale). Then the model is not asked:
+   * it translates into the other locales only, and `sourceLocale` is that
+   * language.
    */
   public async translateLiterally(
     text: string,
     playlistName: string,
-    locales: string[]
+    locales: string[],
+    knownSourceLocale?: string | null
   ): Promise<{ sourceLocale: string | null; translations: Record<string, string> }> {
+    if (knownSourceLocale && this.translation.isValidLocale(knownSourceLocale)) {
+      return this.translateLiterallyFrom(text, playlistName, locales, knownSourceLocale);
+    }
     if (!text || locales.length === 0) return { sourceLocale: null, translations: {} };
 
     const parsed = await llm.tryJson<{
@@ -501,9 +510,7 @@ First decide which of these languages it is written in: ${locales
             .join(', ')}. Answer "other" when it is none of them.
 
 Then translate it into each of those languages.
-- Keep every sentence, fact, name and nuance, in the same order and the same tone. Do not shorten, summarise, add, explain or optimise anything for search engines.
-- Keep the playlist name "${playlistName}", the names of people, artists, composers and bands, and song titles exactly as written, in the same script.
-- Keep the paragraphs, line breaks and emojis where they are.
+${this.literalTranslationRules(playlistName)}
 - For the language the text is already written in, return the text unchanged.
 
 Text:
@@ -552,6 +559,83 @@ ${text}`,
       }
     }
     return { sourceLocale, translations };
+  }
+
+  /**
+   * translateLiterally for a text whose language we were told: the same
+   * task and rules, into every locale except that one. An empty result
+   * (`translations: {}`) means the model gave nothing usable.
+   */
+  private async translateLiterallyFrom(
+    text: string,
+    playlistName: string,
+    locales: string[],
+    sourceLocale: string
+  ): Promise<{ sourceLocale: string; translations: Record<string, string> }> {
+    const targets = locales.filter((l) => l !== sourceLocale);
+    if (!text || targets.length === 0) return { sourceLocale, translations: {} };
+
+    const parsed = await llm.tryJson<{ translations?: Record<string, unknown> }>(
+      'literalTranslate',
+      {
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator. You translate faithfully and completely, the way a careful human translator would, and never rewrite or improve the text.`,
+          },
+          {
+            role: 'user',
+            content: `The text below is the description a curator wrote in ${this.translation.getLanguageName(
+              sourceLocale
+            )} for their playlist "${playlistName}". It is kept exactly because it is good, so translate it literally into each of these languages: ${targets
+              .map((l) => `${this.translation.getLanguageName(l)} (key "${l}")`)
+              .join(', ')}.
+${this.literalTranslationRules(playlistName)}
+
+Text:
+${text}`,
+          },
+        ],
+        schema: {
+          name: 'translateLiterallyFrom',
+          schema: {
+            type: 'object',
+            properties: {
+              translations: {
+                type: 'object',
+                properties: Object.fromEntries(
+                  targets.map((locale) => [
+                    locale,
+                    {
+                      type: 'string',
+                      description: `The text in ${this.translation.getLanguageName(locale)}`,
+                    },
+                  ])
+                ),
+                required: targets,
+              },
+            },
+            required: ['translations'],
+          },
+        },
+      }
+    );
+
+    const translations: Record<string, string> = {};
+    for (const locale of targets) {
+      const value = parsed?.translations?.[locale];
+      if (typeof value === 'string' && value.trim()) {
+        translations[locale] = value.trim();
+      }
+    }
+    return { sourceLocale, translations };
+  }
+
+  /** What a literal translation keeps, for both translateLiterally prompts. */
+  private literalTranslationRules(playlistName: string): string {
+    return `- Keep every sentence, fact, name and nuance, in the same order and the same tone. Do not shorten, summarise, add, explain or optimise anything for search engines.
+- Keep the playlist name "${playlistName}", the names of people, artists, composers and bands, and song titles exactly as written, in the same script.
+- Keep the paragraphs, line breaks and emojis where they are.`;
   }
 
   /**
