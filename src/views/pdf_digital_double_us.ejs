@@ -283,8 +283,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%= tracks[i].extraArtistAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= getYearFontSize(cd.selectedFont) %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;"><%= tracks[i].year %></div>
-                        <div class="text" style="margin-top: <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= cd.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;">
+                        <div class="text" style="margin-top: 3mm;font-size:<%= getYearFontSize(cd.selectedFont) %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;"><%= tracks[i].year %></div>
+                        <div class="text" style="margin-top: 3mm;font-size:<%= cd.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= cd.fontColor || '#000000' %>;position:relative;z-index:1;">
                             <%= tracks[i].name %>
                             <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= cd.fontColor || '#666' %>; margin-top: 1mm;"><%= tracks[i].extraNameAttribute %></div>
