@@ -3,7 +3,7 @@ import { color, white } from 'console-log-colors';
 import Mail from '../mail';
 import Push from '../push';
 import WebPush, { validateSubscription } from '../webPush';
-import Suggestion from '../suggestion';
+import Suggestion, { ORDER_IN_PRODUCTION } from '../suggestion';
 import Designer from '../designer';
 import DesignScreen from '../designScreen';
 import Reviews from '../reviews';
@@ -506,7 +506,9 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      const success = await suggestion.saveUserSuggestion(
+      // { success, error? }: error is ORDER_IN_PRODUCTION once the line's
+      // cards are at the printer
+      return await suggestion.saveUserSuggestion(
         request.params.paymentId,
         request.params.userHash,
         request.params.playlistId,
@@ -519,46 +521,41 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           extraArtistAttribute,
         }
       );
-
-      return { success };
     }
   );
 
   fastify.post(
     '/usersuggestions/:paymentId/:userHash/:playlistId/submit',
     async (request: any, reply) => {
-      const success = await suggestion.submitUserSuggestions(
+      return await suggestion.submitUserSuggestions(
         request.params.paymentId,
         request.params.userHash,
         request.params.playlistId,
         request.clientIp
       );
-      return { success };
     }
   );
 
   fastify.post(
     '/usersuggestions/:paymentId/:userHash/:playlistId/apply-design',
     async (request: any, reply) => {
-      const success = await suggestion.applyDesignChanges(
+      return await suggestion.applyDesignChanges(
         request.params.paymentId,
         request.params.userHash,
         request.params.playlistId,
         request.clientIp
       );
-      return { success };
     }
   );
 
   fastify.post(
     '/usersuggestions/:paymentId/:userHash/:playlistId/extend',
     async (request: any, reply) => {
-      const success = await suggestion.extendPrinterDeadline(
+      return await suggestion.extendPrinterDeadline(
         request.params.paymentId,
         request.params.userHash,
         request.params.playlistId
       );
-      return { success };
     }
   );
 
@@ -709,6 +706,23 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         backOpacity,
         extraDesigns,
       } = request.body;
+
+      // The cards are at the printer: a design saved now would never be
+      // printed (src/suggestion.ts, ORDER_IN_PRODUCTION)
+      if (
+        await suggestion.cardDesignInProduction(
+          paymentId,
+          userHash,
+          playlistId,
+          type,
+          subType
+        )
+      ) {
+        reply
+          .status(409)
+          .send({ success: false, error: ORDER_IN_PRODUCTION });
+        return;
+      }
 
       const success = await designer.updateCardDesign(
         paymentId,

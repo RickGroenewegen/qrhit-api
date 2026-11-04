@@ -28,6 +28,31 @@ async function retryOnUniqueConflict<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * The corrections page's answer when its order has gone to the printer
+ * (`payments.sentToPrinter`) and the line is printed: its cards are being
+ * made, so an approval, a correction or a design change could no longer reach
+ * them. The page shows "already in production" for it.
+ *
+ * Until 2026-11-04 these writes were accepted: order 100009576 was approved
+ * hours after it went to Print&Bind, which regenerated its PDFs and moved its
+ * print deadline (`sendToPrinter` skips a sent order, so nothing printed
+ * twice), and the customer feared they had ordered twice. A design change in
+ * that state was saved and never printed.
+ */
+export const ORDER_IN_PRODUCTION = 'orderInProduction';
+
+/** What the corrections page's writes answer */
+export interface SuggestionWriteResult {
+  success: boolean;
+  error?: typeof ORDER_IN_PRODUCTION;
+}
+
+const IN_PRODUCTION: SuggestionWriteResult = {
+  success: false,
+  error: ORDER_IN_PRODUCTION,
+};
+
 class Suggestion {
   private static instance: Suggestion;
   private prisma = PrismaInstance.getInstance();
@@ -51,6 +76,8 @@ class Suggestion {
       select: {
         id: true,
         canBeSentToPrinterAt: true,
+        sentToPrinter: true,
+        sentToPrinterAt: true,
         countrycode: true,
         currency: true,
         locale: true,
@@ -141,10 +168,17 @@ class Suggestion {
       metadata: {
         payment: {
           canBeSentToPrinterAt: payment?.canBeSentToPrinterAt ?? null,
+          sentToPrinter: payment?.sentToPrinter ?? false,
+          sentToPrinterAt: payment?.sentToPrinterAt ?? null,
           countrycode: payment?.countrycode ?? null,
           currency: payment?.currency ?? null,
           locale: payment?.locale ?? null,
         },
+        // This line's cards are at the printer: the page shows "already in
+        // production" and offers nothing that changes them (the writes
+        // answer ORDER_IN_PRODUCTION). A digital line of the same order is
+        // not affected.
+        inProduction: php?.type === 'physical' && !!payment?.sentToPrinter,
         serviceType: playlist?.serviceType ?? 'spotify',
         paymentHasPlaylistId: php?.id ?? null,
         playlistType: php?.type ?? null,
@@ -195,6 +229,37 @@ class Suggestion {
     await this.generator.queueDigitalRedesign(line.paymentId, line.id);
   }
 
+  /**
+   * A printed line (cards or sheets) whose order went to the printer: see
+   * ORDER_IN_PRODUCTION. Digital lines never are.
+   */
+  private async inProduction(line: OwnedLine): Promise<boolean> {
+    if (line.type !== 'physical') return false;
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: line.paymentDbId },
+      select: { sentToPrinter: true },
+    });
+    return !!payment?.sentToPrinter;
+  }
+
+  /**
+   * For the corrections page's card design save: whether the line it would
+   * write (the same lookup as Designer.updateCardDesign) is in production.
+   */
+  public async cardDesignInProduction(
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    type: string,
+    subType: string
+  ): Promise<boolean> {
+    const line = await findLineByHash(paymentId, userHash, playlistId, {
+      type,
+      subType,
+    });
+    return !!line && (await this.inProduction(line));
+  }
+
   public async saveUserSuggestion(
     paymentId: string,
     userHash: string,
@@ -207,11 +272,14 @@ class Suggestion {
       extraNameAttribute?: string;
       extraArtistAttribute?: string;
     }
-  ): Promise<boolean> {
+  ): Promise<SuggestionWriteResult> {
     try {
       const line = await this.verifyLine(paymentId, userHash, playlistId);
       if (!line) {
-        return false;
+        return { success: false };
+      }
+      if (await this.inProduction(line)) {
+        return IN_PRODUCTION;
       }
 
       // Then verify the track belongs to this line
@@ -226,7 +294,7 @@ class Suggestion {
       `;
 
       if (check.length === 0) {
-        return false;
+        return { success: false };
       }
 
       const user = { id: line.owner.id };
@@ -255,9 +323,9 @@ class Suggestion {
         })
       );
 
-      return true;
+      return { success: true };
     } catch (error) {
-      return false;
+      return { success: false };
     }
   }
 
@@ -266,16 +334,21 @@ class Suggestion {
     userHash: string,
     playlistId: string,
     clientIp: string
-  ): Promise<boolean> {
+  ): Promise<SuggestionWriteResult> {
     try {
       const line = await this.verifyLine(paymentId, userHash, playlistId);
       if (!line) {
-        return false;
+        return { success: false };
       }
       // A given physical set has been printed (src/gift.ts only allows that),
       // so there is nothing left to send to the printer
       if (line.gifted && line.type === 'physical') {
-        return false;
+        return { success: false };
+      }
+      // Approving a printed line would regenerate its PDFs and move the
+      // deadline for nothing, and its corrections would never be printed
+      if (await this.inProduction(line)) {
+        return IN_PRODUCTION;
       }
 
       const payment = await this.prisma.payment.findFirst({
@@ -359,7 +432,7 @@ class Suggestion {
           clientIp
         );
 
-        return true;
+        return { success: true };
       } else if (paymentHasPlaylist?.type == 'physical') {
         // User approved without text corrections, but design might have changed
         // Set eligableForPrinter to FALSE first, then regenerate PDFs
@@ -398,7 +471,7 @@ class Suggestion {
           }
         );
 
-        return true;
+        return { success: true };
       } else if (paymentHasPlaylist) {
         // User approved without text corrections (digital order or other)
         // Design might have changed, regenerate PDFs to capture changes
@@ -423,7 +496,7 @@ class Suggestion {
 
         if (line.gifted) {
           await this.queueGiftedLineRebuild(line);
-          return true;
+          return { success: true };
         }
 
         // Regenerate PDFs (to capture any design changes)
@@ -446,13 +519,13 @@ class Suggestion {
           callbackData
         );
 
-        return true;
+        return { success: true };
       }
 
-      return false;
+      return { success: false };
     } catch (error) {
       console.error('Error submitting user suggestions:', error);
-      return false;
+      return { success: false };
     }
   }
 
@@ -465,11 +538,11 @@ class Suggestion {
     userHash: string,
     playlistId: string,
     clientIp: string
-  ): Promise<boolean> {
+  ): Promise<SuggestionWriteResult> {
     try {
       const line = await this.verifyLine(paymentId, userHash, playlistId);
       if (!line) {
-        return false;
+        return { success: false };
       }
 
       const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
@@ -477,17 +550,22 @@ class Suggestion {
       });
 
       if (!paymentHasPlaylist) {
-        return false;
+        return { success: false };
       }
 
       if (line.gifted) {
         // A given physical set has been printed; a digital one is rebuilt
         // on its own
         if (paymentHasPlaylist.type === 'physical') {
-          return false;
+          return { success: false };
         }
         await this.queueGiftedLineRebuild(line);
-        return true;
+        return { success: true };
+      }
+
+      // The cards are being printed: a new design would never reach them
+      if (await this.inProduction(line)) {
+        return IN_PRODUCTION;
       }
 
       if (paymentHasPlaylist.type === 'physical') {
@@ -542,10 +620,10 @@ class Suggestion {
         );
       }
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error applying design changes:', error);
-      return false;
+      return { success: false };
     }
   }
 
@@ -1020,11 +1098,11 @@ class Suggestion {
     paymentId: string,
     userHash: string,
     playlistId: string
-  ): Promise<boolean> {
+  ): Promise<SuggestionWriteResult> {
     try {
       // The print deadline is the whole order's: the buyer's to move
       if (!(await this.verifyBuyer(paymentId, userHash))) {
-        return false;
+        return { success: false };
       }
 
       const payment = await this.prisma.payment.findFirst({
@@ -1032,11 +1110,17 @@ class Suggestion {
         select: {
           id: true,
           canBeSentToPrinterAt: true,
+          sentToPrinter: true,
         },
       });
 
       if (!payment) {
-        return false;
+        return { success: false };
+      }
+
+      // The order is at the printer: there is no deadline left to move
+      if (payment.sentToPrinter) {
+        return IN_PRODUCTION;
       }
 
       // Add 24 hours to canBeSentToPrinterAt
@@ -1049,10 +1133,10 @@ class Suggestion {
         data: { canBeSentToPrinterAt: newPrinterDate },
       });
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error extending printer deadline:', error);
-      return false;
+      return { success: false };
     }
   }
 
@@ -1258,6 +1342,11 @@ class Suggestion {
           success: false,
           error: 'Unauthorized',
         };
+      }
+
+      // Songs fetched again now would never reach the printed cards
+      if (await this.inProduction(line)) {
+        return { success: false, error: ORDER_IN_PRODUCTION };
       }
 
       // Get PaymentHasPlaylist to check rate limit (unless in development)

@@ -97,7 +97,7 @@ vi.mock('../../../src/cache', () => ({
   },
 }));
 
-import Suggestion from '../../../src/suggestion';
+import Suggestion, { ORDER_IN_PRODUCTION } from '../../../src/suggestion';
 
 const suggestion = Suggestion.getInstance();
 
@@ -253,10 +253,13 @@ describe('getUserSuggestions', () => {
     expect(res.metadata).toEqual({
       payment: {
         canBeSentToPrinterAt: new Date('2026-06-13T10:00:00Z'),
+        sentToPrinter: false,
+        sentToPrinterAt: null,
         countrycode: 'NL',
         currency: 'EUR',
         locale: 'nl',
       },
+      inProduction: false,
       serviceType: 'apple_music',
       paymentHasPlaylistId: 30,
       playlistType: 'physical',
@@ -289,10 +292,13 @@ describe('getUserSuggestions', () => {
     expect(res.metadata).toEqual({
       payment: {
         canBeSentToPrinterAt: null,
+        sentToPrinter: false,
+        sentToPrinterAt: null,
         countrycode: null,
         currency: null,
         locale: null,
       },
+      inProduction: false,
       serviceType: 'spotify',
       paymentHasPlaylistId: null,
       playlistType: null,
@@ -301,6 +307,67 @@ describe('getUserSuggestions', () => {
       boxEnabled: false,
       boxQuantity: 0,
     });
+  });
+
+  it('marks a physical line of an order at the printer as in production', async () => {
+    const sentAt = new Date('2026-11-03T09:00:00Z');
+    h.prisma.payment.findFirst.mockResolvedValue({
+      id: 10,
+      canBeSentToPrinterAt: new Date('2026-11-03T08:00:00Z'),
+      sentToPrinter: true,
+      sentToPrinterAt: sentAt,
+      countrycode: 'NL',
+      currency: 'EUR',
+      locale: 'nl',
+    });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20, serviceType: 'spotify' });
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
+      id: 30,
+      type: 'physical',
+      amount: 1,
+      numberOfTracks: 48,
+      boxEnabled: false,
+      boxQuantity: 0,
+    });
+    routeRaw([OWNED, [SQL.userTracks, []]]);
+
+    const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
+
+    expect(res.metadata.inProduction).toBe(true);
+    expect(res.metadata.payment.sentToPrinter).toBe(true);
+    expect(res.metadata.payment.sentToPrinterAt).toEqual(sentAt);
+    expect(h.prisma.payment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ sentToPrinter: true, sentToPrinterAt: true }),
+      })
+    );
+  });
+
+  it('leaves a digital line of an order at the printer editable', async () => {
+    h.prisma.payment.findFirst.mockResolvedValue({
+      id: 10,
+      canBeSentToPrinterAt: null,
+      sentToPrinter: true,
+      sentToPrinterAt: new Date('2026-11-03T09:00:00Z'),
+      countrycode: 'NL',
+      currency: 'EUR',
+      locale: 'nl',
+    });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20, serviceType: 'spotify' });
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
+      id: 31,
+      type: 'digital',
+      amount: 1,
+      numberOfTracks: 48,
+      boxEnabled: false,
+      boxQuantity: 0,
+    });
+    routeRaw([ownedLine({ id: 31, type: 'digital' }), [SQL.userTracks, []]]);
+
+    const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
+
+    expect(res.metadata.inProduction).toBe(false);
+    expect(res.metadata.payment.sentToPrinter).toBe(true);
   });
 });
 
@@ -313,7 +380,7 @@ describe('saveUserSuggestion', () => {
   it('rejects a hash that holds no line, without touching tracks', async () => {
     routeRaw([NO_LINE]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
-    expect(ok).toBe(false);
+    expect(ok).toEqual({ success: false });
     expect(rawQueryCalls(SQL.trackCheck)).toHaveLength(0);
     expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
@@ -321,7 +388,7 @@ describe('saveUserSuggestion', () => {
   it('rejects when the track does not belong to the line', async () => {
     routeRaw([OWNED, [SQL.trackCheck, []]]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
-    expect(ok).toBe(false);
+    expect(ok).toEqual({ success: false });
     // the check is scoped to the line id, not to payment + playlist
     expect(rawQueryCalls(SQL.trackCheck)[0].slice(1)).toEqual([30, 42]);
     expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
@@ -331,7 +398,7 @@ describe('saveUserSuggestion', () => {
     routeRaw([ownedLine(GIFTED), [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
     h.prisma.userSuggestion.upsert.mockResolvedValue({ id: 333 });
 
-    expect(await suggestion.saveUserSuggestion(...args, body)).toBe(true);
+    expect(await suggestion.saveUserSuggestion(...args, body)).toEqual({ success: true });
 
     expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -351,7 +418,7 @@ describe('saveUserSuggestion', () => {
       extraArtistAttribute: 'feat. X',
     });
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     const fields = {
       name: 'New',
       artist: 'Artist',
@@ -374,7 +441,7 @@ describe('saveUserSuggestion', () => {
 
     const ok = await suggestion.saveUserSuggestion(...args, body);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledTimes(2);
   });
 
@@ -386,7 +453,7 @@ describe('saveUserSuggestion', () => {
 
     const ok = await suggestion.saveUserSuggestion(...args, body);
 
-    expect(ok).toBe(false);
+    expect(ok).toEqual({ success: false });
     expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledTimes(1);
   });
 
@@ -401,7 +468,7 @@ describe('saveUserSuggestion', () => {
       ],
     ]);
     const ok = await suggestion.saveUserSuggestion(...args, body);
-    expect(ok).toBe(false);
+    expect(ok).toEqual({ success: false });
     expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
   });
 });
@@ -427,7 +494,7 @@ describe('submitUserSuggestions', () => {
 
   it('rejects a hash that holds no line', async () => {
     routeRaw([NO_LINE]);
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: false });
     expect(h.prisma.payment.findFirst).not.toHaveBeenCalled();
   });
 
@@ -436,7 +503,7 @@ describe('submitUserSuggestions', () => {
 
     const ok = await suggestion.submitUserSuggestions(...args);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     // the line and its holder's suggestions, by id
     expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith({
       where: { id: 30 },
@@ -466,7 +533,7 @@ describe('submitUserSuggestions', () => {
 
     const ok = await suggestion.submitUserSuggestions(...args);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 30 },
       data: { eligableForPrinter: false, userConfirmedPrinting: true },
@@ -505,7 +572,7 @@ describe('submitUserSuggestions', () => {
 
     const ok = await suggestion.submitUserSuggestions(...args);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { paymentId: 'pay_1' },
       data: {
@@ -536,14 +603,14 @@ describe('submitUserSuggestions', () => {
 
   it('returns false when no paymentHasPlaylist row exists', async () => {
     arrange({ count: 0, php: null });
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: false });
     expect(h.queueGenerate).not.toHaveBeenCalled();
   });
 
   it('returns false when a lookup throws', async () => {
     routeRaw([OWNED]);
     h.prisma.payment.findFirst.mockRejectedValue(new Error('boom'));
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: false });
   });
 
   it('refuses a given physical set: it has been printed', async () => {
@@ -553,7 +620,7 @@ describe('submitUserSuggestions', () => {
       line: { ...GIFTED, type: 'physical' },
     });
 
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(false);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: false });
 
     expect(h.prisma.payment.findFirst).not.toHaveBeenCalled();
     expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
@@ -569,7 +636,7 @@ describe('submitUserSuggestions', () => {
       line: { ...GIFTED, id: 31, type: 'digital' },
     });
 
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(true);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
 
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 31 },
@@ -588,7 +655,7 @@ describe('submitUserSuggestions', () => {
       line: { ...GIFTED, id: 31, type: 'digital' },
     });
 
-    expect(await suggestion.submitUserSuggestions(...args)).toBe(true);
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
 
     expect(h.prisma.userSuggestion.count).toHaveBeenCalledWith({
       where: { playlistId: 20, userId: 8 },
@@ -613,13 +680,13 @@ describe('applyDesignChanges', () => {
 
   it('rejects a hash that holds no line', async () => {
     routeRaw([NO_LINE]);
-    expect(await suggestion.applyDesignChanges(...args)).toBe(false);
+    expect(await suggestion.applyDesignChanges(...args)).toEqual({ success: false });
     expect(h.prisma.paymentHasPlaylist.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns false when the php row is missing', async () => {
     arrange(null);
-    expect(await suggestion.applyDesignChanges(...args)).toBe(false);
+    expect(await suggestion.applyDesignChanges(...args)).toEqual({ success: false });
     expect(h.queueGenerate).not.toHaveBeenCalled();
   });
 
@@ -628,7 +695,7 @@ describe('applyDesignChanges', () => {
 
     const ok = await suggestion.applyDesignChanges(...args);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith({
       where: { id: 30 },
     });
@@ -665,7 +732,7 @@ describe('applyDesignChanges', () => {
 
     const ok = await suggestion.applyDesignChanges(...args);
 
-    expect(ok).toBe(true);
+    expect(ok).toEqual({ success: true });
     expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
     expect(h.prisma.payment.update).not.toHaveBeenCalled();
     expect(h.queueGenerate).toHaveBeenCalledWith(
@@ -688,7 +755,7 @@ describe('applyDesignChanges', () => {
   it('refuses a given physical set: it has been printed', async () => {
     arrange({ id: 30, type: 'physical' }, { ...GIFTED, type: 'physical' });
 
-    expect(await suggestion.applyDesignChanges(...args)).toBe(false);
+    expect(await suggestion.applyDesignChanges(...args)).toEqual({ success: false });
 
     expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
     expect(h.prisma.payment.update).not.toHaveBeenCalled();
@@ -702,7 +769,7 @@ describe('applyDesignChanges', () => {
       { ...GIFTED, id: 31, type: 'digital' }
     );
 
-    expect(await suggestion.applyDesignChanges(...args)).toBe(true);
+    expect(await suggestion.applyDesignChanges(...args)).toEqual({ success: true });
 
     expect(h.queueDigitalRedesign).toHaveBeenCalledWith('pay_1', 31);
     expect(h.queueGenerate).not.toHaveBeenCalled();
@@ -1195,7 +1262,7 @@ describe('extendPrinterDeadline', () => {
 
     expect(
       await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
-    ).toBe(false);
+    ).toEqual({ success: false });
 
     // verifyBuyer: a paid payment whose own user has this hash
     expect(h.prisma.payment.findFirst).toHaveBeenCalledTimes(1);
@@ -1213,7 +1280,7 @@ describe('extendPrinterDeadline', () => {
       .mockResolvedValueOnce(null);
     expect(
       await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
-    ).toBe(false);
+    ).toEqual({ success: false });
     expect(h.prisma.payment.update).not.toHaveBeenCalled();
   });
 
@@ -1225,7 +1292,7 @@ describe('extendPrinterDeadline', () => {
 
     expect(
       await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
-    ).toBe(true);
+    ).toEqual({ success: true });
     expect(h.prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 4 },
       data: { canBeSentToPrinterAt: new Date('2026-06-11T08:00:00Z') },
@@ -1241,7 +1308,7 @@ describe('extendPrinterDeadline', () => {
 
     expect(
       await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
-    ).toBe(true);
+    ).toEqual({ success: true });
 
     const newDate: Date =
       h.prisma.payment.update.mock.calls[0][0].data.canBeSentToPrinterAt;
@@ -1756,5 +1823,240 @@ describe('regenerateAndMail', () => {
     expect(res).toEqual({ success: true });
     // let the rejected promise settle through the .catch handler
     await new Promise((r) => setImmediate(r));
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Once an order went to the printer (payments.sentToPrinter) its printed
+ * lines are in production: the corrections page's writes answer
+ * orderInProduction and change nothing. Order 100009576 (2026-11-04) was
+ * approved hours after it went to Print&Bind, which regenerated its PDFs and
+ * moved its print deadline.
+ */
+describe('an order at the printer (orderInProduction)', () => {
+  const IN_PRODUCTION = { success: false, error: ORDER_IN_PRODUCTION };
+  const SHEETS = { subType: 'sheets' };
+
+  /** The order of line 30 (payment 10) went to the printer */
+  function orderAtPrinter(sent = true) {
+    h.prisma.payment.findUnique.mockResolvedValue({ sentToPrinter: sent });
+  }
+
+  function expectNothingWritten() {
+    expect(h.prisma.paymentHasPlaylist.update).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    expect(h.prisma.userSuggestion.upsert).not.toHaveBeenCalled();
+    expect(h.queueGenerate).not.toHaveBeenCalled();
+    expect(h.queueDigitalRedesign).not.toHaveBeenCalled();
+    expect(h.sendToPrinter).not.toHaveBeenCalled();
+    expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(0);
+  }
+
+  it('looks the order up by the line\'s own payment', async () => {
+    routeRaw([OWNED]);
+    orderAtPrinter();
+    await suggestion.submitUserSuggestions('pay_1', 'hash_1', 'pl_1', '1.2.3.4');
+    expect(h.prisma.payment.findUnique).toHaveBeenCalledWith({
+      where: { id: 10 },
+      select: { sentToPrinter: true },
+    });
+  });
+
+  describe('submitUserSuggestions (approve)', () => {
+    const args = ['pay_1', 'hash_1', 'pl_1', '1.2.3.4'] as const;
+
+    it('refuses the approval: no PDFs regenerated, no consent or deadline moved', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter();
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 30, type: 'physical' });
+      h.prisma.userSuggestion.count.mockResolvedValue(0);
+
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual(IN_PRODUCTION);
+      expectNothingWritten();
+    });
+
+    it('refuses corrections too: nothing goes to the review queue', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter();
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 30, type: 'physical' });
+      h.prisma.userSuggestion.count.mockResolvedValue(3);
+
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual(IN_PRODUCTION);
+      expectNothingWritten();
+      expect(h.prisma.$executeRaw).not.toHaveBeenCalled();
+    });
+
+    it('refuses a sheets line (printed as well)', async () => {
+      routeRaw([ownedLine(SHEETS)]);
+      orderAtPrinter();
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual(IN_PRODUCTION);
+      expectNothingWritten();
+    });
+
+    it('approves as before while the order has not gone to the printer', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter(false);
+      h.prisma.payment.findFirst.mockResolvedValue({ id: 10, fullname: 'Rick G' });
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 30, type: 'physical' });
+      h.prisma.userSuggestion.count.mockResolvedValue(0);
+
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
+      expect(h.queueGenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a digital line of a printed order alone', async () => {
+      routeRaw([ownedLine({ id: 31, type: 'digital' })]);
+      orderAtPrinter();
+      h.prisma.payment.findFirst.mockResolvedValue({ id: 10, fullname: 'Rick G' });
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 31, type: 'digital' });
+      h.prisma.userSuggestion.count.mockResolvedValue(0);
+
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
+      // a digital line never asks whether the order went to the printer
+      expect(h.prisma.payment.findUnique).not.toHaveBeenCalled();
+      expect(h.queueGenerate).toHaveBeenCalledWith(
+        'pay_1', '', '', true, true, false, '',
+        expect.objectContaining({ type: 'sendDigitalEmail' })
+      );
+    });
+
+    it('keeps refusing a given physical set the way it did', async () => {
+      routeRaw([ownedLine({ ...GIFTED, type: 'physical' })]);
+      orderAtPrinter();
+      expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: false });
+      expectNothingWritten();
+    });
+  });
+
+  describe('applyDesignChanges', () => {
+    const args = ['pay_1', 'hash_1', 'pl_1', '9.9.9.9'] as const;
+
+    it('refuses a new design on a printed line', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter();
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 30, type: 'physical' });
+
+      expect(await suggestion.applyDesignChanges(...args)).toEqual(IN_PRODUCTION);
+      expectNothingWritten();
+    });
+
+    it('still rebuilds a digital line of a printed order', async () => {
+      routeRaw([ownedLine({ id: 31, type: 'digital' })]);
+      orderAtPrinter();
+      h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ id: 31, type: 'digital' });
+
+      expect(await suggestion.applyDesignChanges(...args)).toEqual({ success: true });
+      expect(h.queueGenerate).toHaveBeenCalledWith(
+        'pay_1', '', '', true, true, false, '',
+        expect.objectContaining({ type: 'sendDigitalEmail' })
+      );
+    });
+  });
+
+  describe('saveUserSuggestion (a correction)', () => {
+    const body = { name: 'New', artist: 'Artist', year: 1999 };
+
+    it('refuses before it even looks at the track', async () => {
+      routeRaw([OWNED, [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
+      orderAtPrinter();
+
+      expect(
+        await suggestion.saveUserSuggestion('pay_1', 'hash_1', 'pl_1', 42, body)
+      ).toEqual(IN_PRODUCTION);
+      expect(rawQueryCalls(SQL.trackCheck)).toHaveLength(0);
+      expectNothingWritten();
+    });
+
+    it('saves on a digital line of a printed order', async () => {
+      routeRaw([ownedLine({ id: 31, type: 'digital' }), [SQL.trackCheck, [{ playlistDBId: 9 }]]]);
+      orderAtPrinter();
+      h.prisma.userSuggestion.upsert.mockResolvedValue({ id: 1 });
+
+      expect(
+        await suggestion.saveUserSuggestion('pay_1', 'hash_1', 'pl_1', 42, body)
+      ).toEqual({ success: true });
+      expect(h.prisma.userSuggestion.upsert).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('extendPrinterDeadline', () => {
+    it('refuses: the order has no deadline left', async () => {
+      h.prisma.payment.findFirst
+        .mockResolvedValueOnce({ id: 10 }) // verifyBuyer
+        .mockResolvedValueOnce({
+          id: 10,
+          canBeSentToPrinterAt: new Date('2026-11-03T08:00:00Z'),
+          sentToPrinter: true,
+        });
+
+      expect(
+        await suggestion.extendPrinterDeadline('pay_1', 'hash_1', 'pl_1')
+      ).toEqual(IN_PRODUCTION);
+      expect(h.prisma.payment.findFirst).toHaveBeenLastCalledWith({
+        where: { paymentId: 'pay_1' },
+        select: { id: true, canBeSentToPrinterAt: true, sentToPrinter: true },
+      });
+      expect(h.prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reloadPlaylist', () => {
+    it('refuses without asking the music service', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter();
+
+      expect(await suggestion.reloadPlaylist('pay_1', 'hash_1', 'pl_1')).toEqual(
+        IN_PRODUCTION
+      );
+      expect(h.getProviderByString).not.toHaveBeenCalled();
+      expect(h.storeTracks).not.toHaveBeenCalled();
+      expect(h.prisma.paymentHasPlaylist.updateMany).not.toHaveBeenCalled();
+      expect(h.ensureLineQrCodes).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cardDesignInProduction (the design save)', () => {
+    /** The type and subType findLineByHash was narrowed to */
+    function lineFilterValues(): unknown[] {
+      const call = rawQueryCalls(SQL.line)[0];
+      // the Prisma.sql fragments among the template's values
+      const isFragment = (v: any): v is { values: unknown[] } =>
+        !!v && Array.isArray(v.strings) && Array.isArray(v.values);
+      return call.slice(1).filter(isFragment).flatMap((v) => v.values);
+    }
+
+    it('is true for the printed line the save would write', async () => {
+      routeRaw([ownedLine(SHEETS)]);
+      orderAtPrinter();
+
+      expect(
+        await suggestion.cardDesignInProduction('pay_1', 'hash_1', 'pl_1', 'physical', 'sheets')
+      ).toBe(true);
+      // the same line Designer.updateCardDesign would update
+      expect(lineFilterValues()).toEqual(['physical', 'sheets']);
+    });
+
+    it('is false before the order goes to the printer', async () => {
+      routeRaw([OWNED]);
+      orderAtPrinter(false);
+      expect(
+        await suggestion.cardDesignInProduction('pay_1', 'hash_1', 'pl_1', 'physical', 'none')
+      ).toBe(false);
+    });
+
+    it('is false for a digital line, and for a hash that holds no line', async () => {
+      routeRaw([ownedLine({ id: 31, type: 'digital' })]);
+      orderAtPrinter();
+      expect(
+        await suggestion.cardDesignInProduction('pay_1', 'hash_1', 'pl_1', 'digital', 'none')
+      ).toBe(false);
+
+      routeRaw([NO_LINE]);
+      expect(
+        await suggestion.cardDesignInProduction('pay_1', 'nope', 'pl_1', 'physical', 'none')
+      ).toBe(false);
+    });
   });
 });
