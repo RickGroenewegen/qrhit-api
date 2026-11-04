@@ -2677,6 +2677,16 @@ receipt and pays the VAT. So a store order:
 The EUR columns keep the NL storefront price. Apple's JWS adds what the
 buyer paid in their own currency (`currency`, `totalPricePresentment`).
 
+**Country** (2026-11-04): the app sends no country for a digital order,
+and the CloudFront header that `getPaymentUri` falls back on does not reach
+the API from the app, so every store order before this date had
+`countrycode` NULL (the Pushover read "Ralf Angermann (null)"). The settle
+step now writes the store's own country, the one it charges VAT for:
+Apple's `storefront` (alpha-3, `DEU`) or Google's `regionCode` (alpha-2),
+both through `storeCountry` (`i18n-iso-countries`, no list of our own). An
+unknown or missing code leaves the column as it was. The four store orders
+of 1-3 November are App Review/TestFlight sandbox purchases and stay NULL.
+
 **Refunds** (`src/storeRefunds.ts`): a webhook would need a new route
 (Apple's server notifications, Google's real-time developer notifications),
 so a job asks the stores instead, every six hours at :40 (Amsterdam), on

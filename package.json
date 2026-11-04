@@ -93,6 +93,7 @@
     "hyphenation.sv": "^0.2.1",
     "hypher": "^0.2.5",
     "i18n": "^0.15.4",
+    "i18n-iso-countries": "^7.14.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "jsqr": "^1.4.0",

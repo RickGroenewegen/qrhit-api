@@ -9,6 +9,7 @@ import {
   SignedDataVerifier,
 } from '@apple/app-store-server-library';
 import { color } from 'console-log-colors';
+import countries from 'i18n-iso-countries';
 import Logger from './logger';
 import { StorePlatform, parseStorePlatform } from './storeProducts';
 
@@ -67,7 +68,24 @@ export interface VerifiedPurchase {
   /** What the buyer paid, when the store says so (Apple only). */
   price: number | null;
   currency: string | null;
+  /**
+   * The buyer's store country, ISO 3166-1 alpha-2 (`DE`), when the store
+   * says so: Apple's `storefront` (alpha-3, `DEU`), Google's `regionCode`.
+   * The store charges that country's VAT, so it is the order's country.
+   */
+  country: string | null;
   purchaseToken?: string;
+}
+
+/**
+ * A store's country code as our two-letter code, or null for anything that
+ * is not a known ISO 3166-1 country (Apple writes alpha-3, Google alpha-2).
+ */
+export function storeCountry(code: string | null | undefined): string | null {
+  const upper = (code ?? '').trim().toUpperCase();
+  if (upper.length === 3) return countries.alpha3ToAlpha2(upper) ?? null;
+  if (upper.length === 2 && countries.isValid(upper)) return upper;
+  return null;
 }
 
 /**
@@ -202,6 +220,7 @@ class StorePurchases {
       sandbox: environment !== Environment.PRODUCTION,
       price: typeof tx.price === 'number' ? tx.price / 1000 : null,
       currency: tx.currency ?? null,
+      country: storeCountry(tx.storefront),
     };
   }
 
@@ -254,6 +273,7 @@ class StorePurchases {
       sandbox: purchase.purchaseType === 0,
       price: null,
       currency: null,
+      country: storeCountry(purchase.regionCode),
       purchaseToken: proof.purchaseToken,
     };
   }
@@ -270,6 +290,7 @@ class StorePurchases {
       sandbox: true,
       price: null,
       currency: null,
+      country: null,
     };
   }
 }

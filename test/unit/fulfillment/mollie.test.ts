@@ -4515,6 +4515,7 @@ describe('checkPaymentStatus with an app store proof', () => {
       sandbox: false,
       price: 14.99,
       currency: 'EUR',
+      country: null,
       ...over,
     };
   }
@@ -4560,6 +4561,15 @@ describe('checkPaymentStatus with an app store proof', () => {
     expect(cacheMock.del).toHaveBeenCalledWith('playlists:user:userhash');
     expect(metaMock.sendPurchase).toHaveBeenCalledWith(901);
     expect(storePurchasesMock.finish).toHaveBeenCalled();
+  });
+
+  it("stores the store's country as the order's, which the app does not send", async () => {
+    orderThenStatus(storeOrder());
+    storePurchasesMock.verify.mockResolvedValue(purchase({ country: 'DE' }));
+
+    await mollie.checkPaymentStatus(PAYMENT_ID, proof);
+
+    expect(prismaMock.payment.updateMany.mock.calls[0][0].data.countrycode).toBe('DE');
   });
 
   it('marks a test purchase sandbox and sends Meta and the promoter nothing', async () => {
