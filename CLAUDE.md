@@ -2154,6 +2154,38 @@ reset on the Featured page. `linkCheckedAt` is the last definite answer.
 - Nothing unfeatures automatically any more: the cover repair (above) only
   reports a gone playlist and leaves it to this check (2026-11-03).
 
+## Product pages of playlists on other services (`src/featuredOtherService.ts`)
+
+A product page (`/:lang/product/:slug`) has no service in its URL, so the
+site loads every slug through `POST /spotify/playlists(/tracks)` with
+`slug: 1`. Until 2026-11-04 `Spotify.getPlaylist`/`getTracks` then asked
+Spotify for whatever id the slug stood for: a `pl.u-…` (Apple Music), `PL…`
+(YouTube Music), Deezer or Tidal id got a 400, and all 17 non-Spotify featured
+playlists showed "we could not retrieve this playlist" (Rick found two through
+Google Ads clicks). The link check could not see it: their sources were fine.
+
+- The slug path reads the featured row every time it fetches (never the
+  `playlistdb2_` slug-to-id cache, which has no service; it is still written
+  for the deletes in misc.ts) and, for another service, asks that service's
+  provider: `fetchOtherServicePlaylist` answers in the Spotify Web API's shape
+  (Apple Music gives no track count for a user's playlist: the row's
+  `numberOfTracks` stands in), so the featured enrichment after it is one path.
+  `getOtherServiceTracks` in spotify.ts gives the Spotify route's tracks: the
+  same enrichment (track id, ISRC, artist+title) and the playlist's
+  trackextrainfo corrections, `link` on the service, and `spotifyLink` from
+  our tracks table where we have it ("Change the songs" copies from those).
+  `supportsYearData` is left out, so the page goes by that service's setting.
+- Apple Music is asked in the storefront of the row's `featuredLocale` (the
+  first), else nl; its tracks are cached per storefront.
+- Every playlist answer carries `serviceType` (cached entries from before
+  have none and are Spotify). The site's summary takes it in slug mode
+  (`adoptSlugService`), so the cart item says the right service: with
+  `spotify` there, `storePlaylists` would have written `spotify` onto the
+  featured playlist at checkout and the order fetched it from Spotify.
+- A provider failure is passed on as is (cached 60 s), never mapped to
+  `playlistNotFound`: a transient Apple error must not make the page a 404.
+  A really gone source is the link check's.
+
 ## Product page descriptions (SEO)
 
 `description_<locale>` on a featured playlist is the product page's intro,

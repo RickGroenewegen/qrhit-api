@@ -10,6 +10,12 @@ export interface Playlist {
   customImage?: string | null;
   design?: any;
   featured?: boolean;
+  /**
+   * The music service the playlist is on. The product page loads every
+   * featured slug through the Spotify route and takes its service from here
+   * (src/featuredOtherService.ts).
+   */
+  serviceType?: string;
   /** ISO timestamp of the catalogue row; featured lookups only. */
   createdAt?: string | null;
   /** The product photo's URLs (src/productPhoto/photos.ts); featured lookups only. */

@@ -9,7 +9,7 @@ import axios from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
-import { ProgressCallback } from './interfaces/IMusicProvider';
+import { ProgressCallback, ProviderTrackData } from './interfaces/IMusicProvider';
 import Cache from './cache';
 import Data from './data';
 import Utils from './utils';
@@ -38,6 +38,15 @@ import {
 import { youtubeVideoId } from './youtubeLink';
 import { productPageDesign } from './data/productPageDesign';
 import { productPhotoFor } from './productPhoto/photos';
+import { ServiceType } from './enums/ServiceType';
+import {
+  OtherServiceType,
+  TrackCorrection,
+  fetchOtherServicePlaylist,
+  fetchOtherServiceTracks,
+  isOtherService,
+  providerTrackToTrack,
+} from './featuredOtherService';
 import { isUrlOnHosts, SHORTLINK_HOSTS, SPOTIFY_REDIRECT_HOSTS } from './shortlinks';
 
 // Spotify Cache Key Prefixes
@@ -240,7 +249,6 @@ class Spotify {
 
       // Try to get from cache first
       let cacheResult = await this.cache.get(cacheKey);
-      const dbCacheResult = await this.cache.get(dbCacheKey);
 
       if (!cacheResult || !cache) {
         // Try to acquire lock for this playlist
@@ -275,54 +283,80 @@ class Spotify {
               : '';
 
             let checkPlaylistId = playlistId;
+            // The service the playlist is on: Spotify, unless a featured slug
+            // stands for a playlist on another service (featuredOtherService.ts).
+            let serviceType: string = ServiceType.SPOTIFY;
+            let slugRow: { featuredLocale: string | null; numberOfTracks: number | null } | null = null;
 
             if (isSlug) {
-              if (!dbCacheResult || !cache) {
-                const dbPlaylist = await this.prisma.playlist.findFirst({
-                  where: { slug: playlistId, featured: true },
+              // Always the row, never the slug-to-id cache: the row also says
+              // which service the playlist is on. This runs on a cache miss
+              // only, and a featured playlist's lookup is cached forever.
+              const dbPlaylist = await this.prisma.playlist.findFirst({
+                where: { slug: playlistId, featured: true },
+              });
+              if (!dbPlaylist) {
+                // Cache the failure so other waiting requests don't timeout
+                const failureResult = JSON.stringify({
+                  error: 'playlistNotFound',
                 });
-                if (!dbPlaylist) {
-                  // Cache the failure so other waiting requests don't timeout
-                  const failureResult = JSON.stringify({
-                    error: 'playlistNotFound',
-                  });
-                  await this.cache.set(cacheKey, failureResult, 60); // Cache for 1 minute
-                  await this.cache.releaseLock(lockKey);
-                  return { success: false, error: 'playlistNotFound' };
-                }
-                checkPlaylistId = dbPlaylist.playlistId;
-                // Featured playlists cache forever, others expire in 24 hours
-                this.cache.set(dbCacheKey, checkPlaylistId, featured ? undefined : 86400);
-              } else {
-                checkPlaylistId = dbCacheResult;
+                await this.cache.set(cacheKey, failureResult, 60); // Cache for 1 minute
+                await this.cache.releaseLock(lockKey);
+                return { success: false, error: 'playlistNotFound' };
               }
+              checkPlaylistId = dbPlaylist.playlistId;
+              if (isOtherService(dbPlaylist.serviceType)) {
+                serviceType = dbPlaylist.serviceType;
+                slugRow = {
+                  featuredLocale: dbPlaylist.featuredLocale ?? null,
+                  numberOfTracks: dbPlaylist.numberOfTracks ?? null,
+                };
+              }
+              // Featured playlists cache forever, others expire in 24 hours
+              this.cache.set(dbCacheKey, checkPlaylistId, featured ? undefined : 86400);
             }
 
-            // Use rate limit manager for automatic fallback on 429 errors
-            const playlistProvider = await this.getActivePlaylistProvider();
-
-            const playlistTag = playlistProvider === 'v1' ? 'spotify' : `spotify-${playlistProvider}`;
-            this.logger.log(
-              color.blue.bold(
-                `[${color.white.bold(playlistTag)}] Fetching playlist for ${color.white.bold(
-                  playlistId
-                )}${ipInfo}${uaInfo}`
-              )
-            );
             let result;
 
-            if (playlistProvider === 'scraper') {
-              result = await this.spotifyScraper.getPlaylist(checkPlaylistId);
-            } else if (playlistProvider === 'graphql') {
-              result = await this.spotifyGraphqlScraper.getPlaylist(checkPlaylistId);
-            } else {
-              const api = this.getApiForProvider(playlistProvider);
-              result = await this.rateLimitManager.executeWithFallback(
-                'getPlaylist',
-                [checkPlaylistId],
-                api,
-                this.apiFallback
+            if (isOtherService(serviceType)) {
+              this.logger.log(
+                color.blue.bold(
+                  `[${color.white.bold(serviceType)}] Fetching featured playlist ${color.white.bold(
+                    playlistId
+                  )} (${color.white.bold(checkPlaylistId)})${ipInfo}${uaInfo}`
+                )
               );
+              result = await fetchOtherServicePlaylist(serviceType, checkPlaylistId, {
+                cache,
+                featuredLocale: slugRow?.featuredLocale,
+                storedTrackCount: slugRow?.numberOfTracks,
+              });
+            } else {
+              // Use rate limit manager for automatic fallback on 429 errors
+              const playlistProvider = await this.getActivePlaylistProvider();
+
+              const playlistTag = playlistProvider === 'v1' ? 'spotify' : `spotify-${playlistProvider}`;
+              this.logger.log(
+                color.blue.bold(
+                  `[${color.white.bold(playlistTag)}] Fetching playlist for ${color.white.bold(
+                    playlistId
+                  )}${ipInfo}${uaInfo}`
+                )
+              );
+
+              if (playlistProvider === 'scraper') {
+                result = await this.spotifyScraper.getPlaylist(checkPlaylistId);
+              } else if (playlistProvider === 'graphql') {
+                result = await this.spotifyGraphqlScraper.getPlaylist(checkPlaylistId);
+              } else {
+                const api = this.getApiForProvider(playlistProvider);
+                result = await this.rateLimitManager.executeWithFallback(
+                  'getPlaylist',
+                  [checkPlaylistId],
+                  api,
+                  this.apiFallback
+                );
+              }
             }
 
             if (!result.success) {
@@ -492,6 +526,7 @@ class Spotify {
               customImage,
               design: playlistDesign,
               createdAt,
+              serviceType,
               ...decadePercentages,
             };
 
@@ -523,6 +558,7 @@ class Spotify {
               customImage,
               design: playlistDesign,
               createdAt,
+              serviceType,
               ...decadePercentages,
             };
           } catch (error) {
@@ -556,6 +592,8 @@ class Spotify {
           customImage: cachedData.customImage || null,
           design: cachedData.design || null,
           createdAt: cachedData.createdAt || null,
+          // Entries cached before 2026-11-04 carry none; they were all Spotify.
+          serviceType: cachedData.serviceType || ServiceType.SPOTIFY,
           decadePercentage0: cachedData.decadePercentage0 || 0,
           decadePercentage1900: cachedData.decadePercentage1900 || 0,
           decadePercentage1950: cachedData.decadePercentage1950 || 0,
@@ -734,6 +772,21 @@ class Spotify {
       cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}_${playlistData.numberOfTracks}${dupSuffix}`;
 
       const cacheResult = await this.cache.get(cacheKey);
+
+      // A featured slug on another service: its own provider, same answer.
+      if ((!cacheResult || !cache) && isSlug && isOtherService(playlistData.serviceType)) {
+        const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
+        const uaInfo = userAgent ? ` with User-Agent: ${color.white.bold(userAgent)}` : '';
+        return await this.getOtherServiceTracks(playlistId, playlistData.serviceType, {
+          cache,
+          cacheKey,
+          cacheKeyCount,
+          allowDuplicates,
+          onProgress,
+          logSuffix: `${ipInfo}${uaInfo}`,
+        });
+      }
+
       const tracksProvider = await this.getActiveTracksProvider();
 
       if (!cacheResult || !cache) {
@@ -1044,35 +1097,17 @@ class Spotify {
 
       // --- Prepare and Cache Final Result ---
       const supportsYearData = tracksProvider !== 'scraper' && tracksProvider !== 'graphql';
-      const finalResult = {
-        success: true,
-        data: {
-          maxReached,
-          maxReachedPhysical,
-          totalTracks: allFormattedTracks.length,
-          tracks: allFormattedTracks,
-          skippedTracks: skippedTracksInfo,
-          supportsYearData,
-        },
-      };
-
-      // Clear old cache entries and set new ones using the correct playlist ID
-      this.cache.delPattern(`${CACHE_KEY_TRACKS}${checkPlaylistId}*`);
-      this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}*`);
-
-      // Featured playlists (accessed via slug) cache forever, others expire in 24 hours
-      const cacheTTL = isSlug ? undefined : 86400;
-      this.cache.set(cacheKeyCount, allFormattedTracks.length.toString(), cacheTTL);
-      this.cache.set(cacheKey, JSON.stringify(finalResult), cacheTTL);
-
-      // Track analytics for tracks retrieval
-      this.analytics.increaseCounter(
-        'spotify',
-        'tracks',
-        allFormattedTracks.length
-      );
-
-      return finalResult; // Return the processed result
+      return this.storeTracksResult({
+        checkPlaylistId,
+        cacheKey,
+        cacheKeyCount,
+        isSlug,
+        tracks: allFormattedTracks,
+        maxReached,
+        maxReachedPhysical,
+        skippedTracks: skippedTracksInfo,
+        supportsYearData,
+      });
     } catch (e: any) {
       // Keep existing generic error handling
       if (e.response && e.response.status === 404) {
@@ -1083,6 +1118,184 @@ class Spotify {
       );
       return { success: false, error: 'Error getting tracks' };
     }
+  }
+
+  /**
+   * The tracks answer of `getTracks`, cached under the playlist's real id and
+   * track count: forever for a featured slug, a day otherwise.
+   */
+  private storeTracksResult(args: {
+    checkPlaylistId: string;
+    cacheKey: string;
+    cacheKeyCount: string;
+    isSlug: boolean;
+    tracks: Track[];
+    maxReached: boolean;
+    maxReachedPhysical: boolean;
+    skippedTracks: SkippedTracksInfo;
+    /** Left out for another service: the page then goes by that service's own setting. */
+    supportsYearData?: boolean;
+  }): ApiResult {
+    const finalResult = {
+      success: true,
+      data: {
+        maxReached: args.maxReached,
+        maxReachedPhysical: args.maxReachedPhysical,
+        totalTracks: args.tracks.length,
+        tracks: args.tracks,
+        skippedTracks: args.skippedTracks,
+        supportsYearData: args.supportsYearData,
+      },
+    };
+
+    // Clear old cache entries and set new ones using the correct playlist ID
+    this.cache.delPattern(`${CACHE_KEY_TRACKS}${args.checkPlaylistId}*`);
+    this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${args.checkPlaylistId}*`);
+
+    // Featured playlists (accessed via slug) cache forever, others expire in 24 hours
+    const cacheTTL = args.isSlug ? undefined : 86400;
+    this.cache.set(args.cacheKeyCount, args.tracks.length.toString(), cacheTTL);
+    this.cache.set(args.cacheKey, JSON.stringify(finalResult), cacheTTL);
+
+    // Track analytics for tracks retrieval
+    this.analytics.increaseCounter('spotify', 'tracks', args.tracks.length);
+
+    return finalResult;
+  }
+
+  /**
+   * The tracks of a featured slug whose playlist is on another service than
+   * Spotify (featuredOtherService.ts), in the answer `getTracks` gives for a
+   * Spotify one: the same enrichment (track id, then ISRC, then artist and
+   * title) and this playlist's corrections (trackextrainfo), and the Spotify
+   * link from our tracks table where we have it ("Change the songs" copies
+   * the list to Spotify from those links).
+   */
+  private async getOtherServiceTracks(
+    slug: string,
+    serviceType: OtherServiceType,
+    args: {
+      cache: boolean;
+      cacheKey: string;
+      cacheKeyCount: string;
+      allowDuplicates: boolean;
+      onProgress?: ProgressCallback;
+      logSuffix: string;
+    }
+  ): Promise<ApiResult> {
+    const dbPlaylist = await this.prisma.playlist.findFirst({
+      where: { slug, featured: true },
+    });
+    if (!dbPlaylist) {
+      return { success: false, error: 'playlistNotFound' };
+    }
+    const checkPlaylistId = dbPlaylist.playlistId;
+
+    this.logger.log(
+      color.blue.bold(
+        `[${color.white.bold(serviceType)}] Fetching tracks for featured playlist ${color.white.bold(
+          slug
+        )} (${color.white.bold(checkPlaylistId)})${args.logSuffix}`
+      )
+    );
+
+    const result = await fetchOtherServiceTracks(serviceType, checkPlaylistId, {
+      cache: args.cache,
+      allowDuplicates: args.allowDuplicates,
+      featuredLocale: dbPlaylist.featuredLocale,
+      onProgress: args.onProgress,
+    });
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || `Error getting tracks from ${serviceType}` };
+    }
+    const providerTracks: ProviderTrackData[] = result.data.tracks || [];
+
+    // This playlist's own corrections, keyed by the service's track id (our
+    // tracks table stores another service's tracks under their own id).
+    const extraInfoRecords = await this.prisma.trackExtraInfo.findMany({
+      where: { playlistId: dbPlaylist.id },
+      select: {
+        track: { select: { trackId: true } },
+        name: true,
+        artist: true,
+        year: true,
+        extraNameAttribute: true,
+        extraArtistAttribute: true,
+      },
+    });
+    const overrides = new Map<string, TrackCorrection>();
+    for (const record of extraInfoRecords) {
+      if (!record.track?.trackId) continue;
+      overrides.set(record.track.trackId, {
+        year: record.year ?? undefined,
+        name: record.name ?? undefined,
+        artist: record.artist ?? undefined,
+        extraNameAttribute: record.extraNameAttribute ?? undefined,
+        extraArtistAttribute: record.extraArtistAttribute ?? undefined,
+      });
+    }
+
+    const spotifyLinks = new Map<string, string>();
+    const ids = [...new Set(providerTracks.map((t) => t.id).filter(Boolean))];
+    if (ids.length > 0) {
+      const rows = await this.prisma.track.findMany({
+        where: { trackId: { in: ids }, spotifyLink: { not: null } },
+        select: { trackId: true, spotifyLink: true },
+      });
+      for (const row of rows) {
+        if (row.spotifyLink) spotifyLinks.set(row.trackId, row.spotifyLink);
+      }
+    }
+
+    const tracks: Track[] = [];
+    const seen = new Set<string>();
+    for (const providerTrack of providerTracks) {
+      if (seen.has(providerTrack.id)) continue;
+      const enrichment = this.trackEnrichment.enrichTrack({
+        id: providerTrack.id,
+        isrc: providerTrack.isrc,
+        name: providerTrack.name,
+        artist: providerTrack.artist,
+      });
+      const override = overrides.get(providerTrack.id);
+      const correction: TrackCorrection | undefined =
+        enrichment || override
+          ? {
+              year: override?.year || enrichment?.year,
+              name: override?.name || enrichment?.name,
+              artist: override?.artist || enrichment?.artist,
+              extraNameAttribute: override?.extraNameAttribute || enrichment?.extraNameAttribute,
+              extraArtistAttribute: override?.extraArtistAttribute || enrichment?.extraArtistAttribute,
+            }
+          : undefined;
+      const track = providerTrackToTrack(providerTrack, correction, (name) =>
+        this.utils.cleanTrackName(name)
+      );
+      if (!track) continue;
+      track.spotifyLink = spotifyLinks.get(track.id) || '';
+      seen.add(track.id);
+      tracks.push(track);
+    }
+
+    // The providers stop collecting at MAX_CARDS, so a list that reached it
+    // counts as cut off (as the site's own service clients count it).
+    const maxReached = tracks.length >= MAX_CARDS;
+    const maxReachedPhysical = tracks.length > MAX_CARDS_PHYSICAL;
+
+    return this.storeTracksResult({
+      checkPlaylistId,
+      cacheKey: args.cacheKey,
+      cacheKeyCount: args.cacheKeyCount,
+      isSlug: true,
+      tracks: tracks.slice(0, MAX_CARDS),
+      maxReached,
+      maxReachedPhysical,
+      skippedTracks: result.data.skipped || {
+        total: 0,
+        summary: { unavailable: 0, localFiles: 0, podcasts: 0, duplicates: 0 },
+        details: [],
+      },
+    });
   }
 
   /**

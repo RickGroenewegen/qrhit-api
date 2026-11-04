@@ -23,8 +23,21 @@ const holder = vi.hoisted(() => {
     prisma: {
       playlist: { findFirst: vi.fn() },
       trackExtraInfo: { findMany: vi.fn(async () => [] as any[]) },
-      track: { findFirst: vi.fn(async () => null as any) },
+      track: {
+        findFirst: vi.fn(async () => null as any),
+        findMany: vi.fn(async () => [] as any[]),
+      },
     },
+
+    // The other services' providers (src/featuredOtherService.ts).
+    apple: {
+      getPlaylist: vi.fn(),
+      getTracks: vi.fn(),
+      getStorefrontForLocale: vi.fn((locale?: string) =>
+        locale === 'de' ? 'de' : 'nl'
+      ),
+    },
+    youtube: { getPlaylist: vi.fn(), getTracks: vi.fn() },
 
     spotifyApi: {
       getPlaylist: vi.fn(),
@@ -65,7 +78,7 @@ const holder = vi.hoisted(() => {
       spotifyScraper: { limited: false },
     })),
 
-    enrichTrack: vi.fn((): any => undefined),
+    enrichTrack: vi.fn((_track?: any): any => undefined),
 
     externalCardService: {
       getCardByJumboKey: vi.fn(async () => null as any),
@@ -169,6 +182,19 @@ vi.mock('../../../src/externalCardService', () => ({
   default: { getInstance: () => holder.externalCardService },
 }));
 
+vi.mock('../../../src/providers/AppleMusicProvider', () => ({
+  default: { getInstance: () => holder.apple },
+}));
+vi.mock('../../../src/providers/YouTubeMusicProvider', () => ({
+  default: { getInstance: () => holder.youtube },
+}));
+vi.mock('../../../src/providers/DeezerProvider', () => ({
+  default: { getInstance: () => ({}) },
+}));
+vi.mock('../../../src/providers/TidalProvider', () => ({
+  default: { getInstance: () => ({}) },
+}));
+
 vi.mock('axios');
 import axios from 'axios';
 import Spotify, {
@@ -191,6 +217,12 @@ function resetAll() {
   holder.prisma.trackExtraInfo.findMany.mockResolvedValue([]);
   holder.prisma.track.findFirst.mockReset();
   holder.prisma.track.findFirst.mockResolvedValue(null);
+  holder.prisma.track.findMany.mockReset();
+  holder.prisma.track.findMany.mockResolvedValue([]);
+  for (const provider of [holder.apple, holder.youtube]) {
+    provider.getPlaylist.mockReset();
+    provider.getTracks.mockReset();
+  }
   for (const api of [
     holder.spotifyApi,
     holder.spotifyApi2,
@@ -788,6 +820,227 @@ describe('Spotify.getTracks', () => {
     const res = await spotify.getTracks('PLmissing', true, '', false);
     expect(res).toEqual({ success: false, error: 'playlistNotFound' });
     expect(holder.spotifyApi.getTracks).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Featured slugs on another service (src/featuredOtherService.ts)
+// ---------------------------------------------------------------------------
+
+describe('Spotify: a featured slug on another service', () => {
+  const appleRow = {
+    id: 5869,
+    playlistId: 'pl.u-ABC',
+    serviceType: 'apple_music',
+    featuredLocale: 'de,en',
+    numberOfTracks: 182,
+  };
+  const featuredSelect = {
+    id: 5869,
+    slug: 'musical-version',
+    name: 'QRSong! Musical Version',
+    image: 'https://img/old.jpg',
+    design: null,
+    customImage: 'custom.png',
+    description_en: 'EN desc',
+    description_nl: 'NL desc',
+  };
+
+  function rowsFor(row: any) {
+    holder.prisma.playlist.findFirst.mockImplementation(async (args: any) =>
+      args.select ? featuredSelect : row
+    );
+  }
+
+  it('fetches the playlist from its own service, never from Spotify, and says which service', async () => {
+    rowsFor(appleRow);
+    holder.apple.getPlaylist.mockResolvedValueOnce({
+      success: true,
+      data: {
+        id: 'pl.u-ABC',
+        name: 'Hitster für Michi',
+        description: 'apple description',
+        imageUrl: 'https://img/apple.jpg',
+        trackCount: 0,
+        serviceType: 'apple_music',
+      },
+    });
+
+    const res = await spotify.getPlaylist('musical-version', true, '', false, true, true, 'nl');
+
+    expect(res.success).toBe(true);
+    expect(res.data).toMatchObject({
+      id: 'musical-version',
+      playlistId: 'pl.u-ABC',
+      name: 'QRSong! Musical Version',
+      description: 'NL desc',
+      image: 'https://img/apple.jpg',
+      customImage: 'custom.png',
+      serviceType: 'apple_music',
+      // Apple gives no count for a user's playlist: the row's stands in
+      numberOfTracks: 182,
+    });
+    // the list's own market first (featuredLocale "de,en")
+    expect(holder.apple.getPlaylist).toHaveBeenCalledWith('pl.u-ABC', 'de', true);
+    expect(holder.executeWithFallback).not.toHaveBeenCalled();
+    expect(holder.spotifyApi.getPlaylist).not.toHaveBeenCalled();
+    // cached forever under the slug, with its service
+    const cached = JSON.parse(holder.cacheStore.get(`${CACHE_KEY_PLAYLIST}musical-version`)!);
+    expect(cached.serviceType).toBe('apple_music');
+    expect(holder.cacheSets.find((s) => s.key === `${CACHE_KEY_PLAYLIST}musical-version`)?.ttl).toBeUndefined();
+  });
+
+  it('passes another service\'s failure on and caches it for a minute only', async () => {
+    rowsFor({ ...appleRow, serviceType: 'youtube_music', playlistId: 'PLyt' });
+    holder.youtube.getPlaylist.mockResolvedValueOnce({ success: false, error: 'YouTube Music error' });
+
+    const res = await spotify.getPlaylist('musical-version', true, '', false, true, true, 'nl');
+
+    expect(res).toEqual({ success: false, error: 'YouTube Music error' });
+    expect(holder.youtube.getPlaylist).toHaveBeenCalledWith('PLyt', true);
+    expect(holder.cacheSets.find((s) => s.key === `${CACHE_KEY_PLAYLIST}musical-version`)?.ttl).toBe(60);
+  });
+
+  it('says spotify for a Spotify slug and for a lookup cached before the field existed', async () => {
+    rowsFor({ ...appleRow, serviceType: 'spotify', playlistId: 'REAL1' });
+    holder.spotifyApi.getPlaylist.mockResolvedValueOnce({
+      success: true,
+      data: { name: 'Hits', description: '', images: [], tracks: { total: 3 } },
+    });
+    const fresh = await spotify.getPlaylist('hits', true, '', false, true, true, 'nl');
+    expect(fresh.data.serviceType).toBe('spotify');
+    expect(holder.apple.getPlaylist).not.toHaveBeenCalled();
+
+    holder.cacheStore.set(
+      `${CACHE_KEY_PLAYLIST}old-hits`,
+      JSON.stringify({ id: 'old-hits', playlistId: 'OLD1', name: 'Old', numberOfTracks: 1 })
+    );
+    const cached = await spotify.getPlaylist('old-hits', true, '', false, true, true, 'nl');
+    expect(cached.data.serviceType).toBe('spotify');
+  });
+
+  it('loads the tracks from the service, enriched and corrected, with our Spotify links, cached forever', async () => {
+    holder.cacheStore.set(
+      `${CACHE_KEY_PLAYLIST}musical-version`,
+      JSON.stringify({
+        id: 'musical-version',
+        playlistId: 'pl.u-ABC',
+        name: 'QRSong! Musical Version',
+        numberOfTracks: 182,
+        serviceType: 'apple_music',
+      })
+    );
+    holder.prisma.playlist.findFirst.mockResolvedValue({ ...appleRow, featuredLocale: null });
+    const appleTrack = (id: string, name: string, artist: string, releaseDate: string | null) => ({
+      id,
+      name,
+      artist,
+      album: `${name} (Album)`,
+      albumImageUrl: `https://img/${id}.jpg`,
+      releaseDate,
+      isrc: `ISRC${id}`,
+      previewUrl: null,
+      serviceType: 'apple_music',
+      serviceLink: `https://music.apple.com/nl/song/${id}`,
+    });
+    const skipped = {
+      total: 1,
+      summary: { unavailable: 0, localFiles: 0, podcasts: 0, duplicates: 1 },
+      details: [{ position: 4, reason: 'duplicate' }],
+    };
+    holder.apple.getTracks.mockResolvedValueOnce({
+      success: true,
+      data: {
+        tracks: [
+          appleTrack('111', 'Memory', 'Elaine Paige', '1981-05-01T00:00:00Z'),
+          appleTrack('222', 'Defying Gravity', 'Idina Menzel', 'not a date'),
+          appleTrack('111', 'Memory', 'Elaine Paige', '1981-05-01T00:00:00Z'),
+          { ...appleTrack('333', '', 'Nobody', null) },
+        ],
+        total: 4,
+        skipped,
+      },
+    });
+    holder.enrichTrack.mockImplementation((t: any) =>
+      t.id === '111' ? { year: 1981, name: 'Memory (Cats)' } : t.id === '222' ? { year: 2005 } : undefined
+    );
+    holder.prisma.trackExtraInfo.findMany.mockResolvedValueOnce([
+      { track: { trackId: '222' }, name: null, artist: null, year: 2003, extraNameAttribute: 'Wicked', extraArtistAttribute: null },
+    ]);
+    holder.prisma.track.findMany.mockResolvedValueOnce([
+      { trackId: '111', spotifyLink: 'https://open.spotify.com/track/sp111' },
+    ]);
+
+    const res = await spotify.getTracks('musical-version', true, '', false, true);
+
+    expect(res.success).toBe(true);
+    expect(holder.apple.getTracks).toHaveBeenCalledWith('pl.u-ABC', {
+      cache: true,
+      allowDuplicates: false,
+      onProgress: undefined,
+      storefront: 'nl',
+    });
+    expect(holder.spotifyApi.getTracks).not.toHaveBeenCalled();
+    expect(holder.executeWithFallback).not.toHaveBeenCalled();
+    expect(holder.prisma.trackExtraInfo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { playlistId: 5869 } })
+    );
+
+    const { tracks } = res.data;
+    // the repeated id and the track without a name are left out
+    expect(tracks.map((t: any) => t.id)).toEqual(['111', '222']);
+    expect(tracks[0]).toMatchObject({
+      name: 'Memory (Cats)',
+      artist: 'Elaine Paige',
+      trueYear: 1981,
+      releaseDate: '1981-05-01',
+      image: 'https://img/111.jpg',
+      link: 'https://music.apple.com/nl/song/111',
+      spotifyLink: 'https://open.spotify.com/track/sp111',
+      isrc: 'ISRC111',
+    });
+    // this playlist's correction beats the database's year
+    expect(tracks[1]).toMatchObject({ trueYear: 2003, extraNameAttribute: 'Wicked', releaseDate: '', spotifyLink: '' });
+    expect(res.data).toMatchObject({
+      totalTracks: 2,
+      maxReached: false,
+      maxReachedPhysical: false,
+      skippedTracks: skipped,
+    });
+    // the service's own year setting applies, not the Spotify scraper's
+    expect(res.data.supportsYearData).toBeUndefined();
+
+    const tracksSet = holder.cacheSets.find((s) => s.key === `${CACHE_KEY_TRACKS}pl.u-ABC_182`);
+    expect(tracksSet).toBeDefined();
+    expect(tracksSet?.ttl).toBeUndefined();
+  });
+
+  it('serves the cached tracks of another service without asking it again', async () => {
+    holder.cacheStore.set(
+      `${CACHE_KEY_PLAYLIST}musical-version`,
+      JSON.stringify({ id: 'musical-version', playlistId: 'pl.u-ABC', name: 'M', numberOfTracks: 2, serviceType: 'apple_music' })
+    );
+    const cachedTracks = { success: true, data: { totalTracks: 2, tracks: [{ id: '1' }, { id: '2' }] } };
+    holder.cacheStore.set(`${CACHE_KEY_TRACKS}pl.u-ABC_2`, JSON.stringify(cachedTracks));
+
+    const res = await spotify.getTracks('musical-version', true, '', false, true);
+
+    expect(res).toEqual(cachedTracks);
+    expect(holder.apple.getTracks).not.toHaveBeenCalled();
+  });
+
+  it('passes a failing service on', async () => {
+    holder.cacheStore.set(
+      `${CACHE_KEY_PLAYLIST}musical-version`,
+      JSON.stringify({ id: 'musical-version', playlistId: 'pl.u-ABC', name: 'M', numberOfTracks: 2, serviceType: 'apple_music' })
+    );
+    holder.prisma.playlist.findFirst.mockResolvedValue(appleRow);
+    holder.apple.getTracks.mockResolvedValueOnce({ success: false, error: 'Apple Music API error: 500' });
+
+    const res = await spotify.getTracks('musical-version', true, '', false, true);
+
+    expect(res).toEqual({ success: false, error: 'Apple Music API error: 500' });
+    expect(holder.cacheSets.find((s) => s.key.startsWith(CACHE_KEY_TRACKS))).toBeUndefined();
   });
 });
 
