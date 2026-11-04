@@ -57,6 +57,11 @@ vi.mock('../../src/cache', () => ({
         cacheCounters.set(key, next);
         return next;
       },
+      increment: async (key: string) => {
+        const next = (cacheCounters.get(key) || 0) + 1;
+        cacheCounters.set(key, next);
+        return next;
+      },
       del: async (key: string) => { cacheStore.delete(key); },
       delPattern: async () => {},
       acquireLock: async () => true,
@@ -356,6 +361,21 @@ describe('Spotify.resolveSpotifyUrl', () => {
     const result = await spotify.resolveSpotifyUrl('https://music.youtube.com/watch?v=abc123');
     expect(result.success).toBe(true);
     expect(result.links?.youtubeMusicLink).toBeDefined();
+  });
+
+  // The web scanner remembers a 404 as "no song" for the visit; a card turned
+  // away by the paid-lookup limit must be told apart so the route answers 429
+  it('marks a YouTube card over the lookup limit as rate limited, not unknown', async () => {
+    cacheCounters.clear();
+    cacheCounters.set('youtube_card_rl:203.0.113.9', 20);
+    const result = await spotify.resolveSpotifyUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+      partnerCards: true,
+      clientIp: '203.0.113.9',
+    });
+    expect(result.success).toBe(false);
+    expect(result.rateLimited).toBe(true);
+    // Not remembered: the next scan after the limit may still find it
+    expect([...cacheStore.keys()].some((key) => key.includes('dQw4w9WgXcQ'))).toBe(false);
   });
 
   it('detects Deezer native link', async () => {

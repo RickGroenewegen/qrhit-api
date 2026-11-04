@@ -21,6 +21,7 @@ import Utils from '../utils';
 import Translation from '../translation';
 import { MAX_CARDS } from '../config/constants';
 import { isUrlOnHosts, SHORTLINK_HOSTS } from '../shortlinks';
+import { credentialedOrigins } from '../corsOrigins';
 
 // Apple Music API base URL
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
@@ -37,6 +38,14 @@ const CACHE_TTL_SEARCH = 3600; // 1 hour
 const CACHE_KEY_APPLE_MUSIC_TOKEN = 'apple_music_developer_token';
 const APPLE_MUSIC_TOKEN_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
 const APPLE_MUSIC_TOKEN_EXPIRY = 180 * 24 * 60 * 60; // 180 days in seconds (Apple max)
+
+// The browser's token (the site's web scanner, through MusicKit JS) carries
+// an `origin` claim, so a token read from our pages works on our sites only;
+// without it any website could play Apple Music on our developer account.
+// The apps keep the plain token: a native MusicKit has no origin.
+const CACHE_KEY_APPLE_MUSIC_WEB_TOKEN = 'apple_music_web_developer_token_v1';
+// hoster's address of a local frontend, besides the CORS list's ports
+const WEB_TOKEN_DEVELOPMENT_ORIGINS = ['https://qrhit.localhost'];
 
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
@@ -86,6 +95,8 @@ class AppleMusicProvider implements IMusicProvider {
   private utils = new Utils();
   private developerToken: string | null = null;
   private developerTokenExpiry = 0; // epoch seconds; 0 = unknown
+  private webToken: string | null = null;
+  private webTokenExpiry = 0;
 
   readonly serviceType = ServiceType.APPLE_MUSIC;
 
@@ -172,11 +183,46 @@ class AppleMusicProvider implements IMusicProvider {
     return process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] || null;
   }
 
+  /** The origins the browser's token is valid on: the site's own (src/corsOrigins.ts). */
+  public static webTokenOrigins(): string[] {
+    const origins = credentialedOrigins();
+    return process.env['ENVIRONMENT'] === 'production' ? origins : [...origins, ...WEB_TOKEN_DEVELOPMENT_ORIGINS];
+  }
+
+  /**
+   * The developer token for MusicKit JS in a browser, limited to our own
+   * origins (Apple checks the page's origin against the `origin` claim).
+   * Cached like the plain token, under its own key; no static fallback, as
+   * that one has no origin claim.
+   */
+  public async getWebDeveloperToken(): Promise<string | null> {
+    const now = Math.floor(Date.now() / 1000);
+    const buffer = 24 * 60 * 60;
+    if (this.webToken && this.webTokenExpiry > now + buffer) return this.webToken;
+
+    const cached = await this.cache.get(CACHE_KEY_APPLE_MUSIC_WEB_TOKEN).catch(() => null);
+    if (cached) {
+      const exp = this.decodeTokenExpiry(cached);
+      if (exp > now + buffer) {
+        this.webToken = cached;
+        this.webTokenExpiry = exp;
+        return cached;
+      }
+    }
+
+    const generated = this.generateDeveloperToken({ origin: AppleMusicProvider.webTokenOrigins() });
+    if (!generated) return null;
+    this.webToken = generated;
+    this.webTokenExpiry = this.decodeTokenExpiry(generated);
+    await this.cache.set(CACHE_KEY_APPLE_MUSIC_WEB_TOKEN, generated, APPLE_MUSIC_TOKEN_CACHE_TTL).catch(() => undefined);
+    return generated;
+  }
+
   /**
    * Sign a new Apple Music developer token (ES256 JWT) from the .p8 key.
    * Returns null if the key file or Team ID / Key ID are not configured.
    */
-  private generateDeveloperToken(): string | null {
+  private generateDeveloperToken(claims: Record<string, unknown> = {}): string | null {
     try {
       const keyPath = path.join(
         process.env['APP_ROOT'] || '',
@@ -196,7 +242,7 @@ class AppleMusicProvider implements IMusicProvider {
       }
 
       const privateKey = fs.readFileSync(keyPath, 'utf8');
-      const token = jwt.sign({}, privateKey, {
+      const token = jwt.sign(claims, privateKey, {
         algorithm: 'ES256',
         expiresIn: APPLE_MUSIC_TOKEN_EXPIRY,
         issuer: teamId,
@@ -355,7 +401,7 @@ class AppleMusicProvider implements IMusicProvider {
   private async apiRequest<T>(
     endpoint: string,
     storefront: string = DEFAULT_STOREFRONT,
-    { quiet404 = false }: { quiet404?: boolean } = {}
+    { quiet404 = false, timeoutMs }: { quiet404?: boolean; timeoutMs?: number } = {}
   ): Promise<{ success: boolean; data?: T; error?: string; status?: number }> {
     const token = await this.getDeveloperToken();
     if (!token) {
@@ -371,6 +417,7 @@ class AppleMusicProvider implements IMusicProvider {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
       });
 
       if (!response.ok) {
@@ -847,10 +894,21 @@ class AppleMusicProvider implements IMusicProvider {
    * is mostly the same in every storefront; when the link's storefront does
    * not know it, the default one is asked.
    */
-  async getSongPreviewUrl(songId: string, storefront: string = DEFAULT_STOREFRONT): Promise<string | null> {
+  /**
+   * A catalog song's 30-second preview, for the web scanner. `null` when Apple
+   * says the song has none (or does not know it); `undefined` when Apple could
+   * not be asked (no token, a timeout, 429, 5xx), which the caller must not
+   * remember as an answer.
+   */
+  async getSongPreviewUrl(
+    songId: string,
+    storefront: string = DEFAULT_STOREFRONT,
+    timeoutMs?: number
+  ): Promise<string | null | undefined> {
     const storefronts = storefront === DEFAULT_STOREFRONT ? [storefront] : [storefront, DEFAULT_STOREFRONT];
     for (const candidate of storefronts) {
-      const result = await this.apiRequest<any>(`/songs/${songId}`, candidate, { quiet404: true });
+      const result = await this.apiRequest<any>(`/songs/${songId}`, candidate, { quiet404: true, timeoutMs });
+      if (!result.success && result.status !== 404) return undefined;
       const url = result.data?.data?.[0]?.attributes?.previews?.[0]?.url;
       if (typeof url === 'string' && url.startsWith('https://')) return url;
     }
