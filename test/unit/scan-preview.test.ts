@@ -129,7 +129,7 @@ describe('ScanPreview.resolve', () => {
       'apple_music'
     );
     expect(result).toEqual({ url: 'https://audio-ssl.itunes.apple.com/preview.m4a', source: 'apple_music' });
-    expect(applePreview).toHaveBeenCalledWith('42', 'nl');
+    expect(applePreview).toHaveBeenCalledWith('42', 'nl', 5000);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -145,6 +145,48 @@ describe('ScanPreview.resolve', () => {
     expect(await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify')).toBeNull();
     expect(await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify')).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not remember a lookup that failed: a 429, a timeout, a 5xx', async () => {
+    const resolver = freshResolver();
+    fetchMock.mockResolvedValueOnce(new Response('slow down', { status: 429 }));
+    expect(await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify')).toBeNull();
+    fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    expect(await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify')).toBeNull();
+    fetchMock.mockResolvedValueOnce(new Response('', { status: 503 }));
+    expect(await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify')).toBeNull();
+    // Each scan asked again, and the next one gets the song
+    fetchMock.mockResolvedValueOnce(new Response(embedPage(SPOTIFY_PREVIEW)));
+    expect((await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify'))?.url).toBe(SPOTIFY_PREVIEW);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('remembers a song Spotify does not know (404)', async () => {
+    fetchMock.mockResolvedValue(new Response('', { status: 404 }));
+    const resolver = freshResolver();
+    await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify');
+    await resolver.resolve({ link: SPOTIFY_LINK }, 'spotify');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("tells Deezer's 'no such track' apart from its quota error", async () => {
+    const resolver = freshResolver();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: { type: 'Exception', code: 4 } })));
+    expect(await resolver.resolve({ dz: 'https://www.deezer.com/track/1' }, 'deezer')).toBeNull();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: { type: 'DataException', code: 800 } })));
+    expect(await resolver.resolve({ dz: 'https://www.deezer.com/track/1' }, 'deezer')).toBeNull();
+    // The quota error was asked again; "no such track" is remembered
+    expect(await resolver.resolve({ dz: 'https://www.deezer.com/track/1' }, 'deezer')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not remember an Apple lookup that could not be made', async () => {
+    const resolver = freshResolver();
+    applePreview.mockResolvedValueOnce(undefined).mockResolvedValueOnce('https://audio-ssl.itunes.apple.com/p.m4a');
+    const links = { am: 'https://music.apple.com/nl/album/x/1?i=42' };
+    expect(await resolver.resolve(links, 'apple_music')).toBeNull();
+    expect((await resolver.resolve(links, 'apple_music'))?.url).toBe('https://audio-ssl.itunes.apple.com/p.m4a');
+    expect(applePreview).toHaveBeenCalledTimes(2);
   });
 
   it('serves a cached preview without a request', async () => {

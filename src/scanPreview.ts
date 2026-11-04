@@ -40,13 +40,20 @@ const TTL_SECONDS: Record<PreviewSource, number> = {
   deezer: 10 * 60,
   apple_music: 6 * 3600,
 };
-// A track without a preview is asked again after this, not on every scan
+// A track the service says has no preview is asked again after this, not on
+// every scan. A lookup that failed (timeout, 429, 5xx) is not remembered: it
+// used to be, and one bad minute at Spotify left every song played in it
+// without a preview for half an hour.
 const MISS_TTL_SECONDS = 30 * 60;
 const MISS = '-';
 const FETCH_TIMEOUT_MS = 5000;
+const DEEZER_NOT_FOUND = 800;
 const DEFAULT_ORDER: PreviewSource[] = ['spotify', 'deezer', 'apple_music'];
 // Long enough for any real link, short enough to keep junk out of the regexes
 const MAX_LINK_LENGTH = 512;
+
+/** A preview URL; `null` when the service says there is none; `undefined` when it could not be asked. */
+type Lookup = string | null | undefined;
 
 interface SourceId {
   source: PreviewSource;
@@ -149,6 +156,7 @@ export default class ScanPreview {
     }
 
     const url = await this.fetchPreview(sourceId);
+    if (url === undefined) return null;
     try {
       await this.cache.set(
         key,
@@ -161,7 +169,7 @@ export default class ScanPreview {
     return url;
   }
 
-  private async fetchPreview(sourceId: SourceId): Promise<string | null> {
+  private async fetchPreview(sourceId: SourceId): Promise<Lookup> {
     try {
       switch (sourceId.source) {
         case 'spotify':
@@ -171,7 +179,8 @@ export default class ScanPreview {
         case 'apple_music':
           return await AppleMusicProvider.getInstance().getSongPreviewUrl(
             sourceId.id,
-            sourceId.storefront
+            sourceId.storefront,
+            FETCH_TIMEOUT_MS
           );
       }
     } catch (error) {
@@ -180,28 +189,31 @@ export default class ScanPreview {
           `[${color.white.bold('scan')}] Preview lookup failed on ${color.white.bold(sourceId.source)} for ${color.white.bold(sourceId.id)}: ${color.white.bold((error as Error).message)}`
         )
       );
-      return null;
+      return undefined;
     }
   }
 
-  private async spotifyPreview(id: string): Promise<string | null> {
+  private async spotifyPreview(id: string): Promise<Lookup> {
     const response = await fetch(`https://open.spotify.com/embed/track/${id}`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; QRSong)' },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return null;
+    if (!response.ok) return response.status === 404 ? null : undefined;
     const html = await response.text();
     const match = html.match(/"audioPreview":\{"url":"(https:\/\/p\.scdn\.co\/[^"]+)"/);
     return match ? match[1] : null;
   }
 
-  private async deezerPreview(id: string): Promise<string | null> {
+  private async deezerPreview(id: string): Promise<Lookup> {
     const response = await fetch(`https://api.deezer.com/track/${id}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return null;
-    const data = (await response.json()) as { preview?: string; error?: unknown };
-    if (data.error || !data.preview) return null;
+    if (!response.ok) return response.status === 404 ? null : undefined;
+    const data = (await response.json()) as { preview?: string; error?: { code?: number } };
+    // Deezer answers 200 with an error: 800 is "no such track", the rest
+    // (4 quota, 700 busy) are a bad moment, not an answer
+    if (data.error) return data.error.code === DEEZER_NOT_FOUND ? null : undefined;
+    if (!data.preview) return null;
     return /^https:\/\/[a-z0-9.-]+\.dzcdn\.net\//.test(data.preview) ? data.preview : null;
   }
 }

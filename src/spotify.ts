@@ -119,6 +119,8 @@ interface ResolveSpotifyUrlResult {
   error?: string;
   cached?: boolean;
   blacklisted?: boolean;
+  /** Turned away by a limit, not unknown: the route answers 429, not 404. */
+  rateLimited?: boolean;
 }
 
 // A URL matched to a known physical card service, plus the identifiers needed
@@ -1993,7 +1995,12 @@ class Spotify {
           )
         );
         // Not cached: the next scan after the limit may still find it
-        return { success: false, error: 'YouTube lookups limited, try again later', blacklisted: true };
+        return {
+          success: false,
+          error: 'YouTube lookups limited, try again later',
+          blacklisted: true,
+          rateLimited: true,
+        };
       }
     } catch {
       // Redis down: look it up anyway
@@ -2199,6 +2206,7 @@ class Spotify {
     error?: string;
     cached?: boolean;
     blacklisted?: boolean;
+    rateLimited?: boolean;
   }> {
     // Unwrap our own preview cards first, so the wrapper and the bare link
     // share one cache entry below and nothing is ever cached against a URL that

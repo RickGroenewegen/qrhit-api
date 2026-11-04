@@ -22,6 +22,18 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
     return { token };
   });
 
+  // The same token for MusicKit JS in a browser (the site's web scanner),
+  // valid on the site's own origins only. The apps keep /apple-music/token.
+  fastify.get('/apple-music/web-token', async (_request: any, reply) => {
+    const token = await appleMusicProvider.getWebDeveloperToken();
+    if (!token) {
+      reply.status(500);
+      return { error: 'Apple Music token not configured' };
+    }
+    reply.header('Cache-Control', 'no-store');
+    return { token };
+  });
+
   // Resolve Apple Music shortlink
   fastify.post('/apple-music/resolve-shortlink', async (request: any, reply) => {
     const { url } = request.body;

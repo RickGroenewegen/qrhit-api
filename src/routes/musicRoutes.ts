@@ -188,9 +188,12 @@ export default async function musicRoutes(fastify: FastifyInstance) {
             logger.log(`Failed to log unknown link: ${err.message}`);
           });
         }
-        reply.status(404).send({
+        // A card turned away by the YouTube lookup limit is not unknown: the
+        // web scanner (the only client that gets YouTube cards) remembers a
+        // 404 as "no song" for the visit, and offers "Try again" on a 429
+        reply.status(result.rateLimited ? 429 : 404).send({
           success: false,
-          error: result.error || 'No Spotify URI found',
+          error: result.rateLimited ? 'rate_limited' : result.error || 'No Spotify URI found',
         });
       }
     } catch (e: any) {

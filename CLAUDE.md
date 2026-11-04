@@ -3071,6 +3071,7 @@ switched on by `scanClient()` saying `web`.
 | YouTube (Bopster) cards, web only | `resolveYouTubeCard` in `spotify.ts` (`ResolveCardOptions.partnerCards`), `src/youtubeLink.ts` |
 | web push | `src/webPush.ts`, `/push/web/key|subscribe|unsubscribe` (public), `/push/audience`, `/push/web/test-device`, `/push/web/device` (admin) |
 | "Play in your browser" on the card-scan page | `renderOnboarding` in `musicRoutes.ts`, `views/onboarding.ejs` |
+| MusicKit's token for the browser, valid on our origins only | `GET /apple-music/web-token`, `getWebDeveloperToken` in `src/providers/AppleMusicProvider.ts` (+ `test/unit/apple-web-token.test.ts`) |
 
 - **`POST /scan/preview`** takes the links a card resolved to
   (`{ links: { link, am, dz }, prefer }`) and answers `{ success, url, source }`:
@@ -3078,9 +3079,26 @@ switched on by `scanClient()` saying `web`.
   `previews[0]`, the preferred service first. Spotify's Web API has given no
   preview URLs since November 2024. Only those fixed hosts are called, with
   ids that passed a strict pattern. Cached in Redis per source and id (Deezer
-  10 min, its URLs expire after 15; others 6 h; a miss 30 min). 60 per minute
-  per IP, a 429 and **no ban**: it is not under the qrlink AbuseGuard and is
-  not a play.
+  10 min, its URLs expire after 15; others 6 h; a miss 30 min). **Only a
+  definite miss is remembered** (2026-11-04): a lookup is a URL, `null` (the
+  service answered and has no preview: a 404, Deezer's error 800) or
+  `undefined` (it could not be asked: a 429, a 5xx, a timeout, Deezer's quota
+  error 4 or busy 700), and `undefined` is never cached, so a hiccup does not
+  hide a card's preview for half an hour. Apple's lookup has a 5 s timeout
+  (`getSongPreviewUrl(id, storefront, timeoutMs)`). 60 per minute per IP, a
+  429 and **no ban**: it is not under the qrlink AbuseGuard and is not a
+  play.
+- **`GET /apple-music/web-token`** (2026-11-04) is MusicKit JS's developer
+  token for the web scanner: the same key, plus an `origin` claim
+  (`credentialedOrigins()` in production, the local frontends incl.
+  `https://qrhit.localhost` outside it), cached in Redis apart from the apps'
+  token, `no-store`. The scanner falls back to `/apple-music/token` when it
+  fails. The apps keep the plain token (a native MusicKit has no origin to
+  check), and that one stays public, so the claim stops casual reuse of the
+  web token only.
+- **A YouTube card over its lookup limit answers 429 `rate_limited`**, not
+  404 (`/qrlink_unknown`, `rateLimited` from `resolveSpotifyUrl`): the
+  scanner remembered a 404 as "not a song" for the rest of the visit.
 - **Partner cards.** Hitify cards resolve for every client, as before. Plain
   YouTube links (Bopster prints them) resolve for the web scanner only,
   through MusicFetch (paid per uncached lookup: 20 per IP per hour, 500 a
