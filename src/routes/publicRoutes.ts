@@ -1232,7 +1232,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/promotional/:paymentId/:userHash/:playlistId',
     async (request: any, reply) => {
-      const { title, description, image, active, locale, shareDesign } = request.body;
+      const {
+        title,
+        description,
+        image,
+        active,
+        locale,
+        shareDesign,
+        keepDescription,
+        descriptionLocale,
+      } = request.body;
 
       if (!title) {
         reply.status(400).send({ success: false, error: 'Title is required' });
@@ -1255,6 +1264,9 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           active: active !== false,
           locale: locale || 'en',
           shareDesign: shareDesign === true,
+          keepDescription: keepDescription === true,
+          descriptionLocale:
+            typeof descriptionLocale === 'string' ? descriptionLocale : undefined,
         }
       );
 
