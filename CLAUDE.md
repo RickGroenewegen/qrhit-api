@@ -1713,7 +1713,14 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   older order uses the new list; it refuses (409) while an order of the row is
   paid but not finalized, or a Print&Bind physical line is not sent to the
   printer yet (`openOrders`, test/unit/playlist-replace.test.ts), and when the
-  new Spotify playlist already has a row of its own.
+  new Spotify playlist already has a row of its own. `allowOpenOrders`
+  (orderIds as strings, 2026-11-04, `blockingOrders`) lets named open orders
+  through: the order that asked for the fix is open by nature (Esther
+  Brauhardt, 100009410, nine songs missing from "50 Jahre deutsche Charts
+  Platz 1"). Every other open order still blocks, the 409 names the allowed
+  ones in brackets, and every answer carries `allowedOpenOrders` (the open
+  orders the allowance let through). An allowed order's cards still hold the
+  old list until it is regenerated (`qrsong order cards <id> --regenerate`).
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with

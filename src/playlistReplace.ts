@@ -15,6 +15,10 @@ import { MusicProviderFactory } from './providers';
  * That is why it refuses while an order of the row is still open: paid but not finalized, or a physical
  * Print&Bind line not yet sent to the printer. Our own business orders (toolkit_…) go to their printer by mail
  * and are judged on finalized only.
+ *
+ * `allowOpenOrders` (orderIds, 2026-11-04) lets named open orders through: the order that asked for the fix
+ * (Esther Brauhardt, 100009410: nine songs missing from a featured list) is open by nature and gets its cards
+ * regenerated after the swap. Every other open order still blocks; the answer names the ones allowed.
  */
 
 export class PlaylistReplaceError extends Error {
@@ -42,9 +46,33 @@ export function openOrders(rows: ReplaceOrderRow[]): ReplaceOrderRow[] {
   });
 }
 
+/** The open orders split into the ones that still block a swap and the ones `allow` (orderIds) lets through. */
+export function blockingOrders(rows: ReplaceOrderRow[], allow: string[] = []) {
+  const allowSet = new Set(allow.map(String));
+  const open = openOrders(rows);
+  return {
+    blocking: open.filter((r) => !allowSet.has(String(r.orderId))),
+    allowed: open.filter((r) => allowSet.has(String(r.orderId))),
+  };
+}
+
+/** The request's `allowOpenOrders`: absent, or a list of orderIds (digits) as strings. */
+export function parseAllowOpenOrders(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 100 || value.some((v) => typeof v !== 'string' || !/^\d+$/.test(v))) {
+    throw new PlaylistReplaceError('allowOpenOrders must be a list of orderIds (strings of digits)');
+  }
+  return [...new Set(value as string[])];
+}
+
 const PLAYLIST_ID = /^[A-Za-z0-9]{22}$/;
 
-export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistId: string, apply: boolean) {
+export async function replaceSpotifyPlaylist(
+  oldPlaylistId: string,
+  newPlaylistId: string,
+  apply: boolean,
+  allowOpenOrders: string[] = []
+) {
   if (!PLAYLIST_ID.test(oldPlaylistId) || !PLAYLIST_ID.test(newPlaylistId)) {
     throw new PlaylistReplaceError('invalid playlist id');
   }
@@ -85,7 +113,8 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
     finalized: !!l.payment.finalized,
     sentToPrinter: !!l.payment.sentToPrinter,
   }));
-  const blocking = openOrders(orders);
+  const { blocking, allowed } = blockingOrders(orders, allowOpenOrders);
+  const allowedOpenOrders = [...new Set(allowed.map((o) => String(o.orderId)))];
   const before = {
     id: row.id,
     slug: row.slug,
@@ -96,12 +125,14 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
     paidOrders: orders.filter((o) => o.status === 'paid').length,
   };
   if (blocking.length) {
+    const ids = [...new Set(blocking.map((o) => String(o.orderId)))];
     throw new PlaylistReplaceError(
-      `orders of this playlist are still open: ${blocking.map((o) => o.orderId).join(', ')}; swap after they are printed`,
+      `orders of this playlist are still open: ${ids.join(', ')}; swap after they are printed` +
+        (allowedOpenOrders.length ? ` (allowed: ${allowedOpenOrders.join(', ')})` : ''),
       409
     );
   }
-  if (!apply) return { applied: false, before, after: { spotify: newPlaylistId } };
+  if (!apply) return { applied: false, allowedOpenOrders, before, after: { spotify: newPlaylistId } };
 
   const data = Data.getInstance();
   if (!reloadOnly) {
@@ -137,6 +168,7 @@ export async function replaceSpotifyPlaylist(oldPlaylistId: string, newPlaylistI
   return {
     applied: true,
     reloadOnly,
+    allowedOpenOrders,
     before,
     after: { ...after, storedTracks: stored, loaded: !error, error },
   };

@@ -17,7 +17,7 @@ import {
 } from '../toolkitShare';
 import Mail from '../mail';
 import { PRINTER_TYPE } from '../config/constants';
-import { PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace';
+import { parseAllowOpenOrders, PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
@@ -29,7 +29,8 @@ import { PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace
  * - GET  /admin/toolkit/playlist/:playlistId/items  the playlist exactly as Spotify holds it (for verifying)
  * - POST /admin/toolkit/playlist/:playlistId/replace-spotify  point a playlist row (featured page, orders) at another
  *                                                  Spotify playlist and load its tracks (src/playlistReplace.ts);
- *                                                  `apply: true` writes, without it only the check
+ *                                                  `apply: true` writes, without it only the check;
+ *                                                  `allowOpenOrders` (orderIds) lets those open orders through
  * - POST /admin/toolkit/tracks                    Spotify metadata for track ids (for a hand-picked match)
  * - POST /admin/toolkit/order                     a Schneiders/Tromp order without Mollie or mails, on printer hold (src/toolkitOrder.ts)
  * - GET  /admin/toolkit/order/:paymentId          order, design, print files and every card's track + year check
@@ -118,7 +119,8 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
     const oldId = String(request.params.playlistId ?? '');
     const newId = String(request.body?.spotifyPlaylistId ?? '');
     try {
-      const result = await replaceSpotifyPlaylist(oldId, newId, request.body?.apply === true);
+      const allowOpenOrders = parseAllowOpenOrders(request.body?.allowOpenOrders);
+      const result = await replaceSpotifyPlaylist(oldId, newId, request.body?.apply === true, allowOpenOrders);
       return { success: true, ...result };
     } catch (error: any) {
       if (error instanceof PlaylistReplaceError) return reply.status(error.status).send({ success: false, error: error.message });
