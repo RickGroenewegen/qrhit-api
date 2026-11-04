@@ -176,6 +176,21 @@ class Upgrade {
   }
 
   /**
+   * Extra cards only ride along before the order goes to the printer: the
+   * tracks_upgrade webhook raises the line's numberOfTracks and books the
+   * money, and nothing prints cards for an order Print&Bind already has. So
+   * once the payment has `sentToPrinter` the corrections page's tracks routes
+   * answer ORDER_IN_PRODUCTION (src/suggestion.ts), as its other writes do.
+   * Until 2026-11-04 they only refused after the customer's approval
+   * (`userConfirmedPrinting`), not after the timer had sent the order.
+   */
+  public tracksUpgradeClosed(
+    payment: { sentToPrinter?: boolean | null } | null | undefined
+  ): boolean {
+    return !!payment?.sentToPrinter;
+  }
+
+  /**
    * Box upgrade price in EUR. Boxes-per-copy is derived from the playlist's
    * track count (one box per BOX_MAX_CARDS cards). The playlist can be
    * ordered more than once (`amount`); each copy is packed into its own

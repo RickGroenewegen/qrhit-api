@@ -948,6 +948,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             error: 'Track upgrade is only available for physical orders',
           });
         }
+        // The cards are at the printer: extra ones would be paid for and
+        // never printed (Upgrade.tracksUpgradeClosed)
+        if (upgrade.tracksUpgradeClosed(ctx.payment)) {
+          return reply
+            .status(409)
+            .send({ success: false, error: ORDER_IN_PRODUCTION });
+        }
         const tier = parseInt(extraTracks);
         if (!(EXTRA_TRACK_TIERS as readonly number[]).includes(tier)) {
           return reply.status(400).send({
@@ -994,6 +1001,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             success: false,
             error: 'Track upgrade is only available for physical orders',
           });
+        }
+        // The cards are at the printer: extra ones would be paid for and
+        // never printed (Upgrade.tracksUpgradeClosed)
+        if (upgrade.tracksUpgradeClosed(ctx.payment)) {
+          return reply
+            .status(409)
+            .send({ success: false, error: ORDER_IN_PRODUCTION });
         }
         const tier = parseInt(extraTracks);
         if (!(EXTRA_TRACK_TIERS as readonly number[]).includes(tier)) {

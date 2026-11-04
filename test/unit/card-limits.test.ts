@@ -51,3 +51,22 @@ describe('Upgrade track capacity', () => {
     ).toEqual([]);
   });
 });
+
+// Extra cards bought after the order went to the printer were booked and
+// never printed: the corrections page's tracks routes now answer
+// orderInProduction once the payment has sentToPrinter.
+describe('Upgrade tracksUpgradeClosed', () => {
+  const upgrade = Upgrade.getInstance();
+
+  it('closes once the order has gone to the printer', () => {
+    expect(upgrade.tracksUpgradeClosed({ sentToPrinter: true })).toBe(true);
+  });
+
+  it('stays open before that, whatever is missing', () => {
+    expect(upgrade.tracksUpgradeClosed({ sentToPrinter: false })).toBe(false);
+    expect(upgrade.tracksUpgradeClosed({ sentToPrinter: null })).toBe(false);
+    expect(upgrade.tracksUpgradeClosed({})).toBe(false);
+    expect(upgrade.tracksUpgradeClosed(null)).toBe(false);
+    expect(upgrade.tracksUpgradeClosed(undefined)).toBe(false);
+  });
+});

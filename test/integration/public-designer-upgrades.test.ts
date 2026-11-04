@@ -680,6 +680,42 @@ describe('public designer and upgrade routes', () => {
         data: { userConfirmedPrinting: false },
       });
     });
+
+    // The timer sends an order without the customer's approval, so
+    // userConfirmedPrinting alone let extra cards be paid for after the
+    // cards were at the printer, where they never printed.
+    it('refuses pricing and paying extra cards once the order is at the printer', async () => {
+      await prisma().payment.update({
+        where: { paymentId: PHYS_PAYMENT },
+        data: { sentToPrinter: true },
+      });
+      const paymentsBefore = mollieMock.createUpgradePayment.mock.calls.length;
+      try {
+        for (const url of [
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/calculate-price`,
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/upgrade-payment`,
+        ]) {
+          const res = await app.inject({
+            method: 'POST',
+            url,
+            payload: { extraTracks: 10 },
+          });
+          expect(res.statusCode).toBe(409);
+          expect(res.json()).toEqual({
+            success: false,
+            error: 'orderInProduction',
+          });
+        }
+        expect(mollieMock.createUpgradePayment.mock.calls.length).toBe(
+          paymentsBefore
+        );
+      } finally {
+        await prisma().payment.update({
+          where: { paymentId: PHYS_PAYMENT },
+          data: { sentToPrinter: false },
+        });
+      }
+    });
   });
 
   describe('small public endpoints', () => {
