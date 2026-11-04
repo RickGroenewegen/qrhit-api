@@ -24,7 +24,11 @@ vi.mock('googleapis', () => ({
   },
 }));
 
-import StorePurchases, { parseStoreProof, StorePurchaseError } from '../../src/storePurchases';
+import StorePurchases, {
+  parseStoreProof,
+  storeCountry,
+  StorePurchaseError,
+} from '../../src/storePurchases';
 
 const store = StorePurchases.getInstance();
 const TOKEN = '6f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f';
@@ -41,6 +45,7 @@ function appleJws(over: Record<string, any> = {}): string {
       environment: 'Xcode',
       price: 14990,
       currency: 'EUR',
+      storefront: 'DEU',
       signedDate: Date.now(),
       purchaseDate: Date.now(),
       ...over,
@@ -93,6 +98,22 @@ describe('parseStoreProof', () => {
   });
 });
 
+describe('storeCountry', () => {
+  it("reads Apple's three letters and Google's two as our two", () => {
+    expect(storeCountry('NLD')).toBe('NL');
+    expect(storeCountry('deu')).toBe('DE');
+    expect(storeCountry('USA')).toBe('US');
+    expect(storeCountry('BE')).toBe('BE');
+    expect(storeCountry(' gb ')).toBe('GB');
+  });
+
+  it('gives null for anything that is not a country', () => {
+    for (const code of [null, undefined, '', 'ZZZ', 'XX', 'NETHERLANDS', '1']) {
+      expect(storeCountry(code)).toBeNull();
+    }
+  });
+});
+
 describe('Apple', () => {
   it('reads an Xcode transaction in development', async () => {
     process.env['ENVIRONMENT'] = 'development';
@@ -105,7 +126,17 @@ describe('Apple', () => {
       sandbox: true,
       price: 14.99,
       currency: 'EUR',
+      country: 'DE',
     });
+  });
+
+  it('leaves the country empty when the storefront is missing or unknown', async () => {
+    process.env['ENVIRONMENT'] = 'development';
+    for (const storefront of [undefined, 'ZZZ']) {
+      const jws = appleJws({ storefront });
+      const purchase = await store.verify({ platform: 'ios', productId: 'deck.500', jws });
+      expect(purchase.country).toBeNull();
+    }
   });
 
   it('never takes an Xcode transaction outside development', async () => {
@@ -141,7 +172,12 @@ describe('Google', () => {
 
   it('takes a purchased product and tells a license tester apart', async () => {
     playMock.get.mockResolvedValue({
-      data: { purchaseState: 0, orderId: 'GPA.1234-5678', obfuscatedExternalAccountId: TOKEN },
+      data: {
+        purchaseState: 0,
+        orderId: 'GPA.1234-5678',
+        obfuscatedExternalAccountId: TOKEN,
+        regionCode: 'BE',
+      },
     });
     expect(await store.verify(proof)).toEqual({
       platform: 'android',
@@ -151,6 +187,7 @@ describe('Google', () => {
       sandbox: false,
       price: null,
       currency: null,
+      country: 'BE',
       purchaseToken: 'tok-1',
     });
     expect(playMock.get).toHaveBeenCalledWith({
@@ -205,6 +242,7 @@ describe('Google', () => {
       sandbox: false,
       price: null,
       currency: null,
+      country: null,
       purchaseToken: 'tok-1',
     };
     playMock.consume.mockResolvedValue({});

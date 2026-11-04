@@ -4351,6 +4351,10 @@ class Mollie {
           status: 'paid',
           storeTransactionId: purchase.transactionId,
           storeEnvironment: purchase.sandbox ? 'sandbox' : 'production',
+          // The app sends no country for a digital order, and the store's
+          // country is the buyer's anyway (it charges that country's VAT):
+          // the reports and the Pushover read it from here.
+          ...(purchase.country ? { countrycode: purchase.country } : {}),
           ...presentment,
         },
       });
