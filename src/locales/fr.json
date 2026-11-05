@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Ta commande comprend une boîte cadeau. Pour qu'elle arrive en parfait état, elle est expédiée à plat. La plier est facile et ne prend que quelques minutes.",
   "mail.boxInstructionsIntroMany": "Ta commande comprend {{count}} boîtes cadeaux. Pour qu'elles arrivent en parfait état, les boîtes sont expédiées à plat. Plier une boîte est facile et ne prend que quelques minutes.",
   "howto.ruleApp": "Scanne le QR code au recto de cette carte avec l'appareil photo de ton téléphone et télécharge l'appli gratuite QRSong!.",
-  "howto.scanCaption": "Scanne-moi et télécharge l'appli gratuite QRSong!"
+  "howto.scanCaption": "Scanne-moi et télécharge l'appli gratuite QRSong!",
+  "countdown.androidSpotifyQuestion": "Tu utilises Spotify sur Android ?",
+  "countdown.androidSpotifyNote": "Masqué, avec des extraits de 30 secondes.",
+  "countdown.androidHeading": "Joue tes cartes dans ton navigateur !",
+  "countdown.playThisCard": "Jouer cette carte",
+  "countdown.androidAppHeading": "Et l'appli ?",
+  "countdown.androidAppWhy": "Notre appli Android ne peut pas se connecter à Spotify pour le moment. La version 2.1.1 corrige ça et attend la validation de Google, alors garde un œil sur le Play Store pour la mise à jour.",
+  "countdown.androidAppHelp": "Tu veux utiliser l'appli tout de suite ? Contacte-nous et on t'aide à la connecter à Spotify.",
+  "countdown.contactUs": "Contacte-nous"
 }

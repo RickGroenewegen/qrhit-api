@@ -19,6 +19,35 @@
             <img src="/assets/images/logo.png?v=<%= version %>" alt="QRSong!" class="logo-img" width="3334" height="669"/>
         </div>
 
+        <% if (androidSpotifyNotice) { %>
+        <%# Android while the app cannot connect to Spotify (src/onboarding.ts):
+            the web scanner is the main button, the app a small link. %>
+        <p class="no-time"><%= translations.androidSpotifyQuestion %></p>
+        <h1 class="onboarding-heading">
+            <span class="shimmer-text"><%= translations.androidHeading %></span>
+        </h1>
+
+        <div class="store-buttons">
+            <a href="<%= scanUrl %>" class="store-btn" aria-label="<%= translations.playThisCard %>">
+                <span class="btn-content"><i class="fas fa-play"></i><span><%= translations.playThisCard %></span></span>
+            </a>
+        </div>
+        <p class="play-browser-note android-note"><%= translations.androidSpotifyNote %></p>
+
+        <%# Why, that there is an app, the 2.1.1 to watch for, and our help
+            for who wants the app now (the internal tester trick). %>
+        <div class="browser-option android-app">
+            <p class="no-time"><%= translations.androidAppHeading %></p>
+            <p class="android-app-text"><%= translations.androidAppWhy %></p>
+            <p class="android-app-text"><%= translations.androidAppHelp %></p>
+            <a href="<%= domain %>/contact" class="play-browser-btn">
+                <span class="btn-content"><i class="fas fa-envelope"></i><span><%= translations.contactUs %></span></span>
+            </a>
+            <button onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="secondary-link android-store-link" aria-label="<%= translations.googlePlay %>">
+                <span class="btn-content"><i class="fab fa-google-play"></i><span><%= translations.googlePlay %></span></span>
+            </button>
+        </div>
+        <% } else { %>
         <h1 class="onboarding-heading">
             <span class="shimmer-text"><%= translations.youNeedToInstall %></span>
         </h1>
@@ -40,6 +69,7 @@
             </a>
             <p class="play-browser-note"><%= translations.playInBrowserNote %></p>
         </div>
+        <% } %>
         <% } %>
 
         <div class="tagline-row">

@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Tilaukseesi kuuluu yksi lahjarasia. Jotta se saapuu täydellisessä kunnossa, se lähetetään litteänä. Sen taittaminen on helppoa ja vie vain muutaman minuutin.",
   "mail.boxInstructionsIntroMany": "Tilaukseesi kuuluu {{count}} lahjarasiaa. Jotta ne saapuvat täydellisessä kunnossa, rasiat lähetetään litteinä. Rasian taittaminen on helppoa ja vie vain muutaman minuutin.",
   "howto.ruleApp": "Skannaa tämän kortin etupuolen QR-koodi puhelimesi kameralla ja lataa ilmainen QRSong!-sovellus.",
-  "howto.scanCaption": "Skannaa minut ja lataa ilmainen QRSong!-sovellus"
+  "howto.scanCaption": "Skannaa minut ja lataa ilmainen QRSong!-sovellus",
+  "countdown.androidSpotifyQuestion": "Käytätkö Spotifyta Androidilla?",
+  "countdown.androidSpotifyNote": "Piilotettu, 30 sekunnin esikuuntelulla.",
+  "countdown.androidHeading": "Pelaa korttejasi selaimessa!",
+  "countdown.playThisCard": "Pelaa tämä kortti",
+  "countdown.androidAppHeading": "Entä sovellus?",
+  "countdown.androidAppWhy": "Android-sovelluksemme ei tällä hetkellä saa yhteyttä Spotifyyn. Versio 2.1.1 korjaa tämän ja odottaa Googlen hyväksyntää, joten pidä silmällä päivitystä Play Kaupassa.",
+  "countdown.androidAppHelp": "Haluatko käyttää sovellusta heti? Ota yhteyttä, niin autamme yhdistämään sen Spotifyhin.",
+  "countdown.contactUs": "Ota yhteyttä"
 }

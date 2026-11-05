@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "ご注文にはギフトボックスが1つ入っています。きれいな状態で届くよう、平らな状態で発送します。組み立ては簡単で、数分で終わります。",
   "mail.boxInstructionsIntroMany": "ご注文にはギフトボックスが{{count}}個入っています。きれいな状態で届くよう、平らな状態で発送します。1箱の組み立ては簡単で、数分で終わります。",
   "howto.ruleApp": "このカードの表面のQRコードをスマホのカメラでスキャンして、無料のQRSong!アプリをダウンロードしよう。",
-  "howto.scanCaption": "スキャンして無料のQRSong!アプリをダウンロード"
+  "howto.scanCaption": "スキャンして無料のQRSong!アプリをダウンロード",
+  "countdown.androidSpotifyQuestion": "AndroidでSpotifyを使ってる？",
+  "countdown.androidSpotifyNote": "非表示、30秒のプレビュー付き。",
+  "countdown.androidHeading": "ブラウザでカードをプレイしよう！",
+  "countdown.playThisCard": "このカードをプレイ",
+  "countdown.androidAppHeading": "アプリはどうなの？",
+  "countdown.androidAppWhy": "現在、AndroidアプリがSpotifyに接続できません。バージョン2.1.1で修正済みで、Googleの審査待ちです。Playストアでアップデートをチェックしてね。",
+  "countdown.androidAppHelp": "今すぐアプリを使いたい？お問い合わせいただければ、Spotifyとの連携をお手伝いします。",
+  "countdown.contactUs": "お問い合わせ"
 }

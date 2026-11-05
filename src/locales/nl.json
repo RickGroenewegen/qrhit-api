@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Je bestelling bevat één cadeaubox. Zodat hij in perfecte staat aankomt, versturen we hem plat. In elkaar vouwen is makkelijk en duurt maar een paar minuten.",
   "mail.boxInstructionsIntroMany": "Je bestelling bevat {{count}} cadeauboxen. Zodat ze in perfecte staat aankomen, versturen we de boxen plat. Een box in elkaar vouwen is makkelijk en duurt maar een paar minuten.",
   "howto.ruleApp": "Scan de QR-code op de voorkant van deze kaart met de camera van je telefoon en download de gratis QRSong! app.",
-  "howto.scanCaption": "Scan mij en download de gratis QRSong! app"
+  "howto.scanCaption": "Scan mij en download de gratis QRSong! app",
+  "countdown.androidSpotifyQuestion": "Gebruik je Spotify op Android?",
+  "countdown.androidSpotifyNote": "Verborgen, met previews van 30 seconden.",
+  "countdown.androidHeading": "Speel je kaarten in je browser!",
+  "countdown.playThisCard": "Speel deze kaart",
+  "countdown.androidAppHeading": "En de app?",
+  "countdown.androidAppWhy": "Onze Android-app kan op dit moment geen verbinding maken met Spotify. Versie 2.1.1 lost dit op en wacht op goedkeuring van Google, dus houd de Play Store in de gaten voor de update.",
+  "countdown.androidAppHelp": "Wil je de app meteen gebruiken? Neem contact met ons op, dan helpen we je hem aan Spotify te koppelen.",
+  "countdown.contactUs": "Neem contact op"
 }

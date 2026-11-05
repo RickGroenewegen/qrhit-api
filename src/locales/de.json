@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Deine Bestellung enthält eine Geschenkbox. Damit sie in perfektem Zustand ankommt, wird sie flach verschickt. Das Falten ist ganz einfach und dauert nur ein paar Minuten.",
   "mail.boxInstructionsIntroMany": "Deine Bestellung enthält {{count}} Geschenkboxen. Damit sie in perfektem Zustand ankommen, werden die Boxen flach verschickt. Eine Box zu falten ist ganz einfach und dauert nur ein paar Minuten.",
   "howto.ruleApp": "Scanne den QR-Code auf der Vorderseite dieser Karte mit deiner Handykamera und lade dir die kostenlose QRSong! App herunter.",
-  "howto.scanCaption": "Scan mich und lade die kostenlose QRSong! App herunter"
+  "howto.scanCaption": "Scan mich und lade die kostenlose QRSong! App herunter",
+  "countdown.androidSpotifyQuestion": "Nutzt du Spotify auf Android?",
+  "countdown.androidSpotifyNote": "Verborgen, mit 30-Sekunden-Vorschau.",
+  "countdown.androidHeading": "Spiel deine Karten im Browser!",
+  "countdown.playThisCard": "Diese Karte spielen",
+  "countdown.androidAppHeading": "Und die App?",
+  "countdown.androidAppWhy": "Unsere Android-App kann sich gerade nicht mit Spotify verbinden. Version 2.1.1 behebt das und wartet auf die Freigabe von Google – behalte also den Play Store für das Update im Auge.",
+  "countdown.androidAppHelp": "Willst du die App sofort nutzen? Melde dich bei uns und wir helfen dir, sie mit Spotify zu verbinden.",
+  "countdown.contactUs": "Kontaktiere uns"
 }

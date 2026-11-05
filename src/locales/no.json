@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Bestillingen din inneholder én gaveeske. For at den skal komme frem i perfekt stand, sendes den flat. Å brette den sammen er enkelt og tar bare noen minutter.",
   "mail.boxInstructionsIntroMany": "Bestillingen din inneholder {{count}} gaveesker. For at de skal komme frem i perfekt stand, sendes eskene flate. Å brette sammen en eske er enkelt og tar bare noen minutter.",
   "howto.ruleApp": "Skann QR-koden på forsiden av dette kortet med mobilkameraet og last ned den gratis QRSong!-appen.",
-  "howto.scanCaption": "Skann meg og last ned den gratis QRSong!-appen"
+  "howto.scanCaption": "Skann meg og last ned den gratis QRSong!-appen",
+  "countdown.androidSpotifyQuestion": "Bruker du Spotify på Android?",
+  "countdown.androidSpotifyNote": "Skjult, med 30 sekunders forhåndsvisning.",
+  "countdown.androidHeading": "Spill kortene dine i nettleseren!",
+  "countdown.playThisCard": "Spill dette kortet",
+  "countdown.androidAppHeading": "Hva med appen?",
+  "countdown.androidAppWhy": "Android-appen vår får ikke koblet til Spotify akkurat nå. Versjon 2.1.1 fikser dette og venter på godkjenning fra Google, så følg med i Play Butikk for oppdateringen.",
+  "countdown.androidAppHelp": "Vil du bruke appen med en gang? Kontakt oss, så hjelper vi deg med å koble den til Spotify.",
+  "countdown.contactUs": "Kontakt oss"
 }

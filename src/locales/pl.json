@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Twoje zamówienie zawiera jedno pudełko prezentowe. Aby dotarło w idealnym stanie, wysyłamy je na płasko. Złożenie go jest proste i zajmuje tylko kilka minut.",
   "mail.boxInstructionsIntroMany": "Twoje zamówienie zawiera pudełka prezentowe ({{count}} szt.). Aby dotarły w idealnym stanie, wysyłamy je na płasko. Złożenie pudełka jest proste i zajmuje tylko kilka minut.",
   "howto.ruleApp": "Zeskanuj kod QR z przodu tej karty aparatem w telefonie i pobierz darmową aplikację QRSong!.",
-  "howto.scanCaption": "Zeskanuj mnie i pobierz darmową aplikację QRSong!"
+  "howto.scanCaption": "Zeskanuj mnie i pobierz darmową aplikację QRSong!",
+  "countdown.androidSpotifyQuestion": "Korzystasz ze Spotify na Androidzie?",
+  "countdown.androidSpotifyNote": "Ukryte, z 30-sekundowymi fragmentami.",
+  "countdown.androidHeading": "Graj swoimi kartami w przeglądarce!",
+  "countdown.playThisCard": "Zagraj tę kartę",
+  "countdown.androidAppHeading": "A co z aplikacją?",
+  "countdown.androidAppWhy": "Nasza aplikacja na Androida nie może teraz połączyć się ze Spotify. Wersja 2.1.1 to naprawia i czeka na zatwierdzenie przez Google, więc wypatruj aktualizacji w Sklepie Play.",
+  "countdown.androidAppHelp": "Chcesz od razu korzystać z aplikacji? Napisz do nas, a pomożemy ci połączyć ją ze Spotify.",
+  "countdown.contactUs": "Napisz do nas"
 }

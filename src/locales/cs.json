@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Tvoje objednávka obsahuje jednu dárkovou krabičku. Aby dorazila v perfektním stavu, posíláme ji naplocho. Složit ji je snadné a zabere to jen pár minut.",
   "mail.boxInstructionsIntroMany": "Tvoje objednávka obsahuje dárkové krabičky ({{count}} ks). Aby dorazily v perfektním stavu, posíláme je naplocho. Složit krabičku je snadné a zabere to jen pár minut.",
   "howto.ruleApp": "Naskenuj QR kód na přední straně této karty fotoaparátem v mobilu a stáhni si zdarma aplikaci QRSong!.",
-  "howto.scanCaption": "Naskenuj mě a stáhni si zdarma aplikaci QRSong!"
+  "howto.scanCaption": "Naskenuj mě a stáhni si zdarma aplikaci QRSong!",
+  "countdown.androidSpotifyQuestion": "Používáš Spotify na Androidu?",
+  "countdown.androidSpotifyNote": "Skryté, s 30sekundovými ukázkami.",
+  "countdown.androidHeading": "Hraj své karty v prohlížeči!",
+  "countdown.playThisCard": "Zahrát tuto kartu",
+  "countdown.androidAppHeading": "A co aplikace?",
+  "countdown.androidAppWhy": "Naše aplikace pro Android se teď nemůže připojit ke Spotify. Verze 2.1.1 to opravuje a čeká na schválení od Googlu, tak sleduj aktualizaci v Obchodě Play.",
+  "countdown.androidAppHelp": "Chceš aplikaci používat hned? Ozvi se nám a pomůžeme ti ji propojit se Spotify.",
+  "countdown.contactUs": "Napiš nám"
 }
