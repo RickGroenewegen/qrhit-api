@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Din beställning innehåller en presentask. För att den ska komma fram i perfekt skick skickas den platt. Att vika ihop den är enkelt och tar bara några minuter.",
   "mail.boxInstructionsIntroMany": "Din beställning innehåller {{count}} presentaskar. För att de ska komma fram i perfekt skick skickas askarna platta. Att vika ihop en ask är enkelt och tar bara några minuter.",
   "howto.ruleApp": "Skanna QR-koden på framsidan av det här kortet med mobilkameran och ladda ner den gratis QRSong!-appen.",
-  "howto.scanCaption": "Skanna mig och ladda ner den gratis QRSong!-appen"
+  "howto.scanCaption": "Skanna mig och ladda ner den gratis QRSong!-appen",
+  "countdown.androidSpotifyQuestion": "Använder du Spotify på Android?",
+  "countdown.androidSpotifyNote": "Dold, med 30-sekunders förhandslyssningar.",
+  "countdown.androidHeading": "Spela dina kort i webbläsaren!",
+  "countdown.playThisCard": "Spela det här kortet",
+  "countdown.androidAppHeading": "Och appen då?",
+  "countdown.androidAppWhy": "Vår Android-app kan just nu inte ansluta till Spotify för dold uppspelning. Appens två andra uppspelningslägen fungerar. Version 2.1.1 fixar dold uppspelning och väntar på godkännande från Google, så håll koll på Play Butik efter uppdateringen.",
+  "countdown.androidAppHelp": "Vill du ha dold uppspelning i appen direkt? Hör av dig så hjälper vi dig att koppla den till Spotify.",
+  "countdown.contactUs": "Kontakta oss"
 }

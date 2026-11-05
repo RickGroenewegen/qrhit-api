@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "你的订单包含一个礼盒。为了让它完好无损地送达，我们会以平板形式寄出。折叠成型很简单，只需几分钟。",
   "mail.boxInstructionsIntroMany": "你的订单包含 {{count}} 个礼盒。为了让它们完好无损地送达，礼盒会以平板形式寄出。折叠一个礼盒很简单，只需几分钟。",
   "howto.ruleApp": "用手机相机扫描这张卡片正面的二维码，下载免费的 QRSong! 应用。",
-  "howto.scanCaption": "扫我，下载免费的 QRSong! 应用"
+  "howto.scanCaption": "扫我，下载免费的 QRSong! 应用",
+  "countdown.androidSpotifyQuestion": "在安卓上用 Spotify？",
+  "countdown.androidSpotifyNote": "隐藏播放，使用30秒试听片段。",
+  "countdown.androidHeading": "在浏览器里玩你的卡片吧！",
+  "countdown.playThisCard": "播放这张卡片",
+  "countdown.androidAppHeading": "那应用呢？",
+  "countdown.androidAppWhy": "我们的安卓应用目前无法连接 Spotify 进行隐藏播放。应用的另外两种播放模式可以正常使用。2.1.1 版本修复了隐藏播放，正在等待 Google 审核，请留意 Play 商店的更新。",
+  "countdown.androidAppHelp": "想马上在应用里使用隐藏播放？联系我们，我们会帮你把它连接到 Spotify。",
+  "countdown.contactUs": "联系我们"
 }

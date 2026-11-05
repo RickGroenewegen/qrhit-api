@@ -26,6 +26,7 @@ import scanRoutes from './scanRoutes';
 import { getProductCover } from '../playlistArtwork';
 import { scanClient, scanAppVersion } from '../scanClient';
 import featuredCopyRoutes from './featuredCopyRoutes';
+import { onboardingOffer } from '../onboarding';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -341,9 +342,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   // the site's web scanner, which gets the card along (`?card=`) and plays it
   // straight away. The scanner link has no language: the site sends it on to
   // the visitor's own, and the API's locale codes are not all the site's.
-  // Held back (2026-10-26) until Rick has tested the scanner in production;
-  // set to true to show "Play in your browser" on every card scan.
-  const OFFER_WEB_SCANNER = false;
+  // Who gets the scanner, and the Android note on Spotify: src/onboarding.ts.
   const renderOnboarding = async (request: any, reply: any) => {
     const locale = utils.parseAcceptLanguage(
       request.headers['accept-language']
@@ -353,16 +352,18 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       'countdown'
     );
     // Raised with every change to onboarding.css/js, which are cached by URL
-    let useVersion = '1.1.0';
+    let useVersion = '1.1.1';
     if (process.env['ENVIRONMENT'] === 'development') {
       useVersion = new Date().getTime().toString();
     }
     const cardUrl = `${process.env['API_URI']}${request.url}`;
+    const offer = onboardingOffer(request.headers['user-agent']);
     await reply.view(`onboarding.ejs`, {
       translations,
       version: useVersion,
       domain: process.env['FRONTEND_URI'],
-      scanUrl: OFFER_WEB_SCANNER ? `${process.env['FRONTEND_URI']}/scan?card=${encodeURIComponent(cardUrl)}` : null,
+      scanUrl: offer.webScanner ? `${process.env['FRONTEND_URI']}/scan?card=${encodeURIComponent(cardUrl)}` : null,
+      androidSpotifyNotice: offer.androidSpotifyNotice,
     });
   };
 

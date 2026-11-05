@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "A rendelésed egy ajándékdobozt tartalmaz. Hogy tökéletes állapotban érkezzen, laposan küldjük. Az összehajtása egyszerű, és csak pár percet vesz igénybe.",
   "mail.boxInstructionsIntroMany": "A rendelésed {{count}} ajándékdobozt tartalmaz. Hogy tökéletes állapotban érkezzenek, a dobozokat laposan küldjük. Egy doboz összehajtása egyszerű, és csak pár percet vesz igénybe.",
   "howto.ruleApp": "Olvasd be a kártya elején lévő QR-kódot a telefonod kamerájával, és töltsd le az ingyenes QRSong! appot.",
-  "howto.scanCaption": "Olvass be, és töltsd le az ingyenes QRSong! appot"
+  "howto.scanCaption": "Olvass be, és töltsd le az ingyenes QRSong! appot",
+  "countdown.androidSpotifyQuestion": "Androidon használod a Spotifyt?",
+  "countdown.androidSpotifyNote": "Rejtett, 30 másodperces előnézetekkel.",
+  "countdown.androidHeading": "Játssz a kártyáiddal a böngésződben!",
+  "countdown.playThisCard": "Játszd le ezt a kártyát",
+  "countdown.androidAppHeading": "És mi a helyzet az appal?",
+  "countdown.androidAppWhy": "Az Android-alkalmazásunk jelenleg nem tud csatlakozni a Spotifyhoz a rejtett lejátszáshoz. Az alkalmazás másik két lejátszási módja működik. A 2.1.1-es verzió javítja a rejtett lejátszást, és a Google jóváhagyására vár, úgyhogy figyeld a frissítést a Play Áruházban.",
+  "countdown.androidAppHelp": "Azonnal szeretnéd a rejtett lejátszást az alkalmazásban? Írj nekünk, és segítünk összekapcsolni a Spotifyjal.",
+  "countdown.contactUs": "Írj nekünk"
 }

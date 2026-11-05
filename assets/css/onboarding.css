@@ -237,6 +237,22 @@ body::before {
     color: var(--ink-mute);
 }
 
+/* Android while the app cannot connect to Spotify (src/onboarding.ts): the
+   web scanner is the main button, a link in the store button's clothes. */
+a.store-btn {
+    text-decoration: none;
+    text-align: center;
+}
+.android-note { margin: -10px 0 22px; }
+.android-app-text {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-mute);
+}
+.android-app .play-browser-btn { margin-top: 4px; }
+.android-app .android-store-link { margin-top: 6px; padding: 8px 14px; font-size: 13px; }
+
 /* ── Secondary link: visit website ────────────── */
 .secondary-link {
     display: block;

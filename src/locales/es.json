@@ -629,5 +629,13 @@
   "mail.boxInstructionsIntroOne": "Tu pedido incluye una caja regalo. Para que llegue en perfecto estado, se envía plana. Montarla es fácil y solo lleva unos minutos.",
   "mail.boxInstructionsIntroMany": "Tu pedido incluye {{count}} cajas regalo. Para que lleguen en perfecto estado, las cajas se envían planas. Montar una caja es fácil y solo lleva unos minutos.",
   "howto.ruleApp": "Escanea el código QR de la parte delantera de esta carta con la cámara de tu móvil y descarga la app gratuita QRSong!.",
-  "howto.scanCaption": "Escanéame y descarga la app gratuita QRSong!"
+  "howto.scanCaption": "Escanéame y descarga la app gratuita QRSong!",
+  "countdown.androidSpotifyQuestion": "¿Usas Spotify en Android?",
+  "countdown.androidSpotifyNote": "Oculta, con fragmentos de 30 segundos.",
+  "countdown.androidHeading": "¡Juega tus cartas en el navegador!",
+  "countdown.playThisCard": "Jugar esta carta",
+  "countdown.androidAppHeading": "¿Y la app?",
+  "countdown.androidAppWhy": "Ahora mismo nuestra app de Android no puede conectarse a Spotify para la reproducción oculta. Los otros dos modos de reproducción de la app sí funcionan. La versión 2.1.1 arregla la reproducción oculta y está pendiente de aprobación por Google, así que estate atento a la actualización en Play Store.",
+  "countdown.androidAppHelp": "¿Quieres la reproducción oculta en la app ya mismo? Escríbenos y te ayudamos a conectarla con Spotify.",
+  "countdown.contactUs": "Escríbenos"
 }
