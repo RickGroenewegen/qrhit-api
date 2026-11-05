@@ -86,10 +86,11 @@ describe('onboarding.ejs', () => {
     expect(html).not.toContain('Can&#39;t install the app right now?');
   });
 
-  it('explains the app on Android: why, 2.1.1, our help, a small store link', async () => {
+  it('explains the app on Android: only hidden playback is out, 2.1.1, our help, a small store link', async () => {
     const html = await render('en', ANDROID);
     expect(html).toContain('What about the app?');
-    expect(html).toContain('can&#39;t connect to Spotify right now');
+    expect(html).toContain('can&#39;t connect to Spotify for hidden playback');
+    expect(html).toContain('two other playback modes do work');
     expect(html).toContain('Version 2.1.1');
     expect(html).toContain('keep an eye on the Play Store');
     expect(html).toContain('we&#39;ll help you connect it to Spotify');
@@ -105,7 +106,10 @@ describe('onboarding.ejs', () => {
     expect(nl).toContain('Gebruik je Spotify op Android?');
     expect(nl).toContain('En de app?');
     expect(nl).toContain('2.1.1');
-    expect(await render('de', ANDROID)).toContain('Nutzt du Spotify auf Android?');
+    expect(nl).toContain('verborgen afspelen');
+    const de = await render('de', ANDROID);
+    expect(de).toContain('Nutzt du Spotify auf Android?');
+    expect(de).toContain('versteckte Wiedergabe');
   });
 
   it('shows an iPhone no scanner block and no note', async () => {

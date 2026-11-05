@@ -635,7 +635,7 @@
   "countdown.androidHeading": "Pelaa korttejasi selaimessa!",
   "countdown.playThisCard": "Pelaa tämä kortti",
   "countdown.androidAppHeading": "Entä sovellus?",
-  "countdown.androidAppWhy": "Android-sovelluksemme ei tällä hetkellä saa yhteyttä Spotifyyn. Versio 2.1.1 korjaa tämän ja odottaa Googlen hyväksyntää, joten pidä silmällä päivitystä Play Kaupassa.",
-  "countdown.androidAppHelp": "Haluatko käyttää sovellusta heti? Ota yhteyttä, niin autamme yhdistämään sen Spotifyhin.",
+  "countdown.androidAppWhy": "Android-sovelluksemme ei tällä hetkellä saa yhteyttä Spotifyyn piilotettua toistoa varten. Sovelluksen kaksi muuta toistotilaa toimivat. Versio 2.1.1 korjaa piilotetun toiston ja odottaa Googlen hyväksyntää, joten pidä Play Kauppaa silmällä päivityksen varalta.",
+  "countdown.androidAppHelp": "Haluatko piilotetun toiston sovellukseen heti? Ota yhteyttä, niin autamme yhdistämään sen Spotifyyn.",
   "countdown.contactUs": "Ota yhteyttä"
 }

@@ -631,11 +631,11 @@
   "howto.ruleApp": "このカードの表面のQRコードをスマホのカメラでスキャンして、無料のQRSong!アプリをダウンロードしよう。",
   "howto.scanCaption": "スキャンして無料のQRSong!アプリをダウンロード",
   "countdown.androidSpotifyQuestion": "AndroidでSpotifyを使ってる？",
-  "countdown.androidSpotifyNote": "非表示、30秒のプレビュー付き。",
+  "countdown.androidSpotifyNote": "隠し再生、30秒プレビュー付き。",
   "countdown.androidHeading": "ブラウザでカードをプレイしよう！",
   "countdown.playThisCard": "このカードをプレイ",
   "countdown.androidAppHeading": "アプリはどうなの？",
-  "countdown.androidAppWhy": "現在、AndroidアプリがSpotifyに接続できません。バージョン2.1.1で修正済みで、Googleの審査待ちです。Playストアでアップデートをチェックしてね。",
-  "countdown.androidAppHelp": "今すぐアプリを使いたい？お問い合わせいただければ、Spotifyとの連携をお手伝いします。",
+  "countdown.androidAppWhy": "現在、Android版アプリでは隠し再生のためにSpotifyへ接続できません。アプリのほか2つの再生モードは問題なく使えます。隠し再生を修正したバージョン2.1.1はGoogleの承認待ちなので、Playストアでのアップデートをチェックしてね。",
+  "countdown.androidAppHelp": "今すぐアプリで隠し再生を使いたい？連絡してくれれば、Spotifyとの接続を手伝うよ。",
   "countdown.contactUs": "お問い合わせ"
 }

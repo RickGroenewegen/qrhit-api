@@ -11457,7 +11457,7 @@
     "fi",
     "cs"
   ],
-  "countdown.androidSpotifyNote": [
+  "countdown.androidAppHeading": [
     "nl",
     "de",
     "fr",
@@ -11474,7 +11474,24 @@
     "fi",
     "cs"
   ],
-  "countdown.androidAppHeading": [
+  "countdown.contactUs": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no",
+    "da",
+    "hu",
+    "fi",
+    "cs"
+  ],
+  "countdown.androidSpotifyNote": [
     "nl",
     "de",
     "fr",
@@ -11509,23 +11526,6 @@
     "cs"
   ],
   "countdown.androidAppHelp": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv",
-    "no",
-    "da",
-    "hu",
-    "fi",
-    "cs"
-  ],
-  "countdown.contactUs": [
     "nl",
     "de",
     "fr",

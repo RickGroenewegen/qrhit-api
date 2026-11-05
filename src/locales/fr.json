@@ -631,11 +631,11 @@
   "howto.ruleApp": "Scanne le QR code au recto de cette carte avec l'appareil photo de ton téléphone et télécharge l'appli gratuite QRSong!.",
   "howto.scanCaption": "Scanne-moi et télécharge l'appli gratuite QRSong!",
   "countdown.androidSpotifyQuestion": "Tu utilises Spotify sur Android ?",
-  "countdown.androidSpotifyNote": "Masqué, avec des extraits de 30 secondes.",
+  "countdown.androidSpotifyNote": "Cachée, avec des extraits de 30 secondes.",
   "countdown.androidHeading": "Joue tes cartes dans ton navigateur !",
   "countdown.playThisCard": "Jouer cette carte",
   "countdown.androidAppHeading": "Et l'appli ?",
-  "countdown.androidAppWhy": "Notre appli Android ne peut pas se connecter à Spotify pour le moment. La version 2.1.1 corrige ça et attend la validation de Google, alors garde un œil sur le Play Store pour la mise à jour.",
-  "countdown.androidAppHelp": "Tu veux utiliser l'appli tout de suite ? Contacte-nous et on t'aide à la connecter à Spotify.",
+  "countdown.androidAppWhy": "Notre appli Android ne peut pas se connecter à Spotify pour la lecture cachée en ce moment. Les deux autres modes de lecture de l'appli fonctionnent. La version 2.1.1 corrige la lecture cachée et attend la validation de Google, alors garde un œil sur le Play Store pour la mise à jour.",
+  "countdown.androidAppHelp": "Tu veux la lecture cachée dans l'appli tout de suite ? Contacte-nous et on t'aide à la connecter à Spotify.",
   "countdown.contactUs": "Contacte-nous"
 }

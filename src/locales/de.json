@@ -631,11 +631,11 @@
   "howto.ruleApp": "Scanne den QR-Code auf der Vorderseite dieser Karte mit deiner Handykamera und lade dir die kostenlose QRSong! App herunter.",
   "howto.scanCaption": "Scan mich und lade die kostenlose QRSong! App herunter",
   "countdown.androidSpotifyQuestion": "Nutzt du Spotify auf Android?",
-  "countdown.androidSpotifyNote": "Verborgen, mit 30-Sekunden-Vorschau.",
+  "countdown.androidSpotifyNote": "Versteckt, mit 30-Sekunden-Vorschauen.",
   "countdown.androidHeading": "Spiel deine Karten im Browser!",
   "countdown.playThisCard": "Diese Karte spielen",
   "countdown.androidAppHeading": "Und die App?",
-  "countdown.androidAppWhy": "Unsere Android-App kann sich gerade nicht mit Spotify verbinden. Version 2.1.1 behebt das und wartet auf die Freigabe von Google – behalte also den Play Store für das Update im Auge.",
-  "countdown.androidAppHelp": "Willst du die App sofort nutzen? Melde dich bei uns und wir helfen dir, sie mit Spotify zu verbinden.",
+  "countdown.androidAppWhy": "Unsere Android-App kann sich gerade nicht für die versteckte Wiedergabe mit Spotify verbinden. Die beiden anderen Wiedergabemodi der App funktionieren. Version 2.1.1 behebt die versteckte Wiedergabe und wartet auf die Freigabe durch Google – behalte also den Play Store für das Update im Auge.",
+  "countdown.androidAppHelp": "Du willst die versteckte Wiedergabe sofort in der App nutzen? Melde dich bei uns, dann helfen wir dir, sie mit Spotify zu verbinden.",
   "countdown.contactUs": "Kontaktiere uns"
 }

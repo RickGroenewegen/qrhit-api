@@ -631,11 +631,11 @@
   "howto.ruleApp": "Olvasd be a kártya elején lévő QR-kódot a telefonod kamerájával, és töltsd le az ingyenes QRSong! appot.",
   "howto.scanCaption": "Olvass be, és töltsd le az ingyenes QRSong! appot",
   "countdown.androidSpotifyQuestion": "Androidon használod a Spotifyt?",
-  "countdown.androidSpotifyNote": "Rejtve, 30 másodperces előzetesekkel.",
+  "countdown.androidSpotifyNote": "Rejtett, 30 másodperces előnézetekkel.",
   "countdown.androidHeading": "Játssz a kártyáiddal a böngésződben!",
   "countdown.playThisCard": "Játszd le ezt a kártyát",
   "countdown.androidAppHeading": "És mi a helyzet az appal?",
-  "countdown.androidAppWhy": "Az Android-appunk jelenleg nem tud csatlakozni a Spotifyhoz. A 2.1.1-es verzió javítja ezt, és a Google jóváhagyására vár, úgyhogy figyeld a frissítést a Play Áruházban.",
-  "countdown.androidAppHelp": "Azonnal használnád az appot? Írj nekünk, és segítünk összekapcsolni a Spotifyjal.",
+  "countdown.androidAppWhy": "Az Android-alkalmazásunk jelenleg nem tud csatlakozni a Spotifyhoz a rejtett lejátszáshoz. Az alkalmazás másik két lejátszási módja működik. A 2.1.1-es verzió javítja a rejtett lejátszást, és a Google jóváhagyására vár, úgyhogy figyeld a frissítést a Play Áruházban.",
+  "countdown.androidAppHelp": "Azonnal szeretnéd a rejtett lejátszást az alkalmazásban? Írj nekünk, és segítünk összekapcsolni a Spotifyjal.",
   "countdown.contactUs": "Írj nekünk"
 }

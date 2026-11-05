@@ -631,11 +631,11 @@
   "howto.ruleApp": "Scan QR-koden på forsiden af dette kort med din telefons kamera, og download den gratis QRSong!-app.",
   "howto.scanCaption": "Scan mig og download den gratis QRSong!-app",
   "countdown.androidSpotifyQuestion": "Bruger du Spotify på Android?",
-  "countdown.androidSpotifyNote": "Skjult, med 30 sekunders forhåndsvisning.",
+  "countdown.androidSpotifyNote": "Skjult, med 30-sekunders forhåndsvisninger.",
   "countdown.androidHeading": "Spil dine kort i browseren!",
   "countdown.playThisCard": "Spil dette kort",
   "countdown.androidAppHeading": "Hvad med appen?",
-  "countdown.androidAppWhy": "Vores Android-app kan ikke forbinde til Spotify lige nu. Version 2.1.1 løser det og venter på Googles godkendelse, så hold øje med Play Butik for opdateringen.",
-  "countdown.androidAppHelp": "Vil du bruge appen med det samme? Kontakt os, så hjælper vi dig med at forbinde den til Spotify.",
+  "countdown.androidAppWhy": "Vores Android-app kan lige nu ikke forbinde til Spotify til skjult afspilning. Appens to andre afspilningstilstande virker. Version 2.1.1 retter skjult afspilning og venter på godkendelse fra Google, så hold øje med opdateringen i Play Butik.",
+  "countdown.androidAppHelp": "Vil du have skjult afspilning i appen med det samme? Kontakt os, så hjælper vi dig med at forbinde den til Spotify.",
   "countdown.contactUs": "Kontakt os"
 }

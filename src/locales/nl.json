@@ -635,7 +635,7 @@
   "countdown.androidHeading": "Speel je kaarten in je browser!",
   "countdown.playThisCard": "Speel deze kaart",
   "countdown.androidAppHeading": "En de app?",
-  "countdown.androidAppWhy": "Onze Android-app kan op dit moment geen verbinding maken met Spotify. Versie 2.1.1 lost dit op en wacht op goedkeuring van Google, dus houd de Play Store in de gaten voor de update.",
-  "countdown.androidAppHelp": "Wil je de app meteen gebruiken? Neem contact met ons op, dan helpen we je hem aan Spotify te koppelen.",
+  "countdown.androidAppWhy": "Onze Android-app kan op dit moment geen verbinding maken met Spotify voor verborgen afspelen. De twee andere afspeelmodi van de app werken wel. Versie 2.1.1 lost verborgen afspelen op en wacht op goedkeuring van Google, dus hou de Play Store in de gaten voor de update.",
+  "countdown.androidAppHelp": "Wil je meteen verborgen afspelen in de app? Neem contact met ons op, dan helpen we je het aan Spotify te koppelen.",
   "countdown.contactUs": "Neem contact op"
 }

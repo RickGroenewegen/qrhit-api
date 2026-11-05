@@ -635,7 +635,7 @@
   "countdown.androidHeading": "Hraj své karty v prohlížeči!",
   "countdown.playThisCard": "Zahrát tuto kartu",
   "countdown.androidAppHeading": "A co aplikace?",
-  "countdown.androidAppWhy": "Naše aplikace pro Android se teď nemůže připojit ke Spotify. Verze 2.1.1 to opravuje a čeká na schválení od Googlu, tak sleduj aktualizaci v Obchodě Play.",
-  "countdown.androidAppHelp": "Chceš aplikaci používat hned? Ozvi se nám a pomůžeme ti ji propojit se Spotify.",
+  "countdown.androidAppWhy": "Naše aplikace pro Android se teď nemůže připojit ke Spotify pro skryté přehrávání. Další dva režimy přehrávání v aplikaci fungují. Verze 2.1.1 skryté přehrávání opravuje a čeká na schválení od Googlu, tak sleduj aktualizaci v Obchodě Play.",
+  "countdown.androidAppHelp": "Chceš skryté přehrávání v aplikaci hned teď? Ozvi se nám a pomůžeme ti ho propojit se Spotify.",
   "countdown.contactUs": "Napiš nám"
 }
