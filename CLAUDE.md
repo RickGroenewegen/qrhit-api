@@ -1721,6 +1721,24 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   ones in brackets, and every answer carries `allowedOpenOrders` (the open
   orders the allowance let through). An allowed order's cards still hold the
   old list until it is regenerated (`qrsong order cards <id> --regenerate`).
+- `POST /admin/toolkit/order-line/:lineId/swap-playlist` (`src/orderLineSwap.ts`,
+  2026-11-08) points **one order line** (a `payment_has_playlist` id) at another
+  Spotify playlist (`spotifyPlaylistId`) before it is printed; replace-spotify
+  would change the row and with it every order and the product page. The line
+  keeps its design, box, price and paid count; its playlist becomes the row of
+  the new Spotify id (found, or made as checkout makes one), whose tracks are
+  fetched and stored like an order does. The line's review flags
+  (`eligableForPrinter`, `userConfirmedPrinting`, `suggestionsPending`) and the
+  order's `userAgreedToPrinting` are cleared: the customer has not seen the new
+  cards. Refused (409) for an unpaid order, one at the printer, a digital line
+  (its PDF went out), a given set, another service, or the playlist it already
+  plays; 404 when Spotify does not give the playlist (private or gone). The
+  answer compares the paid cards with the new list (`cards`): the generator
+  prints the list as stored, so more songs than paid are free unless the
+  customer pays the difference. Without `apply: true` it only reads. The PDFs
+  hold the old list until `qrsong order cards <id> --regenerate`. First: Esther
+  Brauhardt, 100009410, her own "Rock the Dancefloor" in place of the featured
+  "Dance Dance Dance" she had ordered (test/unit/order-line-swap.test.ts).
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with
