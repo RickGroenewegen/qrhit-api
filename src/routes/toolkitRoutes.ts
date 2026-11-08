@@ -18,6 +18,7 @@ import {
 import Mail from '../mail';
 import { PRINTER_TYPE } from '../config/constants';
 import { parseAllowOpenOrders, PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace';
+import { LineSwapError, swapLinePlaylist } from '../orderLineSwap';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
@@ -124,6 +125,19 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
       return { success: true, ...result };
     } catch (error: any) {
       if (error instanceof PlaylistReplaceError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
+    }
+  });
+
+  // One order line onto another Spotify playlist before printing (src/orderLineSwap.ts); without apply only the check
+  fastify.post('/admin/toolkit/order-line/:lineId/swap-playlist', adminOnly, async (request: any, reply: any) => {
+    const lineId = Number(request.params.lineId);
+    const newId = String(request.body?.spotifyPlaylistId ?? '');
+    try {
+      const result = await swapLinePlaylist(lineId, newId, request.body?.apply === true);
+      return { success: true, ...result };
+    } catch (error: any) {
+      if (error instanceof LineSwapError) return reply.status(error.status).send({ success: false, error: error.message });
       return fail(reply, error);
     }
   });
