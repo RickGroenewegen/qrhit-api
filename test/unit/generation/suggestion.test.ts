@@ -39,6 +39,7 @@ const h = vi.hoisted(() => ({
   clearPlaylistCache: vi.fn(),
   storeTracks: vi.fn(),
   cacheDel: vi.fn(),
+  cacheSet: vi.fn(),
   mollieInstances: [] as any[],
 }));
 
@@ -87,7 +88,7 @@ vi.mock('../../../src/cache', () => ({
     getInstance: () => ({
       del: h.cacheDel,
       get: vi.fn(async () => null),
-      set: vi.fn(async () => undefined),
+      set: h.cacheSet,
       // Settings.getSetting() takes a Redis lock around its DB read, so the
       // double needs the lock pair too - without acquireLock the call throws
       // and isAutoMode() swallows it as "not auto".
@@ -98,8 +99,12 @@ vi.mock('../../../src/cache', () => ({
 }));
 
 import Suggestion, { ORDER_IN_PRODUCTION } from '../../../src/suggestion';
+import Upgrade from '../../../src/upgrade';
 
 const suggestion = Suggestion.getInstance();
+// Whether the line's playlist takes songs from the customer and how many
+// extra cards it can fill: its own tests are in extra-tracks-room.test.ts
+const extraTracksForLine = vi.spyOn(Upgrade.getInstance(), 'extraTracksForLine');
 
 // --- raw SQL routing -------------------------------------------------------
 // Each distinct $queryRaw in suggestion.ts (and the findLineByHash it calls in
@@ -195,7 +200,8 @@ function allMockFns(): ReturnType<typeof vi.fn>[] {
     h.getStorefrontForLocale,
     h.clearPlaylistCache,
     h.storeTracks,
-    h.cacheDel
+    h.cacheDel,
+    h.cacheSet
   );
   return fns;
 }
@@ -212,6 +218,12 @@ beforeEach(() => {
   h.clearPlaylistCache.mockResolvedValue(undefined);
   h.storeTracks.mockResolvedValue(undefined);
   h.cacheDel.mockResolvedValue(undefined);
+  h.cacheSet.mockResolvedValue(undefined);
+  extraTracksForLine.mockReset();
+  extraTracksForLine.mockResolvedValue({
+    playlistEditable: true,
+    extraTracksRoom: null,
+  });
   h.getProviderByString.mockReturnValue(h.provider);
   h.getStorefrontForLocale.mockReturnValue('storefront-nl');
   outbound.reset();
@@ -267,7 +279,11 @@ describe('getUserSuggestions', () => {
       amount: 2,
       boxEnabled: true,
       boxQuantity: 3,
+      playlistEditable: true,
+      extraTracksRoom: null,
     });
+    // asked for the line, as its holder (the buyer, user 5)
+    expect(extraTracksForLine).toHaveBeenCalledWith(30, 5);
     // php is the line the hash holds, and the track rows are that line's
     expect(h.prisma.paymentHasPlaylist.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 30 } })
@@ -306,7 +322,10 @@ describe('getUserSuggestions', () => {
       amount: 1,
       boxEnabled: false,
       boxQuantity: 0,
+      playlistEditable: true,
+      extraTracksRoom: null,
     });
+    expect(extraTracksForLine).not.toHaveBeenCalled();
   });
 
   it('marks a physical line of an order at the printer as in production', async () => {
@@ -336,6 +355,8 @@ describe('getUserSuggestions', () => {
     expect(res.metadata.inProduction).toBe(true);
     expect(res.metadata.payment.sentToPrinter).toBe(true);
     expect(res.metadata.payment.sentToPrinterAt).toEqual(sentAt);
+    // no extra cards to sell any more: the music service is not asked
+    expect(extraTracksForLine).not.toHaveBeenCalled();
     expect(h.prisma.payment.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({ sentToPrinter: true, sentToPrinterAt: true }),
@@ -368,6 +389,66 @@ describe('getUserSuggestions', () => {
 
     expect(res.metadata.inProduction).toBe(false);
     expect(res.metadata.payment.sentToPrinter).toBe(true);
+    // a digital line takes no extra cards
+    expect(extraTracksForLine).not.toHaveBeenCalled();
+  });
+
+  // Order 100009738 line 10825: +10 cards on "House & Techno Classics", a
+  // featured playlist of another customer with 150 songs, paid 150
+  const physicalLine = () => {
+    h.prisma.payment.findFirst.mockResolvedValue({
+      id: 10,
+      canBeSentToPrinterAt: null,
+      sentToPrinter: false,
+      sentToPrinterAt: null,
+      countrycode: 'NL',
+      currency: 'EUR',
+      locale: 'nl',
+    });
+    h.prisma.playlist.findFirst.mockResolvedValue({ id: 20, serviceType: 'spotify' });
+    h.prisma.paymentHasPlaylist.findUnique.mockResolvedValue({
+      id: 30,
+      type: 'physical',
+      amount: 1,
+      numberOfTracks: 150,
+      boxEnabled: false,
+      boxQuantity: 0,
+    });
+  };
+
+  it('tells the page a featured playlist takes no songs and how many extra cards fit', async () => {
+    physicalLine();
+    extraTracksForLine.mockResolvedValue({
+      playlistEditable: false,
+      extraTracksRoom: 0,
+    });
+    routeRaw([OWNED, [SQL.userTracks, []]]);
+
+    const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
+
+    expect(res.metadata.playlistEditable).toBe(false);
+    expect(res.metadata.extraTracksRoom).toBe(0);
+  });
+
+  it('asks as the recipient on a given set', async () => {
+    physicalLine();
+    routeRaw([ownedLine(GIFTED), [SQL.userTracks, []]]);
+
+    await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
+
+    expect(extraTracksForLine).toHaveBeenCalledWith(30, 8);
+  });
+
+  it('still loads the page when the room cannot be worked out', async () => {
+    physicalLine();
+    extraTracksForLine.mockRejectedValue(new Error('db down'));
+    routeRaw([OWNED, [SQL.userTracks, []]]);
+
+    const res = await suggestion.getUserSuggestions('pay_1', 'hash_1', 'pl_1');
+
+    // the tracks routes check again before taking a payment
+    expect(res.metadata.playlistEditable).toBe(true);
+    expect(res.metadata.extraTracksRoom).toBeNull();
   });
 });
 
@@ -1473,6 +1554,8 @@ describe('reloadPlaylist', () => {
       storefront: undefined,
     });
     expect(h.storeTracks).not.toHaveBeenCalled();
+    // the extra cards offered next go by the count the customer just saw
+    expect(h.cacheSet).toHaveBeenCalledWith('extraTracksSource:pl_1:0', '15', 600);
   });
 
   it('counts the tracks after the duplicate filter, not the service total', async () => {

@@ -42,6 +42,7 @@ import {
   priceTokenValues,
 } from '../priceTokens';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
+import { PLAYLIST_NOT_EDITABLE, tierFitsRoom } from '../extraTracksRoom';
 import PrismaInstance from '../prisma';
 import { registerAppPaymentReturn } from '../appPaymentReturn';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
@@ -972,6 +973,21 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             availableTrackTiers: upgrade.availableTrackTiers(ctx.php),
           });
         }
+        // A playlist the customer cannot add songs to (one of our featured
+        // playlists, an AI playlist) only takes the cards its unpaid songs
+        // fill; more would be paid for and stay empty (src/extraTracksRoom.ts)
+        const extra = await upgrade.extraTracksForLine(ctx.php.id, ctx.user.id);
+        if (!tierFitsRoom(tier, extra.extraTracksRoom)) {
+          return reply.status(409).send({
+            success: false,
+            error: PLAYLIST_NOT_EDITABLE,
+            extraTracksRoom: extra.extraTracksRoom,
+            availableTrackTiers: upgrade.availableTrackTiers(
+              ctx.php,
+              extra.extraTracksRoom
+            ),
+          });
+        }
         const price = await upgrade.calculateExtraTracksPrice(ctx.php, ctx.payment, tier);
         return reply.send({
           success: true,
@@ -1024,6 +1040,21 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             error: 'This tier would exceed the maximum number of cards',
             remainingTrackCapacity: upgrade.remainingTrackCapacity(ctx.php),
             availableTrackTiers: upgrade.availableTrackTiers(ctx.php),
+          });
+        }
+        // A playlist the customer cannot add songs to (one of our featured
+        // playlists, an AI playlist) only takes the cards its unpaid songs
+        // fill; more would be paid for and stay empty (src/extraTracksRoom.ts)
+        const extra = await upgrade.extraTracksForLine(ctx.php.id, ctx.user.id);
+        if (!tierFitsRoom(tier, extra.extraTracksRoom)) {
+          return reply.status(409).send({
+            success: false,
+            error: PLAYLIST_NOT_EDITABLE,
+            extraTracksRoom: extra.extraTracksRoom,
+            availableTrackTiers: upgrade.availableTrackTiers(
+              ctx.php,
+              extra.extraTracksRoom
+            ),
           });
         }
         if (ctx.php.userConfirmedPrinting) {
