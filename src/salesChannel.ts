@@ -5,7 +5,8 @@
  * `payments.channel` is 'app' for an order the scan app placed: an App Store
  * or Google Play purchase (`store` on POST /mollie/payment) and a printed
  * order it paid through Mollie (`returnTo: 'app'`). It is null for the
- * website, and for every order from before 2.1.0.
+ * website, and for every order from before 2.1.0. `payments.appPlatform`
+ * says which app (iOS or Android), see appPlatformOf.
  *
  * The day and month reports, the country report, the customer report and
  * the charts take `?channel=web|app`; anything else is all, the reports as
@@ -25,6 +26,30 @@ export type SalesChannel = 'all' | 'web' | 'app';
 
 /** The value `payments.channel` holds for an order placed in the scan app. */
 export const APP_CHANNEL = 'app';
+
+/** Which app placed an order: `payments.appPlatform`. */
+export type AppPlatform = 'ios' | 'android';
+
+/**
+ * The platform of an order the scan app placed, null for any other order.
+ * Orders from 2026-11-09 on carry it (`appPlatform`, written by
+ * getPaymentUri from the store or the app's WebView); an older store order
+ * still says it through its method. An older app order paid through Mollie
+ * stays unknown.
+ */
+export function appPlatformOf(payment: {
+  channel?: string | null;
+  appPlatform?: string | null;
+  paymentMethod?: string | null;
+}): AppPlatform | null {
+  if (payment.channel !== APP_CHANNEL) return null;
+  if (payment.appPlatform === 'ios' || payment.appPlatform === 'android') {
+    return payment.appPlatform;
+  }
+  if (payment.paymentMethod === 'appstore') return 'ios';
+  if (payment.paymentMethod === 'googleplay') return 'android';
+  return null;
+}
 
 export function parseSalesChannel(value: unknown): SalesChannel {
   return value === 'web' || value === 'app' ? value : 'all';

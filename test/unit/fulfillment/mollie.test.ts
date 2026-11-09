@@ -4361,6 +4361,7 @@ describe('getPaymentUri for an app store order', () => {
       status: 'open',
       paymentMethod: 'appstore',
       channel: 'app',
+      appPlatform: 'ios',
       storeProductId: 'deck.500',
       totalPrice: 13,
       productPriceWithoutTax: 10.74,
@@ -4389,6 +4390,7 @@ describe('getPaymentUri for an app store order', () => {
     expect(data).toMatchObject({
       paymentMethod: 'googleplay',
       channel: 'app',
+      appPlatform: 'android',
       totalPrice: 30,
       gamesFee: 0,
     });
@@ -4470,6 +4472,34 @@ describe('getPaymentUri with returnTo app', () => {
     expect(data).not.toHaveProperty('paymentMethod');
   });
 
+  it('records which app placed it, from the platform the request came from', async () => {
+    await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4', false, false, '', 'android');
+    await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4', false, false, '', 'ios');
+    await mollie.getPaymentUri(makeParams({ returnTo: 'app' }), '1.2.3.4');
+
+    const [android, ios, unknown] = prismaMock.payment.create.mock.calls.map(([args]: any) => args.data);
+    expect(android).toMatchObject({ channel: 'app', appPlatform: 'android' });
+    expect(ios).toMatchObject({ channel: 'app', appPlatform: 'ios' });
+    expect(unknown).toMatchObject({ channel: 'app' });
+    expect(unknown).not.toHaveProperty('appPlatform');
+  });
+
+  it("takes the store's platform over the request's", async () => {
+    await mollie.getPaymentUri(
+      makeParams({ store: { platform: 'ios' }, refreshPlaylists: [] }),
+      '1.2.3.4',
+      false,
+      false,
+      '',
+      'android'
+    );
+
+    expect(prismaMock.payment.create.mock.calls[0][0].data).toMatchObject({
+      paymentMethod: 'appstore',
+      appPlatform: 'ios',
+    });
+  });
+
   it('keeps the site return for everyone else', async () => {
     await mollie.getPaymentUri(makeParams(), '1.2.3.4');
 
@@ -4481,10 +4511,14 @@ describe('getPaymentUri with returnTo app', () => {
     await mollie.getPaymentUri(makeParams(), '1.2.3.4');
     await mollie.getPaymentUri(makeParams({ returnTo: 'site' }), '1.2.3.4');
 
+    // A phone's browser on the site is no app, whatever its user agent says
+    await mollie.getPaymentUri(makeParams(), '1.2.3.4', false, false, '', 'ios');
+
     for (const [args] of prismaMock.payment.create.mock.calls) {
       expect(args.data).not.toHaveProperty('channel');
+      expect(args.data).not.toHaveProperty('appPlatform');
     }
-    expect(prismaMock.payment.create).toHaveBeenCalledTimes(2);
+    expect(prismaMock.payment.create).toHaveBeenCalledTimes(3);
   });
 });
 

@@ -186,6 +186,11 @@ model Payment {
   // and the printed orders it pays through Mollie), null for the website.
   // The turnover reports' Website / App toggle (src/salesChannel.ts).
   channel                  String?              @db.VarChar(8)
+  // Which app placed it: "ios" or "android" (src/salesChannel.ts,
+  // appPlatformOf), for the Pushover and the admin order list. Null for the
+  // website and for app orders from before 2026-11-09; a store order's
+  // method (appstore / googleplay) says it anyway.
+  appPlatform              String?              @db.VarChar(8)
   productPriceWithoutTax   Float
   shippingPriceWithoutTax  Float
   productVATPrice          Float

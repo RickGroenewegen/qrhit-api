@@ -23,6 +23,7 @@ import {
   getExtraDesigns,
 } from '../cardDesigns';
 import { maxCardsFor } from '../config/constants';
+import { scanClient } from '../scanClient';
 
 import fs from 'fs/promises';
 import { color } from 'console-log-colors';
@@ -67,12 +68,16 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       (request.headers['cloudfront-viewer-country'] as string | undefined) ||
       (request.headers['x-country-code'] as string | undefined) ||
       '';
+    // Which app placed the order, from its WebView's origin and user agent
+    // (the app sends no platform for a printed order); the site is neither.
+    const client = scanClient(request.headers['origin'], request.headers['user-agent']);
     return await mollie.getPaymentUri(
       request.body,
       request.clientIp,
       false,
       false,
-      headerCountry.toUpperCase()
+      headerCountry.toUpperCase(),
+      client === 'web' ? null : client
     );
   });
 

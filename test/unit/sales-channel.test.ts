@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
  */
 
 import {
+  appPlatformOf,
   channelSql,
   filterLedgerByChannel,
   ledgerChannelCondition,
@@ -76,5 +77,28 @@ describe('ledger conditions', () => {
       await filterLedgerByChannel(prisma as any, [{ paymentId: null }], 'web')
     ).toEqual([{ paymentId: null }]);
     expect(prisma.payment.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('appPlatformOf', () => {
+  it('reads the stored platform of an app order', () => {
+    expect(appPlatformOf({ channel: 'app', appPlatform: 'ios', paymentMethod: 'ideal' })).toBe('ios');
+    expect(appPlatformOf({ channel: 'app', appPlatform: 'android', paymentMethod: 'ideal' })).toBe(
+      'android'
+    );
+  });
+
+  it("falls back on a store order's method, and leaves an older Mollie app order unknown", () => {
+    expect(appPlatformOf({ channel: 'app', appPlatform: null, paymentMethod: 'appstore' })).toBe('ios');
+    expect(appPlatformOf({ channel: 'app', appPlatform: null, paymentMethod: 'googleplay' })).toBe(
+      'android'
+    );
+    expect(appPlatformOf({ channel: 'app', appPlatform: null, paymentMethod: 'ideal' })).toBeNull();
+    expect(appPlatformOf({ channel: 'app', appPlatform: 'web', paymentMethod: 'ideal' })).toBeNull();
+  });
+
+  it('is null for a website order, whatever else it carries', () => {
+    expect(appPlatformOf({ channel: null, appPlatform: 'ios', paymentMethod: 'appstore' })).toBeNull();
+    expect(appPlatformOf({})).toBeNull();
   });
 });

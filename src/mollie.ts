@@ -77,7 +77,9 @@ import {
 } from './businessSales';
 import {
   APP_CHANNEL,
+  AppPlatform,
   SalesChannel,
+  appPlatformOf,
   channelSql,
   filterLedgerByChannel,
   ledgerChannelCondition,
@@ -2094,8 +2096,9 @@ class Mollie {
         // "sandbox" for a store test purchase (App Review, TestFlight)
         storeEnvironment: true,
         // 'app' for an order the scan app placed (salesChannel.ts), so the
-        // list can mark the ones it paid through Mollie
+        // list can mark the ones it paid through Mollie, and which app
         channel: true,
+        appPlatform: true,
         // The discount codes on the order, with what each took off (incl.
         // VAT). A released use belongs to a checkout that was never paid.
         discount: true,
@@ -2321,8 +2324,10 @@ class Mollie {
       const appDesignEnabled =
         payment.user?.appDesignEnabled ??
         (payment.user?._count?.AppDesignPurchase ?? 0) > 0;
+      // Which app placed it, also for a store order from before the column
+      const appPlatform = appPlatformOf(payment);
       if (!attentionIds.has(payment.id)) {
-        return { ...payment, appDesignEnabled, attention: null };
+        return { ...payment, appDesignEnabled, appPlatform, attention: null };
       }
 
       const openCorrections = payment.PaymentHasPlaylist.reduce(
@@ -2373,6 +2378,7 @@ class Mollie {
       return {
         ...payment,
         appDesignEnabled,
+        appPlatform,
         attention: { reason, openCorrections, printerError, printerWaiting },
       };
     });
@@ -2486,7 +2492,10 @@ class Mollie {
     clientIp: string,
     waitForDirectGeneration: boolean = false,
     skipGenerationMail: boolean = false,
-    fallbackCountry: string = ''
+    fallbackCountry: string = '',
+    // The platform the request came from (POST /mollie/payment: the app's
+    // WebView), used for an order the app places
+    requestPlatform: AppPlatform | null = null
   ): Promise<ApiResult> {
     // Declared outside the try so the catch can release any discount uses that
     // were already reserved before the failure.
@@ -2533,6 +2542,11 @@ class Mollie {
       // orders it pays through Mollie. Recorded on the row (`channel`) for
       // the reports' Website / App toggle; the website's orders leave it null.
       const placedInApp = !!params.store || params.returnTo === 'app';
+      // Which app: the store it buys in, else the WebView the request came
+      // from (a printed order); the Pushover and the order list show it
+      const appPlatform: AppPlatform | null = placedInApp
+        ? storePlatform ?? requestPlatform
+        : null;
       // Where Mollie sends the buyer back: the site, or the scan app's return
       // page, an app link (appPaymentReturn.ts)
       const returnUrl = (molliePaymentRef?: string) => {
@@ -3206,6 +3220,7 @@ class Mollie {
               }
             : {}),
           ...(placedInApp ? { channel: APP_CHANNEL } : {}),
+          ...(appPlatform ? { appPlatform } : {}),
           PaymentHasPlaylist: { create: playlists },
         },
       });
@@ -4408,6 +4423,7 @@ class Mollie {
         paymentMethod: true,
         storeEnvironment: true,
         channel: true,
+        appPlatform: true,
         printApiOrderId: true,
         locale: true,
         productPriceWithoutTax: true,

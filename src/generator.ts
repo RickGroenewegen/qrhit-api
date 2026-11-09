@@ -38,7 +38,7 @@ import { computePrintFingerprint } from './printFingerprint';
 import { deckDesigns, designIndexForCard, getExtraDesigns } from './cardDesigns';
 import { isBusinessDeck } from './trackMix';
 import { isStorePayment } from './storeProducts';
-import { APP_CHANNEL } from './salesChannel';
+import { APP_CHANNEL, AppPlatform, appPlatformOf } from './salesChannel';
 import OrderProgress from './orderProgress';
 
 // The only lines sendToPrinter sends to Print&Bind. Schneiders, Tromp,
@@ -48,11 +48,17 @@ const PRINTNBIND_PHYSICAL_LINE = {
   printerType: PRINTER_TYPE.PRINTNBIND,
 };
 
-// Where an app sale was paid, the first words of its Pushover.
+// Where an app sale was paid, after the app it was placed in.
 const APP_SALE_PAID_BY: Record<string, string> = {
-  appstore: 'Via de App Store',
-  googleplay: 'Via Google Play',
-  mollie: 'In de app, via Mollie',
+  appstore: 'via de App Store',
+  googleplay: 'via Google Play',
+  mollie: 'via Mollie',
+};
+
+// The app an app sale was placed in, in its Pushover's title and first words.
+const APP_SALE_PLATFORM: Record<AppPlatform, { title: string; app: string }> = {
+  ios: { title: 'iOS-APP', app: 'In de iOS-app' },
+  android: { title: 'ANDROID-APP', app: 'In de Android-app' },
 };
 
 class Generator {
@@ -821,12 +827,20 @@ class Generator {
         ).toFixed(2)} besteld.`;
       }
 
-      // A sale in the scan app gets a Pushover of its own: its title, where
-      // it was paid, and the cash register instead of the usual sound.
+      // A sale in the scan app gets a Pushover of its own: its title, the
+      // app (iOS or Android) and where it was paid, and the cash register
+      // instead of the usual sound. An app order from before appPlatform
+      // was stored, paid through Mollie, names no platform.
       const appSale = payment.channel === APP_CHANNEL;
       if (appSale) {
-        title = `📱 APP-${title}`;
-        message = `${APP_SALE_PAID_BY[payment.paymentMethod] ?? APP_SALE_PAID_BY['mollie']}: ${message}`;
+        const platform = appPlatformOf(payment);
+        const app = platform
+          ? APP_SALE_PLATFORM[platform]
+          : { title: 'APP', app: 'In de app' };
+        const paidBy =
+          APP_SALE_PAID_BY[payment.paymentMethod] ?? APP_SALE_PAID_BY['mollie'];
+        title = `📱 ${app.title}-${title}`;
+        message = `${app.app}, ${paidBy}: ${message}`;
       }
 
       // Pushover

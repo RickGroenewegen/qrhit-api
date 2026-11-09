@@ -334,20 +334,28 @@ describe('generate()', () => {
   });
 
   it.each([
-    ['appstore', 'Via de App Store'],
-    ['googleplay', 'Via Google Play'],
-    ['ideal', 'In de app, via Mollie'],
-  ])('gives an app sale paid by %s a Pushover of its own', async (paymentMethod, paidBy) => {
-    const { mollie } = arrange({ channel: 'app', paymentMethod });
-    await gen.generate('pay_1', '9.9.9.9', '', mollie);
-    const push = outbound.calls('PushoverClient', 'sendMessage');
-    expect(push).toHaveLength(1);
-    expect(push[0].args[0]).toMatchObject({
-      title: '📱 APP-KA-CHING! € 5 verdiend!',
-      message: `${paidBy}: Rick Tester (NL) heeft 1 set(s) met in totaal 2 kaarten besteld voor totaal € 25.`,
-      sound: 'cashregister',
-    });
-  });
+    ['appstore', 'ios', 'iOS-APP', 'In de iOS-app, via de App Store'],
+    ['googleplay', 'android', 'ANDROID-APP', 'In de Android-app, via Google Play'],
+    ['ideal', 'ios', 'iOS-APP', 'In de iOS-app, via Mollie'],
+    ['ideal', 'android', 'ANDROID-APP', 'In de Android-app, via Mollie'],
+    // From before appPlatform was stored: a store order still says it
+    ['appstore', null, 'iOS-APP', 'In de iOS-app, via de App Store'],
+    ['googleplay', null, 'ANDROID-APP', 'In de Android-app, via Google Play'],
+    ['ideal', null, 'APP', 'In de app, via Mollie'],
+  ])(
+    'gives an app sale paid by %s in the %s app a Pushover of its own',
+    async (paymentMethod, appPlatform, titleTag, opening) => {
+      const { mollie } = arrange({ channel: 'app', paymentMethod, appPlatform });
+      await gen.generate('pay_1', '9.9.9.9', '', mollie);
+      const push = outbound.calls('PushoverClient', 'sendMessage');
+      expect(push).toHaveLength(1);
+      expect(push[0].args[0]).toMatchObject({
+        title: `📱 ${titleTag}-KA-CHING! € 5 verdiend!`,
+        message: `${opening}: Rick Tester (NL) heeft 1 set(s) met in totaal 2 kaarten besteld voor totaal € 25.`,
+        sound: 'cashregister',
+      });
+    }
+  );
 
   it('gives a website sale the usual Pushover', async () => {
     const { mollie } = arrange();

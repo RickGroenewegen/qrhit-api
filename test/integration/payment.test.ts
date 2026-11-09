@@ -146,6 +146,31 @@ describe('payment routes', () => {
       });
       expect(mollieMock.getPaymentUri.mock.calls[0][4]).toBe('');
     });
+
+    it("passes the app's platform from its WebView, none for the site", async () => {
+      mollieMock.getPaymentUri.mockResolvedValue({ success: true });
+      const send = (headers: Record<string, string>) =>
+        app.inject({
+          method: 'POST',
+          url: '/mollie/payment',
+          payload: { extraOrderData: {} },
+          headers,
+        });
+      const iphone =
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+      const android =
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36';
+
+      await send({ origin: 'capacitor://localhost', 'user-agent': iphone });
+      await send({ origin: 'https://localhost', 'user-agent': android });
+      await send({ origin: 'https://www.qrsong.io', 'user-agent': iphone });
+
+      expect(mollieMock.getPaymentUri.mock.calls.map((call: any[]) => call[5])).toEqual([
+        'ios',
+        'android',
+        null,
+      ]);
+    });
   });
 
   describe('POST /mollie/check', () => {

@@ -2707,7 +2707,15 @@ No new routes; two existing ones take optional fields.
   (`AppCodeCheck` in `src/discount.ts`). Payment creation checks every code
   again with the buyer's e-mail, as for the website.
 - Either one writes `channel = 'app'` on the order, for the reports'
-  Website / App toggle (see "Turnover and profit").
+  Website / App toggle (see "Turnover and profit"), and `appPlatform`
+  (`ios` / `android`, since 2026-11-09): the store's platform, else the
+  request's, read from the app's WebView by `scanClient` (origin
+  `capacitor://localhost` or `https://localhost`, else the user agent) in
+  `POST /mollie/payment`. The app sends nothing for it, so no app update was
+  needed. `appPlatformOf` (`src/salesChannel.ts`) reads it, falling back on
+  a store order's method for older rows; an older app order paid through
+  Mollie stays unknown. The admin order list gets it from the API already
+  derived.
 
 **Verification** (`src/storePurchases.ts`):
 - **Apple**: the StoreKit 2 transaction JWS is checked offline against the
@@ -2731,9 +2739,11 @@ No new routes; two existing ones take optional fields.
   Play's license testers do too. They stay out of every turnover report
   (`notStoreTestSql`), the Redis turnover counters, Pushover and Meta.
 - **Pushover**: every sale the app placed (`channel = 'app'`, store or
-  Mollie) gets its own: "📱 APP-KA-CHING!", the first words saying where it
-  was paid ("Via de App Store", "Via Google Play", "In de app, via Mollie")
-  and the `cashregister` sound instead of `incoming` (generator
+  Mollie) gets its own: "📱 iOS-APP-KA-CHING!" or "📱 ANDROID-APP-KA-CHING!",
+  the first words saying which app and where it was paid ("In de iOS-app,
+  via de App Store", "In de Android-app, via Mollie"; "📱 APP-KA-CHING!" and
+  "In de app, via Mollie" when the platform is unknown) and the
+  `cashregister` sound instead of `incoming` (generator `APP_SALE_PLATFORM`,
   `APP_SALE_PAID_BY`).
 
 **Bookkeeping**: the store is the seller to the buyer. It sends the
