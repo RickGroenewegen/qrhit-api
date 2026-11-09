@@ -6,12 +6,11 @@ import PrismaInstance from './prisma';
 import PushoverClient from './pushover';
 import Mollie from './mollie';
 import Generator from './generator';
-import MusicServiceRegistry from './services/MusicServiceRegistry';
-import AppleMusicProvider from './providers/AppleMusicProvider';
 import Data from './data';
 import Cache from './cache';
 import Settings from './settings';
 import { findLineByHash, lineOwnerSql, OwnedLine } from './lineOwner';
+import Upgrade, { LineExtraTracks } from './upgrade';
 
 /**
  * Prisma's upsert on MySQL is a read followed by a create, not one statement.
@@ -60,7 +59,6 @@ class Suggestion {
   private pushover = new PushoverClient();
   private mollie = new Mollie();
   private generator = Generator.getInstance();
-  private musicRegistry = MusicServiceRegistry.getInstance();
   private data = Data.getInstance();
   private cache = Cache.getInstance();
 
@@ -156,6 +154,30 @@ class Suggestion {
       AND php.id = ${line?.id ?? 0}
       AND t.manuallyChecked = true
     `;
+
+    // Extra cards on a playlist the customer cannot add songs to: the page
+    // offers only what fits, or explains why there is nothing to buy
+    // (src/extraTracksRoom.ts). Only asked while extra cards can be bought.
+    const inProduction = php?.type === 'physical' && !!payment?.sentToPrinter;
+    let extraTracks: LineExtraTracks = {
+      playlistEditable: true,
+      extraTracksRoom: null,
+    };
+    if (line && php?.type === 'physical' && !inProduction) {
+      try {
+        extraTracks = await Upgrade.getInstance().extraTracksForLine(
+          line.id,
+          line.ownerUserId ?? line.buyerId
+        );
+      } catch (error: any) {
+        this.logger.log(
+          color.yellow.bold(
+            `Extra cards room for line ${line.id} not known: ${error?.message || error}`
+          )
+        );
+      }
+    }
+
     return {
       // cardIndex is the card's 0-based position in the whole deck, in
       // data.getTracks() order (every track, not only the checked ones), so
@@ -178,7 +200,7 @@ class Suggestion {
         // production" and offers nothing that changes them (the writes
         // answer ORDER_IN_PRODUCTION). A digital line of the same order is
         // not affected.
-        inProduction: php?.type === 'physical' && !!payment?.sentToPrinter,
+        inProduction,
         serviceType: playlist?.serviceType ?? 'spotify',
         paymentHasPlaylistId: php?.id ?? null,
         playlistType: php?.type ?? null,
@@ -188,6 +210,11 @@ class Suggestion {
         // Boxes per copy. Total boxes the customer receives is
         // boxQuantity * amount (each copy is packed separately).
         boxQuantity: php?.boxQuantity ?? 0,
+        // false: one of our featured playlists or an AI playlist, which the
+        // customer cannot add songs to. extraTracksRoom is then how many
+        // extra cards it can still fill (null: only the physical cap).
+        playlistEditable: extraTracks.playlistEditable,
+        extraTracksRoom: extraTracks.extraTracksRoom,
       },
     };
   }
@@ -1250,35 +1277,28 @@ class Suggestion {
       const locale = paymentInfo[0].locale || 'en';
       const allowDuplicates = !!paymentInfo[0].allowDuplicates;
 
-      // Get the correct provider for this service type
-      const provider = this.musicRegistry.getProviderByString(serviceType);
-      if (!provider) {
-        return {
-          valid: false,
-          error: `Unsupported music service: ${serviceType}`,
-        };
-      }
-
-      // Fetch fresh tracks from the music service (cache=false to get latest data)
-      // For Apple Music, use the payment's locale to determine the storefront
-      const serviceTracks = await provider.getTracks(playlistId, {
-        cache: false,
+      // Fresh tracks from the music service (no cache); Apple Music in the
+      // storefront of the order's language
+      const upgrade = Upgrade.getInstance();
+      const fetched = await upgrade.fetchPlaylistTracks({
+        playlistId,
+        serviceType,
+        locale,
         allowDuplicates,
-        storefront:
-          serviceType === 'apple_music'
-            ? AppleMusicProvider.getInstance().getStorefrontForLocale(locale)
-            : undefined,
       });
-
-      if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
-        return {
-          valid: false,
-          error: `Failed to fetch tracks from ${serviceType}`,
-        };
+      if (!fetched.success || !fetched.tracks) {
+        return { valid: false, error: fetched.error };
       }
 
-      const tracks = serviceTracks.data.tracks;
+      const tracks = fetched.tracks;
       const currentTracks = tracks.length;
+      // The extra cards offered next (Upgrade.extraTracksForLine) go by
+      // this same count
+      await upgrade.rememberSourceTrackCount(
+        playlistId,
+        allowDuplicates,
+        currentTracks
+      );
 
       // Validate: service tracks must be <= paid tracks
       if (currentTracks > paidTracks) {

@@ -14,6 +14,9 @@ import { MAX_CARDS_PHYSICAL } from '../../src/config/constants';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { outbound } from '../helpers/recording-mock';
 import Generator from '../../src/generator';
+import Upgrade from '../../src/upgrade';
+import Cache from '../../src/cache';
+import { sourceCountCacheKey } from '../../src/extraTracksRoom';
 
 // Mollie talks to the real Mollie API — fully mocked (same pattern as
 // payment.test.ts). The upgrade endpoints use createUpgradePayment.
@@ -715,6 +718,79 @@ describe('public designer and upgrade routes', () => {
           data: { sentToPrinter: false },
         });
       }
+    });
+
+    // Order 100009738: +10 cards on another customer's featured playlist
+    // that had no more songs than were paid, so the cards stayed empty. The
+    // physical line here has 2 paid cards.
+    async function asFeaturedPlaylist(songsAtService: number, run: () => Promise<void>) {
+      const fetchSpy = vi
+        .spyOn(Upgrade.getInstance(), 'fetchPlaylistTracks')
+        .mockResolvedValue({
+          success: true,
+          tracks: Array.from({ length: songsAtService }, (_, i) => ({ id: `s${i}` })),
+        });
+      await prisma().playlist.update({
+        where: { playlistId: PHYS_PLAYLIST },
+        data: { featured: true, promotionalUserId: null },
+      });
+      try {
+        await run();
+      } finally {
+        fetchSpy.mockRestore();
+        await prisma().playlist.update({
+          where: { playlistId: PHYS_PLAYLIST },
+          data: { featured: false },
+        });
+        await Cache.getInstance().del(sourceCountCacheKey(PHYS_PLAYLIST, false));
+      }
+    }
+
+    it('refuses extra cards a featured playlist cannot fill', async () => {
+      const paymentsBefore = mollieMock.createUpgradePayment.mock.calls.length;
+      await asFeaturedPlaylist(2, async () => {
+        for (const url of [
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/calculate-price`,
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/upgrade-payment`,
+        ]) {
+          const res = await app.inject({
+            method: 'POST',
+            url,
+            payload: { extraTracks: 10 },
+          });
+          expect(res.statusCode).toBe(409);
+          expect(res.json()).toEqual({
+            success: false,
+            error: 'playlistNotEditable',
+            extraTracksRoom: 0,
+            availableTrackTiers: [],
+          });
+        }
+      });
+      expect(mollieMock.createUpgradePayment.mock.calls.length).toBe(paymentsBefore);
+    });
+
+    it('sells the extra cards the unpaid songs of a featured playlist fill', async () => {
+      await asFeaturedPlaylist(14, async () => {
+        const fits = await app.inject({
+          method: 'POST',
+          url: `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/calculate-price`,
+          payload: { extraTracks: 10 },
+        });
+        expect(fits.statusCode).toBe(200);
+
+        const tooMany = await app.inject({
+          method: 'POST',
+          url: `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/calculate-price`,
+          payload: { extraTracks: 25 },
+        });
+        expect(tooMany.statusCode).toBe(409);
+        expect(tooMany.json()).toMatchObject({
+          error: 'playlistNotEditable',
+          extraTracksRoom: 12,
+          availableTrackTiers: [10],
+        });
+      });
     });
   });
 

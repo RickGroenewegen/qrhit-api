@@ -1441,6 +1441,36 @@ webhook branches in `mollie.ts` (`app_design_upgrade`, `bingo_upgrade`,
   payment's metadata (`boxPrice` × `quantity`, `shippingCost`), so a replay
   after the box is already enabled issues the same invoice.
 
+## Extra cards on a playlist the customer cannot change
+
+Extra cards on the corrections page only raise the paid count; the customer
+then adds songs to their playlist and reloads. On one of our featured
+playlists or an AI playlist they cannot add songs, so cards beyond the songs
+the playlist has stay empty (order 100009738, line 10825: +10 on "House &
+Techno Classics", 150 songs, invoice U2026-00039). Since 2026-11-09 such a
+line only sells the cards its unpaid songs fill (`src/extraTracksRoom.ts`,
+`Upgrade.extraTracksForLine`).
+
+- **Not editable**: an AI playlist (`payment_has_playlist.aiPrompt`, or an
+  `aisearches` row naming it), or a featured playlist the holder did not
+  submit (`promotionalUserId` is not the holder: a customer's own playlist we
+  feature stays theirs, line 10056). "QRSong! copy" playlists from "Change the
+  songs" are not featured and stay editable.
+- **Room** = the songs at the music service (read like the reload: no cache,
+  the line's `allowDuplicates`, Apple's storefront) minus the paid count. The
+  count is kept 10 minutes in Redis (`extraTracksSource:<id>:<dup>`), and a
+  reload stores the count it fetched, so the page and the price agree with the
+  reload's message. No answer from the service: the stored songs; nothing at
+  all: room 0.
+- Both tracks routes answer **409 `playlistNotEditable`** with
+  `extraTracksRoom` and `availableTrackTiers` for a tier that does not fit,
+  and the corrections metadata carries `playlistEditable` and
+  `extraTracksRoom` (only for a printed line not in production). Under 10 the
+  page sells nothing and offers the chat; the customer can still have the
+  line moved to their own playlist (`swap-playlist` in the admin toolkit).
+- A tier below the room leaves the reload blocked (it refuses any playlist
+  with more songs than paid), so only a tier equal to the room fills cleanly.
+
 ## Company list invoices (MoneyBird, 30/70/100%)
 
 The dashboard's Lists tab invoices a company list in MoneyBird, in full or as

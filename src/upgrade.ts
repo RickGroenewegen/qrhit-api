@@ -1,7 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Data from './data';
+import Cache from './cache';
+import Logger from './logger';
 import PrintEnBind from './printers/printenbind';
+import MusicServiceRegistry from './services/MusicServiceRegistry';
+import AppleMusicProvider from './providers/AppleMusicProvider';
 import {
   BOX_PRICE,
   BOX_MAX_CARDS,
@@ -10,6 +14,27 @@ import {
   EXTRA_TRACK_MARKUP_MULT,
   MAX_CARDS_PHYSICAL,
 } from './config/constants';
+import {
+  customerCanAddSongs,
+  extraTracksRoom,
+  sourceCountCacheKey,
+  SOURCE_COUNT_TTL_SECONDS,
+  tierFitsRoom,
+} from './extraTracksRoom';
+
+/** Whether the holder can add songs to the line's playlist, and the extra
+ *  cards it can still take when they cannot (src/extraTracksRoom.ts). */
+export interface LineExtraTracks {
+  playlistEditable: boolean;
+  /** null: no limit of its own, only the physical cap */
+  extraTracksRoom: number | null;
+}
+
+export interface PlaylistTracksFetch {
+  success: boolean;
+  tracks?: any[];
+  error?: string;
+}
 
 export interface VerifiedUpgradeContext {
   php: any;
@@ -126,6 +151,8 @@ class Upgrade {
   private static instance: Upgrade;
   private prisma: PrismaClient = PrismaInstance.getInstance();
   private data = Data.getInstance();
+  private cache = Cache.getInstance();
+  private logger = new Logger();
   private printEnBind = PrintEnBind.getInstance();
 
   private constructor() {}
@@ -259,11 +286,179 @@ class Upgrade {
   /**
    * The subset of EXTRA_TRACK_TIERS this playlist can still buy. Used by the
    * routes to reject an over-cap tier and by the frontend to hide the ones
-   * that no longer fit.
+   * that no longer fit. `room` is the line's own limit when the customer
+   * cannot add songs to the playlist (extraTracksForLine), null for none.
    */
-  public availableTrackTiers(php: any): number[] {
+  public availableTrackTiers(php: any, room: number | null = null): number[] {
     const remaining = this.remainingTrackCapacity(php);
-    return (EXTRA_TRACK_TIERS as readonly number[]).filter((t) => t <= remaining);
+    return (EXTRA_TRACK_TIERS as readonly number[]).filter(
+      (t) => t <= remaining && tierFitsRoom(t, room)
+    );
+  }
+
+  /**
+   * Whether the line's holder can add songs to its playlist and, when they
+   * cannot (a featured playlist that is not their own, an AI playlist), how
+   * many extra cards still fit: the songs the playlist has at its music
+   * service beyond the paid count. Only that case asks the service, and the
+   * count is kept for SOURCE_COUNT_TTL_SECONDS. When the service does not
+   * answer, the songs we stored for the playlist stand in.
+   */
+  public async extraTracksForLine(
+    lineId: number,
+    holderUserId: number
+  ): Promise<LineExtraTracks> {
+    const line = await this.prisma.paymentHasPlaylist.findUnique({
+      where: { id: lineId },
+      select: {
+        numberOfTracks: true,
+        allowDuplicates: true,
+        aiPrompt: true,
+        payment: { select: { locale: true } },
+        playlist: {
+          select: {
+            id: true,
+            playlistId: true,
+            featured: true,
+            promotionalUserId: true,
+            serviceType: true,
+          },
+        },
+      },
+    });
+    if (!line) return { playlistEditable: true, extraTracksRoom: null };
+
+    const playlist = line.playlist;
+    const aiGenerated =
+      !!line.aiPrompt ||
+      (await this.prisma.aISearch.count({
+        where: { spotifyPlaylistId: playlist.playlistId },
+      })) > 0;
+    const playlistEditable = customerCanAddSongs({
+      featured: !!playlist.featured,
+      promotionalUserId: playlist.promotionalUserId,
+      holderUserId,
+      aiGenerated,
+    });
+    if (playlistEditable) {
+      return { playlistEditable, extraTracksRoom: null };
+    }
+
+    const sourceTracks = await this.sourceTrackCount({
+      playlistDbId: playlist.id,
+      playlistId: playlist.playlistId,
+      serviceType: playlist.serviceType || 'spotify',
+      locale: line.payment?.locale || 'en',
+      allowDuplicates: !!line.allowDuplicates,
+    });
+    return {
+      playlistEditable,
+      extraTracksRoom: extraTracksRoom(
+        false,
+        sourceTracks,
+        line.numberOfTracks || 0
+      ),
+    };
+  }
+
+  /**
+   * The playlist's tracks as its music service gives them now, the way the
+   * corrections page's reload reads them (no cache; Apple Music in the
+   * storefront of the order's language).
+   */
+  public async fetchPlaylistTracks(params: {
+    playlistId: string;
+    serviceType: string;
+    locale: string;
+    allowDuplicates: boolean;
+  }): Promise<PlaylistTracksFetch> {
+    const provider = MusicServiceRegistry.getInstance().getProviderByString(
+      params.serviceType
+    );
+    if (!provider) {
+      return {
+        success: false,
+        error: `Unsupported music service: ${params.serviceType}`,
+      };
+    }
+    const result = await provider.getTracks(params.playlistId, {
+      cache: false,
+      allowDuplicates: params.allowDuplicates,
+      storefront:
+        params.serviceType === 'apple_music'
+          ? AppleMusicProvider.getInstance().getStorefrontForLocale(params.locale)
+          : undefined,
+    });
+    if (!result.success || !result.data || !result.data.tracks) {
+      return {
+        success: false,
+        error: `Failed to fetch tracks from ${params.serviceType}`,
+      };
+    }
+    return { success: true, tracks: result.data.tracks };
+  }
+
+  /** Keep a count the reload just fetched, so the upgrade agrees with it. */
+  public async rememberSourceTrackCount(
+    playlistId: string,
+    allowDuplicates: boolean,
+    count: number
+  ): Promise<void> {
+    try {
+      await this.cache.set(
+        sourceCountCacheKey(playlistId, allowDuplicates),
+        String(count),
+        SOURCE_COUNT_TTL_SECONDS
+      );
+    } catch {
+      // Only a cache: the next check asks the service itself
+    }
+  }
+
+  private async sourceTrackCount(params: {
+    playlistDbId: number;
+    playlistId: string;
+    serviceType: string;
+    locale: string;
+    allowDuplicates: boolean;
+  }): Promise<number | null> {
+    const key = sourceCountCacheKey(params.playlistId, params.allowDuplicates);
+    try {
+      const cached = await this.cache.get(key);
+      if (cached !== null && cached !== undefined && /^\d+$/.test(cached)) {
+        return parseInt(cached, 10);
+      }
+    } catch {
+      // Redis unavailable: ask the service
+    }
+
+    try {
+      const fetched = await this.fetchPlaylistTracks(params);
+      if (fetched.success && fetched.tracks) {
+        const count = fetched.tracks.length;
+        await this.rememberSourceTrackCount(
+          params.playlistId,
+          params.allowDuplicates,
+          count
+        );
+        return count;
+      }
+      this.logger.log(
+        `Extra cards: ${params.playlistId} not read (${fetched.error}), using the stored songs`
+      );
+    } catch (error: any) {
+      this.logger.log(
+        `Extra cards: ${params.playlistId} not read (${error?.message || error}), using the stored songs`
+      );
+    }
+
+    try {
+      return await this.prisma.playlistHasTrack.count({
+        where: { playlistId: params.playlistDbId },
+      });
+    } catch {
+      return null;
+    }
   }
 
   /**
