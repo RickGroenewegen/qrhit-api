@@ -10,11 +10,12 @@
 export const OFFER_WEB_SCANNER = false;
 
 // The Android app 2.0.3 cannot make a new connection with Spotify, so hidden
-// playback fails for anyone who connects for the first time; the fix (2.1.1)
-// was waiting for Google's approval in November 2026. Until 2.1.1 is in the
-// Play Store an Android phone gets the web scanner with a short note
-// (Rick, 2026-11-05). Set to false once it is.
-export const ANDROID_SPOTIFY_NOTICE = true;
+// playback fails for anyone who connects for the first time. While the fix
+// (2.1.1) waited for Google's approval, an Android phone got the web scanner
+// with a short note (Rick, 2026-11-05). 2.1.1 is in the Play Store since
+// 2026-11-09, so the note is off; set to true again if a release ever breaks
+// the Spotify connection on Android.
+export const ANDROID_SPOTIFY_NOTICE = false;
 
 export interface OnboardingFlags {
   offerWebScanner: boolean;

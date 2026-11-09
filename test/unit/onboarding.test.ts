@@ -50,8 +50,8 @@ describe('onboardingOffer', () => {
     expect(onboardingOffer(IPHONE, all)).toEqual({ webScanner: true, androidSpotifyNotice: false });
     expect(onboardingOffer(ANDROID, all)).toEqual({ webScanner: true, androidSpotifyNotice: false });
   });
-  it('is on by default, until 2.1.1 is in the Play Store', () => {
-    expect(onboardingOffer(ANDROID).androidSpotifyNotice).toBe(true);
+  it('is off by default since 2.1.1 is in the Play Store (2026-11-09)', () => {
+    expect(onboardingOffer(ANDROID)).toEqual({ webScanner: false, androidSpotifyNotice: false });
     expect(onboardingOffer(IPHONE).webScanner).toBe(false);
   });
 });
