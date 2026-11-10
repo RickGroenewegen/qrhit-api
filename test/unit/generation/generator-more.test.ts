@@ -644,6 +644,45 @@ describe('sendToPrinter(): QR codes before the PDF is rebuilt', () => {
     expect(h.pdf.generatePDF).not.toHaveBeenCalled();
   });
 
+  it("makes the PDFs of a set added since (the toolkit's order sets) although the fingerprint is current", async () => {
+    const { payment, playlist } = arrange();
+    await writeQr('t1');
+    await writeQr('t2');
+    h.prisma.paymentHasPlaylistItem.findMany.mockResolvedValue([
+      { id: 41, index: 1, filename: 'phys.pdf' },
+      { id: 42, index: 2, filename: null },
+    ]);
+    vi.spyOn(gen as any, 'linePdfFilename').mockImplementation(
+      (_payment: any, _playlist: any, kind: any, index: any) => `${kind}_${index}.pdf`
+    );
+    h.pdf.generatePDF.mockImplementation(async (filename: string) => filename);
+
+    const res = await gen.sendToPrinter('pay_1', '');
+
+    expect(res).toEqual({ success: true });
+    // Only set 2: set 1 has its file and the design did not change
+    expect(h.pdf.generatePDF.mock.calls.map((c) => [c[0], c[7]])).toEqual([
+      ['digital_2.pdf', 2],
+      ['printer_2.pdf', 2],
+    ]);
+    expect(h.pdf.generatePDF).toHaveBeenCalledWith(
+      'printer_2.pdf',
+      playlist,
+      payment,
+      'printer',
+      `${qrSubDir}_31`,
+      false,
+      'printnbind',
+      2,
+      false
+    );
+    expect(h.prisma.paymentHasPlaylistItem.update).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: { filename: 'printer_2.pdf', filenameDigital: 'digital_2.pdf' },
+    });
+    expect(h.order.createOrder).toHaveBeenCalled();
+  });
+
   it('does not send the order when a QR code still cannot be made', async () => {
     arrange();
     await writeQr('t1');

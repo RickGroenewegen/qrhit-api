@@ -2051,13 +2051,15 @@ class Generator {
    * A set whose printer PDF cannot be made throws: the send holds the order rather than print without it.
    */
   private async makeMissingSetPdfs(payment: any, playlist: any): Promise<number> {
-    const missing = await this.prisma.paymentHasPlaylistItem.findMany({
-      where: {
-        paymentHasPlaylistId: playlist.paymentHasPlaylistId,
-        OR: [{ filename: null }, { filename: '' }],
-      },
-      orderBy: { index: 'asc' },
-    });
+    const missing = (
+      await this.prisma.paymentHasPlaylistItem.findMany({
+        where: {
+          paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+          OR: [{ filename: null }, { filename: '' }],
+        },
+        orderBy: { index: 'asc' },
+      })
+    ).filter((item) => !item.filename);
     if (!missing.length) return 0;
 
     const qrSubDir = await resolveQrSubDir(payment.qrSubDir, playlist.paymentHasPlaylistId);
