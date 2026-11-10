@@ -3296,6 +3296,32 @@ or downgrades requests and bans nobody.
   also loads) and `TRUSTED_IPS` are exempt, and the check is skipped when
   the setting cannot be read. The site loads Google's script only when asked.
 
+## Writing playlists to our Spotify account: a 502 is retried, never twice
+
+`createOrUpdatePlaylist` (`spotify_api.ts`) writes every playlist we make in
+our own Spotify account: featured copies, AI playlists, Excel imports,
+business and default playlists. On 2026-11-10 three featured copies in ten
+seconds got a 502 on their first batch of songs; the same copy went through
+four minutes later, and each failed one had left an empty playlist behind.
+
+- `executeWithRetry` retries 500, 502, 503 and 504 (waits of about 1 and 2 s,
+  three attempts), as it did a 429. A gateway error does not say whether the
+  write happened, so a call that is not safe to repeat passes `landed`,
+  asked after the wait: adding songs checks the playlist's count
+  (`GET /playlists/{id}/items?limit=1&fields=total`: still the old count,
+  retry; already the new one, it went through; anything else, give up rather
+  than add the songs twice). Creating looks for the name in `/me/playlists`,
+  where a new playlist comes first. GET, PUT and DELETE are retried as they
+  are.
+- A playlist the call created and could not fill is unfollowed again
+  (`discardNewPlaylist`): none of the callers gets its id, so nothing else
+  would ever remove it.
+- Every retry and every give-up is logged with the step (`adding tracks to
+  playlist … (chunk 1/12)`), which the old error (`Spotify API error: 502`)
+  never said.
+- The connect link asks for `playlist-modify-public` only, so a playlist we
+  make must be public: a private one gets 403 "Insufficient client scope".
+
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
   - Account/auth routes → `accountRoutes.ts`

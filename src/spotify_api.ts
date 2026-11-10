@@ -29,6 +29,13 @@ interface SpotifyErrorResponse {
   };
 }
 
+/**
+ * Spotify's gateway failing (502 seen on 2026-11-10: three featured copies in
+ * ten seconds got one on their first batch of songs, the same copy went
+ * through four minutes later). Usually over in seconds, so worth a retry.
+ */
+const SERVER_ERROR_STATUSES = new Set([500, 502, 503, 504]);
+
 /** Optional extras of createOrUpdatePlaylist (the toolkit's playlist route). */
 export interface PlaylistWriteOptions {
   /** Refill exactly this playlist of our own account instead of looking the name up. */
@@ -400,16 +407,27 @@ class SpotifyApi {
   }
 
   /**
-   * Handles rate limiting with retry logic for Spotify API calls.
+   * Runs a Spotify call, retrying a rate limit (429) and a failing gateway
+   * (500, 502, 503, 504).
+   *
+   * A gateway error does not say whether the call landed: Spotify may have
+   * done the write before the gateway gave up. A call that is not safe to
+   * repeat (adding songs, creating a playlist) passes `landed`, which is
+   * asked after the wait: it returns the call's result when the write is
+   * there (no retry), undefined when it is not (retry), and throws when it
+   * cannot tell (give up rather than add songs twice). GET, PUT and DELETE
+   * calls are retried as they are.
    * @param fn The async function to execute
    * @param context Description of the operation for logging
-   * @param maxRetries Maximum number of retry attempts (default 3)
+   * @param maxRetries Maximum number of attempts (default 3)
+   * @param landed Whether a call that got a gateway error took effect anyway
    * @returns The result from the function or an error result
    */
   private async executeWithRetry<T>(
     fn: () => Promise<T>,
     context: string,
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    landed?: () => Promise<T | undefined>
   ): Promise<T | ApiResult> {
     let retries = 0;
     let lastError: any;
@@ -419,6 +437,50 @@ class SpotifyApi {
         return await fn();
       } catch (error) {
         lastError = error;
+
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        if (status !== undefined && SERVER_ERROR_STATUSES.has(status)) {
+          const last = retries >= maxRetries - 1;
+          if (last && !landed) {
+            this.logServerErrorGiveUp(status, context, maxRetries);
+            throw error;
+          }
+          // 1s, 2s between attempts; after the last one a short look whether it landed.
+          await this.delay(last ? 1000 : Math.pow(2, retries) * 1000 + Math.random() * 500);
+          if (landed) {
+            let result: T | undefined;
+            try {
+              result = await landed();
+            } catch (checkError) {
+              this.logger.log(
+                color.red.bold(`Spotify API ${status} `) +
+                  color.white.bold(context) +
+                  color.red.bold(`, and could not check whether it went through, so no retry: ${checkError}`)
+              );
+              throw error;
+            }
+            if (result !== undefined) {
+              this.logger.log(
+                color.yellow.bold(`Spotify API ${status} `) +
+                  color.white.bold(context) +
+                  color.yellow.bold(', but it went through anyway')
+              );
+              return result;
+            }
+          }
+          if (last) {
+            this.logServerErrorGiveUp(status, context, maxRetries);
+            throw error;
+          }
+          retries++;
+          this.logger.log(
+            color.yellow.bold(`Spotify API ${status} `) +
+              color.white.bold(context) +
+              color.yellow.bold(`, retry `) +
+              color.white.bold(`${retries + 1}/${maxRetries}`)
+          );
+          continue;
+        }
 
         if (axios.isAxiosError(error) && error.response?.status === 429) {
           const retryAfter = error.response.headers['retry-after'];
@@ -497,6 +559,64 @@ class SpotifyApi {
 
     // This should not be reached, but just in case
     throw lastError;
+  }
+
+  private logServerErrorGiveUp(status: number, context: string, attempts: number): void {
+    this.logger.log(
+      color.red.bold(`Spotify API ${status} `) +
+        color.white.bold(context) +
+        color.red.bold(`, giving up after `) +
+        color.white.bold(`${attempts}`) +
+        color.red.bold(' attempts')
+    );
+  }
+
+  /**
+   * After a gateway error on adding songs: the songs are there when the
+   * playlist already holds `expectedTotal`, still to add when it holds
+   * `previousTotal`. Anything else (another writer, a half write) cannot be
+   * told apart, so it throws and the caller gives up instead of adding twice.
+   */
+  private async songsLanded(
+    accessToken: string,
+    playlistId: string,
+    previousTotal: number,
+    expectedTotal: number
+  ): Promise<{ success: true } | undefined> {
+    const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
+      params: { limit: 1, fields: 'total' },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const total = response.data?.total;
+    if (total === expectedTotal) return { success: true };
+    if (total === previousTotal) return undefined;
+    throw new Error(`playlist ${playlistId} holds ${total} songs, expected ${previousTotal} or ${expectedTotal}`);
+  }
+
+  /**
+   * Unfollows a playlist this call just created and could not fill, so a
+   * failed copy or AI playlist leaves nothing in our account. Never throws.
+   */
+  private async discardNewPlaylist(accessToken: string, playlistId: string, playlistName: string): Promise<void> {
+    try {
+      await this.executeWithRetry(async () => {
+        await axios.delete(`https://api.spotify.com/v1/playlists/${playlistId}/followers`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return { success: true };
+      }, `removing the half-made playlist ${playlistId}`);
+      this.logger.log(
+        color.yellow.bold('Removed the half-made playlist ') +
+          color.white.bold(`"${playlistName}" (${playlistId})`) +
+          color.yellow.bold(': its songs could not be added')
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold('Could not remove the half-made playlist ') +
+          color.white.bold(`"${playlistName}" (${playlistId})`) +
+          color.red.bold(`, it stays in our Spotify account: ${error}`)
+      );
+    }
   }
 
   /**
@@ -1154,18 +1274,24 @@ class SpotifyApi {
           const chunk = trackUris.slice(i, i + chunkSize);
           const method = i === 0 ? 'put' : 'post'; // First chunk replaces, subsequent chunks add
 
-          const updateResult = await this.executeWithRetry(async () => {
-            await axios({
-              method: method,
-              url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              data: JSON.stringify({ uris: chunk }),
-            });
-            return { success: true };
-          }, `updating playlist ${playlistId} tracks (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
+          const updateResult = await this.executeWithRetry(
+            async () => {
+              await axios({
+                method: method,
+                url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+                data: JSON.stringify({ uris: chunk }),
+              });
+              return { success: true };
+            },
+            `updating playlist ${playlistId} tracks (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`,
+            3,
+            // The PUT replaces, so repeating it is safe; a POST adds.
+            method === 'post' ? () => this.songsLanded(accessToken, playlistId, i, i + chunk.length) : undefined
+          );
 
           // Check if executeWithRetry returned an ApiResult (error case)
           if (
@@ -1197,23 +1323,38 @@ class SpotifyApi {
             )}". Creating new playlist.`
           )
         );
-        const createResult = await this.executeWithRetry(async () => {
-          const response = await axios.post(
-            `https://api.spotify.com/v1/me/playlists`,
-            JSON.stringify({
-              name: playlistName,
-              description: playlistDescription,
-              public: true, // Or false depending on requirements
-            }),
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-          return response.data;
-        }, `creating playlist "${playlistName}"`);
+        const createResult = await this.executeWithRetry(
+          async () => {
+            const response = await axios.post(
+              `https://api.spotify.com/v1/me/playlists`,
+              JSON.stringify({
+                name: playlistName,
+                description: playlistDescription,
+                public: true, // Or false depending on requirements
+              }),
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+            return response.data;
+          },
+          `creating playlist "${playlistName}"`,
+          3,
+          // The name was not there a moment ago and a new playlist comes
+          // first in the list, so finding it means the create went through.
+          async () => {
+            const response = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
+              params: { limit: maxPlaylistsToCheck, fields: 'items(id,name,owner(id),external_urls)' },
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            return (response.data?.items || []).find(
+              (p: any) => p.name === playlistName && (userId ? p.owner?.id === userId : true)
+            );
+          }
+        );
 
         // Check if executeWithRetry returned an ApiResult (error case)
         if (
@@ -1228,34 +1369,48 @@ class SpotifyApi {
         playlistId = createResponse.data.id;
         playlistUrl = createResponse.data.external_urls.spotify;
 
-        // Add tracks (max 100 per request)
+        // Add tracks (max 100 per request). A playlist we just made and could
+        // not fill is no use to any caller and none of them would remove it,
+        // so it goes again (2026-11-10: three empty featured copies stayed).
+        const newPlaylistId = playlistId;
         const chunkSize = 100;
-        for (let i = 0; i < trackUris.length; i += chunkSize) {
-          const chunk = trackUris.slice(i, i + chunkSize);
+        try {
+          for (let i = 0; i < trackUris.length; i += chunkSize) {
+            const chunk = trackUris.slice(i, i + chunkSize);
 
-          const addResult = await this.executeWithRetry(async () => {
-            await axios.post(
-              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-              JSON.stringify({ uris: chunk }),
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  'Content-Type': 'application/json',
-                },
-              }
+            const addResult = await this.executeWithRetry(
+              async () => {
+                await axios.post(
+                  `https://api.spotify.com/v1/playlists/${newPlaylistId}/tracks`,
+                  JSON.stringify({ uris: chunk }),
+                  {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      'Content-Type': 'application/json',
+                    },
+                  }
+                );
+                return { success: true };
+              },
+              `adding tracks to playlist ${newPlaylistId} (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`,
+              3,
+              () => this.songsLanded(accessToken, newPlaylistId, i, i + chunk.length)
             );
-            return { success: true };
-          }, `adding tracks to playlist ${playlistId} (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
 
-          // Check if executeWithRetry returned an ApiResult (error case)
-          if (
-            addResult &&
-            typeof addResult === 'object' &&
-            'success' in addResult &&
-            !(addResult as any).success
-          ) {
-            return addResult as ApiResult;
+            // Check if executeWithRetry returned an ApiResult (error case)
+            if (
+              addResult &&
+              typeof addResult === 'object' &&
+              'success' in addResult &&
+              !(addResult as any).success
+            ) {
+              await this.discardNewPlaylist(accessToken, newPlaylistId, playlistName);
+              return addResult as ApiResult;
+            }
           }
+        } catch (error) {
+          await this.discardNewPlaylist(accessToken, newPlaylistId, playlistName);
+          throw error;
         }
       }
 
@@ -1324,15 +1479,20 @@ class SpotifyApi {
       const chunkSize = 100;
       for (let i = 0; i < trackUris.length; i += chunkSize) {
         const chunk = trackUris.slice(i, i + chunkSize);
-        await this.executeWithRetry(async () => {
-          await axios({
-            method: i === 0 ? 'put' : 'post', // the first chunk replaces, the rest is added
-            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-            headers,
-            data: JSON.stringify({ uris: chunk }),
-          });
-          return { success: true };
-        }, `refilling playlist ${playlistId} (chunk ${i / chunkSize + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
+        await this.executeWithRetry(
+          async () => {
+            await axios({
+              method: i === 0 ? 'put' : 'post', // the first chunk replaces, the rest is added
+              url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              headers,
+              data: JSON.stringify({ uris: chunk }),
+            });
+            return { success: true };
+          },
+          `refilling playlist ${playlistId} (chunk ${i / chunkSize + 1}/${Math.ceil(trackUris.length / chunkSize)})`,
+          3,
+          i === 0 ? undefined : () => this.songsLanded(accessToken, playlistId, i, i + chunk.length)
+        );
       }
 
       if (current.name !== playlistName || description !== undefined) {

@@ -830,6 +830,129 @@ describe('SpotifyApi.createOrUpdatePlaylist', () => {
     expect(res).toMatchObject({ success: false, needsReAuth: true });
     expect(h.axiosGet).not.toHaveBeenCalled();
   });
+
+  describe('when Spotify answers 502 (2026-11-10, featured copies)', () => {
+    const ITEMS_URL = 'https://api.spotify.com/v1/playlists/pl-new/items';
+    const ADD_URL = 'https://api.spotify.com/v1/playlists/pl-new/tracks';
+
+    /** /me, an empty playlist list (or `listed` after the create), and the song count. */
+    function mockGets(totals: number[], listed: any[] = []) {
+      let created = false;
+      h.axiosGet.mockImplementation(async (url: string, config: any) => {
+        if (url === 'https://api.spotify.com/v1/me') return { data: { id: 'user1' } };
+        if (url === 'https://api.spotify.com/v1/me/playlists') {
+          const items = created ? listed : [];
+          created = true;
+          return { data: { items } };
+        }
+        if (url === ITEMS_URL) {
+          expect(config.params).toEqual({ limit: 1, fields: 'total' });
+          if (!totals.length) throw new Error('no more totals');
+          return { data: { total: totals.shift() } };
+        }
+        throw new Error(`unexpected GET ${url}`);
+      });
+    }
+
+    function createdPlaylist() {
+      return { data: { id: 'pl-new', external_urls: { spotify: 'https://open.spotify.com/playlist/pl-new' } } };
+    }
+
+    it('retries a batch that did not land and fills the playlist', async () => {
+      vi.useFakeTimers();
+      mockGets([0]);
+      h.axiosPost
+        .mockResolvedValueOnce(createdPlaylist())
+        .mockRejectedValueOnce(axiosError(502))
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({});
+
+      const promise = makeApi().createOrUpdatePlaylist('My List', trackIds);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const res = await promise;
+
+      expect(res).toMatchObject({ success: true, data: { playlistId: 'pl-new' } });
+      const adds = h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL);
+      expect(adds.map((c) => JSON.parse(c[1]).uris.length)).toEqual([100, 100, 50]);
+      expect(h.axiosDelete).not.toHaveBeenCalled();
+    });
+
+    it('does not add a batch twice when the 502 came after Spotify had added it', async () => {
+      vi.useFakeTimers();
+      mockGets([150]); // the second batch (offset 100, 50 songs) is there
+      h.axiosPost
+        .mockResolvedValueOnce(createdPlaylist())
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(axiosError(502));
+
+      const promise = makeApi().createOrUpdatePlaylist('My List', trackIds);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const res = await promise;
+
+      expect(res).toMatchObject({ success: true, data: { playlistId: 'pl-new' } });
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL)).toHaveLength(2);
+    });
+
+    it('removes the new playlist when its songs cannot be added, and reports the 502', async () => {
+      vi.useFakeTimers();
+      mockGets([0, 0, 0]);
+      h.axiosPost.mockResolvedValueOnce(createdPlaylist()).mockRejectedValue(axiosError(502));
+      h.axiosDelete.mockResolvedValue({});
+
+      const promise = makeApi().createOrUpdatePlaylist('My List', trackIds);
+      await vi.advanceTimersByTimeAsync(20_000);
+      const res = await promise;
+
+      expect(res).toEqual({ success: false, error: 'Spotify API error: 502', needsReAuth: false });
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL)).toHaveLength(3);
+      expect(h.axiosDelete).toHaveBeenCalledTimes(1);
+      expect(h.axiosDelete.mock.calls[0][0]).toBe('https://api.spotify.com/v1/playlists/pl-new/followers');
+    });
+
+    it('gives up without a retry when it cannot tell whether the batch landed', async () => {
+      vi.useFakeTimers();
+      mockGets([]); // the count read fails
+      h.axiosPost.mockResolvedValueOnce(createdPlaylist()).mockRejectedValueOnce(axiosError(502));
+      h.axiosDelete.mockResolvedValue({});
+
+      const promise = makeApi().createOrUpdatePlaylist('My List', trackIds);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const res = await promise;
+
+      expect(res).toMatchObject({ success: false, error: 'Spotify API error: 502' });
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL)).toHaveLength(1);
+      expect(h.axiosDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes the playlist a 502 create made anyway instead of making a second one', async () => {
+      vi.useFakeTimers();
+      mockGets(
+        [],
+        [{ id: 'pl-new', name: 'My List', owner: { id: 'user1' }, external_urls: { spotify: 'https://open.spotify.com/playlist/pl-new' } }]
+      );
+      h.axiosPost.mockRejectedValueOnce(axiosError(502)).mockResolvedValue({});
+
+      const promise = makeApi().createOrUpdatePlaylist('My List', trackIds);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const res = await promise;
+
+      expect(res).toMatchObject({ success: true, data: { playlistId: 'pl-new' } });
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === 'https://api.spotify.com/v1/me/playlists')).toHaveLength(1);
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL)).toHaveLength(2);
+    });
+
+    it('does not retry a 4xx', async () => {
+      mockGets([]);
+      h.axiosPost.mockResolvedValueOnce(createdPlaylist()).mockRejectedValueOnce(axiosError(400));
+      h.axiosDelete.mockResolvedValue({});
+
+      const res = await makeApi().createOrUpdatePlaylist('My List', trackIds);
+
+      expect(res).toMatchObject({ success: false, error: 'Spotify API error: 400 Bad Request' });
+      expect(h.axiosPost.mock.calls.filter((c) => c[0] === ADD_URL)).toHaveLength(1);
+      expect(h.axiosDelete).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('SpotifyApi.createOrUpdatePlaylist with playlistId and description (toolkit)', () => {
