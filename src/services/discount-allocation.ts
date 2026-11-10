@@ -106,33 +106,46 @@ export function digitalGoodsGross(input: {
   gamesFee: number;
   appDesignFee: number;
 }): number {
-  const items = (input.items || []).filter((i) => i?.productType !== 'giftcard');
+  // Only the lines calculateOrder charges (cards and gift cards), each at what
+  // it charged for it (price × amount), so a line charged nothing (amount 0,
+  // an unknown product type) cannot move the goods under the digital
+  // percentage. A gift card counts as goods but never as digital.
+  const charged = (input.items || []).filter(
+    (i) => i?.productType === 'cards' || i?.productType === 'giftcard'
+  );
+  const lineGross = (i: any): number => {
+    const value = Number(i?.price) * Number(i?.amount);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
   const productsGross = Math.max(0, input.productsGross || 0);
   const volumeDiscount = Math.max(0, input.volumeDiscount || 0);
   const gamesFee = Math.max(0, input.gamesFee || 0);
   const appDesignFee = Math.max(0, input.appDesignFee || 0);
   const goods = round2(productsGross + gamesFee + appDesignFee);
 
-  const digital = items.filter((i) => i?.type === 'digital');
+  const cards = charged.filter((i) => i.productType === 'cards');
+  const digital = cards.filter((i) => i.type === 'digital' && lineGross(i) > 0);
   if (digital.length === 0) return 0;
-  const anyPhysical = items.some(isPhysicalItem);
+  const anyPhysical = cards.some((i) => isPhysicalItem(i) && Number(i.amount) > 0);
+  const anyGiftcard = charged.some((i) => i.productType === 'giftcard' && lineGross(i) > 0);
   // The box fee is in the goods too, but only a physical order has one.
-  if (!anyPhysical) return goods;
+  if (!anyPhysical && !anyGiftcard) return goods;
 
-  const raw = (list: any[]) =>
-    list.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.amount) || 1), 0);
-  const allRaw = raw(items);
+  const sum = (list: any[]) => list.reduce((total, i) => total + lineGross(i), 0);
+  const allRaw = sum(charged);
   const itemsGross = productsGross + volumeDiscount;
   const digitalProducts =
-    allRaw > 0 ? Math.max(0, (itemsGross * raw(digital)) / allRaw - volumeDiscount) : 0;
+    allRaw > 0 ? Math.max(0, (itemsGross * sum(digital)) / allRaw - volumeDiscount) : 0;
 
-  const withGames = items.filter((i) => i?.productType === 'cards' && i?.gamesEnabled === true);
+  // calculateOrder charges QRGames per cards line with gamesEnabled
+  const withGames = cards.filter((i) => i.gamesEnabled === true);
   const digitalGames =
     withGames.length > 0
       ? (gamesFee * withGames.filter((i) => i.type === 'digital').length) / withGames.length
       : 0;
+  const digitalAppDesign = anyPhysical ? 0 : appDesignFee;
 
-  return round2(Math.min(goods, digitalProducts + digitalGames));
+  return round2(Math.min(goods, digitalProducts + digitalGames + digitalAppDesign));
 }
 
 /**

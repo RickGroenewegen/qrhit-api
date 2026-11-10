@@ -187,6 +187,48 @@ describe('digitalGoodsGross', () => {
       })
     ).toBe(round2(72 * (26 / 60) - 2));
   });
+
+  // calculateOrder charges price x amount for cards and gift card lines only;
+  // a line it charged nothing for must not count as digital, or a printed
+  // order would get the digital percentage (uncapped on BF2026)
+  it('ignores a digital line with amount 0 that was charged nothing', () => {
+    expect(
+      digitalGoodsGross({
+        items: [physical, { ...digital, price: 10000, amount: 0 }],
+        productsGross: 34,
+        volumeDiscount: 0,
+        gamesFee: 0,
+        appDesignFee: 0,
+      })
+    ).toBe(0);
+  });
+
+  it('ignores a digital line of a product type that is not charged', () => {
+    expect(
+      digitalGoodsGross({
+        items: [physical, { ...digital, productType: 'something', price: 10000 }],
+        productsGross: 34,
+        volumeDiscount: 0,
+        gamesFee: 0,
+        appDesignFee: 0,
+      })
+    ).toBe(0);
+  });
+
+  it('counts a gift card as goods that are not digital', () => {
+    // 13 digital + 50 gift card: only the 13 is digital, App Designer too
+    // since nothing is shipped
+    const giftcard = { type: 'digital', productType: 'giftcard', price: 50, amount: 1 };
+    expect(
+      digitalGoodsGross({
+        items: [digital, giftcard],
+        productsGross: 63,
+        volumeDiscount: 0,
+        gamesFee: 0,
+        appDesignFee: 9,
+      })
+    ).toBe(22);
+  });
 });
 
 describe('percentCodeAmount', () => {
