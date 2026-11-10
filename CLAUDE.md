@@ -1795,7 +1795,29 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
     lines whose fingerprint no longer matches, from the stored tracks (a
     regenerate fetches the playlist again), no mail, no printer. On hold and
     not at the printer only (`rebuildRefusal`). Answers per line `rebuilt`
-    and the file. Tests: test/unit/printer-redo, order-line-design.
+    and the file, plus per set its file and whether it was `made` now.
+    Tests: test/unit/printer-redo, order-line-design.
+- **Sets of a printed line after payment** (`src/orderLineSets.ts`,
+  2026-11-10; the toolkit's `order sets`; first: Esther wanted a second set
+  of "Rock the Dancefloor"). The checkout's + and − on the payment-address
+  step, after payment. `POST /admin/toolkit/order-line/:lineId/sets`
+  (`amount` 1..10, `apply`). A set is a `payment_has_playlist_item` row with
+  its own printer PDF; Print&Bind gets one article per row
+  (`printenbindV2.createOrder`). Up: rows `amount+1..n`, their PDFs made by
+  `Generator.makeMissingSetPdfs` (called from `regenerateStalePrinterPdfs`,
+  so the send and `rebuild-printer-pdfs` make them too; before, a row without
+  a file was skipped and would have gone to Print&Bind as `/public/pdf/null`).
+  Down: rows above the new amount deleted. Price: an added set at today's list
+  price (`PrintEnBind.getOrderType`), a removed one at what was paid per set;
+  the difference onto the line (price, VAT split at `payment.taxRate`,
+  `printApiPrice` scaled) and onto `totalPrice`, `totalPriceWithoutTax`,
+  `productPriceWithoutTax`, `productVATPrice`, `totalVATPrice`, `profit`
+  (ex-VAT, provisional), as `bookUpgradeOnPayment` books an upgrade; the
+  cached invoice PDF is deleted. The customer pays the difference separately
+  (a payment link). Refused (409) unless paid, on printer hold, not at the
+  printer, Print&Bind physical, no gift boxes (their insert is made per set),
+  not a gifted line and not express. Without `apply` it answers before/after
+  of the line and the totals. Tests: test/unit/order-line-sets.
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with

@@ -1977,6 +1977,8 @@ class Generator {
       });
 
       if (!madeQrCodes && stored?.pdfFingerprint && stored.pdfFingerprint === current) {
+        // Up to date, but a set added since (the toolkit's `order sets`) still needs its files
+        await this.makeMissingSetPdfs(payment, playlist);
         continue;
       }
 
@@ -2031,11 +2033,78 @@ class Generator {
         }
       }
 
+      // The loop above only rebuilds files that exist; a set added since gets its own now, in the current design
+      await this.makeMissingSetPdfs(payment, playlist);
+
       await this.prisma.paymentHasPlaylist.update({
         where: { id: playlist.paymentHasPlaylistId },
         data: { pdfFingerprint: current },
       });
     }
+  }
+
+  /**
+   * The printer and digital PDF of every set of a line that has none yet: an item row added after generation,
+   * when the toolkit raised the line's number of sets (`POST /admin/toolkit/order-line/:lineId/sets`,
+   * src/orderLineSets.ts). generate() only makes item rows when a line has none, and the stale rebuild above
+   * skips items without a file, so without this a second set went to Print&Bind as `/public/pdf/null`.
+   * A set whose printer PDF cannot be made throws: the send holds the order rather than print without it.
+   */
+  private async makeMissingSetPdfs(payment: any, playlist: any): Promise<number> {
+    const missing = await this.prisma.paymentHasPlaylistItem.findMany({
+      where: {
+        paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+        OR: [{ filename: null }, { filename: '' }],
+      },
+      orderBy: { index: 'asc' },
+    });
+    if (!missing.length) return 0;
+
+    const qrSubDir = await resolveQrSubDir(payment.qrSubDir, playlist.paymentHasPlaylistId);
+    const printerTemplate = printerTemplateFor(playlist.orderTemplate, playlist.printerType);
+    const digitalTemplate = this.digitalTemplateFor(playlist, payment);
+    const printerType = playlist.printerType || DEFAULT_PRINTER_TYPE;
+
+    for (const item of missing) {
+      this.logger.log(
+        color.yellow.bold(
+          `[${white.bold('printer')}] set ${white.bold(String(item.index))} of playlist ${white.bold(
+            String(playlist.paymentHasPlaylistId)
+          )} (${white.bold(payment.paymentId)}) has no PDF yet, making it`
+        )
+      );
+      const [digital, printer] = await Promise.all([
+        this.pdf.generatePDF(
+          this.linePdfFilename(payment, playlist, 'digital', item.index),
+          playlist,
+          payment,
+          digitalTemplate,
+          qrSubDir,
+          playlist.eco == 1,
+          printerType,
+          item.index
+        ),
+        this.pdf.generatePDF(
+          this.linePdfFilename(payment, playlist, 'printer', item.index),
+          playlist,
+          payment,
+          playlist.subType == 'sheets' ? 'printer_sheets' : printerTemplate,
+          qrSubDir,
+          false,
+          printerType,
+          item.index,
+          playlist.addHowToCard || false
+        ),
+      ]);
+      if (!printer) {
+        throw new Error(`no printer PDF for set ${item.index} of playlist ${playlist.paymentHasPlaylistId}`);
+      }
+      await this.prisma.paymentHasPlaylistItem.update({
+        where: { id: item.id },
+        data: { filename: printer, filenameDigital: digital || null },
+      });
+    }
+    return missing.length;
   }
 
   /**
@@ -2046,7 +2115,15 @@ class Generator {
    */
   public async rebuildStalePrinterPdfs(
     paymentId: string
-  ): Promise<Array<{ lineId: number; name: string; rebuilt: boolean; filename: string | null }>> {
+  ): Promise<
+    Array<{
+      lineId: number;
+      name: string;
+      rebuilt: boolean;
+      filename: string | null;
+      sets: { index: number; filename: string | null; made: boolean }[];
+    }>
+  > {
     const lockKey = `printer:${paymentId}`;
     if (!(await this.cache.acquireLock(lockKey, 900))) {
       throw new Error(`order ${paymentId} is being sent or rebuilt right now: try again in a few minutes`);
@@ -2060,24 +2137,42 @@ class Generator {
       const playlists = (await this.data.getPlaylistsByPaymentId(payment.paymentId)).filter(
         (playlist: any) => playlist.orderType === 'physical' && playlist.printerType === PRINTER_TYPE.PRINTNBIND
       );
+      const lineIds = playlists.map((p: any) => p.paymentHasPlaylistId);
       const before = await this.prisma.paymentHasPlaylist.findMany({
-        where: { id: { in: playlists.map((p: any) => p.paymentHasPlaylistId) } },
+        where: { id: { in: lineIds } },
         select: { id: true, pdfFingerprint: true },
+      });
+      const setsBefore = await this.prisma.paymentHasPlaylistItem.findMany({
+        where: { paymentHasPlaylistId: { in: lineIds } },
+        select: { id: true, filename: true },
       });
       await this.regenerateStalePrinterPdfs(payment, playlists);
       const after = await this.prisma.paymentHasPlaylist.findMany({
-        where: { id: { in: playlists.map((p: any) => p.paymentHasPlaylistId) } },
+        where: { id: { in: lineIds } },
         select: { id: true, pdfFingerprint: true, filename: true },
+      });
+      const setsAfter = await this.prisma.paymentHasPlaylistItem.findMany({
+        where: { paymentHasPlaylistId: { in: lineIds } },
+        orderBy: { index: 'asc' },
+        select: { id: true, paymentHasPlaylistId: true, index: true, filename: true },
       });
       return playlists.map((playlist: any) => {
         const id = playlist.paymentHasPlaylistId;
         const was = before.find((row) => row.id === id)?.pdfFingerprint ?? null;
         const now = after.find((row) => row.id === id);
+        const sets = setsAfter
+          .filter((set) => set.paymentHasPlaylistId === id)
+          .map((set) => ({
+            index: set.index,
+            filename: set.filename,
+            made: !setsBefore.find((old) => old.id === set.id)?.filename && !!set.filename,
+          }));
         return {
           lineId: id,
           name: playlist.name,
-          rebuilt: (now?.pdfFingerprint ?? null) !== was,
+          rebuilt: (now?.pdfFingerprint ?? null) !== was || sets.some((set) => set.made),
           filename: now?.filename ?? null,
+          sets,
         };
       });
     } finally {

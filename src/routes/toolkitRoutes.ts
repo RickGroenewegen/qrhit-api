@@ -21,6 +21,7 @@ import { parseAllowOpenOrders, PlaylistReplaceError, replaceSpotifyPlaylist } fr
 import { LineSwapError, swapLinePlaylist } from '../orderLineSwap';
 import { copyLineDesign, LineDesignError } from '../orderLineDesign';
 import { PrinterRedoError, printerRow, rebuildRefusal, resetPrinterState, rowState } from '../printerRedo';
+import { changeLineSets, LineSetsError } from '../orderLineSets';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
@@ -37,6 +38,9 @@ import { PrinterRedoError, printerRow, rebuildRefusal, resetPrinterState, rowSta
  * - POST /admin/toolkit/order-line/:lineId/swap-playlist  one order line onto another Spotify playlist (src/orderLineSwap.ts)
  * - POST /admin/toolkit/order-line/:lineId/design/:position  copy the front, back or all of another design of the
  *                                                  same line onto this one (src/orderLineDesign.ts); `apply: true` writes
+ * - POST /admin/toolkit/order-line/:lineId/sets  the number of sets of a printed line after payment (src/orderLineSets.ts):
+ *                                                  set rows, line price and order totals; `apply: true` writes and
+ *                                                  makes the new set's PDF; on printer hold only
  * - POST /admin/toolkit/order/:paymentId/printer-reset  after cancelling at Print&Bind: the row says "not at the
  *                                                  printer" again (src/printerRedo.ts); on hold only, names the cancelled order
  * - POST /admin/toolkit/order/:paymentId/rebuild-printer-pdfs  rebuild stale printer PDFs from the stored tracks, no mail
@@ -161,6 +165,20 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
       return { success: true, ...result };
     } catch (error: any) {
       if (error instanceof LineDesignError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
+    }
+  });
+
+  fastify.post('/admin/toolkit/order-line/:lineId/sets', adminOnly, async (request: any, reply: any) => {
+    try {
+      const result = await changeLineSets(
+        Number(request.params.lineId),
+        { amount: Number(request.body?.amount), apply: request.body?.apply === true },
+        (paymentId) => generator.rebuildStalePrinterPdfs(paymentId)
+      );
+      return { success: true, ...result };
+    } catch (error: any) {
+      if (error instanceof LineSetsError) return reply.status(error.status).send({ success: false, error: error.message });
       return fail(reply, error);
     }
   });
