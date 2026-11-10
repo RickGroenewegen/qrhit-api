@@ -19,6 +19,8 @@ import Mail from '../mail';
 import { PRINTER_TYPE } from '../config/constants';
 import { parseAllowOpenOrders, PlaylistReplaceError, replaceSpotifyPlaylist } from '../playlistReplace';
 import { LineSwapError, swapLinePlaylist } from '../orderLineSwap';
+import { copyLineDesign, LineDesignError } from '../orderLineDesign';
+import { PrinterRedoError, printerRow, rebuildRefusal, resetPrinterState, rowState } from '../printerRedo';
 
 /**
  * Routes for Rick's qrsong toolkit (~/Sites/skills/skill-qrsong), a CLI the agent
@@ -32,6 +34,12 @@ import { LineSwapError, swapLinePlaylist } from '../orderLineSwap';
  *                                                  Spotify playlist and load its tracks (src/playlistReplace.ts);
  *                                                  `apply: true` writes, without it only the check;
  *                                                  `allowOpenOrders` (orderIds) lets those open orders through
+ * - POST /admin/toolkit/order-line/:lineId/swap-playlist  one order line onto another Spotify playlist (src/orderLineSwap.ts)
+ * - POST /admin/toolkit/order-line/:lineId/design/:position  copy the front, back or all of another design of the
+ *                                                  same line onto this one (src/orderLineDesign.ts); `apply: true` writes
+ * - POST /admin/toolkit/order/:paymentId/printer-reset  after cancelling at Print&Bind: the row says "not at the
+ *                                                  printer" again (src/printerRedo.ts); on hold only, names the cancelled order
+ * - POST /admin/toolkit/order/:paymentId/rebuild-printer-pdfs  rebuild stale printer PDFs from the stored tracks, no mail
  * - POST /admin/toolkit/tracks                    Spotify metadata for track ids (for a hand-picked match)
  * - POST /admin/toolkit/order                     a Schneiders/Tromp order without Mollie or mails, on printer hold (src/toolkitOrder.ts)
  * - GET  /admin/toolkit/order/:paymentId          order, design, print files and every card's track + year check
@@ -138,6 +146,50 @@ export default async function toolkitRoutes(fastify: FastifyInstance, getAuthHan
       return { success: true, ...result };
     } catch (error: any) {
       if (error instanceof LineSwapError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
+    }
+  });
+
+  fastify.post('/admin/toolkit/order-line/:lineId/design/:position', adminOnly, async (request: any, reply: any) => {
+    try {
+      const result = await copyLineDesign(Number(request.params.lineId), {
+        position: Number(request.params.position),
+        copyFrom: Number(request.body?.copyFrom),
+        side: String(request.body?.side ?? ''),
+        apply: request.body?.apply === true,
+      });
+      return { success: true, ...result };
+    } catch (error: any) {
+      if (error instanceof LineDesignError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
+    }
+  });
+
+  fastify.post('/admin/toolkit/order/:paymentId/printer-reset', adminOnly, async (request: any, reply: any) => {
+    try {
+      const result = await resetPrinterState(
+        String(request.params.paymentId),
+        String(request.body?.cancelledPrintApiOrderId ?? '').trim(),
+        request.body?.apply === true
+      );
+      return { success: true, ...result };
+    } catch (error: any) {
+      if (error instanceof PrinterRedoError) return reply.status(error.status).send({ success: false, error: error.message });
+      return fail(reply, error);
+    }
+  });
+
+  // From the stored tracks and the live design, without a mail and without the printer: the printer pass's own
+  // rebuild (Generator.rebuildStalePrinterPdfs). Only on hold and not at the printer (src/printerRedo.ts).
+  fastify.post('/admin/toolkit/order/:paymentId/rebuild-printer-pdfs', adminOnly, async (request: any, reply: any) => {
+    const paymentId = String(request.params.paymentId);
+    try {
+      const refusal = rebuildRefusal(rowState(await printerRow(paymentId)));
+      if (refusal) return reply.status(409).send({ success: false, error: refusal });
+      const lines = await generator.rebuildStalePrinterPdfs(paymentId);
+      return { success: true, lines };
+    } catch (error: any) {
+      if (error instanceof PrinterRedoError) return reply.status(error.status).send({ success: false, error: error.message });
       return fail(reply, error);
     }
   });

@@ -2038,6 +2038,53 @@ class Generator {
     }
   }
 
+  /**
+   * The same rebuild for the toolkit (`POST /admin/toolkit/order/:paymentId/rebuild-printer-pdfs`,
+   * src/printerRedo.ts): after a design fix on an order on printer hold, so Rick can check the new file before
+   * the order goes. Under the printer lock, so it never runs next to a send of the same order. The caller checks
+   * that the order is on hold and not at the printer.
+   */
+  public async rebuildStalePrinterPdfs(
+    paymentId: string
+  ): Promise<Array<{ lineId: number; name: string; rebuilt: boolean; filename: string | null }>> {
+    const lockKey = `printer:${paymentId}`;
+    if (!(await this.cache.acquireLock(lockKey, 900))) {
+      throw new Error(`order ${paymentId} is being sent or rebuilt right now: try again in a few minutes`);
+    }
+    try {
+      const payment = await this.prisma.payment.findFirst({
+        where: { paymentId },
+        include: { user: { select: { hash: true } } },
+      });
+      if (!payment) throw new Error(`no order ${paymentId}`);
+      const playlists = (await this.data.getPlaylistsByPaymentId(payment.paymentId)).filter(
+        (playlist: any) => playlist.orderType === 'physical' && playlist.printerType === PRINTER_TYPE.PRINTNBIND
+      );
+      const before = await this.prisma.paymentHasPlaylist.findMany({
+        where: { id: { in: playlists.map((p: any) => p.paymentHasPlaylistId) } },
+        select: { id: true, pdfFingerprint: true },
+      });
+      await this.regenerateStalePrinterPdfs(payment, playlists);
+      const after = await this.prisma.paymentHasPlaylist.findMany({
+        where: { id: { in: playlists.map((p: any) => p.paymentHasPlaylistId) } },
+        select: { id: true, pdfFingerprint: true, filename: true },
+      });
+      return playlists.map((playlist: any) => {
+        const id = playlist.paymentHasPlaylistId;
+        const was = before.find((row) => row.id === id)?.pdfFingerprint ?? null;
+        const now = after.find((row) => row.id === id);
+        return {
+          lineId: id,
+          name: playlist.name,
+          rebuilt: (now?.pdfFingerprint ?? null) !== was,
+          filename: now?.filename ?? null,
+        };
+      });
+    } finally {
+      await this.cache.releaseLock(lockKey);
+    }
+  }
+
   public async sendToPrinter(
     paymentId: string,
     clientIp: string,

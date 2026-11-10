@@ -1769,6 +1769,33 @@ admin bearer token. Its routes live in `src/routes/toolkitRoutes.ts`, all
   hold the old list until `qrsong order cards <id> --regenerate`. First: Esther
   Brauhardt, 100009410, her own "Rock the Dancefloor" in place of the featured
   "Dance Dance Dance" she had ordered (test/unit/order-line-swap.test.ts).
+- **Redo an order cancelled at Print&Bind** (`src/printerRedo.ts`,
+  `src/orderLineDesign.ts`, 2026-11-10; the toolkit's `order printer-reset`,
+  `design-copy`, `rebuild-pdfs`). Esther Brauhardt's design change (100009410)
+  landed three minutes before the order went to Print&Bind (1541189) with
+  every tenth card on the default front; Rick cancelled it there and put it on
+  hold, but the row still said "at the printer", so the corrections page
+  answered `orderInProduction` and every toolkit write refused.
+  - `POST /admin/toolkit/order/:paymentId/printer-reset` (`cancelledPrintApiOrderId`,
+    `apply`): `sentToPrinter` off, `printApiOrderId` '', `printApiStatus`
+    `Created`, tracking link and waiting state cleared, in one `updateMany`
+    on the row as read. Refused (409) without printer hold (the hourly pass
+    would place it again at once), for another Print&Bind number than the
+    row's, a shipped order or one not at the printer. Approval, timer and
+    `printApiPrice` stay; lifting the hold sends it as any approved order.
+  - `POST /admin/toolkit/order-line/:lineId/design/:position` (`copyFrom`,
+    `side` front|back|both, `apply`): one side of another design of the
+    same line over this one (1 = the line, 2..N = `payment_has_playlist_designs`),
+    sanitised as the designer saves, answering the columns that change.
+    `FRONT_COLUMNS` / `BACK_COLUMNS` follow `views/pdf_printer.ejs`. Refused
+    while the order is at the printer, like the corrections page.
+  - `POST /admin/toolkit/order/:paymentId/rebuild-printer-pdfs`:
+    `Generator.rebuildStalePrinterPdfs`, the printer pass's own rebuild
+    (`regenerateStalePrinterPdfs`) under the `printer:<paymentId>` lock: only
+    lines whose fingerprint no longer matches, from the stored tracks (a
+    regenerate fetches the playlist again), no mail, no printer. On hold and
+    not at the printer only (`rebuildRefusal`). Answers per line `rebuilt`
+    and the file. Tests: test/unit/printer-redo, order-line-design.
 - `POST /admin/toolkit/order` (`src/toolkitOrder.ts`) writes a Schneiders or
   Tromp order directly, like the reseller API: status `paid`, totals 0, no
   Mollie, no invoice, no mail, `marketingEmails` off, generation with
