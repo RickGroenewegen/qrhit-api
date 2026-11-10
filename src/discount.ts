@@ -6,7 +6,9 @@ import PrismaInstance from './prisma';
 import {
   DiscountBase,
   buildDiscountBase,
+  percentCodeAmount,
   round2,
+  splitPercentsApplied,
 } from './services/discount-allocation';
 import { DIGITAL_CARDS_BASE_PRICE } from './config/constants';
 
@@ -38,9 +40,25 @@ export interface EvaluatedDiscount {
   code: string;
   discountCodeId: number;
   kind: DiscountKind;
+  /**
+   * The percentage this order gets. For a code with its own digital
+   * percentage: the digital one for an all-digital order, the physical one
+   * for an order without digital playlists, null for a mixed order (then see
+   * the two below).
+   */
   percent: number | null;
+  /** A code with its own digital percentage: digital and physical; else null. */
+  percentDigital: number | null;
+  percentPhysical: number | null;
+  /** The whole discount's maximum; for a split code the physical part's. */
   maxDiscountAmount: number | null;
-  /** Shown on the invoice and in the checkout: "SUMMER10 (10%)" or the code. */
+  /** A split code: the digital part's maximum (null = none). */
+  maxDiscountAmountDigital: number | null;
+  /**
+   * Shown on the invoice and in the checkout: "SUMMER10 (10%)" or the code;
+   * a mixed order on a code with its own digital percentage "BF2026 (50% / 10%)",
+   * digital first.
+   */
   label: string;
   /** EUR applied to this order. */
   amount: number;
@@ -101,6 +119,8 @@ interface ParsedCodeData {
   type: DiscountKind;
   amount: number;
   percent: number | null;
+  percentDigital: number | null;
+  maxDiscountAmountDigital: number | null;
   maxDiscountAmount: number | null;
   maxUses: number | null;
   oncePerCustomer: boolean;
@@ -116,6 +136,10 @@ interface CodeParams {
   amount?: number;
   type?: string;
   percent?: number | string | null;
+  /** Empty or missing: `percent` applies to digital too. */
+  percentDigital?: number | string | null;
+  /** With `percentDigital`: the digital part's maximum; empty = none. */
+  maxDiscountAmountDigital?: number | string | null;
   maxDiscountAmount?: number | string | null;
   maxUses?: number | string | null;
   oncePerCustomer?: boolean | number | string;
@@ -224,6 +248,8 @@ class Discount {
 
     let amount = 0;
     let percent: number | null = null;
+    let percentDigital: number | null = null;
+    let maxDiscountAmountDigital: number | null = null;
     let maxDiscountAmount: number | null = null;
 
     if (kind === 'percent') {
@@ -232,6 +258,28 @@ class Discount {
         return { error: 'Invalid percentage' };
       }
       percent = round2(p);
+      if (
+        params.percentDigital !== undefined &&
+        params.percentDigital !== null &&
+        String(params.percentDigital) !== ''
+      ) {
+        const pd = Number(params.percentDigital);
+        if (isNaN(pd) || pd <= 0 || pd > 100) {
+          return { error: 'Invalid digital percentage' };
+        }
+        percentDigital = round2(pd);
+        if (
+          params.maxDiscountAmountDigital !== undefined &&
+          params.maxDiscountAmountDigital !== null &&
+          String(params.maxDiscountAmountDigital) !== ''
+        ) {
+          const capDigital = Number(params.maxDiscountAmountDigital);
+          if (isNaN(capDigital) || capDigital <= 0) {
+            return { error: 'Invalid maximum digital discount' };
+          }
+          maxDiscountAmountDigital = round2(capDigital);
+        }
+      }
       if (
         params.maxDiscountAmount !== undefined &&
         params.maxDiscountAmount !== null &&
@@ -272,6 +320,8 @@ class Discount {
         type: kind,
         amount,
         percent,
+        percentDigital,
+        maxDiscountAmountDigital,
         maxDiscountAmount,
         maxUses,
         oncePerCustomer: toBool(params.oncePerCustomer),
@@ -932,8 +982,39 @@ class Discount {
     return out;
   }
 
-  private labelFor(d: any): string {
-    return d.type === 'percent' ? `${d.code} (${d.percent}%)` : d.code;
+  /**
+   * "SUMMER10 (10%)" or the code. A code with its own digital percentage
+   * names the percentage the order gets, or both (digital first) for a mixed
+   * order or when there is no order to look at. invoice-lines.ts reads this
+   * back (`splitCodes`).
+   */
+  private labelFor(d: any, applied?: { digital: number | null; physical: number | null } | null): string {
+    if (d.type !== 'percent') return d.code;
+    if (d.percentDigital === null || d.percentDigital === undefined) {
+      return `${d.code} (${d.percent}%)`;
+    }
+    const digital = applied ? applied.digital : d.percentDigital;
+    const physical = applied ? applied.physical : d.percent;
+    if (digital !== null && physical !== null) {
+      return `${d.code} (${digital}% / ${physical}%)`;
+    }
+    return `${d.code} (${digital ?? physical}%)`;
+  }
+
+  /** The percentages (and digital maximum) of a code with its own digital percentage, else nulls. */
+  private splitOf(d: any): {
+    percentDigital: number | null;
+    percentPhysical: number | null;
+    maxDiscountAmountDigital: number | null;
+  } {
+    if (d.type !== 'percent' || d.percentDigital === null || d.percentDigital === undefined) {
+      return { percentDigital: null, percentPhysical: null, maxDiscountAmountDigital: null };
+    }
+    return {
+      percentDigital: d.percentDigital,
+      percentPhysical: d.percent,
+      maxDiscountAmountDigital: d.maxDiscountAmountDigital ?? null,
+    };
   }
 
   private emptyEvaluation(total: number): DiscountEvaluation {
@@ -1120,18 +1201,20 @@ class Discount {
       }
 
       if (d.type === 'percent') {
-        let amount = round2((percentBase * (d.percent || 0)) / 100);
-        if (d.maxDiscountAmount) {
-          amount = Math.min(amount, d.maxDiscountAmount);
-        }
+        // Its maximum (or a split code's two) is applied inside
+        let amount = percentCodeAmount(d, percentBase, base.digitalGoodsGross);
         amount = round2(Math.min(amount, remaining));
+        // A mixed order on a split code has no single percentage
+        const split = splitPercentsApplied(d, percentBase, base.digitalGoodsGross);
+        const mixed = !!split && split.digital !== null && split.physical !== null;
         applied.push({
           code: d.code,
           discountCodeId: d.id,
           kind: 'percent',
-          percent: d.percent,
+          percent: !split ? d.percent : mixed ? null : (split.digital ?? split.physical),
+          ...this.splitOf(d),
           maxDiscountAmount: d.maxDiscountAmount ?? null,
-          label: this.labelFor(d),
+          label: this.labelFor(d, split),
           amount,
           fullAmount: null,
           amountLeft: null,
@@ -1160,7 +1243,10 @@ class Discount {
         discountCodeId: d.id,
         kind: 'fixed',
         percent: null,
+        percentDigital: null,
+        percentPhysical: null,
         maxDiscountAmount: null,
+        maxDiscountAmountDigital: null,
         label: this.labelFor(d),
         amount: usable,
         fullAmount: d.amount,
@@ -1227,7 +1313,7 @@ class Discount {
         email: opts.email || undefined,
       });
       if (calc?.success && calc.data) {
-        return buildDiscountBase(calc.data);
+        return buildDiscountBase(calc.data, cart.items || []);
       }
     } catch (e) {
       // fall through
@@ -1238,15 +1324,7 @@ class Discount {
         0
       )
     );
-    return {
-      productsGross: total,
-      addonsGross: 0,
-      volumeDiscount: 0,
-      shippingGross: 0,
-      total,
-      taxRate: 0,
-      taxRateShipping: 0,
-    };
+    return buildDiscountBase({ total }, cart.items || []);
   }
 
   private describeApplied(a: EvaluatedDiscount) {
@@ -1254,7 +1332,10 @@ class Discount {
       code: a.code,
       kind: a.kind,
       percent: a.percent,
+      percentDigital: a.percentDigital,
+      percentPhysical: a.percentPhysical,
       maxDiscountAmount: a.maxDiscountAmount,
+      maxDiscountAmountDigital: a.maxDiscountAmountDigital,
       label: a.label,
       amount: a.amount,
       fullAmount: a.fullAmount ?? 0,
@@ -1400,10 +1481,13 @@ class Discount {
         if (discount.maxUses !== null && usage.useCount >= discount.maxUses) {
           return { success: false, message: 'discountCodeMaxUsesReached' };
         }
+        // Without a cart a split code answers with its physical percentage
+        // and both of its own; checkout asks again with the cart.
         return {
           success: true,
           kind: 'percent',
           percent: discount.percent,
+          ...this.splitOf(discount),
           maxDiscountAmount: discount.maxDiscountAmount,
           label: this.labelFor(discount),
           amount: 0,
@@ -1500,7 +1584,7 @@ class Discount {
     percent: number | null;
     label: string;
   }> {
-    const base = buildDiscountBase(calc);
+    const base = buildDiscountBase(calc, cart?.items || []);
     const ev = await this.evaluateDiscounts(cart, base, { email }, 'redeem');
     if (!ev.ok) {
       const first = ev.failed[0];

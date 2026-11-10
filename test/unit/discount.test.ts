@@ -225,6 +225,167 @@ describe('Discount.createAdminDiscountCode', () => {
 // deleteDiscountCode
 // ──────────────────────────────────────────────
 
+describe('Discount.createAdminDiscountCode with a digital percentage', () => {
+  it('stores no digital percentage unless one is given, so a code works as before', async () => {
+    const svc = makeSvc();
+    await svc.createAdminDiscountCode({ type: 'percent', percent: 10, code: 'TEN' });
+    await svc.createAdminDiscountCode({ type: 'percent', percent: 10, percentDigital: '', code: 'TEN2' });
+    expect(prismaMock.discountCode.create.mock.calls[0][0].data.percentDigital).toBeNull();
+    expect(prismaMock.discountCode.create.mock.calls[1][0].data.percentDigital).toBeNull();
+  });
+
+  it('stores the digital percentage next to the physical one', async () => {
+    const svc = makeSvc();
+    const res = await svc.createAdminDiscountCode({
+      type: 'percent',
+      percent: 10,
+      percentDigital: '50',
+      code: 'bf2026',
+    });
+    expect(res).toEqual({ success: true, code: 'BF2026' });
+    const data = prismaMock.discountCode.create.mock.calls[0][0].data;
+    expect(data.percent).toBe(10);
+    expect(data.percentDigital).toBe(50);
+  });
+
+  it('stores a maximum for the digital part only next to a digital percentage', async () => {
+    const svc = makeSvc();
+    await svc.createAdminDiscountCode({
+      type: 'percent', percent: 10, maxDiscountAmount: 10, percentDigital: 50, maxDiscountAmountDigital: '25', code: 'A',
+    });
+    await svc.createAdminDiscountCode({ type: 'percent', percent: 10, maxDiscountAmountDigital: 25, code: 'B' });
+    const [a, b] = prismaMock.discountCode.create.mock.calls.map((c: any) => c[0].data);
+    expect([a.maxDiscountAmount, a.maxDiscountAmountDigital]).toEqual([10, 25]);
+    expect(b.maxDiscountAmountDigital).toBeNull();
+    const bad = await svc.createAdminDiscountCode({
+      type: 'percent', percent: 10, percentDigital: 50, maxDiscountAmountDigital: -1,
+    });
+    expect(bad).toEqual({ success: false, error: 'Invalid maximum digital discount' });
+  });
+
+  it('refuses a digital percentage outside 0-100', async () => {
+    const svc = makeSvc();
+    for (const percentDigital of [0, -5, 101, 'abc']) {
+      const res = await svc.createAdminDiscountCode({ type: 'percent', percent: 10, percentDigital });
+      expect(res).toEqual({ success: false, error: 'Invalid digital percentage' });
+    }
+  });
+
+  it('never gives a fixed voucher a digital percentage', async () => {
+    const svc = makeSvc();
+    await svc.createAdminDiscountCode({ amount: 25, percentDigital: 50, code: 'VOUCHER' });
+    expect(prismaMock.discountCode.create.mock.calls[0][0].data.percentDigital).toBeNull();
+  });
+});
+
+describe('Discount.checkDiscount without a cart, on a split code', () => {
+  it('answers both percentages and names them in the label', async () => {
+    discountCodeStore.set('BF2026', {
+      id: 7,
+      code: 'BF2026',
+      type: 'percent',
+      percent: 10,
+      percentDigital: 50,
+      maxDiscountAmount: null,
+      maxUses: null,
+      amount: 0,
+      digital: false,
+      startDate: null,
+      endDate: null,
+    });
+    const svc = makeSvc();
+    const res = await svc.checkDiscount('bf2026', 'token', true);
+    expect(res).toMatchObject({
+      success: true,
+      kind: 'percent',
+      percent: 10,
+      percentDigital: 50,
+      percentPhysical: 10,
+      label: 'BF2026 (50% / 10%)',
+    });
+  });
+});
+
+describe('Discount.evaluateDiscounts on a split code (BF2026: 50% digital, 10% printed)', () => {
+  const digital = { type: 'digital', productType: 'cards', price: 13, amount: 1 };
+  const physical = { type: 'physical', productType: 'cards', price: 34, amount: 1 };
+
+  async function evaluate(items: any[], productsGross: number, extra: any = {}) {
+    const { buildDiscountBase } = await import('../../src/services/discount-allocation');
+    const base = buildDiscountBase({ total: productsGross + (extra.shipping || 0), ...extra }, items);
+    return makeSvc().evaluateDiscounts({ items, discounts: [{ code: 'BF2026' }] }, base, {}, 'check');
+  }
+
+  beforeEach(() => {
+    discountCodeStore.set('BF2026', {
+      id: 7,
+      code: 'BF2026',
+      type: 'percent',
+      percent: 10,
+      percentDigital: 50,
+      maxDiscountAmount: null,
+      maxUses: null,
+      oncePerCustomer: false,
+      amount: 0,
+      general: false,
+      digital: false,
+      playlistId: null,
+      startDate: null,
+      endDate: null,
+    });
+  });
+
+  it('takes 50% off a digital order', async () => {
+    const ev = await evaluate([digital], 13);
+    expect(ev.applied[0]).toMatchObject({ amount: 6.5, percent: 50, label: 'BF2026 (50%)' });
+  });
+
+  it('takes 10% off a printed order and never touches shipping', async () => {
+    const ev = await evaluate([physical], 34, { shipping: 2.99 });
+    expect(ev.applied[0]).toMatchObject({ amount: 3.4, percent: 10, label: 'BF2026 (10%)' });
+  });
+
+  it('takes each off its own playlist in a mixed order', async () => {
+    const ev = await evaluate([digital, physical], 47);
+    expect(ev.applied[0]).toMatchObject({
+      amount: 9.9,
+      percent: null,
+      percentDigital: 50,
+      percentPhysical: 10,
+      label: 'BF2026 (50% / 10%)',
+    });
+  });
+
+  it('gives each part its own maximum: none on digital, €10 on printed', async () => {
+    discountCodeStore.set('BF2026', {
+      ...discountCodeStore.get('BF2026'),
+      maxDiscountAmount: 10,
+      maxDiscountAmountDigital: null,
+    });
+    const bigPrinted = { ...physical, price: 150 };
+    const twoDigital = [digital, { ...digital, playlistId: 'b' }];
+    expect((await evaluate(twoDigital, 26)).applied[0].amount).toBe(13);
+    expect((await evaluate([bigPrinted], 150)).applied[0].amount).toBe(10);
+    expect((await evaluate([...twoDigital, bigPrinted], 176)).applied[0]).toMatchObject({
+      amount: 23,
+      maxDiscountAmount: 10,
+      maxDiscountAmountDigital: null,
+    });
+  });
+
+  it('leaves a code without a digital percentage exactly as it was', async () => {
+    discountCodeStore.set('BF2026', { ...discountCodeStore.get('BF2026'), percentDigital: null });
+    const ev = await evaluate([digital, physical], 47);
+    expect(ev.applied[0]).toMatchObject({
+      amount: 4.7,
+      percent: 10,
+      percentDigital: null,
+      percentPhysical: null,
+      label: 'BF2026 (10%)',
+    });
+  });
+});
+
 describe('Discount.deleteDiscountCode', () => {
   it('deletes an existing code', async () => {
     discountCodeStore.set('DEL01', { id: 10, code: 'DEL01' });

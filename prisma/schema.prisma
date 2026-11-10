@@ -50,7 +50,15 @@ model DiscountCode {
   // are maxUses / oncePerCustomer / maxDiscountAmount.
   type              String              @default("fixed")
   percent           Float?
-  maxDiscountAmount Float?
+  // A percent code may take a different percentage off digital playlists:
+  // then `percent` and `maxDiscountAmount` are for printed cards and sheets
+  // (and the gift box), these two for digital (percentCodeAmount in
+  // discount-allocation.ts; no maximum when null). percentDigital null, as on
+  // every code made before it existed: `percent` off everything, capped by
+  // `maxDiscountAmount` as a whole.
+  percentDigital           Float?
+  maxDiscountAmountDigital Float?
+  maxDiscountAmount        Float?
   maxUses           Int?
   oncePerCustomer   Boolean             @default(false)
   createdAt         DateTime            @default(now())

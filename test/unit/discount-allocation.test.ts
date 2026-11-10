@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   allocateDiscount,
   buildDiscountBase,
+  digitalGoodsGross,
   goodsVatAfterDiscount,
+  percentCodeAmount,
+  splitPercentsApplied,
   round2,
   exVat,
 } from '../../src/services/discount-allocation';
@@ -119,5 +122,130 @@ describe('rounding helpers', () => {
     expect(round2(2.675)).toBe(2.68);
     expect(exVat(25, 21)).toBe(20.66);
     expect(exVat(10, 0)).toBe(10);
+  });
+});
+
+/**
+ * A percent code with its own digital percentage (`percentDigital`), e.g.
+ * BF2026: 50% off digital, 10% off printed cards and sheets.
+ */
+describe('digitalGoodsGross', () => {
+  const digital = { type: 'digital', productType: 'cards', price: 13, amount: 1 };
+  const physical = { type: 'physical', productType: 'cards', price: 34, amount: 1 };
+  const sheets = { type: 'sheets', productType: 'cards', price: 20, amount: 1 };
+
+  it('is the whole goods for an all-digital order, App Designer and QRGames included', () => {
+    expect(
+      digitalGoodsGross({
+        items: [{ ...digital, gamesEnabled: true }],
+        productsGross: 13,
+        volumeDiscount: 0,
+        gamesFee: 3,
+        appDesignFee: 9,
+      })
+    ).toBe(25);
+  });
+
+  it('is 0 without a digital playlist (cards and sheets are physical)', () => {
+    expect(
+      digitalGoodsGross({
+        items: [physical, sheets],
+        productsGross: 54,
+        volumeDiscount: 0,
+        gamesFee: 0,
+        appDesignFee: 9,
+      })
+    ).toBe(0);
+  });
+
+  it('takes a digital playlist\'s own share in a mixed order, with its QRGames', () => {
+    // 13 + 34 products, QRGames on both (2 x 3), App Designer goes with the
+    // physical order
+    expect(
+      digitalGoodsGross({
+        items: [
+          { ...digital, gamesEnabled: true },
+          { ...physical, gamesEnabled: true },
+        ],
+        productsGross: 47,
+        volumeDiscount: 0,
+        gamesFee: 6,
+        appDesignFee: 9,
+      })
+    ).toBe(16);
+  });
+
+  it('keeps fast track proportional and the volume discount on digital', () => {
+    // Fast track: (13 + 13 + 34) x 1.2 = 72, volume discount 2 on the digital pair
+    expect(
+      digitalGoodsGross({
+        items: [digital, digital, physical],
+        productsGross: 70,
+        volumeDiscount: 2,
+        gamesFee: 0,
+        appDesignFee: 0,
+      })
+    ).toBe(round2(72 * (26 / 60) - 2));
+  });
+});
+
+describe('percentCodeAmount', () => {
+  it('takes `percent` off everything for a code without a digital percentage, as before', () => {
+    expect(percentCodeAmount({ percent: 10 }, 47, 13)).toBe(4.7);
+    expect(percentCodeAmount({ percent: 10, percentDigital: null }, 47, undefined)).toBe(4.7);
+  });
+
+  it('takes each percentage off its own share', () => {
+    const bf = { percent: 10, percentDigital: 50 };
+    expect(percentCodeAmount(bf, 13, 13)).toBe(6.5); // all digital
+    expect(percentCodeAmount(bf, 34, 0)).toBe(3.4); // all physical
+    expect(percentCodeAmount(bf, 47, 13)).toBe(round2(6.5 + 3.4)); // mixed
+  });
+
+  it('caps a code without a digital percentage as a whole, as before', () => {
+    expect(percentCodeAmount({ percent: 50, maxDiscountAmount: 5 }, 25, 25)).toBe(5);
+  });
+
+  it('caps each part of a split code with its own maximum, none when empty', () => {
+    // BF2026: 50% digital without a maximum, 10% printed at most €10
+    const bf = { percent: 10, maxDiscountAmount: 10, percentDigital: 50, maxDiscountAmountDigital: null };
+    expect(percentCodeAmount(bf, 26, 26)).toBe(13); // two digital playlists: no maximum
+    expect(percentCodeAmount(bf, 150, 0)).toBe(10); // printed: capped at 10
+    expect(percentCodeAmount(bf, 176, 26)).toBe(23); // 13 + 10
+    expect(percentCodeAmount({ ...bf, maxDiscountAmountDigital: 8 }, 26, 26)).toBe(8);
+  });
+
+  it('treats a missing digital share as physical and never exceeds the goods', () => {
+    const bf = { percent: 10, percentDigital: 50 };
+    expect(percentCodeAmount(bf, 34, undefined)).toBe(3.4);
+    expect(percentCodeAmount(bf, 10, 99)).toBe(5);
+  });
+});
+
+describe('splitPercentsApplied', () => {
+  const bf = { percent: 10, percentDigital: 50 };
+
+  it('is null for a code without a digital percentage', () => {
+    expect(splitPercentsApplied({ percent: 10 }, 47, 13)).toBeNull();
+  });
+
+  it('names the percentages the order gets', () => {
+    expect(splitPercentsApplied(bf, 13, 13)).toEqual({ digital: 50, physical: null });
+    expect(splitPercentsApplied(bf, 34, 0)).toEqual({ digital: null, physical: 10 });
+    expect(splitPercentsApplied(bf, 47, 13)).toEqual({ digital: 50, physical: 10 });
+    expect(splitPercentsApplied(bf, 0, 0)).toEqual({ digital: null, physical: 10 });
+  });
+});
+
+describe('buildDiscountBase with the cart', () => {
+  it('adds the digital share only when the items are passed', () => {
+    const calc = { total: 47, shipping: 0, gamesFee: 0, taxRate: 21 };
+    expect(buildDiscountBase(calc).digitalGoodsGross).toBeUndefined();
+    expect(
+      buildDiscountBase(calc, [
+        { type: 'digital', productType: 'cards', price: 13, amount: 1 },
+        { type: 'physical', productType: 'cards', price: 34, amount: 1 },
+      ]).digitalGoodsGross
+    ).toBe(13);
   });
 });

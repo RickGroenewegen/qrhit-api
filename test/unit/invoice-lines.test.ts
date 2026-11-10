@@ -19,6 +19,7 @@ const t = makeTranslator({
   volumeDiscount: 'Volume discount',
   discountPercentLine: 'Discount {{code}} ({{percent}}%)',
   discountCodeLine: 'Discount code {{code}}',
+  discount: 'Discount',
 });
 
 const sum = (lines: any[], key: string) =>
@@ -190,5 +191,29 @@ describe('buildInvoiceLines', () => {
     );
     expect(lines.map((l) => l.kind)).toEqual(['product']);
     expect(lines[0].description).toBe('Gift card');
+  });
+
+  it('names both percentages of a split code on a mixed order, and one on the others', () => {
+    // BF2026: 50% off digital, 10% off printed. €13 digital + €34 printed =
+    // 6.50 + 3.40 off; the order gets no single percentage.
+    const mixed = {
+      ...workedExample,
+      discount: 9.9,
+      discountPercent: null,
+      discountPercentAmount: 9.9,
+      discountCodes: 'BF2026 (50% / 10%)',
+    };
+    const { lines } = buildInvoiceLines(mixed, playlists, 'physical', t);
+    const percentLines = lines.filter((l) => l.kind === 'discountPercent');
+    expect(percentLines.map((l) => [l.description, l.totalIncl])).toEqual([
+      ['Discount BF2026 (50% / 10%)', -9.9],
+    ]);
+    expect(lines.some((l) => l.kind === 'discountCode')).toBe(false);
+
+    const digitalOnly = { ...mixed, discountPercent: 50, discountCodes: 'BF2026 (50%), GIFT-AB12' };
+    const { lines: digitalLines } = buildInvoiceLines(digitalOnly, playlists, 'digital', t);
+    expect(digitalLines.find((l) => l.kind === 'discountPercent')?.description).toBe(
+      'Discount BF2026 (50%)'
+    );
   });
 });

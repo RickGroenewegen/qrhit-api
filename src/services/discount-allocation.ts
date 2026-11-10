@@ -29,14 +29,21 @@ export interface DiscountBase {
   total: number;
   taxRate: number;
   taxRateShipping: number;
+  /**
+   * The digital share of the goods (products + add-ons) incl. VAT, for a
+   * percent code with its own digital percentage (`percentDigital`). Only
+   * set when the cart's items were passed; see `digitalGoodsGross`.
+   */
+  digitalGoodsGross?: number;
 }
 
 /**
  * Derive the discount base from a `calculateOrder()` result. `total` already
  * has shipping, add-ons and the volume discount folded in, so the product
- * share is what is left after taking the known parts back out.
+ * share is what is left after taking the known parts back out. With the
+ * cart's items the digital share of the goods comes along.
  */
-export function buildDiscountBase(calc: any): DiscountBase {
+export function buildDiscountBase(calc: any, items?: any[]): DiscountBase {
   const total = Number(calc?.total) || 0;
   // calculateOrder returns the shipping cost as both `shipping` and `payment`.
   const shippingGross = Number(calc?.shipping ?? calc?.payment) || 0;
@@ -47,14 +54,134 @@ export function buildDiscountBase(calc: any): DiscountBase {
   const productsGross = round2(
     Math.max(0, total - shippingGross - addonsGross)
   );
-  return {
+  const volumeDiscount = Number(calc?.volumeDiscount) || 0;
+  const base: DiscountBase = {
     productsGross,
     addonsGross,
-    volumeDiscount: Number(calc?.volumeDiscount) || 0,
+    volumeDiscount,
     shippingGross,
     total,
     taxRate: Number(calc?.taxRate) || 0,
     taxRateShipping: Number(calc?.taxRateShipping) || 0,
+  };
+  if (Array.isArray(items)) {
+    base.digitalGoodsGross = digitalGoodsGross({
+      items,
+      productsGross,
+      volumeDiscount,
+      gamesFee,
+      appDesignFee,
+    });
+  }
+  return base;
+}
+
+/** Shipped to the customer: printed cards and sheets. */
+function isPhysicalItem(item: any): boolean {
+  return item?.type === 'physical' || item?.type === 'sheets';
+}
+
+/**
+ * What part of the goods (products + add-ons, incl. VAT) is digital, so a
+ * percent code can take a different percentage off digital and physical
+ * (`percentDigital` on the code). The website's mirror is
+ * `digitalGoodsGross` in qrhit's `shared/discount-math.util.ts`; change both.
+ *
+ * - A digital playlist's share of the products, from the items' own prices
+ *   (fast track raises them all alike), less the volume discount, which only
+ *   digital playlists get.
+ * - QRGames follows its playlist (`gamesEnabled === true`, the rule
+ *   calculateOrder charges by).
+ * - The gift box is physical only, so never digital.
+ * - App Designer is one per order: digital when nothing in the order is
+ *   shipped, otherwise it goes with the physical order.
+ *
+ * A cart that is all digital gives the whole goods, one with nothing digital
+ * gives 0, so the split only ever rounds in a mixed cart.
+ */
+export function digitalGoodsGross(input: {
+  items: any[];
+  productsGross: number;
+  volumeDiscount: number;
+  gamesFee: number;
+  appDesignFee: number;
+}): number {
+  const items = (input.items || []).filter((i) => i?.productType !== 'giftcard');
+  const productsGross = Math.max(0, input.productsGross || 0);
+  const volumeDiscount = Math.max(0, input.volumeDiscount || 0);
+  const gamesFee = Math.max(0, input.gamesFee || 0);
+  const appDesignFee = Math.max(0, input.appDesignFee || 0);
+  const goods = round2(productsGross + gamesFee + appDesignFee);
+
+  const digital = items.filter((i) => i?.type === 'digital');
+  if (digital.length === 0) return 0;
+  const anyPhysical = items.some(isPhysicalItem);
+  // The box fee is in the goods too, but only a physical order has one.
+  if (!anyPhysical) return goods;
+
+  const raw = (list: any[]) =>
+    list.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.amount) || 1), 0);
+  const allRaw = raw(items);
+  const itemsGross = productsGross + volumeDiscount;
+  const digitalProducts =
+    allRaw > 0 ? Math.max(0, (itemsGross * raw(digital)) / allRaw - volumeDiscount) : 0;
+
+  const withGames = items.filter((i) => i?.productType === 'cards' && i?.gamesEnabled === true);
+  const digitalGames =
+    withGames.length > 0
+      ? (gamesFee * withGames.filter((i) => i.type === 'digital').length) / withGames.length
+      : 0;
+
+  return round2(Math.min(goods, digitalProducts + digitalGames));
+}
+
+/**
+ * EUR a percent code takes off the goods (`percentBase`: products + add-ons
+ * incl. VAT), its maximum applied. A code without `percentDigital` takes
+ * `percent` off everything and caps the whole at `maxDiscountAmount`, exactly
+ * as before those columns existed. With it, the digital share
+ * (`base.digitalGoodsGross`) gets `percentDigital` capped at
+ * `maxDiscountAmountDigital`, and the rest (printed cards and sheets, the gift
+ * box) gets `percent` capped at `maxDiscountAmount`; no maximum when null.
+ */
+export function percentCodeAmount(
+  code: {
+    percent: number | null;
+    maxDiscountAmount?: number | null;
+    percentDigital?: number | null;
+    maxDiscountAmountDigital?: number | null;
+  },
+  percentBase: number,
+  digitalGoods: number | undefined
+): number {
+  const capped = (amount: number, max: number | null | undefined) =>
+    max ? Math.min(amount, max) : amount;
+  if (code.percentDigital === null || code.percentDigital === undefined) {
+    return capped(round2((percentBase * (code.percent || 0)) / 100), code.maxDiscountAmount);
+  }
+  const digital = Math.min(Math.max(0, digitalGoods || 0), percentBase);
+  const physical = Math.max(0, percentBase - digital);
+  return round2(
+    capped(round2((digital * code.percentDigital) / 100), code.maxDiscountAmountDigital) +
+      capped(round2((physical * (code.percent || 0)) / 100), code.maxDiscountAmount)
+  );
+}
+
+/**
+ * Which percentages of a split code an order gets: only the digital one, only
+ * the physical one, or both (a mixed cart). Null for a code without a split.
+ */
+export function splitPercentsApplied(
+  code: { percent: number | null; percentDigital?: number | null },
+  percentBase: number,
+  digitalGoods: number | undefined
+): { digital: number | null; physical: number | null } | null {
+  if (code.percentDigital === null || code.percentDigital === undefined) return null;
+  const digital = Math.min(Math.max(0, digitalGoods || 0), percentBase);
+  const physical = Math.max(0, percentBase - digital);
+  return {
+    digital: digital > 0 ? code.percentDigital : null,
+    physical: physical > 0 || digital <= 0 ? code.percent : null,
   };
 }
 

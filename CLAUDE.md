@@ -2562,6 +2562,33 @@ Two things `channable.ts` deliberately does NOT do:
   same way, for the day the direct push comes back. **When `merchantcenter.ts`
   is retired, a playlist without a product photo loses its fallback image.**
 
+## Discount codes: one percentage for digital, another for printed
+
+A percent code can take a different percentage off digital playlists (built
+2026-11-10 for BF2026: 50% digital without a maximum, 10% printed at most
+€10). Admin: Discounts, "Different percentage for digital".
+
+- **Columns** on `discount_codes`: `percentDigital` and
+  `maxDiscountAmountDigital`. With `percentDigital` set, `percent` and
+  `maxDiscountAmount` are the printed part's (cards, sheets, the gift box);
+  null on every code made before, which then works exactly as it did:
+  `percent` off everything, the whole capped at `maxDiscountAmount`.
+- **The split** is `digitalGoodsGross` in `src/services/discount-allocation.ts`:
+  a digital playlist's share of the products by the items' own prices, less
+  the volume discount (digital only); QRGames with its playlist; the box
+  never; App Designer only when nothing is shipped. `percentCodeAmount` takes
+  each percentage off its own part, each part capped by its own maximum.
+  The website mirrors both in `shared/discount-math.util.ts` (header cart,
+  checkout): change them together.
+- **Label and invoice.** A mixed order has no single percentage:
+  `payments.discountPercent` is null and the label reads `BF2026 (50% / 10%)`
+  (`labelFor`); an order of one kind gets that kind's percentage, as before.
+  `splitCodes` in `invoice-lines.ts` reads both shapes, so the invoice line is
+  "Discount BF2026 (50% / 10%)". The checkout shows
+  `address.percentOffSplit` / `cart.percentOffSplit`.
+- **The scan app** only sells printed orders and reads `percent` and
+  `maxDiscountAmount`, which are the printed part's: it needed no update.
+
 ## Mollie payment methods: pay later, Riverty and the dead ones
 
 Which methods a customer sees comes from `src/data/shared/markets.json` (per

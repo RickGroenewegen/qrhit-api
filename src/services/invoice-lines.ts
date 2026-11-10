@@ -65,18 +65,27 @@ export function makeTranslator(translations: Record<string, string>): Translate 
 /**
  * Split "SUMMER10 (10%), GIFT-1234" into the percent code and the rest.
  */
+/**
+ * The stored label (`discountCodes`, "SUMMER10 (10%), ABCD-…") split into the
+ * percent code and the vouchers. A code with its own digital percentage on a
+ * mixed order is stored as "BF2026 (50% / 10%)" (labelFor in discount.ts);
+ * `percentLabel` keeps it whole for that line.
+ */
 function splitCodes(discountCodes: string | null | undefined): {
   percentCode: string;
+  percentLabel: string;
   fixedCodes: string;
 } {
   const parts = String(discountCodes || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const percentCode = parts.find((p) => /\(\s*[\d.,]+%\s*\)$/.test(p)) || '';
-  const fixedCodes = parts.filter((p) => p !== percentCode).join(', ');
+  const percentLabel =
+    parts.find((p) => /\(\s*[\d.,]+%(\s*\/\s*[\d.,]+%)?\s*\)$/.test(p)) || '';
+  const fixedCodes = parts.filter((p) => p !== percentLabel).join(', ');
   return {
-    percentCode: percentCode.replace(/\s*\([^)]*\)$/, ''),
+    percentCode: percentLabel.replace(/\s*\([^)]*\)$/, ''),
+    percentLabel,
     fixedCodes,
   };
 }
@@ -205,18 +214,24 @@ export function buildInvoiceLines(
   const discountWithoutTax = Number(payment.discountWithoutTax) || 0;
   const discountVAT = Number(payment.discountVAT) || 0;
   const percentAmount = Number(payment.discountPercentAmount) || 0;
-  const { percentCode, fixedCodes } = splitCodes(payment.discountCodes);
+  const { percentCode, percentLabel, fixedCodes } = splitCodes(payment.discountCodes);
   let percentExcl = 0;
   let percentVat = 0;
   if (percentAmount > 0) {
     percentExcl = reverse ? percentAmount : exVat(percentAmount, addonRate);
     percentVat = round2(percentAmount - percentExcl);
+    // A mixed order on a split code has no single percentage: its line
+    // names both, "Discount BF2026 (50% / 10%)"
+    const hasOnePercent =
+      payment.discountPercent !== null && payment.discountPercent !== undefined;
     lines.push({
       kind: 'discountPercent',
-      description: t('discountPercentLine', {
-        code: percentCode,
-        percent: payment.discountPercent ?? '',
-      }),
+      description: hasOnePercent || !percentLabel
+        ? t('discountPercentLine', {
+            code: percentCode,
+            percent: payment.discountPercent ?? '',
+          })
+        : `${t('discount')} ${percentLabel}`,
       quantity: 1,
       unitExcl: -percentExcl,
       totalExcl: -percentExcl,
