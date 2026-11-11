@@ -26,6 +26,7 @@ import {
   recordListInvoice,
 } from '../listInvoices';
 import { markListSold } from '../businessSales';
+import { linkedPaymentId } from '../howtoTheme';
 import {
   completeOrderBoardUpdate,
   getOrderBoard,
@@ -782,6 +783,18 @@ export default async function companyRoutes(
           return;
         }
         updateData['customerOrderNumber'] = number || null;
+      }
+
+      // The list's own order, by our order number (1000…): ties the list to the
+      // cards printed for it, which the personal how-to page reads its theme
+      // from (src/howtoTheme.ts). null clears it.
+      if (body.orderId !== undefined) {
+        const linked = await linkedPaymentId(body.orderId);
+        if ('error' in linked) {
+          reply.status(linked.status).send({ error: linked.error });
+          return;
+        }
+        updateData['paymentId'] = linked.paymentId;
       }
 
       for (const field of numberFields) {

@@ -1008,6 +1008,26 @@ Both kinds of business theme are assigned per order line by an admin
   database did on 2026-10-22, where a push wanted to drop `broken_links`,
   `printer_invoices` and `payments.printApiInvoicePrice`).
 
+**The personal how-to page** (2026-11-11, first: Medienwerft, list 74):
+`www.qrsong.io/how-to/<list slug>` is the site's game explanation in a
+business deck's theme. `GET /howto/:listSlug` (public, `src/howtoTheme.ts`
+plus the route in `themeRoutes.ts`) answers exactly what `GET /theme/:slug`
+answers for the theme on the list's order line, or 404 (the site then shows
+the standard page).
+
+- The slug is the company list's own, the one `/v/<slug>` uses.
+- A list reaches its order through `company_lists.paymentId`, set by the
+  `orderId` field (our order number, `null` clears) of
+  `PUT /business/companies/:id/lists/:listId/info`; the toolkit's
+  `qquote list update --link-order`. Toolkit orders are booked on Rick's
+  account, so nothing else ties a list to its cards. Until 2026-11-11 no list
+  had one. A linked order also leaves the customer report (it already did as
+  a `toolkit_` order).
+- Only the admin-assigned `php.theme` counts, the first line that has one:
+  never an App Designer design, which on Rick's account would be his own.
+- Nothing is cached: a `theme push` shows on the page at once, like on the
+  scanned cards.
+
 **App Designer is an upgrade on the account.** `APP_DESIGN_PRICE` in
 `src/config/constants.ts` is the only place the amount is written. A paid
 `app_design_upgrade` webhook writes one `app_design_purchases` row, which is

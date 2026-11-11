@@ -7,6 +7,7 @@ import AppDesign, {
 } from '../appDesign';
 import Logger from '../logger';
 import StoredThemes, { servedStoredTheme, themeAssetPath } from '../storedThemes';
+import { resolveListTheme } from '../howtoTheme';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -107,8 +108,33 @@ export default async function themeRoutes(
 
   // Get theme configuration JSON file
   fastify.get('/theme/:slug', async (request: any, reply) => {
-    const { slug } = request.params;
+    return serveTheme(request.params.slug, reply);
+  });
 
+  /**
+   * The personal how-to page (www.qrsong.io/how-to/<list slug>, see
+   * src/howtoTheme.ts): the theme on the order line of the company list with
+   * that slug, served exactly as GET /theme/:slug serves it. 404 when the
+   * list, its order or a theme is missing; the site then shows the standard
+   * page.
+   */
+  fastify.get('/howto/:listSlug', async (request: any, reply) => {
+    let theme: { slug: string; name: string } | null = null;
+    try {
+      theme = await resolveListTheme(request.params.listSlug);
+    } catch (error: any) {
+      logger.log(`How-to theme for ${request.params.listSlug}: ${error.message}`);
+      reply.code(500);
+      return { success: false, error: 'Failed to load theme' };
+    }
+    if (!theme) {
+      reply.code(404);
+      return { success: false, error: 'Theme not found' };
+    }
+    return serveTheme(theme.slug, reply);
+  });
+
+  async function serveTheme(slug: string, reply: any) {
     if (!isValidThemeSlug(slug)) {
       reply.code(404);
       return { success: false, error: 'Theme not found' };
@@ -153,7 +179,7 @@ export default async function themeRoutes(
       reply.code(500);
       return { success: false, error: 'Failed to load theme' };
     }
-  });
+  }
 
   // Reload app themes (admin only)
   fastify.post(
