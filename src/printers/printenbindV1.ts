@@ -23,6 +23,12 @@ import { QRGAMES_UPGRADE_PRICE } from '../game';
 import { paymentTaxRate } from './paymentTaxRate';
 import { shippingCompany } from './shippingCompany';
 import { PrinterWaiting } from './printerWaiting';
+import {
+  CARD_PRINT_COST,
+  priceWithProfit,
+  pricedQuantity,
+  printedDeckCost,
+} from './cardPricing';
 
 interface PriceResult {
   totalPrice: number;
@@ -1448,15 +1454,13 @@ class PrintEnBindV1 {
 
   /**
    * Raw print cost per card in EUR — just paper + ink, no handling, no
-   * minimum-order amortization, no profit, no VAT. Mirrors the constants in
-   * `calculateSingleItem`. Used by post-purchase upgrade pricing where the
-   * customer pays a simple per-card markup rather than going through the
-   * full margin model.
+   * minimum-order amortization, no profit, no VAT: what Print&Bind invoices
+   * per card (src/printers/cardPricing.ts). Used by post-purchase upgrade
+   * pricing where the customer pays a simple per-card markup rather than
+   * going through the full margin model.
    */
   public getRawCardCostEur(): number {
-    const colorPrice = 0.018;
-    const paperPrice = 0.034;
-    return colorPrice * 2 + paperPrice;
+    return CARD_PRINT_COST;
   }
 
   public async calculateSingleItem(
@@ -1469,60 +1473,21 @@ class PrintEnBindV1 {
     // rate is applied by /order/calculate at checkout.
     const taxRate = (await this.data.getTaxRate('NL'))!;
     let price = 0;
-    let colorPrice = 0.018;
-    let colorPriceA4 = 0.09;
-    let paperPrice = 0.034;
-    let paperPriceA4 = 0.104;
-    let cardPrice = colorPrice * 2 + paperPrice;
-    let A4Price = colorPriceA4 * 2 + paperPriceA4;
-    let priceWithProfit = 0;
-    let minimumCards = 50;
-    let useCardAmount = params.quantity;
-    let numberOfSheets = 0;
-
-    if (useCardAmount < minimumCards) {
-      useCardAmount = minimumCards;
-    }
-
-    numberOfSheets = Math.ceil(useCardAmount / 12);
+    const useCardAmount = pricedQuantity(params.quantity);
 
     if (params.type == 'physical') {
-      if (params.subType == 'sheets') {
-        price = numberOfSheets * A4Price;
-      } else {
-        price = useCardAmount * cardPrice;
-      }
-
-      price += 1.8; // Handling
+      // Our cost of the deck (src/printers/cardPricing.ts), then the profit
+      // on top of it and the VAT.
+      const cost = printedDeckCost(
+        params.quantity,
+        params.subType == 'sheets'
+      );
+      price = priceWithProfit(cost) * (1 + taxRate / 100);
     } else {
       price = (
         await this.calculateCardPrice(DIGITAL_CARDS_BASE_PRICE, useCardAmount)
       ).totalPrice;
-    }
-
-    price = parseFloat(price.toFixed(2));
-
-    if (params.type == 'physical') {
-      // Smart profit scaling function
-      const calculateProfit = (basePrice: number, quantity: number): number => {
-        // Minimum profit we want to make
-        const minProfit = 12;
-
-        // Base margin starts at 50% (1.5)
-        let margin = 1.5;
-
-        let priceWithMargin = basePrice * margin;
-
-        // Ensure minimum profit
-        if (priceWithMargin - basePrice < minProfit) {
-          priceWithMargin = basePrice + minProfit;
-        }
-
-        return priceWithMargin;
-      };
-
-      priceWithProfit = calculateProfit(price, useCardAmount);
-      price = priceWithProfit * (1 + taxRate / 100);
+      price = parseFloat(price.toFixed(2));
     }
 
     price = Math.ceil(price);

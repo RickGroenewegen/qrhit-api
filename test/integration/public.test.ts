@@ -36,7 +36,7 @@ describe('public routes', () => {
   });
 
   describe('GET /api/pricing/tiers', () => {
-    const CACHE_KEY = 'pricingTiers_v2';
+    const CACHE_KEY = 'pricingTiers_v3';
 
     beforeEach(async () => {
       await Cache.getInstance().executeCommand('del', CACHE_KEY);

@@ -133,7 +133,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // quantity); the finished table is cached for an hour so the SSR pass
   // costs a single request.
   fastify.get('/api/pricing/tiers', async (_request: any, reply: any) => {
-    const cacheKey = 'pricingTiers_v2';
+    const cacheKey = 'pricingTiers_v3';
     const cached = await cache.get(cacheKey);
     if (cached) {
       return reply.send(JSON.parse(cached));
@@ -186,7 +186,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Every named price (src/priceTokens.ts) in EUR, for the blog price tokens:
   // the site converts and formats them in the visitor's currency.
   fastify.get('/api/pricing/tokens', async (_request: any, reply: any) => {
-    const cacheKey = 'priceTokens_v1';
+    const cacheKey = 'priceTokens_v2';
     const cached = await cache.get(cacheKey);
     if (cached) {
       return reply.send(JSON.parse(cached));

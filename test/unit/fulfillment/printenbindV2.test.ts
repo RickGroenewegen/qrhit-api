@@ -280,8 +280,8 @@ describe('calculateCardPrice', () => {
 // getRawCardCostEur
 // ---------------------------------------------------------------------------
 describe('getRawCardCostEur', () => {
-  it('returns raw print cost: 2× color (0.018) + paper (0.034) = 0.07', () => {
-    expect(peb.getRawCardCostEur()).toBe(0.07);
+  it('returns what Print&Bind invoices per card (cardPricing.ts)', () => {
+    expect(peb.getRawCardCostEur()).toBe(0.079);
   });
 });
 
@@ -289,33 +289,33 @@ describe('getRawCardCostEur', () => {
 // calculateSingleItem — sticker price incl. NL VAT and margin model
 // ---------------------------------------------------------------------------
 describe('calculateSingleItem', () => {
-  it('prices 100 physical cards: cost 8.80, +€12 min profit, +21% VAT, ceil → 26', async () => {
+  it('prices 100 physical cards: cost 10.62, +€12 min profit, +21% VAT, ceil → 28', async () => {
     const r = await peb.calculateSingleItem(
       { productType: 'cards', type: 'physical', subType: 'none', quantity: 100, alternatives: {} },
       false
     );
-    // (100 × 0.07 + 1.8) = 8.8 → margin 1.5 gives only 4.4 profit < 12
-    // → 8.8 + 12 = 20.8 → × 1.21 = 25.168 → ceil 26
-    expect(r).toEqual({ price: 26, alternatives: {} });
+    // 100 × (0.079 + 0.0023) + 1.5 + 0.99 = 10.62 → margin 1.5 gives only 5.31 profit < 12
+    // → 10.62 + 12 = 22.62 → × 1.21 = 27.37 → ceil 28
+    expect(r).toEqual({ price: 28, alternatives: {} });
     expect(dataMock.getTaxRate).toHaveBeenCalledWith('NL');
   });
 
   it('applies the 50-card minimum to small physical quantities', async () => {
-    // quantity 10 → billed as 50: (50 × 0.07 + 1.8) = 5.3 → +12 → 17.3 → ×1.21 → ceil 21
+    // quantity 10 → billed as 50: 50 × 0.0813 + 2.49 = 6.56 → +12 → 18.56 → ×1.21 → ceil 23
     const r = await peb.calculateSingleItem(
       { productType: 'cards', type: 'physical', subType: 'none', quantity: 10, alternatives: {} },
       false
     );
-    expect(r.price).toBe(21);
+    expect(r.price).toBe(23);
   });
 
   it('uses the 50% margin once it beats the €12 minimum profit', async () => {
-    // 500 × 0.07 + 1.8 = 36.8 → ×1.5 = 55.2 (profit 18.4 ≥ 12) → ×1.21 = 66.792 → 67
+    // 500 × 0.0813 + 2.49 = 43.14 → ×1.5 = 64.71 (profit 21.57 ≥ 12) → ×1.21 = 78.30 → 79
     const r = await peb.calculateSingleItem(
       { productType: 'cards', type: 'physical', subType: 'none', quantity: 500, alternatives: {} },
       false
     );
-    expect(r.price).toBe(67);
+    expect(r.price).toBe(79);
   });
 
   it('prices A4 sheets at 12 cards per sheet', async () => {
@@ -348,9 +348,9 @@ describe('calculateSingleItem', () => {
       quantity: 100,
       alternatives: {},
     });
-    expect(r.price).toBe(26);
+    expect(r.price).toBe(28);
     expect(r.alternatives).toEqual({
-      type: { physical: 0, digital: -13, sheets: -6 },
+      type: { physical: 0, digital: -15, sheets: -8 },
     });
   });
 
@@ -364,7 +364,7 @@ describe('calculateSingleItem', () => {
     });
     expect(r.price).toBe(13);
     expect(r.alternatives).toEqual({
-      type: { physical: 13, digital: 0, sheets: 7 },
+      type: { physical: 15, digital: 0, sheets: 7 },
     });
   });
 });
@@ -434,11 +434,11 @@ describe('getShippingCosts', () => {
 describe('getOrderType', () => {
   it('computes the price of a physical deck', async () => {
     const r = await peb.getOrderType(100, false, 'cards', 'pl1');
-    // calculateSingleItem(physical, 100) = 26
+    // calculateSingleItem(physical, 100) = 28
     expect(r).toEqual({
       digital: false,
-      amount: 26,
-      alternatives: { type: { physical: 0, digital: -13, sheets: -6 } },
+      amount: 28,
+      alternatives: { type: { physical: 0, digital: -15, sheets: -8 } },
     });
   });
 
@@ -1368,18 +1368,18 @@ describe('processOrderRequest', () => {
     });
 
     // --- price math (taxModifier 1.21) ---
-    // product ex VAT: 26 / 1.21 = 21.49 · delivery+handling: 20 − 12.05 = 7.95
-    // total = (21.49 + 7.95) × 1.21 = 35.62 · shipping = 7.95 × 1.21 = 9.62
-    // price = 21.49 × 1.21 = 26.00 · payment = 9.62
+    // product ex VAT: 28 / 1.21 = 23.14 · delivery+handling: 20 − 12.05 = 7.95
+    // total = (23.14 + 7.95) × 1.21 = 37.62 · shipping = 7.95 × 1.21 = 9.62
+    // price = 23.14 × 1.21 = 28.00 · payment = 9.62
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
       orderId: '7989',
-      total: 35.62,
+      total: 37.62,
       shipping: 9.62,
       handling: 0,
       taxRateShipping: 21,
       taxRate: 21,
-      price: 26,
+      price: 28,
       payment: 9.62,
     });
     expect(result.apiCalls).toHaveLength(1);
@@ -1436,15 +1436,15 @@ describe('processOrderRequest', () => {
     });
     expect(body(orderCall).reference).toBeUndefined();
 
-    // taxRate 0 → product 26.00, delivery+handling 7.95
+    // taxRate 0 → product 28.00, delivery+handling 7.95
     expect(result.data).toEqual({
       orderId: '7989',
-      total: 33.95,
+      total: 35.95,
       shipping: 7.95,
       handling: 0,
       taxRateShipping: 0,
       taxRate: 0,
-      price: 26,
+      price: 28,
       payment: 7.95,
     });
   });

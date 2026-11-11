@@ -174,18 +174,32 @@ describe('PrintEnBind.calculateSingleItem', () => {
     dataMock.getTaxRate.mockResolvedValue(21);
   });
 
-  it('physical non-sheet: price includes 1.8 handling + 50% margin + 21% VAT (minimum 50 cards)', async () => {
+  it('physical non-sheet: the printer\'s real cost + minimum profit + 21% VAT (minimum 50 cards)', async () => {
     const result = await pnb.calculateSingleItem(
       { productType: 'cards', type: 'physical', subType: 'none', quantity: 10, alternatives: {} },
       false
     );
     // useCardAmount = max(10, 50) = 50
-    // cardPrice = 0.018*2 + 0.034 = 0.07
-    // price = 50 * 0.07 + 1.8 = 3.5 + 1.8 = 5.3
-    // margin = max(5.3*1.5, 5.3+12) = max(7.95, 17.3) = 17.3
-    // final = Math.ceil(17.3 * 1.21) = Math.ceil(20.933) = 21
-    expect(result.price).toBe(21);
+    // cost = 50 * (0.079 + 0.0023) + 1.5 + 0.99 = 6.56 (src/printers/cardPricing.ts)
+    // margin = max(6.56*1.5, 6.56+12) = 18.56
+    // final = Math.ceil(18.56 * 1.21) = Math.ceil(22.46) = 23
+    expect(result.price).toBe(23);
     expect(result.alternatives).toEqual({});
+  });
+
+  it('physical non-sheet: the price table of 2026-11-11', async () => {
+    const prices: Record<number, number> = {};
+    for (const quantity of [50, 100, 150, 200, 252, 300, 500]) {
+      prices[quantity] = (
+        await pnb.calculateSingleItem(
+          { productType: 'cards', type: 'physical', subType: 'none', quantity, alternatives: {} },
+          false
+        )
+      ).price;
+    }
+    // Up to about 265 cards the EUR 12 minimum profit sets the price, above
+    // it the 50% margin on the cost.
+    expect(prices).toEqual({ 50: 23, 100: 28, 150: 33, 200: 38, 252: 43, 300: 49, 500: 79 });
   });
 
   it('physical sheet subType: price computed on sheets × A4Price', async () => {
@@ -220,10 +234,8 @@ describe('PrintEnBind.calculateSingleItem', () => {
     expect(result.alternatives).toHaveProperty('type.sheets');
   });
 
-  it('getRawCardCostEur returns color*2 + paper', () => {
-    const cost = pnb.getRawCardCostEur();
-    expect(cost).toBeCloseTo(0.018 * 2 + 0.034, 5);
-    expect(cost).toBeCloseTo(0.07, 5);
+  it('getRawCardCostEur returns what Print&Bind invoices per card', () => {
+    expect(pnb.getRawCardCostEur()).toBeCloseTo(0.079, 5);
   });
 });
 
