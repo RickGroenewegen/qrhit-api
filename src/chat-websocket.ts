@@ -4,6 +4,7 @@ import Redis from 'ioredis';
 import { ChatService } from './chat';
 import Logger from './logger';
 import Translation from './translation';
+import { isChatToken, parseChatId } from './chatToken';
 
 interface ChatConnection {
   ws: WebSocket;
@@ -103,8 +104,17 @@ class ChatWebSocketServer {
         return;
       }
 
-      const chatId = parseInt(chatIdParam, 10);
-      if (isNaN(chatId)) {
+      const chatId = parseChatId(chatIdParam);
+      if (chatId === null) {
+        this.sendError(ws, 'Invalid Chat ID');
+        ws.close();
+        return;
+      }
+
+      // The id is a counted number; only the browser that got the chat's
+      // token from /chat/init (or an admin, from the chat's messages route)
+      // may join it. See chatToken.ts.
+      if (!isChatToken(chatId, url.searchParams.get('token'))) {
         this.sendError(ws, 'Invalid Chat ID');
         ws.close();
         return;

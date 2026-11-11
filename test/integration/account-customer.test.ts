@@ -184,6 +184,20 @@ describe('customer account routes', () => {
       expect(verificationToken).toHaveLength(64);
     });
 
+    it('refuses a token that is not a string (a Prisma filter)', async () => {
+      for (const token of [{ startsWith: verificationToken.slice(0, 1) }, { not: null }, [verificationToken]]) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/account/customer-set-password',
+          payload: { verificationToken: token, password1: password, password2: password },
+        });
+        expect(res.statusCode).toBe(400);
+        expect(res.json().error).toBe('invalidOrExpiredToken');
+      }
+      const user = await prisma().user.findUnique({ where: { id: shopperId } });
+      expect(user!.passwordResetToken).toBe(verificationToken);
+    });
+
     it('rejects mismatching passwords', async () => {
       const res = await app.inject({
         method: 'POST',

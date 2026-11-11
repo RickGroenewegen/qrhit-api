@@ -487,6 +487,22 @@ export default async function accountRoutes(
         return;
       }
 
+      // Strings only, and the token in the shape customer-verify-pincode
+      // makes it. A JSON object here would reach Prisma as a filter
+      // ({ startsWith: 'a' }) and match someone else's live token.
+      if (
+        typeof verificationToken !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(verificationToken) ||
+        typeof password1 !== 'string' ||
+        typeof password2 !== 'string'
+      ) {
+        reply.status(400).send({
+          success: false,
+          error: 'invalidOrExpiredToken',
+        });
+        return;
+      }
+
       if (password1 !== password2) {
         reply.status(400).send({
           success: false,

@@ -431,6 +431,9 @@ class Server {
     // Add security headers
     this.fastify.addHook('onSend', (_request, reply, _payload, done) => {
       reply.header('X-Frame-Options', 'DENY');
+      // Uploaded files are served from this domain: a browser must take the
+      // type we send, never guess one from the content
+      reply.header('X-Content-Type-Options', 'nosniff');
       done();
     });
 

@@ -34,6 +34,7 @@ import { buildInvoiceLines, makeTranslator } from '../services/invoice-lines';
 import PrismaInstance from '../prisma';
 import UpgradeInvoices from '../upgradeInvoice';
 import { isSignedRenderRequest } from '../renderSignature';
+import { limitProgressData } from '../progressPrivacy';
 import CardPreviews from '../cardPreview';
 import { showcaseView } from '../productPhoto/cards';
 import {
@@ -59,7 +60,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // `store`: the scan app's proof of an App Store / Google Play purchase,
   // which settles a store_… order (see mollie.ts settleStorePurchase).
   fastify.post('/mollie/check', async (request: any, _reply) => {
-    return await mollie.checkPaymentStatus(request.body.paymentId, request.body.store);
+    // A string only: an object would reach Prisma as a filter
+    const paymentId = request.body?.paymentId;
+    if (typeof paymentId !== 'string' || !paymentId) {
+      return { success: false, error: 'Payment not found' };
+    }
+    const result = await mollie.checkPaymentStatus(paymentId, request.body.store);
+    // The status only. The method also hands the generator the buyer's
+    // e-mail and account hash, which no caller of this route reads and which
+    // would open the buyer's pages to anyone holding a payment id.
+    if (result?.data?.payment) {
+      return { ...result, data: { status: result.data.status } };
+    }
+    return result;
   });
 
   // Create payment
@@ -110,25 +123,25 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       // order's totals, address and the buyer's hash, so it closes once a
       // set of the order was given away (src/gift.ts): the Mollie id is in
       // the recipient's links.
+      const paymentId = String(request.params.paymentId);
       const given = await prisma.paymentHasPlaylist.count({
         where: {
-          payment: { paymentId: String(request.params.paymentId) },
+          payment: { paymentId },
           ownerUserId: { not: null },
         },
       });
       if (given > 0) {
         return { success: false, error: 'Payment not found' };
       }
-      const data = await Data.getInstance().getPayment(
-        request.params.paymentId,
-        request.params.playlistId
-      );
+      const data = await Data.getInstance().getPayment(paymentId, request.params.playlistId);
       if (!data) {
         return { success: false, error: 'Payment not found' };
       }
+      // The id travels, so the buyer's name, address and hash are only in
+      // the answer while the checkout needs them (progressPrivacy.ts)
       return {
         success: true,
-        data,
+        data: limitProgressData(data),
       };
     }
   );
@@ -405,7 +418,12 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // Invoice for a purchase made after an order (App Designer, extra cards),
   // rendered from its stored snapshot through the order invoice template so
   // both look the same. Keyed on the Mollie payment id like /invoice/:paymentId.
+  // Signed like the order invoice: it prints the buyer's name and address.
   fastify.get('/invoice/upgrade/:molliePaymentId', async (request: any, reply) => {
+    if (!isSignedRenderRequest('invoice-upgrade', request)) {
+      reply.status(404).send({ error: 'Invoice not found' });
+      return;
+    }
     const row = await prisma.upgradeInvoice.findUnique({
       where: { molliePaymentId: request.params.molliePaymentId },
     });

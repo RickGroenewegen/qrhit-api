@@ -4,6 +4,7 @@ import Logger from './logger';
 import PrismaInstance from './prisma';
 import Mail from './mail';
 import PDF from './pdf';
+import { signedRenderQuery } from './renderSignature';
 import { round2 } from './services/discount-allocation';
 import type { InvoiceLine } from './services/invoice-lines';
 
@@ -298,7 +299,8 @@ class UpgradeInvoices {
     }
     await fs.mkdir(`${process.env['PRIVATE_DIR']}/invoice/upgrade`, { recursive: true });
     const pdf = new PDF();
-    await pdf.generateFromUrl(`${process.env['API_URI']}/invoice/upgrade/${molliePaymentId}`, pdfPath, {
+    const signature = signedRenderQuery('invoice-upgrade', { molliePaymentId: String(molliePaymentId) }, {});
+    await pdf.generateFromUrl(`${process.env['API_URI']}/invoice/upgrade/${molliePaymentId}?${signature}`, pdfPath, {
       format: 'a4',
       marginTop: 0,
       marginRight: 0,

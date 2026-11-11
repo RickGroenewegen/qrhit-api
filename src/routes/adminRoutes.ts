@@ -35,6 +35,7 @@ import PrismaInstance from '../prisma';
 import Designer from '../designer';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
+import { chatToken } from '../chatToken';
 import { AiTasks } from '../aiTasks';
 import Mail from '../mail';
 import BusinessContacts from '../businessContacts';
@@ -4591,6 +4592,8 @@ export default async function adminRoutes(
           supportNeeded: chat.supportNeeded,
           hijacked: chat.hijacked,
           createdAt: chat.createdAt,
+          // What the chat's socket asks for (chatToken.ts)
+          chatToken: chatToken(chat.id),
           messages: chat.messages.map((m) => ({
             id: m.id,
             role: m.role,

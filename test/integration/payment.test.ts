@@ -174,20 +174,33 @@ describe('payment routes', () => {
   });
 
   describe('POST /mollie/check', () => {
-    it('returns the paid status shape verbatim', async () => {
-      const paid = {
+    it('answers paid with the status only, never the buyer', async () => {
+      mollieMock.checkPaymentStatus.mockResolvedValue({
         success: true,
-        data: { status: 'paid', payment: { status: 'paid' } },
-      };
-      mollieMock.checkPaymentStatus.mockResolvedValue(paid);
+        data: {
+          status: 'paid',
+          payment: { status: 'paid', user: { userId: 'buyer@test.qrsong.io', hash: 'a8f3ec97ca372a88' } },
+        },
+      });
       const res = await app.inject({
         method: 'POST',
         url: '/mollie/check',
         payload: { paymentId: 'tr_paid' },
       });
       expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual(paid);
-      expect(mollieMock.checkPaymentStatus).toHaveBeenCalledWith('tr_paid');
+      expect(res.json()).toEqual({ success: true, data: { status: 'paid' } });
+      expect(mollieMock.checkPaymentStatus).toHaveBeenCalledWith('tr_paid', undefined);
+    });
+
+    it('refuses a payment id that is not a string', async () => {
+      mollieMock.checkPaymentStatus.mockClear();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/mollie/check',
+        payload: { paymentId: { startsWith: 'tr_' } },
+      });
+      expect(res.json().success).toBe(false);
+      expect(mollieMock.checkPaymentStatus).not.toHaveBeenCalled();
     });
 
     it('returns the open status shape verbatim', async () => {

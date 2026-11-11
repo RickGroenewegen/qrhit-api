@@ -237,7 +237,7 @@ describe('UpgradeInvoices.issue', () => {
       paymentMethod: 'ideal',
     });
     expect(pdfMock.generateFromUrl).toHaveBeenCalledWith(
-      'https://api.test/invoice/upgrade/tr_up',
+      expect.stringMatching(/^https:\/\/api\.test\/invoice\/upgrade\/tr_up\?exp=\d+&sig=[0-9a-f]{64}$/),
       `/private-test/invoice/upgrade/${upgradeInvoiceNumber(year, 1)}.pdf`,
       expect.any(Object)
     );

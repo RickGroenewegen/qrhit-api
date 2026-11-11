@@ -13,6 +13,9 @@ import {
 } from './cardDesigns';
 import { findLineByHash, lineOwnerSql } from './lineOwner';
 
+// What a logo may be stored as: the formats sharp writes for a raster upload
+const LOGO_FORMATS = ['png', 'jpeg', 'webp', 'gif'];
+
 class Designer {
   private static instance: Designer;
   private logger = new Log();
@@ -288,45 +291,45 @@ class Designer {
         return { success: false, error: 'No image provided' };
       }
 
-      let imageType: string;
       let base64Data: string;
 
       // Handle both full data URI and raw base64 string
       if (base64Image.includes('base64,')) {
-        // Extract the actual base64 data and determine the file type
+        // Extract the actual base64 data
         const matches = base64Image.match(
           /^data:image\/([a-zA-Z]+);base64,(.+)$/
         );
         if (!matches || matches.length !== 3) {
           return { success: false, error: 'Invalid image data format' };
         }
-        imageType = matches[1];
         base64Data = matches[2];
       } else {
-        // Assume it's a raw base64 string and try to determine format from content
-        // Default to png if we can't determine
-        imageType = 'png';
+        // Assume it's a raw base64 string
         base64Data = base64Image;
       }
-
-      // Generate unique filename using utils.generateRandomString
-      const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
-      const actualFilename = `${uniqueId}.${imageType}`.toLowerCase();
-
-      const filePath = path.join(
-        process.env['PUBLIC_DIR'] as string,
-        'logo',
-        actualFilename
-      );
 
       try {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
 
         // Resize to max 800x800 while keeping aspect ratio
-        const processedBuffer = await sharp(buffer)
+        const { data: processedBuffer, info } = await sharp(buffer)
           .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-          .toBuffer();
+          .toBuffer({ resolveWithObject: true });
+
+        // The extension is what sharp wrote, never what the upload called
+        // itself: "data:image/html" used to be saved as .html in a folder
+        // served from our own domain.
+        if (!LOGO_FORMATS.includes(info.format)) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        const uniqueId = this.utils.generateRandomString(32);
+        const actualFilename = `${uniqueId}.${info.format}`.toLowerCase();
+        const filePath = path.join(
+          process.env['PUBLIC_DIR'] as string,
+          'logo',
+          actualFilename
+        );
 
         // Write the processed file
         await fs.writeFile(filePath, processedBuffer);

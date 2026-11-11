@@ -6,6 +6,7 @@ import Translation from './translation';
 import Cache from './cache';
 import maxmind, { CityResponse, Reader } from 'maxmind';
 import path from 'path';
+import crypto from 'crypto';
 
 class Utils {
   private translation: Translation = new Translation();
@@ -362,7 +363,10 @@ class Utils {
     let result = '';
 
     for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * characters.length);
+      // crypto, not Math.random: these strings name uploaded files and make
+      // ids and tokens, and Math.random's sequence can be worked out from a
+      // handful of its outputs
+      const randomIndex = crypto.randomInt(characters.length);
       result += characters[randomIndex];
     }
 

@@ -116,6 +116,7 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payments.invoiceCountrycode,
                   payments.processedFirstTime,
                   payments.finalized,
+                  payments.finalizedAt,
                   users.hash AS userHash,
                   CASE
                     WHEN EXISTS (

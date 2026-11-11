@@ -20,6 +20,7 @@ describe('chat routes', () => {
   let app: FastifyInstance;
   let adminHeaders: Record<string, string>;
   let chatId: number;
+  let chatToken: string;
 
   beforeAll(async () => {
     vi.spyOn(Utils.prototype, 'verifyRecaptcha').mockResolvedValue({
@@ -73,7 +74,27 @@ describe('chat routes', () => {
       expect(body.success).toBe(true);
       expect(body.username).toBe('chatter');
       expect(body.hasMessages).toBe(false);
+      expect(body.chatToken).toMatch(/^[0-9a-f]{64}$/);
       chatId = body.chatId;
+      chatToken = body.chatToken;
+    });
+
+    it('does not resume a chat on its id alone', async () => {
+      for (const token of [undefined, 'f'.repeat(64), { startsWith: 'a' }]) {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/chat/init',
+          payload: {
+            email: 'chatter@test.qrsong.io',
+            recaptchaToken: 'tok',
+            existingChatId: chatId,
+            chatToken: token,
+          },
+        });
+        const body = res.json();
+        expect(body.chatDeleted).toBe(true);
+        expect(body.username).toBeUndefined();
+      }
     });
 
     it('resumes an existing chat session', async () => {
@@ -84,6 +105,7 @@ describe('chat routes', () => {
           email: 'chatter@test.qrsong.io',
           recaptchaToken: 'tok',
           existingChatId: chatId,
+          chatToken,
         },
       });
       const body = res.json();
@@ -104,11 +126,22 @@ describe('chat routes', () => {
       expect(res.json().chatDeleted).toBe(true);
     });
 
+    it('refuses support-needed and clear without the chat\'s token', async () => {
+      for (const url of ['/chat/support-needed', '/chat/clear']) {
+        for (const payload of [{ chatId }, { chatId: { gt: 0 }, chatToken }, { chatId, chatToken: 'f'.repeat(64) }]) {
+          const res = await app.inject({ method: 'POST', url, payload });
+          expect(res.statusCode).toBe(400);
+        }
+      }
+      const chat = await prisma().chat.findUnique({ where: { id: chatId } });
+      expect(chat!.supportNeeded).toBe(false);
+    });
+
     it('marks a chat as needing support (pushover mocked)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/chat/support-needed',
-        payload: { chatId },
+        payload: { chatId, chatToken },
       });
       expect(res.statusCode).toBe(200);
       const chat = await prisma().chat.findUnique({ where: { id: chatId } });
@@ -229,7 +262,7 @@ describe('chat routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/chat/clear',
-        payload: { chatId },
+        payload: { chatId, chatToken },
       });
       expect(res.statusCode).toBe(200);
       const messages = await prisma().chatMessage.findMany({

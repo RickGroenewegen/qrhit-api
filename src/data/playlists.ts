@@ -23,6 +23,11 @@ export async function storePlaylists(
   for (const cartItem of cartItems) {
     let playlistDatabaseId: number = 0;
 
+    // A string only: as an object it would reach Prisma as a filter and
+    // pick (and then overwrite) someone else's playlist
+    if (typeof cartItem.playlistId !== 'string' || !cartItem.playlistId) {
+      throw new Error('Invalid playlist id in cart');
+    }
     let usePlaylistId = cartItem.playlistId;
     if (cartItem.isSlug) {
       const dbPlaylist = await deps.prisma.playlist.findFirst({

@@ -12,6 +12,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const holder = vi.hoisted(() => ({
   chains: [] as any[],
   nextToBufferError: null as Error | null,
+  // The format sharp says it wrote (the logo upload names the file after it)
+  outputFormat: 'png',
   sharp: undefined as any,
   writeFile: undefined as any,
   createDir: undefined as any,
@@ -36,13 +38,14 @@ vi.mock('sharp', () => {
     chain.resize = vi.fn(() => chain);
     chain.composite = vi.fn(() => chain);
     chain.png = vi.fn(() => chain);
-    chain.toBuffer = vi.fn(async () => {
+    chain.toBuffer = vi.fn(async (options?: { resolveWithObject?: boolean }) => {
       if (holder.nextToBufferError) {
         const err = holder.nextToBufferError;
         holder.nextToBufferError = null;
         throw err;
       }
-      return Buffer.from('processed-image');
+      const data = Buffer.from('processed-image');
+      return options?.resolveWithObject ? { data, info: { format: holder.outputFormat } } : data;
     });
     holder.chains.push(chain);
     return chain;
@@ -122,6 +125,7 @@ beforeEach(() => {
   holder.chains.length = 0;
   holder.nextToBufferError = null;
   holder.sharp.mockClear();
+  holder.outputFormat = 'png';
   holder.writeFile.mockClear();
   holder.generateRandomString.mockClear();
   holder.parseBoolean.mockClear();
@@ -243,7 +247,8 @@ describe('uploadBackgroundBackImage', () => {
 });
 
 describe('uploadLogoImage', () => {
-  it('keeps the original image type in the filename and fits inside 800x800', async () => {
+  it('names the file after the format sharp wrote and fits inside 800x800', async () => {
+    holder.outputFormat = 'jpeg';
     const result = await designer.uploadLogoImage(JPEG_DATA_URI);
 
     expect(result).toEqual({
@@ -263,6 +268,24 @@ describe('uploadLogoImage', () => {
       `${PUBLIC_DIR}/logo/randomid32.jpeg`,
       Buffer.from('processed-image')
     );
+  });
+
+  it('never takes the extension from what the upload calls itself', async () => {
+    const result = await designer.uploadLogoImage('data:image/html;base64,AAAA');
+    expect(result.filename).toBe('randomid32.png');
+    expect(holder.writeFile).toHaveBeenCalledWith(
+      `${PUBLIC_DIR}/logo/randomid32.png`,
+      Buffer.from('processed-image')
+    );
+  });
+
+  it('refuses a format a logo is not stored as', async () => {
+    holder.outputFormat = 'heif';
+    expect(await designer.uploadLogoImage(JPEG_DATA_URI)).toEqual({
+      success: false,
+      error: 'Invalid image data format',
+    });
+    expect(holder.writeFile).not.toHaveBeenCalled();
   });
 
   it('defaults to png for raw base64 input', async () => {

@@ -1154,6 +1154,10 @@ class Discount {
           failed.push({ code, message: 'notApplicable' });
           continue;
         }
+        if (typeof single.playlistId !== 'string') {
+          failed.push({ code, message: 'notApplicable' });
+          continue;
+        }
         let usePlaylistId = single.playlistId;
         const dbPlaylist = await db.playlist.findFirst({
           where: { slug: single.playlistId },

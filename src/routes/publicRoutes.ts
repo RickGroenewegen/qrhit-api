@@ -50,6 +50,7 @@ import { STORE_PRODUCTS } from '../storeProducts';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
+import { chatToken, isChatToken, parseChatId } from '../chatToken';
 
 export default async function publicRoutes(fastify: FastifyInstance) {
   const mail = Mail.getInstance();
@@ -201,7 +202,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Chat init endpoint - creates or resumes chat session
   fastify.post('/chat/init', async (request: any, reply: any) => {
     try {
-      const { email, recaptchaToken, existingChatId } = request.body;
+      const { email, recaptchaToken, existingChatId, chatToken: chatTokenParam } = request.body || {};
 
       // Verify reCAPTCHA
       const { isHuman } = await utils.verifyRecaptcha(recaptchaToken);
@@ -215,14 +216,24 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ success: false, error: 'Valid email required' });
       }
 
-      // If existingChatId provided, try to resume
-      if (existingChatId) {
-        const existingChat = await chatService.getChat(existingChatId);
+      if (typeof email !== 'string' || email.length > 255) {
+        return reply.status(400).send({ success: false, error: 'Valid email required' });
+      }
+
+      // Resume a chat only for the browser that holds its token (chatToken.ts):
+      // the id is a counted number. Without the token the visitor starts a
+      // new chat, as after a deleted one.
+      const resumeId = parseChatId(existingChatId);
+      if (resumeId !== null) {
+        const existingChat = isChatToken(resumeId, chatTokenParam)
+          ? await chatService.getChat(resumeId)
+          : null;
         if (existingChat) {
-          const hasMessages = await chatService.chatHasMessages(existingChatId);
+          const hasMessages = await chatService.chatHasMessages(resumeId);
           return reply.send({
             success: true,
             chatId: existingChat.id,
+            chatToken: chatToken(existingChat.id),
             username: existingChat.username,
             hasMessages,
             supportNeeded: existingChat.supportNeeded,
@@ -242,7 +253,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       const chatId = await chatService.createChat(email);
       const username = email.split('@')[0];
 
-      return reply.send({ success: true, chatId, username, hasMessages: false, supportNeeded: false });
+      return reply.send({
+        success: true,
+        chatId,
+        chatToken: chatToken(chatId),
+        username,
+        hasMessages: false,
+        supportNeeded: false,
+      });
     } catch (error) {
       logger.log(`Error in /chat/init: ${(error as Error).message}`);
       return reply.status(500).send({ success: false, error: 'Failed to initialize chat' });
@@ -252,8 +270,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Clear chat messages for user (soft delete)
   fastify.post('/chat/clear', async (request: any, reply: any) => {
     try {
-      const { chatId } = request.body;
-      if (!chatId) {
+      const chatId = parseChatId(request.body?.chatId);
+      if (chatId === null || !isChatToken(chatId, request.body?.chatToken)) {
         return reply.status(400).send({ success: false, error: 'Chat ID required' });
       }
       await chatService.clearChatForUser(chatId);
@@ -267,8 +285,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Mark chat as needing support
   fastify.post('/chat/support-needed', async (request: any, reply: any) => {
     try {
-      const { chatId } = request.body;
-      if (!chatId) {
+      const chatId = parseChatId(request.body?.chatId);
+      if (chatId === null || !isChatToken(chatId, request.body?.chatToken)) {
         return reply.status(400).send({ success: false, error: 'Chat ID required' });
       }
       await chatService.markSupportNeeded(chatId);

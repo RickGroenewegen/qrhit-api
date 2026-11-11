@@ -105,6 +105,16 @@ describe('music and hitlist routes', () => {
       expect(body.data.companyName ?? body.data.Company?.name).toBeTruthy();
     });
 
+    it('refuses a slug that is not a string (a Prisma filter)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/hitlist',
+        payload: { domain: 'qrvote.io', hash: '', slug: { startsWith: 'p' } },
+      });
+      expect(res.json().success).toBe(false);
+      expect(res.json().data).toBeUndefined();
+    });
+
     it('errors for an unknown slug', async () => {
       const res = await app.inject({
         method: 'POST',

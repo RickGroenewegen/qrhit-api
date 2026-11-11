@@ -156,6 +156,9 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
   // Helper: Load track mapping from bingo file (used during room creation and as fallback)
   async function loadTrackMapping(hostFilename: string): Promise<Record<string, number> | null> {
+    // The filename comes out of the room's plugin data, which a host sets:
+    // as an object it would be a Prisma filter matching someone else's file
+    if (typeof hostFilename !== 'string' || !hostFilename) return null;
     try {
       // Get bingo file from database (lookup by filename directly)
       const bingoFile = await prisma.bingoFile.findFirst({

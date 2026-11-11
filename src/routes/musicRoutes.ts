@@ -545,11 +545,13 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   // Hitlist routes
   fastify.post('/hitlist', async (request: any, _reply) => {
-    return await hitlist.getCompanyListByDomain(
-      request.body.domain,
-      request.body.hash,
-      request.body.slug
-    );
+    // Strings only: an object would reach Prisma as a filter and walk
+    // every company's voting list
+    const { domain, hash, slug } = request.body || {};
+    if (typeof domain !== 'string' || typeof hash !== 'string' || typeof slug !== 'string') {
+      return { success: false, error: 'Company list not found' };
+    }
+    return await hitlist.getCompanyListByDomain(domain, hash, slug);
   });
 
   fastify.post('/hitlist/search', async (request: any, _reply) => {
@@ -581,7 +583,21 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       marketingEmails,
       birthDate,
       birthdayTrackId,
-    } = request.body;
+    } = request.body || {};
+
+    // Plain values only: `email` and the hash go into a Prisma filter, where
+    // an object ({ startsWith: 'j' }) would answer yes or no about other
+    // voters' addresses
+    const optionalString = (value: unknown) =>
+      value === undefined || value === null || typeof value === 'string';
+    if (
+      !Array.isArray(hitlistTracks) ||
+      typeof submissionHash !== 'string' ||
+      !['string', 'number'].includes(typeof companyListId) ||
+      ![email, firstname, lastname, locale].every(optionalString)
+    ) {
+      return { success: false, error: 'Error submitting hitlist' };
+    }
 
     // Add companyListId, submissionHash, firstname, lastname, email, agreeToUseName, and marketingEmails to each track
     const enrichedHitlist = hitlistTracks.map((track: any) => ({
