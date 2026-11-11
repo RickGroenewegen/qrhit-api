@@ -27,6 +27,7 @@ import { getProductCover } from '../playlistArtwork';
 import { scanClient, scanAppVersion } from '../scanClient';
 import featuredCopyRoutes from './featuredCopyRoutes';
 import { onboardingOffer } from '../onboarding';
+import { countryOfLocale, pickMarket } from '../data/marketRanking';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -220,10 +221,32 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // The countries a request may be from, most trusted first: `?country=`
+  // (the site's server knows it from CloudFront), CloudFront's own header,
+  // the country of the caller's IP (the scan app sends no country and calls
+  // the API directly), and the country its language implies.
+  const requestCountries = async (request: any): Promise<Array<string | null>> => {
+    const header =
+      request.headers['cloudfront-viewer-country'] || request.headers['cf-ipcountry'];
+    const explicit = typeof request.query?.country === 'string' ? request.query.country : null;
+    const fromHeader = typeof header === 'string' ? header : null;
+    let fromIp: string | null = null;
+    if (!explicit && !fromHeader && request.clientIp) {
+      fromIp = (await utils.lookupIp(request.clientIp))?.country_code ?? null;
+    }
+    return [explicit, fromHeader, fromIp, countryOfLocale(String(request.params?.locale || ''))];
+  };
+
   // Get featured playlists
   fastify.get('/featured/:locale', async (request: any, _reply) => {
     const skipLocaleFilter = request.query.all === 'true';
-    const playlists = await data.getFeaturedPlaylists(request.params.locale, skipLocaleFilter);
+    // Ranked for the visitor's country; see data/marketRanking.ts.
+    const market = pickMarket(await requestCountries(request));
+    const playlists = await data.getFeaturedPlaylistsForMarket(
+      request.params.locale,
+      skipLocaleFilter,
+      market
+    );
     return { success: true, data: playlists };
   });
 
@@ -283,19 +306,16 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     return { success: true, data: playlists };
   });
 
-  // Active seasonal occasions + curated playlists for the visitor's country.
-  // Country comes from ?country= (the frontend already knows it) or the
-  // CloudFront-Viewer-Country header. Cache key includes country + date.
+  // Active seasonal occasions + curated playlists for the visitor's country
+  // (requestCountries above). Cache key includes country + date.
   fastify.get('/seasonal/:locale', async (request: any, _reply) => {
     const locale = request.params.locale;
-    const cfCountry =
-      request.headers['cloudfront-viewer-country'] || request.headers['cf-ipcountry'];
     const country = (
-      request.query.country ||
-      (typeof cfCountry === 'string' ? cfCountry : '') ||
-      ''
+      (await requestCountries(request)).find(
+        (c) => typeof c === 'string' && /^[A-Za-z]{2}$/.test(c)
+      ) || ''
     ).toUpperCase();
-    if (!country || country.length !== 2) {
+    if (!country) {
       return { success: true, occasions: [] };
     }
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');

@@ -4998,7 +4998,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Update featured playlist stats (Wilson scores + decade percentages)
+  // Update featured playlist stats (the rankings per market + decade percentages)
   fastify.post(
     '/admin/calculate-playlist-scores',
     getAuthHandler(['admin']),
@@ -5015,7 +5015,7 @@ export default async function adminRoutes(
 
         return reply.send({
           success: true,
-          message: `Updated ${result.scoresProcessed} playlists (scores) and ${result.decadesProcessed} playlists (decades)`,
+          message: `Ranked ${result.scoresProcessed} playlists for every market; decades of ${result.decadesProcessed} playlists`,
           scoresProcessed: result.scoresProcessed,
           decadesProcessed: result.decadesProcessed
         });

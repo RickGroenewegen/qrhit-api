@@ -2120,6 +2120,66 @@ first that applies wins:
 a business deck: those are ordinary Print&Bind orders. The Excel QR-link supplement keeps
 its row order (a new playlist, no seed).
 
+## Featured ranking per market (`src/data/marketRanking.ts`)
+
+`GET /featured/:locale` returns the featured playlists ranked for the
+visitor's country (built 2026-11-11): what people there buy comes first. Before,
+`playlists.score` was all-time sales through a Wilson term times
+`exp(-0.5 × years since the playlist row was created)`. The decay ran from the
+playlist's age, not the sales': 10 sales at three months old scored 64 and 500
+sales at two years old 36, so a new customer submission with a handful of
+orders led the list for everyone ("Russian Hits").
+
+**The ranking**, for each market in `markets.json` and `world`, by the 03:00
+stats job (`calculatePlaylistScores`):
+
+1. Paid consumer orders of the last 3 years per playlist and buyer country,
+   one per payment, each weighted `0.5^(days / 180)`. Left out: business
+   orders, store sandbox purchases, the submitter's own orders. The country is
+   `countrycode`, else `shippingCountry`, else the country the order's site
+   language implies; without one the sale counts for the world only.
+2. Sales from 45 days either side of today one year ago count 0.5 extra, so a
+   Christmas or Sinterklaas list rises in its season.
+3. A playlist's share of its country's sales is blended with its share in the
+   language group (markets with the same first language: NL + BE, DE + AT +
+   CH) and that with the world's: `(own + 50 × parent share) / (total + 50)`.
+   A country with few sales follows the world; one with many, itself.
+4. A list in one of the market's own languages (`featuredLocale`, not `en`)
+   counts 1.5 times.
+5. A list under 60 days old is ranked with at least the median list's sales.
+6. In the first 12 places no genre comes three times in a row.
+
+All of it is pure functions with constants at the top of the file
+(`test/unit/market-ranking.test.ts`).
+
+- **Stored in Redis**, a list of playlist ids per market
+  (`featuredMarketRanking_v1_<CC>` and `…_world`), no database column. When
+  the keys are missing (a new package version changes the cache prefix) the
+  first request computes them. The world ranking is also written to
+  `playlists.score` (place as 0 to 100), which the feeds, the AI suggestions,
+  the related row and the admin still sort by; `downloads` stays the all-time
+  paid count.
+- **`score` in the answer is the place, not a measure**: 100 for the first,
+  falling, never equal, with `rank` (1 = first). The released app (2.1.x)
+  ignores the order it is given, sorts by `score` and takes its "Popular"
+  stickers from it, so the score is how the order reaches it. Do not put
+  another meaning into that field.
+- **Which market** (`requestCountries` in `musicRoutes.ts`, then
+  `pickMarket`): `?country=`, CloudFront's header, the country of the caller's
+  IP (MaxMind), the country the language implies; a country that is not a
+  market gets `world`. The site's server always sends `?country=` (its own
+  request would otherwise be ranked for our server's country; `unknown` skips
+  the IP). The app sends nothing and calls the API directly, so its IP is the
+  user's. `/seasonal/:locale` uses the same countries: the app used to get no
+  occasions at all, having no country to send.
+- The base list is cached per language as before; the ranking is applied in
+  memory per request (`getFeaturedPlaylistsForMarket`), so nothing is cached
+  per market. Other callers of `getFeaturedPlaylists` get the stored order.
+- **Reading a ranking**: `npm run market-ranking -- --country=NL --top=25`
+  prints each place with its own and world sales; `--untagged` lists the
+  international lists that sell in one language group only (candidates for a
+  `featuredLocale`). Production through the read-only user, only when asked.
+
 ## Featured playlist covers
 
 `playlists.image` is a URL on the music service's CDN, stored once when the

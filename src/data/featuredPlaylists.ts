@@ -7,6 +7,7 @@ import {
 } from '../spotify';
 import { clearPlaylistCache, createSiteMap } from './misc';
 import { productPageLocales } from './productPageLocales';
+import { applyRanking, getMarketRanking } from './marketRanking';
 import { DataDeps } from './types';
 import { productPhotoFeatured, queueProductPhoto } from '../productPhoto/triggers';
 
@@ -206,6 +207,24 @@ export async function getFeaturedPlaylists(
     returnList = JSON.parse(cachedPlaylists);
   }
   return returnList;
+}
+
+/**
+ * The featured list as `market` (a market code or `world`, from `pickMarket`)
+ * should see it: in that market's ranking, with `score` rewritten to follow
+ * the order and a `rank`. The base list stays cached per language; the
+ * ranking is applied in memory, so nothing is cached per market. Without a
+ * stored ranking the list comes back as it is.
+ */
+export async function getFeaturedPlaylistsForMarket(
+  deps: DataDeps,
+  locale: string,
+  skipLocaleFilter: boolean,
+  market: string
+): Promise<any[]> {
+  const list: any[] = await getFeaturedPlaylists(deps, locale, skipLocaleFilter);
+  const ranking = await getMarketRanking(deps, market);
+  return ranking ? applyRanking(list, ranking) : list;
 }
 
 /** Decade columns, weighted against each other to measure musical overlap. */

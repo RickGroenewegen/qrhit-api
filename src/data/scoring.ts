@@ -1,34 +1,7 @@
 import { color } from 'console-log-colors';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
+import { computeMarketRankings, scoreForPlace } from './marketRanking';
 import { DataDeps } from './types';
-
-export function calculateWilsonScore(downloads: number, createdAt: Date): number {
-  // Wilson score calculation parameters
-  const z = 1.96; // 95% confidence
-  const n = Math.max(downloads, 1); // Total number of downloads (minimum 1 to avoid division by zero)
-
-  // Calculate time decay factor (1 year = ~365.25 days)
-  const daysSinceCreation = Math.max(
-    1,
-    (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  const yearsElapsed = daysSinceCreation / 365.25;
-  const decayFactor = Math.exp(-0.5 * yearsElapsed); // Exponential decay with half-life of 1 year
-
-  // Wilson score calculation
-  const phat = n / n; // For downloads, we consider all as positive (proportion = 1)
-  const numerator =
-    phat +
-    (z * z) / (2 * n) -
-    z * Math.sqrt((phat * (1 - phat) + (z * z) / (4 * n)) / n);
-  const denominator = 1 + (z * z) / n;
-  const wilsonScore = numerator / denominator;
-
-  // Apply time decay to the Wilson score
-  const adjustedScore = wilsonScore * decayFactor * 100; // Scale to 0-100 range
-
-  return Math.round(adjustedScore);
-}
 
 export async function calculatePlaylistScores(deps: DataDeps): Promise<{
   success: boolean;
@@ -62,21 +35,29 @@ export async function calculatePlaylistScores(deps: DataDeps): Promise<{
 
     const updated: Array<{ playlistId: string; name: string; downloads: number; score: number }> = [];
 
+    // All-time paid orders per playlist: the admin's figure, not what ranks.
+    const counts = await deps.prisma.paymentHasPlaylist.groupBy({
+      by: ['playlistId'],
+      where: {
+        playlistId: { in: featuredPlaylists.map((p) => p.id) },
+        payment: { status: 'paid' },
+      },
+      _count: { _all: true },
+    });
+    const downloads = new Map(counts.map((c) => [c.playlistId, c._count._all]));
+
+    // The stored score is the playlist's place in the world ranking (100 for
+    // the first). Every market's own ranking is stored in Redis by the same
+    // call; see marketRanking.ts.
+    const { world } = await computeMarketRankings(deps);
+    const place = new Map(world.map((r, i) => [r.id, i]));
+
     for (const playlist of featuredPlaylists) {
-      // Count purchases from payment_has_playlist where payment is paid
-      const downloadCount = await deps.prisma.paymentHasPlaylist.count({
-        where: {
-          playlistId: playlist.id,
-          payment: {
-            status: 'paid',
-          },
-        },
-      });
+      const downloadCount = downloads.get(playlist.id) ?? 0;
+      const at = place.get(playlist.id);
+      const score =
+        at === undefined ? 0 : Math.round(scoreForPlace(at, world.length));
 
-      // Calculate Wilson score with time decay
-      const score = calculateWilsonScore(downloadCount, playlist.createdAt);
-
-      // Update the playlist
       await deps.prisma.playlist.update({
         where: { id: playlist.id },
         data: {
@@ -91,12 +72,6 @@ export async function calculatePlaylistScores(deps: DataDeps): Promise<{
         downloads: downloadCount,
         score: score,
       });
-
-      deps.logger.log(
-        color.blue.bold(
-          `Updated ${color.white.bold(playlist.name)}: downloads = ${color.white.bold(downloadCount)}, score = ${color.white.bold(score)}`
-        )
-      );
     }
 
     // Clear featured playlists cache after updating scores
@@ -327,7 +302,7 @@ export async function updateFeaturedPlaylistStats(deps: DataDeps): Promise<{
       color.blue.bold('Starting featured playlist stats update...')
     );
 
-    // Calculate Wilson scores
+    // Scores: the world ranking, and every market's own
     const scoresResult = await calculatePlaylistScores(deps);
 
     // Calculate decade percentages

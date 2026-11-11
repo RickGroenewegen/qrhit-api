@@ -75,7 +75,7 @@ class Data {
           const genreJob = new CronJob('30 1 * * *', async () => {
             await this.translateGenres();
           });
-          // Schedule daily playlist stats update at 3 AM (Wilson scores + decade percentages)
+          // Schedule daily playlist stats update at 3 AM (market rankings + decade percentages)
           const playlistStatsJob = new CronJob('0 3 * * *', async () => {
             await this.updateFeaturedPlaylistStats();
           });
@@ -577,6 +577,19 @@ class Data {
   }
 
   // ── Scoring ──────────────────────────────────────────────────
+
+  public async getFeaturedPlaylistsForMarket(
+    locale: string,
+    skipLocaleFilter: boolean,
+    market: string
+  ): Promise<any[]> {
+    return featuredPlaylistsModule.getFeaturedPlaylistsForMarket(
+      this.deps,
+      locale,
+      skipLocaleFilter,
+      market
+    );
+  }
 
   public async calculatePlaylistScores() {
     return scoringModule.calculatePlaylistScores(this.deps);
