@@ -991,6 +991,77 @@ describe('setupForPrinter()', () => {
         printApiWaitingDetail: null,
       },
     });
+    // nothing shipped before: no reprint bookkeeping
+    expect(h.prisma.payment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('on a reprint after a shipped order books its print cost as extra and clears the shipment (100009549)', async () => {
+    h.prisma.payment.findFirst.mockResolvedValue({
+      printApiOrderId: '1533139',
+      printApiShipped: true,
+      printApiPrice: 25.04,
+    });
+
+    await gen.setupForPrinter('tr_maria');
+
+    expect(h.prisma.payment.findFirst).toHaveBeenCalledWith({
+      where: { paymentId: 'tr_maria' },
+      select: { printApiOrderId: true, printApiShipped: true, printApiPrice: true },
+    });
+    // guarded on the row as read, so a double click books the cost once
+    expect(h.prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: { paymentId: 'tr_maria', printApiShipped: true, printApiOrderId: '1533139' },
+      data: expect.objectContaining({
+        extraPrintCost: { increment: 25.04 },
+        printApiPrice: 0,
+        printApiPriceInclVat: 0,
+        printApiShipped: false,
+        printApiShippedAt: null,
+        shippingCode: null,
+        shippingStatus: null,
+        shippingDeliveryDateTime: null,
+      }),
+    });
+    // then the usual reset, after the bookkeeping
+    expect(h.prisma.payment.update).toHaveBeenCalledWith({
+      where: { paymentId: 'tr_maria' },
+      data: {
+        printApiStatus: 'Submitted',
+        printApiTrackingLink: null,
+        printApiWaitingAt: null,
+        printApiWaitingDetail: null,
+      },
+    });
+    expect(h.prisma.payment.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      h.prisma.payment.update.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('still resets the status when a concurrent press already booked the reprint', async () => {
+    h.prisma.payment.findFirst.mockResolvedValue({
+      printApiOrderId: '1533139',
+      printApiShipped: true,
+      printApiPrice: 25.04,
+    });
+    h.prisma.payment.updateMany.mockResolvedValue({ count: 0 });
+
+    await gen.setupForPrinter('tr_maria');
+
+    expect(h.prisma.payment.updateMany).toHaveBeenCalledTimes(1);
+    expect(h.prisma.payment.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the cost alone when the previous order never shipped (it may have been cancelled)', async () => {
+    h.prisma.payment.findFirst.mockResolvedValue({
+      printApiOrderId: '1541189',
+      printApiShipped: false,
+      printApiPrice: 30.1,
+    });
+
+    await gen.setupForPrinter('tr_esther');
+
+    expect(h.prisma.payment.updateMany).not.toHaveBeenCalled();
+    expect(h.prisma.payment.update).toHaveBeenCalledTimes(1);
   });
 });
 

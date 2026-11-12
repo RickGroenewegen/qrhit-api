@@ -1715,4 +1715,84 @@ describe('createOrder', () => {
       },
     });
   });
+
+  it('takes an earlier printer order of the payment (extraPrintCost) off the profit too', async () => {
+    // A reprint after a shipped order moves that order's price to
+    // extraPrintCost (src/printers/printerResend.ts); v1 ignored it until
+    // 2026-11-12 and booked the reprint as if it were the only print run.
+    const payment = {
+      id: 9,
+      paymentId: 'pay_9',
+      fullname: 'Jane Buyer',
+      email: 'jane@example.com',
+      address: 'Mainstreet',
+      housenumber: '12',
+      zipcode: '1234AB',
+      city: 'Amsterdam',
+      countrycode: 'NL',
+      fast: false,
+      totalPrice: 60,
+      extraPrintCost: 18.5,
+    };
+    const playlists = [
+      {
+        filename: 'qr_test.pdf',
+        playlist: {
+          paymentHasPlaylistId: 55,
+          numberOfTracks: 100,
+          amount: 1,
+          name: 'Hits',
+          boxEnabled: false,
+          boxQuantity: 0,
+          boxFilename: null,
+        },
+      },
+    ];
+    prismaMock.paymentHasPlaylistItem.findMany.mockResolvedValue([]);
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([]);
+    prismaMock.payment.update.mockResolvedValue({});
+    routeFetch([
+      {
+        method: 'POST',
+        url: `${PB}/v1/orders/articles`,
+        response: () =>
+          jsonResponse({}, { headers: { location: 'orders/7989-1' } }),
+      },
+      {
+        method: 'POST',
+        url: `${PB}/v1/delivery/7989-1`,
+        response: () => jsonResponse({}),
+      },
+      {
+        method: 'GET',
+        url: `${PB}/v1/orders/7989-1`,
+        response: () =>
+          jsonResponse({
+            amount: '20.00',
+            price_startup: '2.25',
+            amount_tax_standard: '4.20',
+          }),
+      },
+      {
+        method: 'GET',
+        url: `${PB}/v1/delivery/7989-1`,
+        response: () => jsonResponse({ amount: '5.95' }),
+      },
+    ]);
+
+    await peb.createOrder(payment, playlists, 'cards');
+
+    await new Promise((resolve) => setImmediate(resolve));
+    // 49.59 ex VAT − 20.00 this order − 18.50 the earlier one − 0 boxes
+    expect(prismaMock.payment.update).toHaveBeenCalledWith({
+      where: { paymentId: 'pay_9' },
+      data: {
+        printApiPrice: 20,
+        printApiPriceInclVat: 24.2,
+        totalPriceWithoutTax: 49.59,
+        profit: 11.09,
+        printApiStatus: 'Submitted',
+      },
+    });
+  });
 });

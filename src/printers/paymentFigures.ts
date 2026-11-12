@@ -15,7 +15,8 @@ import { BOX_UNIT_COST } from '../config/constants';
  *
  * printApiPrice is the printer's ex-VAT price of the order; empty gift boxes
  * are bought from a supplier outside the printer's invoice; extraPrintCost is
- * a later printer order for the same payment (a box shipped on its own).
+ * another printer order for the same payment: a box shipped on its own, or
+ * the shipped order of a reprint (./printerResend.ts).
  */
 export interface BoxLine {
   boxEnabled: boolean | null;

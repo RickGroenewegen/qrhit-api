@@ -249,6 +249,34 @@ poll cannot see orders placed on the other API.
     "Waiting at printer" with the sub status and the date.
   - The fix is Print&Bind's portal (a placed order's file cannot be replaced
     through the API, see the harness below), or cancel and place again.
+- **A reprint after a shipped order** (2026-11-12,
+  `src/printers/printerResend.ts`, called from `setupForPrinter`): the
+  dashboard's "Send to printer" (also inlay-only) on an order whose printer
+  order already shipped. A payment holds one printer order, and until then a
+  reprint kept the old shipment's state: `printApiShipped` stayed true, so
+  neither tracking poll (both select `printApiShipped: false`) ever asked
+  about the new order (no tracking link, no tracking mail), and its price
+  replaced `printApiPrice`, so the profit lost the first run's cost. First:
+  100009549 (Maria Kalinowski), returned "Address incorrect", reprinted as
+  1542477 before this fix, so that row is not covered by it.
+  - The shipped order's price moves to `extraPrintCost` and `printApiPrice` /
+    `printApiPriceInclVat` go to 0 (the profit does not move) until the new
+    order's `setPaymentInfo` books its own price; both runs then come off the
+    profit.
+  - The shipment's fields are cleared: `printApiShipped(At)`, `shipping*`
+    (code, country, postcode, status, message, dates, last change) and
+    `shippingIgnore`. A delivered `shippingStatus` would otherwise stop the
+    PostNL lookup of the new parcel, and `createShipment` skips a code it
+    already has.
+  - Only a shipped order counts: one that never shipped may have been
+    cancelled at Print&Bind (printer-reset clears its id; a cancel in their
+    portal followed by "Send to printer" does not). The update is guarded on
+    the row as read (`printApiShipped: true` and the old order id), so a
+    double click books once.
+  - v1's `setPaymentInfo` now uses `printedOrderFigures` like v2 and takes
+    `extraPrintCost` off the profit; it ignored it before, also for rows
+    where v2 had booked a separate box order. v1's `createBoxUpgradeOrder`
+    still books no `extraPrintCost` of its own.
 
 ### Print&Bind test harness (`scripts/pnb-harness`)
 
@@ -1383,7 +1411,8 @@ October 2026 alone), and this recompute is what corrects their turnover when
 they go to the printer; a box shipped on its own is a
 separate printer order whose ex-VAT price `createBoxUpgradeOrder` books as
 `payments.extraPrintCost` (off the profit at once, and again in every
-recompute).
+recompute). A reprint after a shipped order books that order's price there
+too (see "A reprint after a shipped order" under Print&Bind).
 
 **Correcting one booked order** (2026-11-02): fixing the formula left the
 rows it had booked wrong, and order 100009253 held up the October 2026 tax
