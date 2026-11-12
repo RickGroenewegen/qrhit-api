@@ -40,6 +40,7 @@ import { isBusinessDeck } from './trackMix';
 import { isStorePayment } from './storeProducts';
 import { APP_CHANNEL, AppPlatform, appPlatformOf } from './salesChannel';
 import OrderProgress from './orderProgress';
+import { shippedOrderResend } from './printers/printerResend';
 
 // The only lines sendToPrinter sends to Print&Bind. Schneiders, Tromp,
 // reseller and MusicMatch decks are printed elsewhere.
@@ -1900,6 +1901,37 @@ class Generator {
         `Setting up payment ${white.bold(paymentId)} for printer submission`
       )
     );
+
+    // A reprint of an order that already shipped: its print cost moves to
+    // extraPrintCost and its shipment's tracking state is cleared, so the
+    // tracking poll follows the new order (src/printers/printerResend.ts).
+    // Guarded on the row as read, so a double click books the cost once.
+    const previous = await this.prisma.payment.findFirst({
+      where: { paymentId },
+      select: { printApiOrderId: true, printApiShipped: true, printApiPrice: true },
+    });
+    const resend = shippedOrderResend(previous);
+    if (previous && resend) {
+      const { count } = await this.prisma.payment.updateMany({
+        where: {
+          paymentId,
+          printApiShipped: true,
+          printApiOrderId: previous.printApiOrderId,
+        },
+        data: resend,
+      });
+      if (count > 0) {
+        this.logger.log(
+          blue.bold(
+            `Payment ${white.bold(paymentId)} is reprinted after shipped order ${white.bold(
+              previous.printApiOrderId
+            )}: its print cost ${white.bold(
+              (Number(previous.printApiPrice) || 0).toFixed(2)
+            )} moved to extraPrintCost, tracking state cleared`
+          )
+        );
+      }
+    }
 
     await this.prisma.payment.update({
       where: {

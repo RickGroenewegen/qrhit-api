@@ -29,6 +29,7 @@ import {
   pricedQuantity,
   printedDeckCost,
 } from './cardPricing';
+import { boxCount, exVatAtRate, printedOrderFigures } from './paymentFigures';
 
 interface PriceResult {
   totalPrice: number;
@@ -2049,9 +2050,9 @@ class PrintEnBindV1 {
     const authToken = await this.getAuthToken();
     const taxRate = await paymentTaxRate(payment, this.data);
 
-    const totalPriceWithoutTax = parseFloat(
-      (payment.totalPrice / (1 + taxRate / 100)).toFixed(2)
-    );
+    // The formula is shared with v2 and the admin recompute
+    // (src/paymentTurnover.ts) in ./paymentFigures.ts.
+    const totalPriceWithoutTax = exVatAtRate(payment.totalPrice, taxRate);
 
     let printApiPrice = 0;
     let printApiPriceInclVat = 0;
@@ -2089,17 +2090,19 @@ class PrintEnBindV1 {
         where: { paymentId: payment.id },
         select: { boxEnabled: true, boxQuantity: true, amount: true },
       });
-      const totalBoxCount = playlistsForBoxes.reduce((sum, p) => {
-        if (p.boxEnabled && p.boxQuantity > 0) {
-          return sum + p.boxQuantity * (p.amount || 1);
-        }
-        return sum;
-      }, 0);
-      const boxCost = parseFloat((totalBoxCount * BOX_UNIT_COST).toFixed(2));
+      const totalBoxCount = boxCount(playlistsForBoxes);
 
-      const newProfit = parseFloat(
-        (totalPriceWithoutTax - printApiPrice - boxCost).toFixed(2)
-      );
+      // Printer orders of this payment before this one (the shipped order of
+      // a reprint, src/printers/printerResend.ts) or after it (a box shipped
+      // on its own, v2) are booked as extraPrintCost and come off the profit
+      // here again. v1 ignored it until 2026-11-12.
+      const { boxCost, profit: newProfit } = printedOrderFigures({
+        totalPrice: payment.totalPrice,
+        taxRate,
+        printApiPrice,
+        boxCount: totalBoxCount,
+        extraPrintCost: payment.extraPrintCost,
+      });
 
       await this.prisma.payment.update({
         where: { paymentId: payment.paymentId },
