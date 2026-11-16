@@ -210,6 +210,18 @@ export default async function adminRoutes(
     }
   );
 
+  // The Analytics page's chart: plays per hour over the last ?days, with the
+  // rolling 24-hour figure and its 24-hour moving average
+  fastify.get(
+    '/playlist-plays/history',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const days = parseInt(request.query?.days, 10) || 30;
+      const history = await AnalyticsClient.getInstance().getPlayHistory(days);
+      reply.send({ success: true, data: history });
+    }
+  );
+
   // Broadcast push notification
   fastify.post(
     '/push/broadcast',

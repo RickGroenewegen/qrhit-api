@@ -1312,6 +1312,19 @@ switch asks `?group=playlist`, which adds those rows up per playlist. Built
   `since` back to the oldest scan, and refuses once `plays:php:seeded` exists.
   There is no older per-scan history anywhere: all time means "since".
 
+- **Plays per hour are kept for good** (2026-11-16), for the page's "Plays
+  chart" tab: `recordPlaylistPlay` also adds each play to the hash
+  `plays:hourly` (field = the UTC hour, `2026100315`; no TTL, about 8,760
+  fields a year), and `plays:hourly:since` holds the first hour it covers.
+  `GET /playlist-plays/history?days=` (admin, at most 730) answers one entry
+  per hour: the plays of that hour, the 24 hours ending with it (the "last 24
+  hours" tile as it stood then) and that figure's 24-hour moving average
+  (`getPlayHistory`, `rollingPlays`). Counted as plays happen, not by an
+  hourly job, so no hour can be missed and every server counts into the same
+  hash. The first read copies the hours still in the 8-day buckets into the
+  hash once (`plays:hourly:backfilled`), so the chart starts with a week.
+  A figure is null where its 24 hours reach back before `since`.
+
 ## Turnover and profit: one set of sums
 
 The day and month reports (`Mollie.getSalesReport`), the country report

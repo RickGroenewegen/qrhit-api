@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Map-backed stand-in for the ioredis client (db 1) - unit tests: no Redis.
-const { redisStore, sortedSets, expiries, replyShape, prismaMock } = vi.hoisted(() => ({
+const { redisStore, sortedSets, hashes, expiries, replyShape, prismaMock } = vi.hoisted(() => ({
   redisStore: new Map<string, string>(),
   sortedSets: new Map<string, Map<string, number>>(),
+  hashes: new Map<string, Map<string, number>>(),
   expiries: new Map<string, number>(),
   // 'flat': RESP2 / ioredis legacy mapping; 'pairs': RESP3 proper.
   replyShape: { zrange: 'flat' as 'flat' | 'pairs' },
@@ -84,6 +85,16 @@ vi.mock('ioredis', () => {
         if (replyShape.zrange === 'pairs') return entries;
         return entries.flatMap(([member, score]) => [member, String(score)]);
       }
+      async hincrby(key: string, field: string, n: number) {
+        const hash = hashes.get(key) ?? new Map<string, number>();
+        hash.set(field, (hash.get(field) || 0) + n);
+        hashes.set(key, hash);
+        return hash.get(field);
+      }
+      async hmget(key: string, ...fields: string[]) {
+        const hash = hashes.get(key);
+        return fields.map((field) => (hash?.has(field) ? String(hash.get(field)) : null));
+      }
       async expire(key: string, seconds: number) {
         expiries.set(key, seconds);
         return 1;
@@ -104,13 +115,18 @@ vi.mock('../../src/prisma', () => ({
 
 process.env['REDIS_URL'] = process.env['REDIS_URL'] || 'redis://localhost:6379';
 
-import AnalyticsClient, { playPhpId, playsHourKey } from '../../src/analytics';
+import AnalyticsClient, {
+  playPhpId,
+  playsHourKey,
+  rollingPlays,
+} from '../../src/analytics';
 
 const analytics = AnalyticsClient.getInstance();
 
 beforeEach(() => {
   redisStore.clear();
   sortedSets.clear();
+  hashes.clear();
   expiries.clear();
   replyShape.zrange = 'flat';
   prismaMock.paymentHasPlaylist.groupBy.mockReset();
@@ -244,6 +260,111 @@ describe('recordPlaylistPlay', () => {
     await analytics.recordPlaylistPlay(1, hoursAgo(5));
     await analytics.recordPlaylistPlay(1, NOW);
     expect(redisStore.get('plays:php:since')).toBe(hoursAgo(5).toISOString());
+  });
+});
+
+describe('rollingPlays', () => {
+  it('sums the 24 hours ending with each hour and averages those sums', () => {
+    // 72 hours of one play each, all counted.
+    const result = rollingPlays(Array(72).fill(1), 24, 72);
+    expect(result.plays).toHaveLength(24);
+    expect(result.day.every((value) => value === 24)).toBe(true);
+    expect(result.average.every((value) => value === 24)).toBe(true);
+  });
+
+  it('has no 24-hour figure while the window reaches before counting began', () => {
+    // 30 hours shown, counting began 26 hours ago (the last 26 entries).
+    const perHour = [...Array(50).fill(0), ...Array(26).fill(2)];
+    const { day, average } = rollingPlays(perHour, 30, 26);
+    // Hours 1 to 23 of counting have no full day behind them.
+    expect(day.slice(0, 27).every((value) => value === null)).toBe(true);
+    expect(day.slice(27)).toEqual([48, 48, 48]);
+    expect(average.slice(0, 27).every((value) => value === null)).toBe(true);
+    // The average uses the figures there are, not zeros for the missing ones.
+    expect(average.slice(27)).toEqual([48, 48, 48]);
+  });
+
+  it('averages over the last 24 figures only', () => {
+    // A day of 0 plays an hour, then a day of 24 an hour.
+    const perHour = [...Array(47).fill(0), ...Array(24).fill(24)];
+    const { day, average } = rollingPlays(perHour, 1, perHour.length);
+    expect(day).toEqual([576]);
+    // The figures of the last 24 hours climb 24, 48, ... 576: mean 300.
+    expect(average).toEqual([300]);
+  });
+});
+
+describe('getPlayHistory', () => {
+  it('counts each play in its hour, for good', async () => {
+    await analytics.recordPlaylistPlay(1, hoursAgo(1));
+    await analytics.recordPlaylistPlay(2, hoursAgo(1));
+    await analytics.recordPlaylistPlay(1, NOW);
+    expect(hashes.get('plays:hourly')?.get('2026100314')).toBe(2);
+    expect(hashes.get('plays:hourly')?.get('2026100315')).toBe(1);
+    expect(expiries.has('plays:hourly')).toBe(false);
+  });
+
+  it('answers one entry per hour, ending with this hour', async () => {
+    for (let hour = 0; hour < 30; hour++) {
+      await analytics.recordPlaylistPlay(1, hoursAgo(hour));
+    }
+    const history = await analytics.getPlayHistory(1, NOW);
+    expect(history.plays).toHaveLength(24);
+    expect(history.start).toBe('2026-10-02T16:00:00.000Z');
+    expect(history.since).toBe('2026-10-02T10:00:00.000Z');
+    expect(history.plays.every((count) => count === 1)).toBe(true);
+    // Counting began 29 hours before this one: only the last 7 hours have a
+    // full day behind them.
+    expect(history.day.slice(0, 17).every((value) => value === null)).toBe(true);
+    expect(history.day.slice(17)).toEqual(Array(7).fill(24));
+    expect(history.average[23]).toBe(24);
+  });
+
+  it('copies the hours still in the buckets into the history, once', async () => {
+    // Plays from before the hourly history existed: buckets only.
+    sortedSets.set(playsHourKey(hoursAgo(30)), new Map([['7', 3], ['8', 2]]));
+    sortedSets.set(playsHourKey(hoursAgo(2)), new Map([['7', 4]]));
+    // This hour was counted in both since the deploy, the bucket further.
+    sortedSets.set(playsHourKey(NOW), new Map([['7', 6]]));
+    hashes.set('plays:hourly', new Map([['2026100315', 2]]));
+    redisStore.set('plays:hourly:since', '2026-10-03T15:00:00.000Z');
+
+    const history = await analytics.getPlayHistory(2, NOW);
+    expect(history.since).toBe(new Date(Date.UTC(2026, 9, 2, 9)).toISOString());
+    expect(history.plays[48 - 1 - 30]).toBe(5);
+    expect(history.plays[48 - 1 - 2]).toBe(4);
+    expect(history.plays[47]).toBe(6);
+    expect(history.day[47]).toBe(10);
+
+    // A second read adds nothing again.
+    const again = await analytics.getPlayHistory(2, NOW);
+    expect(again.plays).toEqual(history.plays);
+  });
+
+  it('covers the whole week of buckets when plays were counted before it', async () => {
+    redisStore.set('plays:php:since', '2026-09-01T12:00:00.000Z');
+    sortedSets.set(playsHourKey(hoursAgo(3)), new Map([['7', 4]]));
+    const history = await analytics.getPlayHistory(1, NOW);
+    // 167 hours before this one: the quiet hours in between are real zeros.
+    expect(history.since).toBe('2026-09-26T16:00:00.000Z');
+    expect(history.day.at(-1)).toBe(4);
+    expect(history.day.every((value) => value !== null)).toBe(true);
+  });
+
+  it('keeps an earlier start than the buckets reach back to', async () => {
+    redisStore.set('plays:hourly:since', '2026-09-01T00:00:00.000Z');
+    sortedSets.set(playsHourKey(hoursAgo(3)), new Map([['7', 1]]));
+    const history = await analytics.getPlayHistory(1, NOW);
+    expect(history.since).toBe('2026-09-01T00:00:00.000Z');
+    expect(history.day.every((value) => value !== null)).toBe(true);
+  });
+
+  it('is empty before any play, and caps the range', async () => {
+    const history = await analytics.getPlayHistory(0, NOW);
+    expect(history.since).toBeNull();
+    expect(history.plays).toEqual(Array(24).fill(0));
+    expect(history.day.every((value) => value === null)).toBe(true);
+    expect((await analytics.getPlayHistory(99999, NOW)).plays).toHaveLength(730 * 24);
   });
 });
 

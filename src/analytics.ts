@@ -14,6 +14,17 @@ const PLAYS_SEEDED_KEY = 'plays:php:seeded';
 // An hour bucket outlives the 7-day window by a day.
 const PLAYS_HOUR_TTL_SECONDS = 8 * 24 * 60 * 60;
 const HOUR_MS = 60 * 60 * 1000;
+// Every play per hour, kept for good (the hour buckets above live 8 days):
+// a hash, field = the hour as `2026100315` (UTC), value = plays in that hour.
+// The Analytics page's chart of "plays in the last 24 hours" is built from it.
+const PLAYS_HOURLY_KEY = 'plays:hourly';
+// The first hour the hash covers; hours after it without a field had no plays.
+const PLAYS_HOURLY_SINCE_KEY = 'plays:hourly:since';
+// Set once the hours still in the buckets were copied into the hash.
+const PLAYS_HOURLY_BACKFILLED_KEY = 'plays:hourly:backfilled';
+const DAY_HOURS = 24;
+/** The longest history the chart may ask for, in days. */
+export const PLAY_HISTORY_MAX_DAYS = 730;
 
 export interface PlayCount {
   php: number;
@@ -41,6 +52,24 @@ export interface PlayCounts {
   day: Map<number, number>;
   week: Map<number, number>;
   total: Map<number, number>;
+}
+
+/**
+ * The plays per hour over a range, oldest first, one entry per hour from
+ * `start`. `plays` is that hour alone; `day` the 24 hours ending with it (the
+ * Analytics page's "last 24 hours" figure as it stood that hour); `average`
+ * the mean of `day` over the 24 hours ending there. `day` is null where the
+ * 24 hours reach back before counting per hour began, `average` where it has
+ * no `day` to average.
+ */
+export interface PlayHistory {
+  /** The first hour counted per hour, or null before any play. */
+  since: string | null;
+  /** The hour of the first entry. */
+  start: string;
+  plays: number[];
+  day: (number | null)[];
+  average: (number | null)[];
 }
 
 export interface SeedPlay {
@@ -71,6 +100,62 @@ export function playPhpId(value: unknown): number | null {
 /** The hour bucket of a moment, in UTC: `plays:php:hour:2026100315`. */
 export function playsHourKey(at: Date): string {
   return PLAYS_HOUR_PREFIX + at.toISOString().slice(0, 13).replace(/[-T]/g, '');
+}
+
+/** The hash field of an hour: `2026100315` (UTC). */
+export function playsHourField(at: Date): string {
+  return at.toISOString().slice(0, 13).replace(/[-T]/g, '');
+}
+
+function startOfHour(at: Date): number {
+  return Math.floor(at.getTime() / HOUR_MS) * HOUR_MS;
+}
+
+/**
+ * The rolling 24-hour plays and their 24-hour moving average for the last
+ * `hours` entries of `perHour` (plays per hour, oldest first, hour by hour).
+ * `known` is how many entries at the end of `perHour` are counted hours;
+ * the ones before it are from before counting began, so a window that
+ * reaches into them has no figure.
+ */
+export function rollingPlays(
+  perHour: number[],
+  hours: number,
+  known: number
+): { plays: number[]; day: (number | null)[]; average: (number | null)[] } {
+  const firstKnown = perHour.length - known;
+  const allDay: (number | null)[] = [];
+  let sum = 0;
+  perHour.forEach((count, i) => {
+    sum += count;
+    if (i >= DAY_HOURS) sum -= perHour[i - DAY_HOURS];
+    allDay.push(i - (DAY_HOURS - 1) >= firstKnown ? sum : null);
+  });
+
+  const allAverage: (number | null)[] = [];
+  let total = 0;
+  let counted = 0;
+  allDay.forEach((value, i) => {
+    if (value !== null) {
+      total += value;
+      counted++;
+    }
+    const leaving = i >= DAY_HOURS ? allDay[i - DAY_HOURS] : null;
+    if (leaving !== null) {
+      total -= leaving;
+      counted--;
+    }
+    allAverage.push(
+      value !== null && counted > 0 ? Math.round((total / counted) * 10) / 10 : null
+    );
+  });
+
+  const from = Math.max(0, perHour.length - hours);
+  return {
+    plays: perHour.slice(from),
+    day: allDay.slice(from),
+    average: allAverage.slice(from),
+  };
 }
 
 function toPlayWindow(counts: Map<number, number>, limit: number): PlayWindow {
@@ -212,7 +297,107 @@ class AnalyticsClient {
       .zincrby(hourKey, 1, String(php))
       .expire(hourKey, PLAYS_HOUR_TTL_SECONDS)
       .set(PLAYS_SINCE_KEY, at.toISOString(), 'NX')
+      .hincrby(PLAYS_HOURLY_KEY, playsHourField(at), 1)
+      .set(PLAYS_HOURLY_SINCE_KEY, new Date(startOfHour(at)).toISOString(), 'NX')
       .exec();
+  }
+
+  /**
+   * The plays per hour of the last `days` days up to this hour, with the
+   * rolling 24-hour figure and its moving average (see PlayHistory).
+   */
+  public async getPlayHistory(
+    days: number,
+    now: Date = new Date()
+  ): Promise<PlayHistory> {
+    await this.backfillHourlyPlays(now);
+
+    const hours =
+      Math.min(PLAY_HISTORY_MAX_DAYS, Math.max(1, Math.floor(days) || 1)) *
+      DAY_HOURS;
+    // Two days more than shown: the first point's 24-hour figure needs the 23
+    // hours before it, and its average the 23 figures before that.
+    const lead = 2 * (DAY_HOURS - 1);
+    const end = startOfHour(now);
+    const first = end - (hours + lead - 1) * HOUR_MS;
+    const fields = Array.from({ length: hours + lead }, (_, i) =>
+      playsHourField(new Date(first + i * HOUR_MS))
+    );
+    const [values, since] = await Promise.all([
+      this.client.hmget(PLAYS_HOURLY_KEY, ...fields),
+      this.client.get(PLAYS_HOURLY_SINCE_KEY),
+    ]);
+    const perHour = values.map((value) => Number(value) || 0);
+    const sinceMs = since ? new Date(since).getTime() : NaN;
+    const known = Number.isFinite(sinceMs)
+      ? Math.min(perHour.length, Math.max(0, (end - sinceMs) / HOUR_MS + 1))
+      : 0;
+
+    return {
+      since: Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : null,
+      start: new Date(end - (hours - 1) * HOUR_MS).toISOString(),
+      ...rollingPlays(perHour, hours, known),
+    };
+  }
+
+  /**
+   * Once: copies the hours still in the 8-day buckets into the hourly hash,
+   * so the chart starts with a week of history instead of empty. It adds the
+   * difference per hour, so plays the hash already counted are not doubled.
+   */
+  private async backfillHourlyPlays(now: Date): Promise<void> {
+    if (await this.client.get(PLAYS_HOURLY_BACKFILLED_KEY)) return;
+    const claimed = await this.client.set(
+      PLAYS_HOURLY_BACKFILLED_KEY,
+      now.toISOString(),
+      'NX'
+    );
+    if (claimed === null) return;
+
+    // Oldest first.
+    const moments = Array.from(
+      { length: 168 },
+      (_, i) => new Date(startOfHour(now) - (167 - i) * HOUR_MS)
+    );
+    // One MULTI, so no play lands between reading a bucket and the hash.
+    const read = this.client.multi();
+    for (const at of moments) read.zrange(playsHourKey(at), 0, '-1', 'WITHSCORES');
+    read.hmget(PLAYS_HOURLY_KEY, ...moments.map(playsHourField));
+    read.get(PLAYS_HOURLY_SINCE_KEY);
+    read.get(PLAYS_SINCE_KEY);
+    const replies = (await read.exec()) || [];
+    const failed = replies.find(([error]) => error);
+    if (failed) throw failed[0];
+    const kept = (replies[moments.length]?.[1] as (string | null)[]) || [];
+
+    const write = this.client.multi();
+    let oldest: Date | null = null;
+    moments.forEach((at, i) => {
+      const counts = new Map<number, number>();
+      addScores(counts, replies[i]?.[1]);
+      let plays = 0;
+      for (const count of counts.values()) plays += count;
+      if (plays <= 0) return;
+      oldest ??= at;
+      const missing = plays - (Number(kept[i]) || 0);
+      if (missing > 0) write.hincrby(PLAYS_HOURLY_KEY, playsHourField(at), missing);
+    });
+
+    // The buckets cover every hour they reach back to, the quiet ones too,
+    // when plays were already counted by then; otherwise from the first play.
+    const countingSince = replies[moments.length + 2]?.[1] as string | null;
+    const countedFrom = countingSince ? new Date(countingSince).getTime() : NaN;
+    const covered: Date | null =
+      Number.isFinite(countedFrom) && countedFrom <= moments[0].getTime()
+        ? moments[0]
+        : oldest;
+    if (!covered) return;
+    // The hash usually started later than the buckets reach back.
+    const since = replies[moments.length + 1]?.[1] as string | null;
+    if (!since || covered.getTime() < new Date(since).getTime()) {
+      write.set(PLAYS_HOURLY_SINCE_KEY, covered.toISOString());
+    }
+    await write.exec();
   }
 
   /**
