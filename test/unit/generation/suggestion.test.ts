@@ -98,6 +98,7 @@ vi.mock('../../../src/cache', () => ({
   },
 }));
 
+import Settings from '../../../src/settings';
 import Suggestion, { ORDER_IN_PRODUCTION } from '../../../src/suggestion';
 import Upgrade from '../../../src/upgrade';
 
@@ -607,6 +608,35 @@ describe('submitUserSuggestions', () => {
     // corrections go to the admin review queue, not straight to regeneration
     expect(h.queueGenerate).not.toHaveBeenCalled();
     expect(h.prisma.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('auto mode: corrections it processed are not announced', async () => {
+    arrange({ count: 3, php: { id: 30, type: 'physical' } });
+    const auto = vi.spyOn(Settings.getInstance(), 'isAutoMode').mockResolvedValue(true);
+    const process = vi.spyOn(suggestion, 'processCorrections').mockResolvedValue(true);
+
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
+
+    expect(process).toHaveBeenCalledTimes(1);
+    expect(outbound.calls('PushoverClient', 'sendMessage')).toHaveLength(0);
+    auto.mockRestore();
+    process.mockRestore();
+  });
+
+  it('auto mode: corrections it could not process are announced for review', async () => {
+    arrange({ count: 2, php: { id: 30, type: 'physical' } });
+    const auto = vi.spyOn(Settings.getInstance(), 'isAutoMode').mockResolvedValue(true);
+    const process = vi.spyOn(suggestion, 'processCorrections').mockResolvedValue(false);
+
+    expect(await suggestion.submitUserSuggestions(...args)).toEqual({ success: true });
+
+    const pushes = outbound.calls('PushoverClient', 'sendMessage');
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].args[0].message).toBe(
+      '2 correcties doorgegeven door: Rick G (automatisch verwerken mislukt)'
+    );
+    auto.mockRestore();
+    process.mockRestore();
   });
 
   it('physical order without corrections: locks printer flag and queues regeneration with checkPrinter callback', async () => {

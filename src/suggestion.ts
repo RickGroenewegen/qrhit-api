@@ -448,16 +448,20 @@ class Suggestion {
           }
         }
 
-        this.pushover.sendMessage(
-          {
-            title: `QRSong! Correcties doorgegeven`,
-            message: `${suggestionCount} correcties doorgegeven door: ${
-              line.gifted ? line.owner.displayName : payment?.fullname
-            }${autoApproved ? ' (automatisch verwerkt)' : ''}`,
-            sound: 'incoming',
-          },
-          clientIp
-        );
+        // Corrections auto mode has processed need nothing from an admin, so
+        // they are not announced. The ones it could not process are.
+        if (!autoApproved) {
+          this.pushover.sendMessage(
+            {
+              title: `QRSong! Correcties doorgegeven`,
+              message: `${suggestionCount} correcties doorgegeven door: ${
+                line.gifted ? line.owner.displayName : payment?.fullname
+              }${autoMode ? ' (automatisch verwerken mislukt)' : ''}`,
+              sound: 'incoming',
+            },
+            clientIp
+          );
+        }
 
         return { success: true };
       } else if (paymentHasPlaylist?.type == 'physical') {
