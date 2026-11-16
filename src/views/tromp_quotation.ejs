@@ -705,7 +705,7 @@
                     • <%= t('piSchneiderTotal', { boxes: calculationResult.quantity, cards: totalCards }) %><br><br>
 
                     <strong><%= t('piSpecsBox') %></strong><br>
-                    <% if (cardCount === 48) { %>
+                    <% if (cardCount === 30 || cardCount === 48) { %>
                     • <%= t('piSchneider48a') %><br>
                     • <%= t('piSchneider48b') %><br>
                     <% } else if (cardCount === 96) { %>
