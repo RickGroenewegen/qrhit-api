@@ -1061,6 +1061,7 @@ class Business {
       if (printer === 'schneider') {
         const cardCount = Number(calcState.cardCount) || list.numberOfCards || 96;
         const bundleByCount: Record<number, { bundle: string; box: string }> = {
+          30: { bundle: '1x 30 in banderol', box: '1-vaks' },
           48: { bundle: '1x 48 in banderol', box: '1-vaks' },
           96: { bundle: '2x 48 in banderol', box: '2-vaks' },
           144: { bundle: '2x 72 in banderol', box: '2-vaks' },
@@ -2434,6 +2435,8 @@ class Business {
   /**
    * Calculate Schneider pricing for luxury card boxes
    * Pricing structure:
+   * - 30 cards (1x30 in banderol): Tiered pricing per unit, 1-vaks box
+   *   (Schneiders' memo-spel with 30 cards; Memo-spel_data.xlsx, 2026-11-16)
    * - 48 cards (1x48 in banderol): Tiered pricing per unit, 1-vaks box
    * - 96 cards (2x48 in banderol): Fixed €790 + €2.16 per piece, 2-vaks box
    * - 144 cards (2x72 in banderol): Fixed €1000 + €2.65 per piece, 2-vaks box
@@ -2450,7 +2453,7 @@ class Business {
    */
   public async calculateSchneiderPricing(params: {
     quantity: number;
-    cardCount: number; // 48, 96, 144, or 192
+    cardCount: number; // 30, 48, 96, 144, or 192
     includeStansmes: boolean;
     includeCustomApp?: boolean;
     includeVotingPortal?: boolean;
@@ -2477,8 +2480,8 @@ class Business {
         return { success: false, error: 'Invalid quantity' };
       }
 
-      if (![48, 96, 144, 192].includes(cardCount)) {
-        return { success: false, error: 'Invalid card count. Must be 48, 96, 144, or 192' };
+      if (![30, 48, 96, 144, 192].includes(cardCount)) {
+        return { success: false, error: 'Invalid card count. Must be 30, 48, 96, 144, or 192' };
       }
 
       // Pricing structure based on Schneider quote
@@ -2488,11 +2491,28 @@ class Business {
       let stansmesPrice: number;
       let subtotal: number;
 
-      // 48 cards uses tiered pricing with 30% reseller discount applied
-      if (cardCount === 48) {
-        // Original tiered pricing for 48 cards (before 30% reseller discount)
+      // 30 and 48 cards (the memo-spel) use tiered pricing with 30% reseller discount applied
+      if (cardCount === 30 || cardCount === 48) {
+        // Schneiders' gross price per piece (before 30% reseller discount)
         // Tiers must match frontend QUANTITIES for profit margin lookup
-        const priceTiers: { qty: number; price: number }[] = [
+        const priceTiers30: { qty: number; price: number }[] = [
+          { qty: 75, price: 5.06 },
+          { qty: 100, price: 4.46 },
+          { qty: 150, price: 3.56 },
+          { qty: 200, price: 2.99 },
+          { qty: 250, price: 2.61 },
+          { qty: 300, price: 2.35 },
+          { qty: 400, price: 1.99 },
+          { qty: 500, price: 1.77 },
+          { qty: 750, price: 1.51 }, // Schneiders' 700 step; they have none at 750
+          { qty: 1000, price: 1.30 },
+          { qty: 1500, price: 1.13 },
+          { qty: 2000, price: 1.03 },
+          { qty: 2500, price: 0.97 },
+          { qty: 5000, price: 0.81 },
+          { qty: 10000, price: 0.62 },
+        ];
+        const priceTiers48: { qty: number; price: number }[] = [
           { qty: 75, price: 5.99 },
           { qty: 100, price: 5.31 },
           { qty: 150, price: 4.27 },
@@ -2509,6 +2529,7 @@ class Business {
           { qty: 5000, price: 1.07 },
           { qty: 10000, price: 0.83 },
         ];
+        const priceTiers = cardCount === 30 ? priceTiers30 : priceTiers48;
 
         // Reseller discount rate
         const resellerDiscount = 0.30;
@@ -2538,7 +2559,7 @@ class Business {
         fixedCost = 0;
         pricePerPiece = Math.round(discountedPrice * 100) / 100;
         boxType = '1-vaks luxe dekseldoosje';
-        stansmesPrice = 0; // No stansmes for 48 cards
+        stansmesPrice = 0; // No stansmes for 30 and 48 cards
         subtotal = pricePerPiece * quantity;
       } else {
         switch (cardCount) {
@@ -2582,7 +2603,7 @@ class Business {
       let extrasTotal = 0;
 
       // Stansmes only applies to 144 and 192 cards
-      if (includeStansmes && cardCount !== 48 && cardCount !== 96 && stansmesPrice > 0) {
+      if (includeStansmes && cardCount !== 30 && cardCount !== 48 && cardCount !== 96 && stansmesPrice > 0) {
         extras.push({
           key: 'cuttingDieBox',
           keyVars: { compartments: cardCount === 192 ? 4 : 2 },

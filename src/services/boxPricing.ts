@@ -57,6 +57,7 @@ export function profitTier(quantity: number): number {
   return closest;
 }
 
+/** 30 cards has no row of its own in the profit table: it takes the margins of 48. */
 export function productId(cards: number): string {
   if (cards === 96) return 'schneider-96';
   if (cards === 144 || cards === 192) return 'schneider-192';

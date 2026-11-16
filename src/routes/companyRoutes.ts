@@ -1527,6 +1527,9 @@ export default async function companyRoutes(
           });
 
           switch (cardCount) {
+            case 30:
+              productDetails = quotationT('schneider30Details');
+              break;
             case 48:
               productDetails = quotationT('schneider48Details');
               break;

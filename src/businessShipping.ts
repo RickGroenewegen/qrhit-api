@@ -33,6 +33,9 @@ export const CARTON_SPECS: Record<number, CartonSpec> = {
   144: { boxesPerCarton: 18, ...CARTON_40x30x15 },
   96: { boxesPerCarton: 36, ...CARTON_40x30x15 },
   48: { boxesPerCarton: 106, ...CARTON_31x22x15_5 },
+  // 30 is new (2026-11-16) and has not shipped yet: assumed to pack like 48
+  // (a thinner box, so in practice more fit in a carton).
+  30: { boxesPerCarton: 106, ...CARTON_31x22x15_5 },
 };
 
 /**
@@ -45,6 +48,7 @@ export const BOX_WEIGHT_KG: Record<number, number> = {
   144: 0.21,
   96: 0.15,
   48: 0.07,
+  30: 0.05,
 };
 
 /** Euro pallet, 120x80, loaded to 165 cm on top of its own 15 cm. */

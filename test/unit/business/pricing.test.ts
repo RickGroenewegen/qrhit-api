@@ -128,7 +128,7 @@ describe('calculateSchneiderPricing', () => {
     expect(await schneider({ quantity: 0 })).toMatchObject({ success: false });
     expect(await schneider({ cardCount: 100 })).toMatchObject({
       success: false,
-      error: 'Invalid card count. Must be 48, 96, 144, or 192',
+      error: 'Invalid card count. Must be 30, 48, 96, 144, or 192',
     });
   });
 
@@ -153,6 +153,26 @@ describe('calculateSchneiderPricing', () => {
   it('48 cards: quantities above the top tier use the 10000 tier', async () => {
     const res = await schneider({ quantity: 20000 });
     expect(res.calculation.pricePerPiece).toBe(0.58); // 0.83 * 0.7
+  });
+
+  it('30 cards: its own tier prices with 30% reseller discount, no fixed cost', async () => {
+    const res = await schneider({ cardCount: 30 });
+    const c = res.calculation;
+    expect(c.boxType).toBe('1-vaks luxe dekseldoosje');
+    expect(c.fixedCost).toBe(0);
+    expect(c.pricePerPiece).toBe(3.12); // 4.46 * 0.7
+    expect(c.pricePerBox).toBe(4.12);
+    expect(c.schneiderCost).toBe(312);
+    expect(c.extras).toEqual([]);
+  });
+
+  it('30 cards: tiers follow the 48-card steps, the top tier is 10000', async () => {
+    const at = async (quantity: number) =>
+      (await schneider({ cardCount: 30, quantity, includeStansmes: true })).calculation.pricePerPiece;
+    expect(await at(600)).toBe(1.24); // 500-tier 1.77 * 0.7
+    expect(await at(5000)).toBe(0.57); // 0.81 * 0.7
+    expect(await at(10000)).toBe(0.43); // 0.62 * 0.7
+    expect(await at(30000)).toBe(0.43);
   });
 
   it('48/96 cards never get a stansmes even when requested', async () => {
