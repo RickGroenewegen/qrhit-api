@@ -1,0 +1,26 @@
+<meta name="type" content="bug">
+<meta name="title" content="Vaste prijs kaartjes gewijzigd">
+<meta name="date" content="2026-11-11">
+
+<div class="lead">In februari 2025 hebben we voor onze kaartjes van 6×6 cm een <strong>vaste prijs</strong> afgesproken: <strong>7,0 cent per kaartje</strong>. Op onze orders is die prijs sindsdien <strong>drie keer gewijzigd</strong> en staat nu op <strong>7,9 cent</strong>. Van de eerste twee wijzigingen hebben we geen bericht kunnen vinden.</div>
+
+<h2>Wat we zien</h2>
+<p>De prijs per kaartje (60×60 mm, kleur, dubbelzijdig, kaart 350 g) en de servicekosten per order, zoals ze op onze orders zijn berekend:</p>
+<table>
+<tr><th>Vanaf</th><th>Eerste order</th><th class="num">Per kaartje</th><th class="num">Servicekosten</th></tr>
+<tr><td>februari 2025 (de afspraak)</td><td></td><td class="num">€ 0,070</td><td class="num">€ 1,80</td></tr>
+<tr class="bad"><td>13 november 2025</td><td>1287351</td><td class="num">€ 0,077</td><td class="num">€ 1,80</td></tr>
+<tr class="bad"><td>28 april 2026</td><td>1396507</td><td class="num">€ 0,080</td><td class="num">€ 1,80</td></tr>
+<tr><td>26 juni 2026</td><td>1444654</td><td class="num">€ 0,079</td><td class="num">€ 2,10</td></tr>
+<tr><td>nu (factuur 26173039, week 44)</td><td></td><td class="num">€ 0,079</td><td class="num">€ 1,50</td></tr>
+</table>
+<p>De laatste orders tegen de oude prijs waren 1286376 (13 november, 7,0 cent), 1396374 (28 april, 7,7 cent) en 1444565 (26 juni, 8,0 cent). De wijziging van november viel op de dag voordat de API onze kaartjes van 60 mm even weigerde ("minimaal 80 mm"), dus mogelijk is de prijs met dezelfde update meegekomen.</p>
+
+<h2>Hoe we het getest hebben</h2>
+<p>We hebben de bedragen naast elkaar gelegd van ruim 2.300 orders naar Nederland en Duitsland met één artikel kaartjes zonder doos, van september 2025 tot nu, op volgorde van jullie ordernummer. Binnen elke periode klopt één prijs per kaartje tot op de cent. Op factuur 26173039 staat bij alle 79 artikelen met kaartjes € 0,079 per kaartje, van 37 tot 623 kaartjes, met de vermelding "Vaste prijsafspraak van toepassing". De afspraak zelf staat in de mail van 3 februari 2025 ("De prijs heb ik vastgezet op 1000 kaartjes").</p>
+
+<h2>Waarom het voor ons uitmaakt</h2>
+<p>Onze verkoopprijzen rekenen we uit met de vaste prijs per kaartje. Omdat we de wijzigingen niet wisten, rekende onze site tot deze week nog met 7,0 cent. In week 44 ging het om ruim 18.700 kaartjes in 84 orders, en de drukste weken van het jaar komen er nog aan.</p>
+
+<h2>Onze vraag</h2>
+<p>Kunnen jullie nakijken of de wijzigingen van 13 november 2025 en 28 april 2026 zo bedoeld waren, of dat ze met een update zijn meegekomen? En waar is de vaste prijs nu op gebaseerd: is er bij ons huidige volume ruimte om weer in de buurt van de oorspronkelijke afspraak te komen? Het zou ons ook erg helpen als we een wijziging van de vaste prijs vooraf horen, dan passen we onze eigen prijzen op tijd aan.</p>
