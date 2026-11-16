@@ -612,6 +612,8 @@ describe('customer account routes', () => {
     });
 
     it('mails a reset pincode to an account with a password', async () => {
+      // The registration tests above already sent this address its set-up code
+      const setupMailsBefore = mailsTo('sendCustomerRegistrationPincode', shopperEmail).length;
       const res = await forgot(shopperEmail);
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual(sentAnswer);
@@ -621,7 +623,7 @@ describe('customer account routes', () => {
       const mails = mailsTo('sendForgotPasswordPincode', shopperEmail);
       expect(mails).toHaveLength(1);
       expect(mails[0].args[2]).toBe(user!.gamesActivationCode);
-      expect(mailsTo('sendCustomerRegistrationPincode', shopperEmail)).toHaveLength(0);
+      expect(mailsTo('sendCustomerRegistrationPincode', shopperEmail)).toHaveLength(setupMailsBefore);
     });
 
     describe('a customer who ordered but never set a password', () => {

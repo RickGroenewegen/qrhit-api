@@ -17,9 +17,11 @@ describe('global error handler', () => {
     vi.restoreAllMocks();
   });
 
-  it('answers a static-file 403 with 403 and logs one line, not a stack trace', async () => {
+  it('answers a static-file 403 with 403 and logs nothing', async () => {
     // @fastify/static refuses non-canonical paths (`//`, `..`, `/./`);
-    // this used to come back as a 500 with the full error printed.
+    // this used to come back as a 500 with the full error printed. Such a
+    // path is never a file we serve (probes, a whole srcset as one URL), so
+    // it is answered and not logged.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -28,7 +30,7 @@ describe('global error handler', () => {
     expect(res.statusCode).toBe(403);
     expect(res.json()).toEqual({ error: 'Forbidden' });
     expect(error).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith('403 GET /public//x.png: Forbidden');
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('answers malformed JSON with 400 instead of 500', async () => {

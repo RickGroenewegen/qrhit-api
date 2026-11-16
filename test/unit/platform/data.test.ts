@@ -482,7 +482,7 @@ describe('Data.resolveTaxContext', () => {
 // ---------------------------------------------------------------------------
 
 describe('delegation wrappers', () => {
-  it('getLink applies defaults (useCache=true, no userAgent/php) and passes the ApiResult through', async () => {
+  it('getLink applies defaults (useCache=true, no userAgent/php/client/appVersion) and passes the ApiResult through', async () => {
     const { data } = await makeData();
     const apiResult = { success: true, data: { link: 'https://yt' } };
     h.musicLinks.getLink.mockResolvedValueOnce(apiResult);
@@ -494,22 +494,26 @@ describe('delegation wrappers', () => {
       '1.2.3.4',
       true,
       undefined,
+      undefined,
+      undefined,
       undefined
     );
   });
 
-  it('getLink forwards explicit cache/userAgent/php arguments', async () => {
+  it('getLink forwards explicit cache/userAgent/php/client/appVersion arguments', async () => {
     const { data } = await makeData();
     h.musicLinks.getLink.mockResolvedValueOnce({ success: false });
 
-    await data.getLink(7, '5.6.7.8', false, 'UA/1.0', 99);
+    await data.getLink(7, '5.6.7.8', false, 'UA/1.0', 99, 'ios', '2.1.0');
     expect(h.musicLinks.getLink).toHaveBeenCalledWith(
       data,
       7,
       '5.6.7.8',
       false,
       'UA/1.0',
-      99
+      99,
+      'ios',
+      '2.1.0'
     );
   });
 
