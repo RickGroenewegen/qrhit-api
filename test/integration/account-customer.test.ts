@@ -10,6 +10,38 @@ import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
+import { outbound } from '../helpers/recording-mock';
+
+/** An order by this account, with only the fields the schema requires. */
+async function createOrder(userId: number, email: string, status: string, paymentId: string) {
+  return prisma().payment.create({
+    data: {
+      userId,
+      paymentId,
+      orderId: `QR-${paymentId}`,
+      status,
+      fullname: 'Moritz Besteller',
+      email,
+      locale: 'de',
+      totalPrice: 25,
+      productPriceWithoutTax: 20,
+      shippingPriceWithoutTax: 0,
+      productVATPrice: 5,
+      shippingVATPrice: 0,
+      totalVATPrice: 5,
+      address: 'Teststrasse 1',
+      housenumber: '1',
+      city: 'Berlin',
+      zipcode: '10115',
+      countrycode: 'DE',
+    },
+  });
+}
+
+/** The mails a Mail method was asked to send to this address. */
+function mailsTo(method: string, email: string) {
+  return outbound.calls('Mail', method).filter((call) => call.args[0] === email);
+}
 
 /**
  * Customer self-service account flows: register-by-purchase (pincode),
@@ -564,25 +596,136 @@ describe('customer account routes', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('claims success for unknown emails (no enumeration)', async () => {
-      const res = await app.inject({
+    const sentAnswer = { success: true, message: 'forgotPasswordEmailSent' };
+    const forgot = (email: string, locale?: string) =>
+      app.inject({
         method: 'POST',
         url: '/api/account/forgot-password-request',
-        payload: { email: 'ghost@test.qrsong.io' },
+        payload: locale ? { email, locale } : { email },
       });
+
+    it('claims success for unknown emails (no enumeration)', async () => {
+      const res = await forgot('ghost@test.qrsong.io');
       expect(res.statusCode).toBe(200);
-      expect(res.json().message).toBe('forgotPasswordEmailSent');
+      expect(res.json()).toEqual(sentAnswer);
+      expect(outbound.calls('Mail').filter((c) => c.args[0] === 'ghost@test.qrsong.io')).toHaveLength(0);
     });
 
-    it('stores a pincode for a known account', async () => {
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/account/forgot-password-request',
-        payload: { email: shopperEmail },
-      });
+    it('mails a reset pincode to an account with a password', async () => {
+      const res = await forgot(shopperEmail);
       expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual(sentAnswer);
       const user = await prisma().user.findUnique({ where: { id: shopperId } });
       expect(user!.gamesActivationCode).toMatch(/^\d{6}$/);
+
+      const mails = mailsTo('sendForgotPasswordPincode', shopperEmail);
+      expect(mails).toHaveLength(1);
+      expect(mails[0].args[2]).toBe(user!.gamesActivationCode);
+      expect(mailsTo('sendCustomerRegistrationPincode', shopperEmail)).toHaveLength(0);
+    });
+
+    describe('a customer who ordered but never set a password', () => {
+      // Support, November 2026: two German customers with a paid order and a
+      // users row without a password clicked "Passwort vergessen", saw "code
+      // sent" and got no mail.
+      const buyerEmail = 'ordered-no-password@test.qrsong.io';
+      let buyerId: number;
+
+      beforeAll(async () => {
+        const buyer = await prisma().user.create({
+          data: {
+            userId: buyerEmail,
+            email: buyerEmail,
+            displayName: 'moritz',
+            hash: 'buyer-hash',
+            locale: 'de',
+            verified: false,
+          },
+        });
+        buyerId = buyer.id;
+        await createOrder(buyerId, buyerEmail, 'paid', 'tr_ordered_no_password');
+      });
+
+      it('gets the set-up pincode mail, with the same answer', async () => {
+        const res = await forgot(buyerEmail.toUpperCase(), 'de');
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toEqual(sentAnswer);
+
+        const user = await prisma().user.findUnique({ where: { id: buyerId } });
+        expect(user!.gamesActivationCode).toMatch(/^\d{6}$/);
+        const minutesLeft = (user!.gamesActivationCodeExpiry!.getTime() - Date.now()) / 60000;
+        expect(minutesLeft).toBeGreaterThan(14);
+        expect(minutesLeft).toBeLessThanOrEqual(15);
+
+        const mails = mailsTo('sendCustomerRegistrationPincode', buyerEmail);
+        expect(mails).toHaveLength(1);
+        expect(mails[0].args).toEqual([buyerEmail, 'Moritz Besteller', user!.gamesActivationCode, 'de']);
+        expect(mailsTo('sendForgotPasswordPincode', buyerEmail)).toHaveLength(0);
+      });
+
+      it('sets a password with that pincode through the forgot-password steps', async () => {
+        const issued = await prisma().user.findUnique({ where: { id: buyerId } });
+        const verify = await app.inject({
+          method: 'POST',
+          url: '/api/account/customer-verify-pincode',
+          payload: { email: buyerEmail, pincode: issued!.gamesActivationCode },
+        });
+        expect(verify.statusCode).toBe(200);
+        const { verificationToken } = verify.json();
+        expect(verificationToken).toBeTruthy();
+
+        const set = await app.inject({
+          method: 'POST',
+          url: '/api/account/customer-set-password',
+          payload: { verificationToken, password1: password, password2: password },
+        });
+        expect(set.statusCode).toBe(200);
+        expect(set.json().success).toBe(true);
+
+        const user = await prisma().user.findUnique({ where: { id: buyerId } });
+        expect(user!.password).toBeTruthy();
+        expect(user!.verified).toBe(true);
+        expect(user!.gamesActivationCode).toBeNull();
+
+        const login = await app.inject({
+          method: 'POST',
+          url: '/api/account/customer-login',
+          payload: { email: buyerEmail, password },
+        });
+        expect(login.statusCode).toBe(200);
+      });
+
+      it('gets the reset mail from then on', async () => {
+        const res = await forgot(buyerEmail);
+        expect(res.json()).toEqual(sentAnswer);
+        expect(mailsTo('sendForgotPasswordPincode', buyerEmail)).toHaveLength(1);
+        expect(mailsTo('sendCustomerRegistrationPincode', buyerEmail)).toHaveLength(1);
+      });
+    });
+
+    it('sends nothing to an account without a password and without a paid order', async () => {
+      const email = 'checkout-abandoned@test.qrsong.io';
+      const user = await prisma().user.create({
+        data: { userId: email, email, displayName: 'Abandoned', hash: 'abandoned-hash' },
+      });
+      await createOrder(user.id, email, 'open', 'tr_abandoned_checkout');
+
+      const res = await forgot(email);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual(sentAnswer);
+      const after = await prisma().user.findUnique({ where: { id: user.id } });
+      expect(after!.gamesActivationCode).toBeNull();
+      expect(outbound.calls('Mail').filter((c) => c.args[0] === email)).toHaveLength(0);
+    });
+
+    it('limits forgot-password requests per address', async () => {
+      const email = 'reset-flood@test.qrsong.io';
+      for (let i = 0; i < 5; i++) {
+        expect((await forgot(email)).statusCode).toBe(200);
+      }
+      const blocked = await forgot(email);
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json().error).toBe('tooManyAttempts');
     });
 
     it('clears the auth cookie on logout', async () => {

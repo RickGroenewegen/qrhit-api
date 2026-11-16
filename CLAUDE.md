@@ -3551,7 +3551,9 @@ The frontend consumes this API through the following key endpoints:
 #### Authentication & User Management
 - **POST** `/validate` - JWT token validation
 - **POST** `/api/account/customer-register-request`, `customer-verify-pincode`, `customer-set-password` - Customer sign-up by pincode
-- **POST** `/api/account/forgot-password-request` - Password reset by pincode
+- **POST** `/api/account/forgot-password-request` - Password reset by pincode. An account without a password
+  but with a paid order (made by the order, never registered) gets the sign-up pincode mail instead, which the
+  site's forgot-password steps take as is; the answer is the same either way (no e-mail enumeration)
 
 #### Spotify & Music Features
 - **GET** `/spotify/auth` - Spotify OAuth initiation

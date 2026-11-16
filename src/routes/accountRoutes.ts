@@ -37,6 +37,24 @@ function newPincode(): string {
 }
 
 /**
+ * Gives the account a new pincode, valid for 15 minutes (stored in the
+ * gamesActivationCode fields), and forgets earlier wrong guesses.
+ * customer-verify-pincode takes it, whichever mail carried it.
+ */
+async function issuePincode(userId: number, email: string): Promise<string> {
+  const pincode = newPincode();
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      gamesActivationCode: pincode,
+      gamesActivationCodeExpiry: new Date(Date.now() + 15 * 60 * 1000),
+    },
+  });
+  await cache.del(pincodeFailuresKey(email));
+  return pincode;
+}
+
+/**
  * The account of someone redeeming a gift who has none yet, made the way an
  * order makes one (data/users.ts storeUser): the e-mail as userId, a random
  * hash for mailed links. Named after the voucher's "for", which the giver
@@ -240,20 +258,7 @@ export default async function accountRoutes(
           return;
         }
 
-        // Generate a 6-digit pincode
-        const pincode = newPincode();
-
-        // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-        await prisma.user.update({
-          where: { id: account.id },
-          data: {
-            gamesActivationCode: pincode,
-            gamesActivationCodeExpiry: expiresAt,
-          },
-        });
-        await cache.del(pincodeFailuresKey(normalizedEmail));
+        const pincode = await issuePincode(account.id, normalizedEmail);
 
         // Send pincode email
         const userLocale = locale || payment?.locale || account.locale || 'en';
@@ -304,48 +309,46 @@ export default async function accountRoutes(
       await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'password-reset');
 
       try {
-
-        // Find user with password set (existing account)
-        const user = await prisma.user.findFirst({
-          where: {
-            email: normalizedEmail,
-            password: { not: null },
-          },
+        const user = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
         });
 
-        // Always return success to prevent email enumeration
-        if (!user) {
-          reply.send({
-            success: true,
-            message: 'forgotPasswordEmailSent',
+        if (user?.password) {
+          const pincode = await issuePincode(user.id, normalizedEmail);
+          await mail.sendForgotPasswordPincode(
+            normalizedEmail,
+            user.displayName || normalizedEmail,
+            pincode,
+            locale || user.locale || 'en'
+          );
+        } else if (user) {
+          // Someone who ordered has an account without a password (the order
+          // made it, data/users.ts storeUser) and often tries "forgot
+          // password" instead of creating one. They get the code
+          // customer-register-request sends, under the same condition: a
+          // paid order. The site's next steps (customer-verify-pincode,
+          // customer-set-password) do not care which mail the code came in.
+          const payment = await prisma.payment.findFirst({
+            where: {
+              status: 'paid',
+              OR: [{ email: normalizedEmail }, { userId: user.id }],
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { fullname: true, locale: true },
           });
-          return;
+          if (payment) {
+            const pincode = await issuePincode(user.id, normalizedEmail);
+            await mail.sendCustomerRegistrationPincode(
+              normalizedEmail,
+              payment.fullname || user.displayName,
+              pincode,
+              locale || payment.locale || user.locale || 'en'
+            );
+          }
         }
 
-        // Generate a 6-digit pincode
-        const pincode = newPincode();
-
-        // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            gamesActivationCode: pincode,
-            gamesActivationCodeExpiry: expiresAt,
-          },
-        });
-        await cache.del(pincodeFailuresKey(normalizedEmail));
-
-        // Send pincode email
-        const userLocale = locale || user.locale || 'en';
-        await mail.sendForgotPasswordPincode(
-          normalizedEmail,
-          user.displayName || normalizedEmail,
-          pincode,
-          userLocale
-        );
-
+        // The same answer whether or not anything was sent, so it never
+        // tells whether an address is known.
         reply.send({
           success: true,
           message: 'forgotPasswordEmailSent',
