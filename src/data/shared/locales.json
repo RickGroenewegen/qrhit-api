@@ -308,13 +308,34 @@
       "name": "Russian",
       "nativeName": "Русский",
       "flag": "ru",
+      "ogLocale": "ru_RU",
+      "greeting": "Привет",
+      "storefront": "ru",
       "country": null,
       "currency": null,
-      "shippingCountries": [],
+      "shippingCountries": ["DE", "AT", "PL"],
       "mollieLocale": null,
       "hyphenation": "hyphenation.ru",
-      "site": false,
-      "app": false
+      "aiDescription": "Russian (Russian speakers in Europe and worldwide)",
+      "site": true,
+      "app": true
+    },
+    {
+      "code": "tr",
+      "name": "Turkish",
+      "nativeName": "Türkçe",
+      "flag": "tr",
+      "ogLocale": "tr_TR",
+      "greeting": "Merhaba",
+      "storefront": "tr",
+      "country": null,
+      "currency": null,
+      "shippingCountries": ["DE", "NL", "AT"],
+      "mollieLocale": null,
+      "hyphenation": "hyphenation.tr",
+      "aiDescription": "Turkish (Turkey and Turkish speakers in Europe)",
+      "site": true,
+      "app": true
     }
   ]
 }

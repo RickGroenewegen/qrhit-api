@@ -124,9 +124,31 @@ entry and check every field; the generated interface documents them. Notes:
 | `qrhit/public/llms.txt`, `music-quiz/en.json` `multiLanguageDesc` | the number of languages in copy (`remove-from-cache.sh` after changing the latter) | - |
 | `qrhit/src/app/config/language-specific-routes.json` | optional localized landing slugs (add them to `_scripts/routes/i18n.txt` for the crawl); the Norway lander's copy is about Norway and NOK, so a lander on that component needs hand-edited copy | - |
 
-Needs nothing: fonts (Google Fonts serves latin-ext; the app bundles it),
-locale data (formatting uses `Intl`), flags (flagcdn.com), the countries
-bundle, VAT rates, sitemaps, hreflang, the language menu.
+Needs nothing: locale data (formatting uses `Intl`), flags (flagcdn.com), the
+countries bundle, VAT rates, sitemaps, hreflang, the language menu.
+
+**Fonts** need nothing for a Latin-script language (Google Fonts serves
+latin-ext; the app bundles it), and work for any other script. Inter has
+Cyrillic and Greek, but the display face, expanded Archivo, is Latin only,
+and the self-hosted Caveat files are Latin unless a script's file is added.
+Russian (2026-11-18) is the model:
+
+- Site: `html[lang="ru"]` in `index.html`'s inline style sets
+  `--font-display` to Unbounded (wide and heavy like expanded Archivo), whole
+  headings so a title never mixes two fonts, from self-hosted files with an
+  `Unbounded Fallback` face sized to it; other languages never download it.
+  Why inline and not in the global CSS: the website's
+  `.claude/rules/index-html.md`, "Fonts in the head". The web scanner adds
+  Caveat's own Cyrillic file (`scan.component.scss`, preloaded by
+  `scan-head.ts` on `ru`).
+- App: `src/global.scss` adds a face under Archivo's own name with Unbounded's
+  Cyrillic file and a Cyrillic `unicode-range`, with the same descriptors as
+  Archivo's faces (another `font-stretch` would not join them), plus Caveat's
+  Cyrillic file.
+
+Check a candidate face against the English page in Archivo at phone and
+desktop width before picking one: Science Gothic broke a word mid-line,
+Montserrat and Roboto Flex looked like another brand.
 
 ## 4. Content
 
@@ -166,7 +188,13 @@ After the deploy (production database; ask first):
   one-year cache, so a browser that saw an earlier build keeps its old
   `main.js` and `styles.css` until they are fetched with `cache: 'reload'`.
   Open `/<lang>` home, a product page, pricing and checkout; the language menu
-  on a phone.
+  on a phone. Then once in a scratch production build (`node
+  _scripts/patch-beasties.mjs`, then `npx ng build --configuration=production
+  --output-path=dist/<scratch>`): the new language's pages must get inlined
+  critical CSS like `/de` (`curl -s <server>/<lang> | grep -c '\.qr-display{'`).
+  Turkish got none until the inliner was patched (the website's
+  `.claude/rules/build-deploy.md`, "The beasties patch"); a dev build does not
+  inline, so only this shows it.
 - App: `npx ng test --watch=false`, `npx ng build`, then the app in a browser
   with the device language set.
 

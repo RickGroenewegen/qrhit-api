@@ -453,6 +453,8 @@ model genre {
   name_hu   String     @default("")
   name_fi   String     @default("")
   name_cs   String     @default("")
+  name_ru   String     @default("")
+  name_tr   String     @default("")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Playlist  Playlist[]
@@ -484,6 +486,8 @@ model Playlist {
   description_hu         String?              @db.Text
   description_fi         String?              @db.Text
   description_cs         String?              @db.Text
+  description_ru         String?              @db.Text
+  description_tr         String?              @db.Text
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   featured               Boolean              @default(false)
@@ -1368,6 +1372,8 @@ model CompanyList {
   description_hu          String    @default("")
   description_fi          String    @default("")
   description_cs          String    @default("")
+  description_ru          String    @default("")
+  description_tr          String    @default("")
   slug                    String
   background              String?
   background2             String?
@@ -1980,6 +1986,8 @@ model EventBase {
   name_hu          String              @default("") @db.VarChar(191)
   name_fi          String              @default("") @db.VarChar(191)
   name_cs          String              @default("") @db.VarChar(191)
+  name_ru          String              @default("") @db.VarChar(191)
+  name_tr          String              @default("") @db.VarChar(191)
   // description_en describes what kind of playlists belong to this occasion
   // (admin-editable, used to guide the AI backfill); name_<locale> + the
   // "Translate Fields" action fill the rest.
@@ -1999,6 +2007,8 @@ model EventBase {
   description_hu   String?             @db.Text
   description_fi   String?             @db.Text
   description_cs   String?             @db.Text
+  description_ru   String?             @db.Text
+  description_tr   String?             @db.Text
   // body_en is long-form editorial SEO copy for the landing page; the rest are
   // filled by the "Translate Fields" action / on-create auto-translate.
   body_en          String?             @db.Text
@@ -2017,6 +2027,8 @@ model EventBase {
   body_hu          String?             @db.Text
   body_fi          String?             @db.Text
   body_cs          String?             @db.Text
+  body_ru          String?             @db.Text
+  body_tr          String?             @db.Text
   windowDaysBefore Int                 @default(14)
   notes            String?             @db.Text
   // Hero image shown on the public occasion landing pages (all locales share

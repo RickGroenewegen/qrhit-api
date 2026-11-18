@@ -6,7 +6,7 @@ import localesJson from './locales.json';
 import marketsJson from './markets.json';
 import currenciesJson from './currencies.json';
 
-export type LocaleCode = 'en' | 'nl' | 'de' | 'fr' | 'es' | 'it' | 'pt' | 'pl' | 'jp' | 'cn' | 'sv' | 'no' | 'da' | 'hu' | 'fi' | 'cs' | 'hin' | 'ru';
+export type LocaleCode = 'en' | 'nl' | 'de' | 'fr' | 'es' | 'it' | 'pt' | 'pl' | 'jp' | 'cn' | 'sv' | 'no' | 'da' | 'hu' | 'fi' | 'cs' | 'hin' | 'ru' | 'tr';
 export type MarketCode = 'NL' | 'BE' | 'DE' | 'AT' | 'FR' | 'ES' | 'IT' | 'PT' | 'PL' | 'SE' | 'NO' | 'DK' | 'HU' | 'FI' | 'CZ' | 'US' | 'GB' | 'JP' | 'CN' | 'AU' | 'CA' | 'CH' | 'IE' | 'LI' | 'LU' | 'MC' | 'BR' | 'MX' | 'AR' | 'CL' | 'CO' | 'PE' | 'SM' | 'VA' | 'IS' | 'HK' | 'TW' | 'SG' | 'NZ' | 'ZA';
 export type CurrencyCode = 'EUR' | 'NOK' | 'SEK' | 'DKK' | 'GBP' | 'CHF' | 'PLN' | 'CZK' | 'HUF' | 'USD' | 'CAD' | 'AUD';
 

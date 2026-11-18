@@ -892,7 +892,7 @@
         {
             "slug": "languages",
             "title": "What languages are supported?",
-            "description": "QRSong! supports 16 languages: English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Hungarian, Japanese and Chinese. The website and app are fully translated; the language on your printed cards follows your selection at order time.",
+            "description": "QRSong! supports 18 languages: English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Hungarian, Japanese, Chinese, Russian and Turkish. The website and app are fully translated; the language on your printed cards follows your selection at order time.",
             "tags": [
                 "languages",
                 "translation",

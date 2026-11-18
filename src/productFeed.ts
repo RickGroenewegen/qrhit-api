@@ -210,6 +210,8 @@ export function getTracksLabel(
     hu: `${numberOfTracks} zeneszámot tartalmaz`,
     fi: `Sisältää ${numberOfTracks} kappaletta`,
     cs: `Obsahuje ${numberOfTracks} skladeb`,
+    ru: `Содержит треков: ${numberOfTracks}`,
+    tr: `${numberOfTracks} şarkı içerir`,
   };
   return tracksLabel[locale] || tracksLabel['en'];
 }

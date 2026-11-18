@@ -50,9 +50,9 @@ import Translation from '../../src/translation';
 const translation = new Translation();
 
 describe('locale metadata', () => {
-  it('exposes all 16 supported locales', () => {
+  it('exposes all 18 supported locales', () => {
     expect(Translation.ALL_LOCALES).toEqual([
-      'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no', 'da', 'hu', 'fi', 'cs',
+      'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'jp', 'cn', 'sv', 'no', 'da', 'hu', 'fi', 'cs', 'ru', 'tr',
     ]);
     expect(translation.allLocales).toEqual(Translation.ALL_LOCALES);
   });

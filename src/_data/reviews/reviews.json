@@ -234,6 +234,14 @@
         "cs": {
           "title": "verze pro iPad",
           "text": "prosím vylepšete verzi pro iPad, třeba přidejte režim na šířku"
+        },
+        "ru": {
+          "title": "версия для iPad",
+          "text": "пожалуйста, сделайте версию для iPad лучше, например добавьте альбомный режим"
+        },
+        "tr": {
+          "title": "iPad sürümü",
+          "text": "lütfen iPad sürümünü iyileştirin, mesela yatay mod ekleyin"
         }
       },
       "translatedFrom": "1f7bd487fef6cc7d25d7152832c191da1a39cc8b",
@@ -325,6 +333,14 @@
         "cs": {
           "title": "Snadný proces a skvělá komunikace",
           "text": "Objednání bylo opravdu snadné. Rychlé doručení a skvělá komunikace po celou dobu. Vřele doporučuji jako skvělý, osobní dárek."
+        },
+        "ru": {
+          "title": "Простой процесс и отличная коммуникация",
+          "text": "Заказать было очень просто. Быстрая доставка и отличная коммуникация на всех этапах. Очень рекомендую как отличный персональный подарок."
+        },
+        "tr": {
+          "title": "Kolay süreç ve harika iletişim",
+          "text": "Sipariş vermek çok kolaydı. Hızlı teslimat ve süreç boyunca harika iletişim. Harika, kişisel bir hediye olarak kesinlikle tavsiye ederim."
         }
       },
       "translatedFrom": "34ee2b277fa4497a23073177a16c50b78bf33f46",
@@ -416,6 +432,14 @@
         "cs": {
           "title": "Servis byl naprosto skvělý",
           "text": "Servis byl naprosto skvělý. Karty byly odeslány velmi rychle a také vypadaly skvěle. Také informace ohledně tvorby hudebních karet byly velmi transparentní. Skvělý servis, vřele doporučuji. Kdykoli znovu rád objednám."
+        },
+        "ru": {
+          "title": "Сервис был просто супер",
+          "text": "Сервис был просто супер. Карточки отправили очень быстро, и выглядели они тоже отлично. Информация о процессе создания музыкальных карточек также была очень прозрачной. Отличный сервис, очень рекомендую. С удовольствием обращусь снова в любое время."
+        },
+        "tr": {
+          "title": "Hizmet kesinlikle harikaydı",
+          "text": "Hizmet kesinlikle harikaydı. Kartlar çok hızlı gönderildi ve ayrıca harika görünüyordu. Müzik kartlarının hazırlanmasıyla ilgili bilgiler de çok şeffaftı. Harika hizmet, kesinlikle tavsiye ederim. Her zaman yeniden tercih ederim."
         }
       },
       "translatedFrom": "2443ec004d0848226a795f7470ae22478ed55f8f",
@@ -507,6 +531,14 @@
         "cs": {
           "title": "",
           "text": "Aplikace je skvělá! Funguje bezchybně a stabilně. Je to fakt zábava"
+        },
+        "ru": {
+          "title": "",
+          "text": "Приложение классное! Работает без ошибок и стабильно. Реально весело"
+        },
+        "tr": {
+          "title": "",
+          "text": "Uygulama harika! Sorunsuz ve stabil çalışıyor. Gerçekten çok eğlenceli"
         }
       },
       "translatedFrom": "ff77aea2d214227f10ee461ab0e7b334d0a18ef6",
@@ -598,6 +630,14 @@
         "cs": {
           "title": "Prostě to funguje",
           "text": "Chtěl jsem si sám vytvořit aplikaci jako QRSong na skenování vlastních kartiček s QR kódy. Tahle aplikace dělá přesně to a nemá žádné otravné reklamy! Díky!"
+        },
+        "ru": {
+          "title": "Это просто работает",
+          "text": "Я хотел сам сделать приложение вроде QRSong, чтобы сканировать собственные карточки с QR-кодами. Это приложение делает именно это, и никакой назойливой рекламы! Спасибо!"
+        },
+        "tr": {
+          "title": "Gayet iyi çalışıyor",
+          "text": "Kendi QR kodlu kartlarımı taramak için QRSong gibi bir uygulamayı kendim yapmak istiyordum. Bu uygulama tam olarak bunu yapıyor ve can sıkıcı reklamlar da yok! Teşekkürler!"
         }
       },
       "translatedFrom": "cc2a19e7274d1021ab762d8caf871bdf7d533da8",
@@ -689,6 +729,14 @@
         "cs": {
           "title": "Konečně seriózní dodavatel, špičková kvalita!",
           "text": "Darovali jsme k 50. narozeninám 300 karet včetně 2 dárkových krabiček a byla to pecka! ✨ Bohužel jsme málem naletěli jinému pochybnému dodavateli a byli jsme moc rádi, že s QR Song! všechno proběhlo bez problémů. 🫶🏻 Poměr ceny a výkonu sedí a kvalita karet je skvělá… je poznat, že do toho dávají srdce."
+        },
+        "ru": {
+          "title": "Наконец-то серьёзный поставщик, отличное качество!",
+          "text": "Мы подарили на 50-летие 300 карточек и 2 подарочные коробки, и это было просто потрясающе! ✨ К сожалению, мы чуть не попались на удочку другого сомнительного поставщика и были очень рады, что с QR Song! всё прошло гладко. 🫶🏻 Соотношение цены и качества хорошее, а качество карточек просто отличное… чувствуется, что в это вложили душу."
+        },
+        "tr": {
+          "title": "Sonunda güvenilir bir sağlayıcı, kalite mükemmel!",
+          "text": "50. doğum günü için 2 hediye kutusuyla birlikte 300 kart hediye ettik ve inanılmazdı! ✨ Ne yazık ki az kalsın başka şüpheli bir sağlayıcıya kanıyorduk, QR Song! ile her şeyin sorunsuz ilerlemesine çok sevindik. 🫶🏻 Fiyat performans dengesi iyi ve kartların kalitesi harika… bu işe gönül verildiği belli."
         }
       },
       "translatedFrom": "5d396cdf923561a6e1a37cb77ce3f2f3c31bb947",
@@ -780,6 +828,14 @@
         "cs": {
           "title": "",
           "text": "Vlastně dobrá aplikace. Ale teď jsme najednou během hraní nemohli pokračovat. Od té doby jsem udělal a vyzkoušel všechno. Aplikace sice skladbu pořád rozpozná, ale zůstane na stránce skenování a už žádnou skladbu nepřehraje. Takže je teď k ničemu. Škoda."
+        },
+        "ru": {
+          "title": "",
+          "text": "Вообще-то хорошее приложение. Но теперь во время игры мы внезапно не смогли продолжить. С тех пор я всё перепробовал. Приложение по-прежнему распознаёт песню, но остаётся на странице сканирования и больше не воспроизводит песни. Поэтому теперь оно бесполезно. Жаль."
+        },
+        "tr": {
+          "title": "",
+          "text": "Aslında iyi bir uygulama. Ama şimdi oyun sırasında birden devam edemedik. O zamandan beri her şeyi yaptım ve denedim. Uygulama şarkıyı hâlâ tanıyor ama tarama sayfasında kalıyor ve artık hiçbir şarkıyı çalmıyor. Bu yüzden artık işe yaramaz. Yazık."
         }
       },
       "translatedFrom": "a04f474d4e2f6f6d1b8700ef4d448e81810827c1",
@@ -872,6 +928,14 @@
         "cs": {
           "title": "Pro skvělé letní večery s rodinou",
           "text": "Naše letní večery s rodinou byly díky naší osobní hře Hitster mnohem zábavnější. Stejně snadno se hraje. Tisk a doručení proběhly velmi hladce. S touto zkušeností jsem velmi spokojený;"
+        },
+        "ru": {
+          "title": "Для отличных летних вечеров с семьёй",
+          "text": "Наши летние вечера с семьёй стали намного веселее благодаря нашей персональной игре Hitster. Играть так же легко. Печать и доставка прошли очень быстро. Очень довольны этим опытом;"
+        },
+        "tr": {
+          "title": "Aileyle harika yaz akşamları için",
+          "text": "Kişisel Hitster oyunumuz sayesinde ailece geçirdiğimiz yaz akşamları çok daha eğlenceli oldu. Oynaması da aynı derecede kolay. Baskı ve teslimat çok hızlı ilerledi. Bu deneyimden çok memnunuz;"
         }
       },
       "translatedFrom": "be76a40cefc9e6b1f65e3ebfd3de122364dbb6eb",
@@ -963,6 +1027,14 @@
         "cs": {
           "title": "",
           "text": "Doporučuje se jako alternativa, aby bylo možné hrát Hitster s Tidal. Přestože byla příslušná skladba dostupná, nebyla rozpoznána. Proto bohužel nepoužitelné."
+        },
+        "ru": {
+          "title": "",
+          "text": "Рекомендуется как альтернатива, чтобы можно было играть в Hitster с Tidal. Хотя нужная песня была доступна, она не распозналась. Поэтому, к сожалению, бесполезно."
+        },
+        "tr": {
+          "title": "",
+          "text": "Hitster'ı Tidal ile oynayabilmek için alternatif olarak öneriliyor. İlgili şarkı mevcut olmasına rağmen tanınmadı. Bu yüzden maalesef kullanışsız."
         }
       },
       "translatedFrom": "6e22ff23605d9ee4fd7e1da4af26adde0c08e6a2",
@@ -1055,6 +1127,14 @@
         "cs": {
           "title": "Fakt super!",
           "text": "Opravdu moc zábavná hra, fakt upřímně doporučuju! I děti si můžou vytvořit vlastní seznam, super i na dovolenou! Teď to hraju skoro každý víkend, opravdu skvělý nápad!"
+        },
+        "ru": {
+          "title": "Правда супер!",
+          "text": "Правда очень классная игра, честно, очень рекомендую! Даже дети могут составить свой собственный список, ещё и отличный вариант для каникул! Я теперь играю в неё почти каждые выходные, правда очень здорово придумано!"
+        },
+        "tr": {
+          "title": "Gerçekten harika ya!",
+          "text": "Gerçekten çok eğlenceli bir oyun, açıkçası kesinlikle tavsiye ederim! Çocuklar bile kendi listelerini oluşturabiliyor, tatil için de çok güzel! Artık neredeyse her hafta sonu oynuyorum, gerçekten çok güzel düşünülmüş!"
         }
       },
       "translatedFrom": "fde68263ac87344bc23b5c089d04168a9d603e76",
@@ -1147,6 +1227,14 @@
         "cs": {
           "title": "",
           "text": "S kartami Hitster a Deezerem to vůbec nefunguje. Nenajde se žádná skladba."
+        },
+        "ru": {
+          "title": "",
+          "text": "Вообще не работает с карточками Hitster и Deezer. Ни одна песня не находится."
+        },
+        "tr": {
+          "title": "",
+          "text": "Hitster kartları ve Deezer ile hiç çalışmıyor. Hiçbir şarkı bulunamıyor."
         }
       },
       "translatedFrom": "35745c9c6a9de20f85937bd961cf193d04046844",
@@ -1239,6 +1327,14 @@
         "cs": {
           "title": "Vřele doporučuji",
           "text": "Vytvořil jsem si vlastní hru s vlastním playlistem. Funguje opravdu dobře, protože k ní patří vlastní aplikace, pomocí které můžete karty skenovat."
+        },
+        "ru": {
+          "title": "Очень рекомендую",
+          "text": "Я создал свою собственную игру со своим плейлистом. Всё работает очень хорошо, потому что у игры есть собственное приложение, с помощью которого можно сканировать карточки."
+        },
+        "tr": {
+          "title": "Kesinlikle tavsiye ederim",
+          "text": "Kendi çalma listemle kendi oyunumu oluşturdum. Kartları taramanızı sağlayan kendi uygulaması olduğu için gerçekten çok iyi çalışıyor."
         }
       },
       "translatedFrom": "68e24080ddae788e398ded49a169c92289898c4f",
@@ -1330,6 +1426,14 @@
         "cs": {
           "title": "Perfektní kvalita a rychlé dodání!",
           "text": "Perfektní zkušenost! Ideální řešení, jak snadno převést vlastní playlist na hru H!tster. Kartičky jsem měl do 3 dnů ve schránce a vypadají přesně tak, jak jsem očekával. Rozhodně doporučuji!\n\nJediné, co mi ještě chybí, jsou žetony H!tster a krabice vyrobená na míru. Myslím, že do krabice, kterou QRSong! momentálně nabízí, se vejde jen 200/250 kartiček. Pokud si tedy chcete nechat vytisknout více kartiček, dostanete několik krabiček."
+        },
+        "ru": {
+          "title": "Идеальное качество и быстро!",
+          "text": "Идеальные впечатления! Отличное решение, чтобы легко превратить собственный плейлист в игру H!tster. Карточки были у меня в почтовом ящике уже через 3 дня, и выглядят они в точности так, как я и ожидал. Однозначно рекомендую!\n\nЕдинственное, чего мне ещё не хватает, это фишек H!tster и коробки, изготовленной по размеру. Насколько я понимаю, в коробку, которую сейчас предлагает QRSong!, помещается всего 200/250 карточек. Поэтому, если вы хотите напечатать больше карточек, то получите несколько коробочек."
+        },
+        "tr": {
+          "title": "Mükemmel kalite ve hızlı!",
+          "text": "Mükemmel bir deneyim! Kendi çalma listenizi kolayca bir H!tster oyununa dönüştürmek için ideal bir çözüm. Kartlar 3 gün içinde posta kutuma ulaştı ve tam da beklediğim gibi görünüyorlar. Kesinlikle tavsiye ederim!\n\nHâlâ eksikliğini hissettiğim tek şey H!tster jetonları ve özel ölçüde yapılmış bir kutu. Sanırım QRSong!'un şu anda sunduğu kutuya yalnızca 200/250 kart sığıyor. Yani daha fazla kart bastırmak isterseniz birden fazla kutu alıyorsunuz."
         }
       },
       "translatedFrom": "3a76f12da0b1365b83e21bbb60af389459610af8",
@@ -1422,6 +1526,14 @@
         "cs": {
           "title": "Skvělý svatební dárek",
           "text": "Dali jsme to jako svatební dárek. Mělo to opravdu velký úspěch. Také velmi dobrý poměr ceny a kvality. Škoda, že nejde každou kartu navrhnout individuálně. Pak bych dal pět hvězdiček. Ale jinak bylo všechno super!"
+        },
+        "ru": {
+          "title": "Отличный свадебный подарок",
+          "text": "Мы подарили это на свадьбу. Всем очень понравилось. И соотношение цены и качества очень хорошее. Жаль, что нельзя оформить каждую карточку индивидуально. Тогда я бы поставил(а) пять звёзд. Но в остальном всё было отлично!"
+        },
+        "tr": {
+          "title": "Harika bir düğün hediyesi",
+          "text": "Bunu bir düğünde hediye ettik. Çok beğenildi. Fiyat performans oranı da çok iyi. Her kartın ayrı ayrı tasarlanamaması üzücü. O zaman beş yıldız verirdim. Ama onun dışında her şey harikaydı!"
         }
       },
       "translatedFrom": "186fb267b6ff4501c49f25cecb01fb81f0af71a8",
@@ -1513,6 +1625,14 @@
         "cs": {
           "title": "Je to vždycky zábava a jsme mega…",
           "text": "Je to vždycky zábava a jsme mega šťastní z našeho vlastního playlistu.👍🏼\nDokonce to bylo doručeno o den dřív, než bylo uvedeno ve sledování zásilky😊👍🏼"
+        },
+        "ru": {
+          "title": "Это всегда весело, и мы просто мега…",
+          "text": "Это всегда весело, и мы просто мега рады нашему собственному плейлисту.👍🏼\nДоставили даже на день раньше, чем было указано в отслеживании посылки😊👍🏼"
+        },
+        "tr": {
+          "title": "Her zaman çok eğlenceli ve kendi…",
+          "text": "Her zaman çok eğlenceli ve kendi çalma listemiz olduğu için çok mutluyuz.👍🏼\nHatta kargo takibinde belirtilenden bir gün daha erken teslim edildi😊👍🏼"
         }
       },
       "translatedFrom": "0b64d12357f5f76f382e6449916b43dbb21cca89",
@@ -1604,6 +1724,14 @@
         "cs": {
           "title": "Moc pěkná aplikace",
           "text": "Skvělá aplikace! Přehrává všechny možné hudební QR karty, jako Hitster, maďarský Song Hunter (Dalvadász) a tak dále... 😊😀"
+        },
+        "ru": {
+          "title": "Очень хорошее приложение",
+          "text": "Отличное приложение! Оно воспроизводит всевозможные музыкальные QR-карточки, например Hitster, венгерскую Song Hunter (Dalvadász) и так далее... 😊😀"
+        },
+        "tr": {
+          "title": "Çok güzel uygulama",
+          "text": "Harika bir uygulama! Hitster, Macar Song Hunter (Dalvadász) ve benzeri her tür müzik QR kartını oynatıyor... 😊😀"
         }
       },
       "translatedFrom": "88e39f2fcb5453cf0476a22844607124e8993624",
@@ -1695,6 +1823,14 @@
         "cs": {
           "title": "Vybral jsem playlist na Spotify",
           "text": "Vybral jsem playlist na Spotify a celý proces byl snadný. Kartu jsme dostali o několik týdnů později, jsme v Kanadě, a hráli jsme pomocí aplikace z App Storu. Milujeme to!"
+        },
+        "ru": {
+          "title": "Я выбрал плейлист в Spotify",
+          "text": "Я выбрал плейлист в Spotify, и всё было легко. Через несколько недель мы получили карточки, мы в Канаде, и играли с приложением из App Store. Нам очень понравилось!"
+        },
+        "tr": {
+          "title": "Spotify'da bir çalma listesi seçtim",
+          "text": "Spotify'da bir çalma listesi seçtim ve süreç kolaydı. Birkaç hafta sonra kartlar elimize ulaştı, Kanada'dayız, ve App Store'daki uygulamayla oynadık. Bayıldık!"
         }
       },
       "translatedFrom": "7441925c10a792ad5ea6ecf1015afb3a39439420",
@@ -1786,6 +1922,14 @@
         "cs": {
           "title": "Skvělý nápad na dárek",
           "text": "Je moc fajn, že si teď můžete vytvořit vlastní „hitser“.\nRozhodně doporučuji jako dárek, protože ho můžete udělat velmi osobní.\nPřehledný web a doručení včas.\nJediné malé mínus je, že jsem na Spotify nemohl najít každou písničku"
+        },
+        "ru": {
+          "title": "Отличная идея для подарка",
+          "text": "Очень здорово, что теперь можно сделать свой собственный «хитстер».\nОднозначно рекомендую в качестве подарка, потому что его можно сделать очень личным.\nПонятный сайт и своевременная доставка.\nЕдинственный небольшой минус в том, что мне удалось найти в Spotify не каждую песню"
+        },
+        "tr": {
+          "title": "Harika bir hediye fikri",
+          "text": "Artık kendi \"hitster\"ını yapabilmek çok güzel.\nÇok kişisel hale getirilebildiği için hediye olarak kesinlikle tavsiye ederim.\nSite anlaşılır ve teslimat zamanında.\nTek küçük eksi yanı, her şarkıyı Spotify'da bulamamış olmam"
         }
       },
       "translatedFrom": "614001645b8603c2492c4cdb0a3a237979ec8b8d",
@@ -1877,6 +2021,14 @@
         "cs": {
           "title": "Opravdu dobré",
           "text": "Opravdu dobré! Je to skvělá alternativa s přesně takovým hudebním stylem, jaký si člověk přeje!"
+        },
+        "ru": {
+          "title": "Очень здорово",
+          "text": "Очень здорово! Отличная альтернатива именно с той музыкой, которую хочется!"
+        },
+        "tr": {
+          "title": "Gerçekten çok iyi",
+          "text": "Gerçekten çok iyi! Tam da istediğiniz müzik tarzıyla harika bir alternatif!"
         }
       },
       "translatedFrom": "87b9a9da0134602e5921420f0267d7f69f7e68f8",
@@ -1968,6 +2120,14 @@
         "cs": {
           "title": "Špičková kvalita, zábava pro celou rodinu",
           "text": "Soubor se šablonami k vytištění jsme dostali super rychle.\nSystém také rozpozná duplicitní skladby v playlistu a vynechá je.\nSchválně jsme přidali skladby, aby mohly hrát i naše děti. Bavíme se s celou rodinou"
+        },
+        "ru": {
+          "title": "Отличное качество, веселье для всей семьи",
+          "text": "Очень быстро получили файл с шаблонами для печати.\nСистема также распознаёт повторяющиеся треки в плейлисте и исключает их.\nМы специально добавили треки, чтобы наши дети тоже могли играть. Весело всей семье"
+        },
+        "tr": {
+          "title": "Üstün kalite, tüm aile için eğlence",
+          "text": "Yazdırılacak şablonların bulunduğu dosyayı çok hızlı aldık.\nSistem çalma listesindeki tekrarlanan şarkıları da algılayıp bunları çıkarıyor.\nÇocuklarımızın da oynayabilmesi için özellikle şarkılar ekledik. Tüm ailece çok eğleniyoruz"
         }
       },
       "translatedFrom": "b46ca2461055300935a290d170c1265db0be4bc7",
@@ -2059,6 +2219,14 @@
         "cs": {
           "title": "Byl/a jsem průběžně informován/a o stavu objednávky…",
           "text": "Po celou dobu jsem byl/a informován/a o stavu objednávky a doručení bylo rychlejší, než jsem očekával/a. Kvalita karet je velmi dobrá."
+        },
+        "ru": {
+          "title": "Меня информировали о статусе заказа…",
+          "text": "Меня постоянно информировали о статусе заказа, а доставка оказалась быстрее, чем ожидалось. Качество карточек очень хорошее."
+        },
+        "tr": {
+          "title": "Siparişin durumu hakkında bilgilendirildim…",
+          "text": "Siparişin durumu hakkında sürekli bilgilendirildim ve teslimat beklediğimden daha hızlıydı. Kartların kalitesi çok iyi."
         }
       },
       "translatedFrom": "79a22fc8d8276cead3c227eb45597403480d592b",
@@ -2150,6 +2318,14 @@
         "cs": {
           "title": "Rozhodně doporučuji",
           "text": "Z karet a jejich zákaznického servisu mám opravdu obrovskou radost!! Názvy skladeb, interprety + další informace bylo možné po zaplacení ještě kompletně upravit podle sebe. Dokonce i skladby v playlistu na Spotify šlo ještě dodatečně změnit, pokud celkový počet zůstal stejný jako ten, za který jste zaplatili.\n\nPři ukládání změn se mi bohužel něco pokazilo, takže se správně nezpracovaly. Ale přes e-mail reagovali neuvěřitelně ochotně a nakonec je ještě upravili ručně.\n\nPokud si chcete vytvořit vlastní Hitster, rozhodně doporučuji objednat tady. Poměr ceny/kvality/služeb je opravdu skvělý!"
+        },
+        "ru": {
+          "title": "Однозначно рекомендую",
+          "text": "Я просто безумно довольна карточками и их службой поддержки!! Названия, исполнителей + дополнительную информацию можно было полностью персонализировать самостоятельно даже после оплаты. Даже песни в плейлисте Spotify можно было потом изменить, если их общее количество оставалось таким же, за какое вы заплатили.\n\nК сожалению, при внесении изменений у меня что-то пошло не так, из-за чего они обработались неправильно. Но по электронной почте мне очень охотно помогли и всё-таки внесли изменения вручную.\n\nЕсли вы хотите сделать свой собственный Hitster, я однозначно рекомендую заказывать здесь. Соотношение цены/качества/сервиса просто отличное!"
+        },
+        "tr": {
+          "title": "Kesinlikle tavsiye ederim",
+          "text": "Kartlardan ve müşteri hizmetlerinden gerçekten çok memnun kaldım!! Başlıkları, sanatçıları + ek bilgileri ödemeden sonra bile tamamen kendiniz kişiselleştirebiliyordunuz. Hatta Spotify çalma listesindeki şarkıları bile sonradan değiştirebiliyordunuz, yeter ki toplam sayı ödeme yaptığınız sayıyla aynı kalsın.\n\nNe yazık ki değişiklikleri uygularken bende bir şeyler ters gitti, bu yüzden değişiklikler düzgün işlenmedi. Ama e-posta üzerinden inanılmaz yardımcı oldular ve yine de elle düzelttiler.\n\nKendi Hitster'ınızı yapmak istiyorsanız, buradan sipariş vermenizi kesinlikle tavsiye ederim. Fiyat/kalite/hizmet oranı gerçekten harika!"
         }
       },
       "translatedFrom": "1be3eeb4c73f65d086a8ae2ecee5b06641f4b7c6",
@@ -2241,6 +2417,14 @@
         "cs": {
           "title": "",
           "text": "skvělá alternativa k Hitsteru, když si chcete zahrát vlastní hry"
+        },
+        "ru": {
+          "title": "",
+          "text": "отличная альтернатива Hitster, чтобы играть в свои собственные игры"
+        },
+        "tr": {
+          "title": "",
+          "text": "kendi oyunlarını oynamak için Hitster'a harika bir alternatif"
         }
       },
       "translatedFrom": "143d6b236e8d87b2737b76ebedd03cdd06354b66",
@@ -2332,6 +2516,14 @@
         "cs": {
           "title": "Skvělý podnikatelský nápad",
           "text": "Skvělý podnikatelský nápad. Snadné použití a skvělý výsledek. Zábava pro všechny a pro jakoukoli hudbu. Rozhodně doporučuji."
+        },
+        "ru": {
+          "title": "Отличная бизнес-идея",
+          "text": "Отличная бизнес-идея. Легко пользоваться, и результат отличный. Весело для всех и с любой музыкой. Однозначно рекомендую."
+        },
+        "tr": {
+          "title": "Harika bir iş fikri",
+          "text": "Harika bir iş fikri. Kullanımı kolay ve sonuç harika. Herkes için ve her türlü müzikle eğlenceli. Kesinlikle tavsiye ederim."
         }
       },
       "translatedFrom": "7fc9a79994b39cbacd09b8273f7a2789fb4bba57",
@@ -2423,6 +2615,14 @@
         "cs": {
           "title": "",
           "text": "Miluju tu aplikaci, když funguje. Poslední dobou se pořád zobrazuje jen na půlce obrazovky. Musím ji odinstalovat a pak znovu nainstalovat"
+        },
+        "ru": {
+          "title": "",
+          "text": "Обожаю приложение, когда оно работает. В последнее время постоянно открывается на пол-экрана. Приходится удалять и переустанавливать"
+        },
+        "tr": {
+          "title": "",
+          "text": "Çalıştığında uygulamaya bayılıyorum. Son zamanlarda sürekli yarım ekran açılıyor. Kaldırıp yeniden yüklemek zorunda kalıyorum"
         }
       },
       "translatedFrom": "eca58d4e4d3797f29a273edfe1e77c5c26bd476b",
@@ -2515,6 +2715,14 @@
         "cs": {
           "title": "Skvělá malá firma se srdcem na správném místě",
           "text": "Při vytváření karet s písničkami všechno fungovalo podle očekávání. Je tu spousta možností přizpůsobení. Před vytištěním můžete upravit všechny informace na kartách. Měl jsem dotaz přes kontaktní formulář a majitel odpověděl do 10 minut! Po aktualizaci aplikace a vyřešení mého dotazu se mi dokonce ještě ozval e-mailem."
+        },
+        "ru": {
+          "title": "Отличная небольшая компания, у которой сердце на месте",
+          "text": "При создании карточек с песнями всё работало как и ожидалось. Есть множество возможностей для персонализации. Перед печатью можно отредактировать всю информацию на карточках. Я задал вопрос через контактную форму, и владелец ответил в течение 10 минут! Он даже написал мне ещё раз по электронной почте после обновления приложения, когда мой вопрос был решён."
+        },
+        "tr": {
+          "title": "Kalbi doğru yerde olan harika küçük bir şirket",
+          "text": "Şarkı kartlarını oluştururken her şey beklendiği gibi çalıştı. Pek çok özelleştirme yapılabiliyor. Kartları yazdırmadan önce üzerlerindeki tüm bilgileri düzenleyebiliyorsunuz. İletişim formu üzerinden bir soru sordum ve şirket sahibi 10 dakika içinde cevap verdi! Hatta uygulama güncellendikten ve sorunum çözüldükten sonra e-postayla tekrar dönüş yaptı."
         }
       },
       "translatedFrom": "76c9ec01ebd565e2f66d51ba4ec80d26d40775a3",
@@ -2606,6 +2814,14 @@
         "cs": {
           "title": "Skvělé!",
           "text": "Skvělé, že si můžete přizpůsobit vlastní seznam!"
+        },
+        "ru": {
+          "title": "Здорово!",
+          "text": "Здорово, что можно персонализировать собственный список!"
+        },
+        "tr": {
+          "title": "Harika!",
+          "text": "Kendi listeni kişiselleştirebilmek harika!"
         }
       },
       "translatedFrom": "cc9e46a11a4217cb1dcf584b9e365c23e7435674",
@@ -2698,6 +2914,14 @@
         "cs": {
           "title": "Skvělá věc.",
           "text": "Aplikace funguje skvěle a vytváření vlastních karet s QR kódy je také skvělá věc. Také podpora je vstřícná a rychlá."
+        },
+        "ru": {
+          "title": "Отличная штука.",
+          "text": "Приложение работает прекрасно, и возможность создавать собственные карточки с QR-кодами тоже отличная штука. Поддержка тоже дружелюбная и быстрая."
+        },
+        "tr": {
+          "title": "Harika bir şey.",
+          "text": "Uygulama harika çalışıyor ve kendi QR kod kartlarınızı oluşturabilmek de harika bir şey. Destek de güler yüzlü ve hızlı."
         }
       },
       "translatedFrom": "b301d9bf0c6671e3a1072145f5e4065ff147916d",
@@ -2789,6 +3013,14 @@
         "cs": {
           "title": "",
           "text": "Paráda! Hitster s vlastními kartami!"
+        },
+        "ru": {
+          "title": "",
+          "text": "Супер! Hitster со своими карточками!"
+        },
+        "tr": {
+          "title": "",
+          "text": "Süper! Kendi kartlarınla Hitster!"
         }
       },
       "translatedFrom": "02505795bb0c38c811ba345f0df1f5d0349b9491",
@@ -2880,6 +3112,14 @@
         "cs": {
           "title": "Super",
           "text": "Paráda, opravdu rychlé!\nRozhodně doporučuji, špičková kvalita"
+        },
+        "ru": {
+          "title": "Супер",
+          "text": "Супер, очень быстро!\nОднозначно рекомендую, отличное качество"
+        },
+        "tr": {
+          "title": "Süper",
+          "text": "Harika, çok hızlı!\nKesinlikle tavsiye ederim, mükemmel kalite"
         }
       },
       "translatedFrom": "0ad2768d64ae23a834ae000e1b3a244d092092aa",
@@ -2971,6 +3211,14 @@
         "cs": {
           "title": "Skvělá služba pro vytvoření vlastní hudební hry!",
           "text": "Hledal jsem službu, pomocí které bych si mohl vytvořit vlastní hudební hru. Tady všechno fungovalo bez problémů a lze si nastavit spoustu věcí podle sebe. Navíc je možné po zadání objednávky ještě provést úpravy a výrobu spustit až ve chvíli, kdy všechno sedí a je zkontrolované. Také doručení bylo poměrně rychlé, hru jsem měl v ruce do 10 dnů. Kvalita a funkčnost karet: velmi dobrá. Rád objednám znovu :)"
+        },
+        "ru": {
+          "title": "Отличный сервис для своей музыкальной игры!",
+          "text": "Я искал сервис, чтобы создать собственную музыкальную игру. Здесь всё прошло без проблем, можно задать много индивидуальных настроек. Кроме того, после оформления заказа ещё можно внести изменения и запустить производство только тогда, когда всё подходит и проверено. Доставка тоже была довольно быстрой, игра была у меня в руках в течение 10 дней. Качество и работа карточек: очень хорошие. С удовольствием закажу снова :)"
+        },
+        "tr": {
+          "title": "Kendi şarkı oyununuz için harika hizmet!",
+          "text": "Kendi şarkı oyunumu oluşturmak için bir hizmet arıyordum. Burada her şey sorunsuz ilerledi, birçok kişisel ayar yapılabiliyor. Ayrıca siparişi verdikten sonra da değişiklik yapma ve üretimi ancak her şey uygun olup kontrol edildikten sonra başlatma imkânınız var. Teslimat da oldukça hızlıydı, oyun 10 gün içinde elimdeydi. Kartların kalitesi ve işlevi: çok iyi. Yine memnuniyetle sipariş veririm :)"
         }
       },
       "translatedFrom": "ddda9ac2d6a4314820de6b1c00c20128cb51c914",
@@ -3062,6 +3310,14 @@
         "cs": {
           "title": "Mega",
           "text": "Mega! Jsem opravdu, opravdu spokojený. Nic by nešlo udělat lépe! Všechno se dá individuálně přizpůsobit & aplikace taky funguje perfektně. Moc děkuju"
+        },
+        "ru": {
+          "title": "Супер",
+          "text": "Супер! Я очень, очень доволен. Лучше и не сделаешь! Всё можно настроить индивидуально, и приложение тоже работает идеально. Огромное спасибо"
+        },
+        "tr": {
+          "title": "Süper",
+          "text": "Süper! Gerçekten çok, çok memnunum. Daha iyisi yapılamaz! Her şey kişiye özel olarak ayarlanabiliyor ve uygulama da kusursuz çalışıyor. Çok çok teşekkürler"
         }
       },
       "translatedFrom": "dc3a8aad87ca2b4fafce6886d708d3a4862c673b",
@@ -3153,6 +3409,14 @@
         "cs": {
           "title": "",
           "text": "super aplikace"
+        },
+        "ru": {
+          "title": "",
+          "text": "супер приложение"
+        },
+        "tr": {
+          "title": "",
+          "text": "süper uygulama"
         }
       },
       "translatedFrom": "a5db43d298f18821a7d27635bca19c2e6c46c6d8",
@@ -3247,6 +3511,14 @@
         "cs": {
           "title": "",
           "text": "Necháte si vyrobit drahé kartičky u QR Song a pak celá aplikace vůbec nefunguje... Takže úplně na nic."
+        },
+        "ru": {
+          "title": "",
+          "text": "Заказали дорогие карточки у QR Song, а потом всё приложение вообще не работает... Полный отстой."
+        },
+        "tr": {
+          "title": "",
+          "text": "QR Song'da pahalı kartlar yaptırdık, sonra uygulamanın tamamı çalışmıyor... Yani tam bir rezalet."
         }
       },
       "translatedFrom": "8357c20e5a3ce7aef3e7a91403f7c7995b365f74",
@@ -3342,6 +3614,14 @@
         "cs": {
           "title": "",
           "text": "nespustí se"
+        },
+        "ru": {
+          "title": "",
+          "text": "не запускается"
+        },
+        "tr": {
+          "title": "",
+          "text": "açılmıyor"
         }
       },
       "translatedFrom": "273da0fe817c0e82fd5d47719200ae20b910ba86",
@@ -3434,6 +3714,14 @@
         "cs": {
           "title": "Skvělá práce",
           "text": "Opravdu super služba! Krásné designy a možnosti individuálního návrhu.\nObjednal jsem si vytištěné karty. Bohužel na nich bylo malé číslo, kvůli kterému vypadaly o něco hůř a které před nákupem nebylo na webu vidět. Když jsem to zmínil zákaznické podpoře, dostalo se mi milého vysvětlení a několika možností, jak dál postupovat, přičemž všechny byly velmi vstřícné.\nSkvělá zákaznická podpora!\nMěli by ale do online náhledu karet přidat číslo tiskové série, aby lidé věděli, jak budou karty skutečně vypadat, pokud si je netisknou sami."
+        },
+        "ru": {
+          "title": "Отличная работа",
+          "text": "Очень классный сервис! Красивые дизайны и возможности индивидуального оформления.\nЯ заказал печать карточек. К сожалению, на карточках был маленький номер, из-за которого они выглядели чуть хуже, и перед покупкой на сайте он не отображался. Когда я сообщил об этом службе поддержки, мне всё вежливо объяснили и предложили несколько вариантов решения, причём во всех случаях были очень готовы пойти навстречу.\nОтличная служба поддержки!\nНо им стоит добавить номер партии печати в онлайн-превью карточек, чтобы люди знали, как карточки будут выглядеть на самом деле, если они не печатают их сами."
+        },
+        "tr": {
+          "title": "Harika iş",
+          "text": "Gerçekten çok güzel bir hizmet! Güzel tasarımlar ve kişiye özel tasarım seçenekleri.\nKartları basılı olarak sipariş ettim. Ne yazık ki kartların üzerinde küçük bir numara vardı, bu da onları biraz daha çirkin gösteriyordu ve satın almadan önce internette gösterilmemişti. Bunu müşteri hizmetlerine ilettiğimde güzel bir açıklamayla ve nasıl ilerleyebileceğimize dair çeşitli seçeneklerle karşılandım, bunların hepsinde de son derece yardımcı oldular.\nHarika müşteri hizmetleri!\nYine de baskı parti numarasını kartların çevrim içi ön izlemesine eklemeliler, böylece kartları kendileri basmayanlar kartların gerçekte nasıl görüneceğini bilir."
         }
       },
       "translatedFrom": "ed68ac18138a613a23eab15ec16e652f1756a620",
@@ -3525,6 +3813,14 @@
         "cs": {
           "title": "Super! Jen škoda, že nerozpozná všechny QR kódy",
           "text": "Skvělá aplikace: snadno se používá a navíc i dobře vypadá. Jen škoda, že má s některými QR kódy výrazně větší potíže než vestavěná čtečka v aplikaci Fotoaparát. Kódy s obrázkem uprostřed a na tmavém pozadí nerozpozná vůbec nebo jen stěží."
+        },
+        "ru": {
+          "title": "Супер! Жаль только, что распознаются не все QR-коды",
+          "text": "Отличное приложение: простое в использовании и к тому же хорошо выглядит. Жаль только, что с некоторыми QR-кодами оно справляется заметно хуже, чем встроенный сканер в приложении «Камера». Коды с картинкой посередине и на тёмном фоне почти или совсем не распознаются."
+        },
+        "tr": {
+          "title": "Süper! Yalnız tüm QR kodlarının tanınmaması üzücü",
+          "text": "Harika bir uygulama: kullanımı basit, ayrıca görünümü de güzel. Yalnız bazı QR kodlarında Kamera uygulamasındaki yerleşik okuyucuya kıyasla belirgin şekilde daha fazla zorlanması üzücü. Ortasında resim olan ve koyu renkli bir zemin üzerindeki kodlar ya hiç tanınmıyor ya da zar zor tanınıyor."
         }
       },
       "translatedFrom": "0bdde290270da7ffb476df148e74b82c1735f957",
@@ -3616,6 +3912,14 @@
         "cs": {
           "title": "Skoro všechno bylo super",
           "text": "Všechno bylo super, i to, že si to můžete sami navrhnout. Jediné, co u mě nesedělo, byl rok, u jedné písničky bylo uvedeno 1981, i když vyšla v roce 2018:/ jinak všechno super"
+        },
+        "ru": {
+          "title": "Почти всё было супер",
+          "text": "Всё было супер, в том числе и то, что можно самому сделать дизайн. Единственное, что у меня было не так, это год, у одной песни был указан 1981 год, хотя она вышла в 2018:/ а в остальном всё супер"
+        },
+        "tr": {
+          "title": "Neredeyse her şey süperdi",
+          "text": "Her şey süperdi, tasarımı kendin yapabilmen de. Bende olan tek sorun yılın yanlış olmasıydı, bir şarkıda 1981 yazıyordu ama aslında 2018'de çıkmıştı:/ onun dışında her şey süper"
         }
       },
       "translatedFrom": "19fb64cd3a60b9ec420f9356ecf6d3054802d05c",
@@ -3707,6 +4011,14 @@
         "cs": {
           "title": "Skvělá hra",
           "text": "Skvělá hra, kterou si můžete sami vytvořit."
+        },
+        "ru": {
+          "title": "Отличная игра",
+          "text": "Отличная игра, которую можно оформить самому."
+        },
+        "tr": {
+          "title": "Harika oyun",
+          "text": "Kendin tasarlayabileceğin harika bir oyun."
         }
       },
       "translatedFrom": "9c6a372f0371892675b5671919dcc45adbb910c5",
@@ -3798,6 +4110,14 @@
         "cs": {
           "title": "Opravdu dobré",
           "text": "Opravdu dobré! Funguje bez problémů."
+        },
+        "ru": {
+          "title": "Очень здорово",
+          "text": "Очень здорово! Работает безупречно."
+        },
+        "tr": {
+          "title": "Gerçekten çok iyi",
+          "text": "Gerçekten çok iyi! Sorunsuz çalışıyor."
         }
       },
       "translatedFrom": "181d9d77dac2dec5ee61b42eb4d031ea34b39b31",
@@ -3889,6 +4209,14 @@
         "cs": {
           "title": "Fantastické!",
           "text": "Pro naši firmu jsme vytvořili Hitster s oblíbenými písničkami všech kolegů. Vytvoření šlo rychle, hraní s vlastní aplikací QRSong funguje jako po másle a je to paráda. Super služba!"
+        },
+        "ru": {
+          "title": "Фантастика!",
+          "text": "Для нашей компании мы сделали Hitster с любимыми песнями всех коллег. Всё получилось быстро, игра с собственным приложением QRSong работает как часы и приносит море удовольствия. Суперсервис!"
+        },
+        "tr": {
+          "title": "Harika!",
+          "text": "Şirketimiz için tüm çalışma arkadaşlarımızın en sevdiği şarkılardan bir Hitster hazırladık. Hazırlaması hızlıydı, QRSong'un kendi uygulamasıyla oynamak tıkır tıkır işliyor ve tam bir eğlence. Süper hizmet!"
         }
       },
       "translatedFrom": "c6584ac9db60584fe2adbc0c804ea6cc4b6ea6f7",
@@ -3980,6 +4308,14 @@
         "cs": {
           "title": "",
           "text": "Fajn aplikace. Funguje přímo s odkazem na Spotify. Takže si můžete snadno vytvořit vlastní karty."
+        },
+        "ru": {
+          "title": "",
+          "text": "Классное приложение. работает напрямую со ссылкой Spotify. так что можно легко делать свои собственные карточки"
+        },
+        "tr": {
+          "title": "",
+          "text": "güzel uygulama. doğrudan Spotify bağlantısıyla çalışıyor. böylece kendi kartlarını kolayca yapabilirsin"
         }
       },
       "translatedFrom": "f3d5f92102a1deaf881c5273ca96c19fb3002eec",
@@ -4071,6 +4407,14 @@
         "cs": {
           "title": "Tak strašně spokojená!!",
           "text": "Tak strašně spokojená!!! Tohle bylo přesně to, co jsem hledala. Jsem tak ráda, že jsem narazila na tento web, když jsem se úplně trápila s ruční výrobou všech kartiček. Jsou extrémně rychlí (na můj e-mail odpověděli velmi mile do 24 hodin a kartičky byly doručeny dokonale vytištěné a ořezané do 3 pracovních dnů od objednávky!), produkt je velmi kvalitní a moc se mi líbí, že existuje i aplikace, takže při skenování QR nevidíte název písničky. Nemohla bych být spokojenější, doporučuji na 1000 %!"
+        },
+        "ru": {
+          "title": "Я просто безумно счастлива!!",
+          "text": "Я просто безумно счастлива!!! Это было именно то, что я искала; я так рада, что случайно наткнулась на этот сайт, когда уже совсем замучилась делать все карточки вручную. Они работают невероятно быстро (очень любезно ответили на моё письмо в течение 24 часов, а карточки были доставлены, идеально напечатанные и вырезанные, в течение 3 рабочих дней после моего заказа!), продукт очень качественный, и мне очень нравится, что ещё есть приложение, поэтому при сканировании QR-кода не видно название песни. Я просто невероятно счастлива, рекомендую на 1000%!"
+        },
+        "tr": {
+          "title": "İnanılmaz derecede mutluyum!!",
+          "text": "İnanılmaz derecede mutluyum!!! Bu tam olarak aradığım şeydi; tüm kartları elle yapmaya çalışırken çok zorlandığım sırada bu siteye denk geldiğim için çok mutluyum. İnanılmaz hızlılar (e-postama 24 saat içinde çok nazik bir şekilde yanıt verdiler ve kartlar siparişimden sonraki 3 iş günü içinde kusursuz şekilde basılmış ve kesilmiş olarak teslim edildi!), ürün çok kaliteli ve ayrıca bir uygulama olmasına bayıldım, böylece QR'ı tararken şarkının adını görmüyorsunuz. Daha mutlu olamazdım, %1000 tavsiye ederim!"
         }
       },
       "translatedFrom": "43d14fc665f5620f2fa855ebf241e8e424141c1d",
@@ -4162,6 +4506,14 @@
         "cs": {
           "title": "Opravdu dobré",
           "text": "Rychlé doručení. Všechno podle očekávání. Pěkné a kvalitní. Aplikace i karty fungují dobře."
+        },
+        "ru": {
+          "title": "Очень хорошо",
+          "text": "Быстрая доставка. Всё как и ожидалось. Красиво и хорошего качества. Приложение и карточки работают хорошо."
+        },
+        "tr": {
+          "title": "Gerçekten iyi",
+          "text": "Hızlı teslimat. Her şey beklendiği gibi. Güzel ve kaliteli. Uygulama ve kartlar iyi çalışıyor."
         }
       },
       "translatedFrom": "bde0e2f99f43bc8fa40280f0b0aefeeaa38301fc",
@@ -4253,6 +4605,14 @@
         "cs": {
           "title": "Zábava se švédskými písničkami",
           "text": "Pořídil jsem si playlist Mello-top-3. Funguje přesně tak, jak jsem si přál.\nVytvořil jsem si také vlastní hudební kvíz na Štědrý večer.\nNavrhování a vytváření vlastních kartiček fungovalo dobře. Je skvělé, že web a aplikace jsou teď ve švédštině."
+        },
+        "ru": {
+          "title": "Весело со шведскими песнями",
+          "text": "Приобрёл плейлист Mello-top-3. Работает именно так, как я и хотел.\nЕщё создал собственную музыкальную викторину к Сочельнику.\nДизайн и создание собственных карточек прошли хорошо. Здорово, что сайт и приложение теперь на шведском."
+        },
+        "tr": {
+          "title": "İsveççe şarkılarla eğlence",
+          "text": "Mello-top-3 çalma listesini aldım. Tam istediğim gibi çalışıyor.\nNoel arifesi için kendi müzik quiz'imi de oluşturdum.\nKendi kartlarımı tasarlamak ve oluşturmak iyi çalıştı. Sitenin ve uygulamanın artık İsveççe olması harika."
         }
       },
       "translatedFrom": "9107a900f9e7dd1fe9921e04aca1ddf6a8f9375f",
@@ -4344,6 +4704,14 @@
         "cs": {
           "title": "Páni",
           "text": "Páni, jak skvělá a rychlá služba! Ušetří vám to tolik práce, můžete nahrát vlastní seznam ze Spotify a oni z něj udělají Hitster/QR kartičky. Roky jsou ověřené a máte spoustu možností, jak dát designu osobní nádech. Klobouk dolů! Rozhodně doporučuji!"
+        },
+        "ru": {
+          "title": "Вау",
+          "text": "Вау, какой отличный и быстрый сервис! Это избавляет от огромного объёма работы: можно загрузить собственный плейлист Spotify, и они сделают из него карточки hitster/qr. Годы выпуска проверяются, а в дизайне есть достаточно возможностей добавить что-то личное. Браво! Однозначно рекомендую!"
+        },
+        "tr": {
+          "title": "Vay canına",
+          "text": "Vay canına, ne kadar iyi ve hızlı bir hizmet! İnsanı bir sürü işten kurtarıyor, kendi hazırladığınız Spotify listesini yükleyebiliyorsunuz ve onlar da bunu hitster/qr kartlarına dönüştürüyor. Yıllar doğrulanıyor ve tasarıma kişisel bir dokunuş katmak için yeterince seçeneğiniz oluyor. Bravo! Kesinlikle tavsiye ederim!"
         }
       },
       "translatedFrom": "7b7f514b2cc2262e36c232d7010f258dd694c1e7",
@@ -4435,6 +4803,14 @@
         "cs": {
           "title": "Před rokem jsem hledal takovou službu…",
           "text": "Před rokem jsem hledal takovou službu a neexistovala.\nTeď už existuje a je rychlá a cenově dostupná!\nDíky!"
+        },
+        "ru": {
+          "title": "Год назад я искал такой сервис…",
+          "text": "Год назад я искал такой сервис, но его не существовало.\nТеперь он есть, и это быстро и недорого!\nСпасибо!"
+        },
+        "tr": {
+          "title": "1 yıl önce böyle bir hizmet aramıştım…",
+          "text": "1 yıl önce böyle bir hizmet aramıştım ama yoktu.\nŞimdi var, hem hızlı hem de uygun fiyatlı!\nTeşekkürler!"
         }
       },
       "translatedFrom": "f2900a35a54790e2b1c64a50308e341535390ba4",
@@ -4526,6 +4902,14 @@
         "cs": {
           "title": "Příjemný web, dělá přesně to, co má.",
           "text": "Příjemný web, dělá přesně to, co má! Rychlá komunikace se zaměstnanci přes chat. Po chybě v mé objednávce mi velmi ochotně pomohli s dokončením."
+        },
+        "ru": {
+          "title": "Удобный сайт, делает именно то, что должен.",
+          "text": "Удобный сайт, делает именно то, что должен! Сотрудники быстро отвечают в чате. После ошибки в моём заказе мне очень хорошо помогли всё исправить."
+        },
+        "tr": {
+          "title": "Güzel bir site, tam olarak yapması gerekeni yapıyor.",
+          "text": "Güzel bir site, tam olarak yapması gerekeni yapıyor! Çalışanlar sohbet üzerinden hızlıca yanıt veriyor. Siparişimdeki bir hatadan sonra düzeltme konusunda bana çok güzel yardımcı oldular."
         }
       },
       "translatedFrom": "4247439994502e3a563436f7eb6ec8e5016fc28e",
@@ -4617,6 +5001,14 @@
         "cs": {
           "title": "Super zkušenost",
           "text": "Super zkušenost.\nSuper servis.\nRychlá zákaznická podpora.\nRád si tu objednám znovu."
+        },
+        "ru": {
+          "title": "Отличный опыт",
+          "text": "Отличный опыт.\nОтличный сервис.\nБыстрая служба поддержки.\nС удовольствием закажу здесь снова."
+        },
+        "tr": {
+          "title": "Harika deneyim",
+          "text": "Harika deneyim.\nHarika hizmet.\nHızlı müşteri hizmetleri.\nBuradan tekrar memnuniyetle sipariş veririm."
         }
       },
       "translatedFrom": "3bf14550dd36c06e3a1cc52d06881b38cab6ac75",
@@ -4711,6 +5103,14 @@
         "cs": {
           "title": "",
           "text": "Zábava při hře je zaručena, jediné, co by ještě bylo fakt super, by bylo, kdyby písnička začínala někde uprostřed."
+        },
+        "ru": {
+          "title": "",
+          "text": "Играть весело, единственное, что было бы ещё реально классно, это если бы песня начиналась где-нибудь с середины."
+        },
+        "tr": {
+          "title": "",
+          "text": "Oynaması eğlenceli, gerçekten güzel olabilecek tek şey şarkının ortalarda bir yerden başlaması olurdu."
         }
       },
       "translatedFrom": "55384ab8df55dc7f67f49f0163bc3f3d63ce8e6c",
@@ -4802,6 +5202,14 @@
         "cs": {
           "title": "Karty se snadno kupují",
           "text": "Karty se snadno kupují, s jakýmkoli playlistem, který chcete. Tisknu karty na fotografický papír a funguje to skvěle. Velmi příjemná aplikace, funguje na 100 % i s bezplatnou verzí Spotify."
+        },
+        "ru": {
+          "title": "Карточки легко купить",
+          "text": "Карточки легко купить, с любым плейлистом, каким захотите. Я печатаю карточки на фотобумаге, и всё работает замечательно. Очень хорошее приложение, работает на 100% даже с бесплатной версией Spotify."
+        },
+        "tr": {
+          "title": "Kartları satın almak kolay",
+          "text": "İstediğiniz herhangi bir çalma listesiyle kartları satın almak kolay. Kartları fotoğraf kağıdına basıyorum ve harika çalışıyor. Çok güzel bir uygulama, Spotify'ın ücretsiz sürümüyle bile %100 çalışıyor."
         }
       },
       "translatedFrom": "f0fe60bbda39ff2b73fa852b0790a6a8bf5ef1e1",
@@ -4893,6 +5301,14 @@
         "cs": {
           "title": "",
           "text": "Skvělá hra! Vytváření kartiček a stejně tak i hraní je ohromná zábava!"
+        },
+        "ru": {
+          "title": "",
+          "text": "Отличная игра! Создавать карточки и играть в неё очень весело!"
+        },
+        "tr": {
+          "title": "",
+          "text": "Harika oyun! Kartları oluşturmak da oynamak da çok eğlenceli!"
         }
       },
       "translatedFrom": "bf2dd87927c8116b5efd2454c65f324ce9a19fb3",
@@ -4984,6 +5400,14 @@
         "cs": {
           "title": "Super",
           "text": "Super, vaše vlastní hudební hra. A.... tady s vámi opravdu hledají řešení. Je toho možné opravdu hodně, i když chcete něco aktualizovat."
+        },
+        "ru": {
+          "title": "Супер",
+          "text": "Супер, своя собственная музыкальная игра. И.... здесь действительно думают вместе с тобой. Можно очень многое, даже когда хочешь что-то обновить."
+        },
+        "tr": {
+          "title": "Süper",
+          "text": "Süper, kendi müzik oyunun. Ve.... burada gerçekten seninle birlikte düşünüyorlar. Güncellemek istediğinde bile pek çok şey mümkün."
         }
       },
       "translatedFrom": "a60ac710a30b5459889573b7b546431c57600305",
@@ -5075,6 +5499,14 @@
         "cs": {
           "title": "Příjemný poslech",
           "text": "Objednal jsem asi 1800 kartiček. Rychlé dodání, dobrá kvalita. Aplikace také funguje dobře. Jen je škoda, že vpravo dole je na kartičkách číslo šarže, které nejde odstranit."
+        },
+        "ru": {
+          "title": "Приятного прослушивания",
+          "text": "Заказали около 1800 карточек. Быстрая доставка, хорошее качество. Приложение тоже работает хорошо. Только в правом нижнем углу на карточках есть номер партии, жаль, что его нельзя убрать."
+        },
+        "tr": {
+          "title": "Keyifli dinlemeler",
+          "text": "Yaklaşık 1800 kart sipariş ettik. Hızlı teslimat, iyi kalite. Uygulama da iyi çalışıyor. Yalnız kartların sağ alt köşesinde bir parti numarası var, kaldırılamaması üzücü."
         }
       },
       "translatedFrom": "ea1da92d9003555bc902064e5b9d985ef3221192",
@@ -5166,6 +5598,14 @@
         "cs": {
           "title": "",
           "text": "Skvělá aplikace, seriózní firma. Pravidelně přidávají nové funkce"
+        },
+        "ru": {
+          "title": "",
+          "text": "Отличное приложение, надёжная компания. Регулярно добавляют новые функции"
+        },
+        "tr": {
+          "title": "",
+          "text": "Harika uygulama, güvenilir şirket. Düzenli olarak yeni özellikler ekliyorlar"
         }
       },
       "translatedFrom": "b7ab054236cf5163f39e9ee6a3c2d2dc615fef7e",
@@ -5257,6 +5697,14 @@
         "cs": {
           "title": "",
           "text": "Úžasné služby a s nejnovější aktualizací udělala obrovský krok vpřed i aplikace."
+        },
+        "ru": {
+          "title": "",
+          "text": "Потрясающий сервис, а с последним обновлением приложение тоже сделало огромный шаг вперёд."
+        },
+        "tr": {
+          "title": "",
+          "text": "Harika bir hizmet, son güncellemeyle uygulama da ileriye doğru büyük bir adım attı."
         }
       },
       "translatedFrom": "16934e200e11c05480a5a9de9d177dafb7040e69",
@@ -5348,6 +5796,14 @@
         "cs": {
           "title": "Doporučil/a bych to!",
           "text": "Komunikace s firmou byla skvělá! Je fakt super mít v kvízu svoje oblíbené písničky a všechno dobře dopadlo, doporučil/a bych to. Je to skvělý dárek pro milovníky hudby ☺️"
+        },
+        "ru": {
+          "title": "Я бы порекомендовал(а)!",
+          "text": "Общение с компанией было отличным! Очень здорово, что в викторине есть твои любимые песни, и всё получилось хорошо, я бы порекомендовал(а). Это отличный подарок для любителей музыки ☺️"
+        },
+        "tr": {
+          "title": "Tavsiye ederim!",
+          "text": "Şirketle iletişim harikaydı! En sevdiğin şarkıların quizde olması çok güzel ve her şey yolunda gitti, tavsiye ederim. Müzikseverler için süper bir hediye ☺️"
         }
       },
       "translatedFrom": "367807cda9b647d6fad52510c1357a5882e93f21",
@@ -5439,6 +5895,14 @@
         "cs": {
           "title": "Vynikající služby!!!",
           "text": "Kromě toho, že je to prostě NEJLEPŠÍ DÁREK VŠECH DOB, byly služby této společnosti vynikající. Díky tomuto dárku se někdo cítil opravdu výjimečně. Rozhodně objednám znovu!!!"
+        },
+        "ru": {
+          "title": "Потрясающий сервис!!!",
+          "text": "Помимо того, что это просто ЛУЧШИЙ ПОДАРОК НА СВЕТЕ, сервис этой компании был потрясающим. Благодаря этому подарку один человек почувствовал себя особенным. Я обязательно закажу снова!!!"
+        },
+        "tr": {
+          "title": "Olağanüstü hizmet!!!",
+          "text": "Bunun GERÇEKTEN GELMİŞ GEÇMİŞ EN İYİ HEDİYE olmasının yanı sıra, bu şirketin hizmeti de olağanüstüydü. Bu hediye birinin kendini çok özel hissetmesini sağladı. Kesinlikle tekrar sipariş vereceğim!!!"
         }
       },
       "translatedFrom": "4d3a336774dfe016680cdeba079ef681f95944e2",
@@ -5530,6 +5994,14 @@
         "cs": {
           "title": "Vynikající služba",
           "text": "Vynikající služba, jejich playlisty jsou opravdu skvělé a je velmi snadné vytisknout a získat další karty."
+        },
+        "ru": {
+          "title": "Отличный сервис",
+          "text": "Отличный сервис, плейлисты у них просто супер, и очень легко распечатать и получить больше карточек."
+        },
+        "tr": {
+          "title": "Mükemmel hizmet",
+          "text": "Mükemmel hizmet, sundukları çalma listeleri çok iyi ve daha fazla kart yazdırıp edinmek çok kolay."
         }
       },
       "translatedFrom": "8de98fad6b827597f5346218eea35d9c5b115329",
@@ -5621,6 +6093,14 @@
         "cs": {
           "title": "dobrý zákaznický servis",
           "text": "Dostali jsme kartičky a ukázalo se, že ne všechny fungují správně. Kontaktoval jsem Qr song a pokusili se zjistit, v čem je problém. Problém byl na naší straně, protože jsme neměli Spotify Premium.\nDostaneme peníze zpět a kartičky si přesto můžeme nechat.\nTakže jsme měli s QR Song velmi dobrou zkušenost, za což děkujeme."
+        },
+        "ru": {
+          "title": "хорошая служба поддержки",
+          "text": "Мы получили карточки, и оказалось, что не всё работало как надо. Я связался с Qr song, и они попытались выяснить, в чём была проблема. Проблема оказалась у нас, потому что у нас не было spotify premium.\nНам вернут деньги, и при этом мы можем оставить карточки себе.\nТак что у нас остались очень хорошие впечатления от QR Song, за что большое спасибо."
+        },
+        "tr": {
+          "title": "iyi müşteri hizmetleri",
+          "text": "Kartlar elimize ulaştı ve her şeyin düzgün çalışmadığı ortaya çıktı. Qr song ile iletişime geçtim ve sorunun nerede olduğunu bulmaya çalıştılar. Sorun bizdeydi çünkü spotify premium'umuz yoktu.\nParamızı geri alacağız ve yine de kartları elimizde tutabileceğiz.\nYani QR Song ile çok iyi bir deneyim yaşadık, bunun için teşekkürler."
         }
       },
       "translatedFrom": "eb90faa86ba8ae6115c2e39dee4cc9236382988f",
@@ -5712,6 +6192,14 @@
         "cs": {
           "title": "Super skvělá jedinečná hra",
           "text": "Super skvělá jedinečná hra! Líbí se mi, že ji můžu hrát s přáteli a udělat si hru tak velkou, jak chci, qrsong je nejlepší zpracování tohoto nápadu, protože si můžete vytvořit vlastní nápad. S qrsong si v podstatě vytvoříte vlastní produkt."
+        },
+        "ru": {
+          "title": "Суперкрутая уникальная игра",
+          "text": "Суперкрутая уникальная игра! Мне нравится, что я могу играть в неё с друзьями и сделать игру настолько большой, насколько захочу, qrsong лучше всего воплощает эту идею, потому что вы можете создать свою идею. С qrsong вы, по сути, создаёте собственный продукт."
+        },
+        "tr": {
+          "title": "Süper havalı ve benzersiz bir oyun",
+          "text": "Süper havalı ve benzersiz bir oyun! Arkadaşlarımla oynayabilmem ve oyunu istediğim kadar büyütebilmem hoşuma gidiyor, qrsong bu fikrin en iyi uyarlaması çünkü kendi fikrinizi oluşturabiliyorsunuz. qrsong ile neredeyse kendi ürününüzü yapıyorsunuz."
         }
       },
       "translatedFrom": "c497171b95a804710099ee36d9d7eb539a24240c",
@@ -5803,6 +6291,14 @@
         "cs": {
           "title": "",
           "text": "Nefunguje to. Jakmile naskenuju kartu (jen jsem vyfotil/a ukázkovou kartu, kterou máte na svých webových stránkách), aplikace spadne. Žádné karty jsem si nekoupil/a (ještě že tak), ale tohle je podvod. Pokud by někoho zajímalo, jaký telefon používám, jestli se to pořád děje, je to Samsung galaxy A51. PODVOD"
+        },
+        "ru": {
+          "title": "",
+          "text": "Это не работает. Как только я сканирую карточку (я просто сфотографировал карточку-пример с вашего сайта), приложение вылетает. Я не покупал никаких карточек (мне повезло), но это мошенничество. Если кому-то интересно, каким телефоном я пользуюсь, если это всё ещё продолжает происходить, то это Samsung galaxy A51. МОШЕННИЧЕСТВО"
+        },
+        "tr": {
+          "title": "",
+          "text": "Çalışmıyor. Bir kartı tarar taramaz (web sitenizdeki örnek kartın fotoğrafını çektim sadece) uygulama çöküyor. Hiç kart satın almadım (şanslıyım), ama bu bir dolandırıcılık. Bu hâlâ devam ediyorsa ve kullandığım telefonu merak eden varsa, Samsung galaxy A51. DOLANDIRICILIK"
         }
       },
       "translatedFrom": "6796e979226dd6402b67a65357521b4453d767a6",
@@ -5895,6 +6391,14 @@
         "cs": {
           "title": "",
           "text": "Nefunguje to s ukázkovými kódy na vašem webu, QR kód se nenačte."
+        },
+        "ru": {
+          "title": "",
+          "text": "Не работает с примерами кодов на вашем сайте, QR-код не сканируется."
+        },
+        "tr": {
+          "title": "",
+          "text": "Sitenizdeki örnek kodlarla çalışmıyor, QR kodunu taramıyor."
         }
       },
       "translatedFrom": "8eb648ca0240fd2e33e7098ec57b8698face30eb",
@@ -5987,6 +6491,14 @@
         "cs": {
           "title": "Velmi snadné a ideální pro vytvoření vlastního…",
           "text": "Velmi snadné a ideální pro vytvoření vlastního seznamu až s 500 kartičkami. Nakonec jsem měl ještě pár otázek a dostal jsem okamžitou pomoc dokonce i během svátků a v neděli!\nDoufám, že brzy bude možné objednat si kartičky místo pdf, ušetří to práci se stříháním."
+        },
+        "ru": {
+          "title": "Очень легко и идеально, чтобы сделать свой собственный…",
+          "text": "Очень легко и идеально, чтобы сделать свой собственный список до 500 карточек. После этого у меня осталось ещё несколько вопросов, и мне сразу помогли даже во время праздников и в воскресенье!\nНадеюсь, скоро появится возможность не только скачать pdf, но и заказать карточки, тогда не придётся вырезать."
+        },
+        "tr": {
+          "title": "Kendi listenizi oluşturmak için çok kolay ve ideal…",
+          "text": "500 karta kadar kendi listenizi oluşturmak çok kolay ve ideal. Sonrasında birkaç sorum daha vardı ve tatil günlerinde, hatta pazar günü bile hemen yardımcı oldular!\nUmarım yakında pdf yerine kartları sipariş etme imkânı da olur, böylece kesme işiyle uğraşmak gerekmez."
         }
       },
       "translatedFrom": "3fe1195d0e89cc3711758d7c8e8cceafe7bdfb05",
@@ -6078,6 +6590,14 @@
         "cs": {
           "title": "Eco verze (použít co nejméně inkoustu) je velká výhoda.",
           "text": "K Vánocům jsem koupil/a HITster Music Bingo.\nA náhodou jsem objevil/a QRsong, kde si můžete vytvořit vlastní kartičky s QR kódem z playlistu nebo playlistů na Spotify.\n(Ať už sestavených mnou, nebo ne.)\n.\nServis QRsong je super, protože na můj dotaz e-mailem, zda by byla možná také takzvaná „Eco varianta“, odpověděli okamžitě.\n(Chtěl/a jsem vyplýtvat co nejméně inkoustu přes svou LaserPrinter. Na přední straně měl být QR kód a nic dalšího.\n.\nS Eco verzí jsem tedy velmi spokojený/á.\nTaké jsem zvolil/a „oboustranný“ tisk. Protože jsem doma měl/a ještě silnější papír, jsou moje takto vytištěné kartičky stejně profesionální jako ty z krabice HITster Music Bingo."
+        },
+        "ru": {
+          "title": "Эковерсия (использовать как можно меньше чернил) является большим преимуществом.",
+          "text": "На Рождество купил HITster Music Bingo.\nИ случайно обнаружил QRsong, чтобы делать собственные карточки с QR-кодами из плейлиста(ов) Spotify.\n(Составленных самостоятельно или нет).\n.\nСервис QRsong просто супер, потому что на мой вопрос по электронной почте, возможна ли так называемая «Эко-опция», ответили сразу.\n(Я хотел тратить как можно меньше чернил (на моём лазерном принтере). На лицевой стороне должен был быть QR-код и больше ничего.\n.\nТак что я очень доволен эковерсией.\nТакже я выбрал «Двустороннюю» печать. Поскольку у меня дома была ещё более плотная бумага, напечатанные таким образом карточки выглядят так же профессионально, как и карточки из коробки HITster Music Bingo."
+        },
+        "tr": {
+          "title": "Eco sürüm (mümkün olduğunca az mürekkep kullanmak) büyük bir avantaj.",
+          "text": "Noel için bir HITster Music Bingo satın aldım.\nVe tesadüfen Spotify çalma liste(ler)inden kendi QR kodlu kartlarımı yapmak için QRsong'u keşfettim.\n(Kendim hazırlamış olsam da olmasam da).\n.\nQRsong'un hizmeti süper, çünkü e-postayla sözde bir \"Eco Seçeneği\" olup olmadığını sorduğumda hemen yanıt verdiler.\n(Mümkün olduğunca az mürekkep (lazer yazıcımda) harcamak istiyordum. Ön yüzde QR kodu olmalıydı, başka da hiçbir şey olmamalıydı.\n.\nBu yüzden Eco sürümden çok memnunum.\nAyrıca \"Çift Taraflı\" baskıyı seçtim. Evde daha kalın kâğıdım olduğu için bu şekilde bastığım kartlar HITster Music Bingo kutusundakiler kadar profesyonel."
         }
       },
       "translatedFrom": "21513b418007e08be225fac4af6d9259757068b7",
@@ -6170,6 +6690,14 @@
         "cs": {
           "title": "Vaše vlastní osobní verze hry 'Hitster'!",
           "text": "Je super, že si můžete vytvořit vlastní verzi hry Hitster. Sami jsme si na Spotify vytvořili playlist s vánoční hudbou, après-ski hudbou a top 100 z top 2000. Pak jsme ho poslali a dostali jsme praktické kartičky v PDF dokumentu, které jsme si sami vytiskli. Takže jsme si během svátků mohli zahrát osobnější variantu! Také aplikace QRsong se ovládá velmi snadno a prakticky. Můžu ji všem doporučit!"
+        },
+        "ru": {
+          "title": "Твоя собственная персональная версия «Hitster»!",
+          "text": "Очень здорово, что можно самому сделать свою версию Hitster. Я сам составил плейлист в Spotify с рождественской музыкой, музыкой для апре-ски и топ-100 из top 2000. Потом отправил его, и нам прислали удобные карточки в PDF-документе, которые мы сами распечатали. Так что во время праздников мы смогли сыграть в более персонализированную версию! Приложение QRsong тоже очень простое и удобное в использовании. Могу рекомендовать всем!"
+        },
+        "tr": {
+          "title": "Kendi kişisel 'Hitster' versiyonun!",
+          "text": "Kendi Hitster versiyonunu yapabilmek çok eğlenceli. Spotify'da Noel müzikleri, après-ski müzikleri ve top 2000'in ilk 100'ünden oluşan bir çalma listesi hazırladım. Ardından bunu gönderdim ve bize PDF belgesiyle, kendimiz yazdırdığımız kullanışlı kartlar gönderildi. Böylece tatil döneminde daha kişiselleştirilmiş bir versiyon oynayabildik! QRsong uygulamasının kullanımı da çok kolay ve pratik. Herkese tavsiye ederim!"
         }
       },
       "translatedFrom": "05a253e1bfc1017a0f10bed36db2a9a0de0b9bf5",
@@ -6262,6 +6790,14 @@
         "cs": {
           "title": "",
           "text": "Dobrá aplikace, ale v nepravidelných intervalech přeskočí o jednu skladbu dál."
+        },
+        "ru": {
+          "title": "",
+          "text": "Хорошее приложение, однако время от времени оно перескакивает на следующую песню."
+        },
+        "tr": {
+          "title": "",
+          "text": "İyi bir uygulama, ancak ara sıra bir sonraki şarkıya atlıyor."
         }
       },
       "translatedFrom": "c443b3ef7172ee579043358a5c367564d853cbcd",
@@ -6353,6 +6889,14 @@
         "cs": {
           "title": "",
           "text": "Vynikající služby, velmi rychlé dodání písniček a hra je velmi zábavná, není co dodat.!!!"
+        },
+        "ru": {
+          "title": "",
+          "text": "Отличный сервис, песни доставили очень быстро, а игра очень увлекательная, никаких нареканий.!!!"
+        },
+        "tr": {
+          "title": "",
+          "text": "Mükemmel hizmet, şarkılar çok hızlı teslim edildi ve oyun çok eğlenceli, söyleyecek hiçbir şey yok.!!!"
         }
       },
       "translatedFrom": "abd69cd48c2c304a96801eca6bb0275adee089ab",
