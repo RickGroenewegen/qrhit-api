@@ -174,3 +174,30 @@ describe('getQrLogoRect', () => {
     expect(getQrLogoRect(45, 999, 1)).toEqual(getQrLogoRect(45, MAX_SCALE, 1));
   });
 });
+
+describe('applyQrLogo on a light code', () => {
+  // A white code on a dark square (Breeuwer, order 100009954, 2026-11-18): the
+  // decode check flattened onto white, found nothing to read at any scale and
+  // left every card without its logo.
+  it('keeps the logo when the code is lighter than its backing', async () => {
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const QRCode = (await import('qrcode')).default;
+    const sharp = (await import('sharp')).default;
+    const jsQR = (await import('jsqr')).default;
+    const { applyQrLogo } = await import('../../src/qr-logo');
+    const dir = mkdtempSync(join(tmpdir(), 'qr-logo-'));
+    const link = 'https://api.qrsong.io/qr2/2893/11059';
+    const png = join(dir, 'qr.png');
+    await QRCode.toFile(png, link, { type: 'png', width: 600, color: { dark: '#ffffff', light: '#0000' }, errorCorrectionLevel: 'H' });
+    const logo = join(dir, 'logo.png');
+    writeFileSync(logo, await sharp({ create: { width: 200, height: 200, channels: 4, background: '#ffffff' } }).png().toBuffer());
+    const before = (await sharp(png).raw().toBuffer()).length && (await sharp(png).png().toBuffer());
+    expect(await applyQrLogo(png, link, { logoPath: logo, scale: 20, backingColor: '#202530' })).toBe(true);
+    const after = await sharp(png).png().toBuffer();
+    expect(after.equals(before)).toBe(false);
+    const { data, info } = await sharp(after).flatten({ background: '#202530' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    expect(jsQR(new Uint8ClampedArray(data), info.width, info.height)?.data).toBe(link);
+  });
+});

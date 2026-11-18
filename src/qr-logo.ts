@@ -173,13 +173,17 @@ export async function getImageAspect(imagePath: string): Promise<number | null> 
 /**
  * Whether a rendered QR PNG still decodes.
  *
- * The QR's light modules are transparent, so it is flattened onto white first -
- * the same thing a card does when it prints the code onto its background.
+ * The QR's light modules are transparent, so it is flattened first - the same
+ * thing a card does when it prints the code onto its background. That is the
+ * logo's backing colour: the QR's shape colour, or white when the code sits on
+ * the card. Flattening a light code (white on a dark square) onto white left
+ * nothing to read, so every scale failed and the logo was silently dropped
+ * (Breeuwer, order 100009954, 2026-11-18). jsQR reads the inverted code.
  */
-async function decodes(png: Buffer): Promise<boolean> {
+async function decodes(png: Buffer, background = '#ffffff'): Promise<boolean> {
   try {
     const { data, info } = await sharp(png)
-      .flatten({ background: '#ffffff' })
+      .flatten({ background })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -354,7 +358,7 @@ export async function applyQrLogo(
     // the generation log under hundreds of identical lines.
     for (let scale = clampScale(options.scale); scale >= MIN_SCALE; scale -= 1) {
       const candidate = await render(scale);
-      if (!(await decodes(candidate))) continue;
+      if (!(await decodes(candidate, options.backingColor))) continue;
 
       await sharp(candidate).toFile(pngPath);
       return true;
