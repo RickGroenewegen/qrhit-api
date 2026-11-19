@@ -7,6 +7,7 @@ import {
 } from '../spotify';
 import { clearPlaylistCache, createSiteMap } from './misc';
 import { productPageLocales } from './productPageLocales';
+import { featuredLocaleWhere, normalizeFeaturedLocale } from './featuredLocale';
 import { applyRanking, getMarketRanking } from './marketRanking';
 import { DataDeps } from './types';
 import { productPhotoFeatured, queueProductPhoto } from '../productPhoto/triggers';
@@ -455,7 +456,7 @@ export async function searchFeaturedPlaylists(
       ];
     }
     if (locale) {
-      pendingWhere.featuredLocale = locale;
+      pendingWhere.AND = [featuredLocaleWhere(locale)];
     }
 
     const pendingPlaylists = await deps.prisma.playlist.findMany({
@@ -526,7 +527,7 @@ export async function searchFeaturedPlaylists(
       });
     }
     if (locale) {
-      approvedWhere.featuredLocale = locale;
+      approvedWhere.AND.push(featuredLocaleWhere(locale));
     }
 
     // Build orderBy
@@ -931,7 +932,7 @@ export async function updatePromotionalPlaylist(
       name: data.name,
       promotionalTitle: data.name,
       promotionalDescription: data.description,
-      featuredLocale: data.featuredLocale,
+      featuredLocale: normalizeFeaturedLocale(data.featuredLocale),
       markedForMerchantCenter: true,
     };
     if (data.preserveDescription !== undefined) {

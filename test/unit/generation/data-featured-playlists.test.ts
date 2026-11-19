@@ -49,6 +49,7 @@ import {
   getProductPageLocale,
   CACHE_KEY_FEATURED_PLAYLISTS,
 } from '../../../src/data/featuredPlaylists';
+import { featuredLocaleWhere } from '../../../src/data/featuredLocale';
 
 const today = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
@@ -290,7 +291,8 @@ describe('searchFeaturedPlaylists', () => {
         { name: { contains: 'abc' } },
         { promotionalTitle: { contains: 'abc' } },
       ],
-      featuredLocale: 'de',
+      // German alone or among other languages ("de,tr")
+      AND: [featuredLocaleWhere('de')],
     });
 
     const approvedArgs = prisma.playlist.findMany.mock.calls[1][0];
@@ -305,9 +307,9 @@ describe('searchFeaturedPlaylists', () => {
             { promotionalTitle: { contains: 'abc' } },
           ],
         },
+        featuredLocaleWhere('de'),
       ],
       NOT: { promotionalActive: true, promotionalAccepted: false },
-      featuredLocale: 'de',
     });
     expect(approvedArgs.orderBy).toEqual({ name: 'asc' });
     expect(approvedArgs.skip).toBe(10);
@@ -775,6 +777,18 @@ describe('updatePromotionalPlaylist', () => {
     expect(deps.cache.del).toHaveBeenCalledWith('productPageLocales_old-slug');
     // A new slug is a new URL in the sitemap.
     expect(h.createSiteMap).toHaveBeenCalledWith(deps);
+  });
+
+  it('stores several languages as a clean comma list, and none as null', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findFirst.mockResolvedValue(null);
+    prisma.playlist.findUnique.mockResolvedValue({ slug: 'old-slug' });
+
+    await updatePromotionalPlaylist(deps, 'pl1', { ...payload, featuredLocale: ' DE, tr ,de' });
+    expect(prisma.playlist.update.mock.calls[0][0].data.featuredLocale).toBe('de,tr');
+
+    await updatePromotionalPlaylist(deps, 'pl1', { ...payload, featuredLocale: null });
+    expect(prisma.playlist.update.mock.calls[1][0].data.featuredLocale).toBeNull();
   });
 
   it('rebuilds the sitemap when the locale changes, and not for a name or text edit', async () => {
