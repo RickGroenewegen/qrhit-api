@@ -52,6 +52,7 @@ import ExternalCardService from './externalCardService';
 import CalendarService from './calendarService';
 import AbandonedPayments from './abandonedPayments';
 import StoreRefunds from './storeRefunds';
+import PushSchedule from './pushSchedule';
 import FeaturedLinkCheck from './linkCheck';
 import AppTheme from './apptheme';
 import TrackEnrichment from './trackEnrichment';
@@ -310,6 +311,10 @@ class Server {
       // Refunds of the scan app's store orders block their cards (every six
       // hours; production main server only)
       StoreRefunds.getInstance();
+
+      // Scheduled push broadcasts go out at their time (every minute;
+      // production main server, and in development as dry runs only)
+      PushSchedule.getInstance().startCron();
 
       // Featured playlists whose source playlist is gone leave the feeds and
       // the public lists (nightly at 02:15; production main server only)

@@ -388,6 +388,30 @@ model PushMessage {
   @@map("push_messages")
 }
 
+// A broadcast set to go out later (src/pushSchedule.ts). When it is due the
+// scheduler sends it through Push.broadcastNotification, which writes the
+// push_messages row at the real send moment, so the statistics never see a
+// broadcast that has not gone yet. status: scheduled | sending | sent |
+// cancelled | failed | missed (more than two hours late, not sent).
+model PushSchedule {
+  id            Int       @id @default(autoincrement())
+  name          String?   @db.VarChar(100)
+  title         String    @db.VarChar(100)
+  message       String    @db.Text
+  sendAt        DateTime
+  test          Boolean   @default(false)
+  dry           Boolean   @default(false)
+  status        String    @default("scheduled") @db.VarChar(16)
+  pushMessageId Int?
+  sentAt        DateTime?
+  error         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, sendAt])
+  @@map("push_schedules")
+}
+
 model PushToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique

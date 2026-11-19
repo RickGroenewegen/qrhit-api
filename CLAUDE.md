@@ -3398,6 +3398,47 @@ switched on by `scanClient()` saying `web`.
   constant shows it on `/qr`, `/qr2` and `/qr_url2`.
 - `/scan` is in the sitemap (`src/data/misc.ts`).
 
+## Scheduled push broadcasts
+
+Built 2026-11-19 (Rick: "broadcast with a schedule just like we can in
+emailoctopus"). A broadcast can be written now and sent at a set moment; the
+dashboard's Broadcasts page and Rick's qrsong toolkit (`qrsong broadcast …`)
+both use it. Code: `src/pushSchedule.ts`, table `push_schedules`, test
+`test/unit/push-schedule.test.ts`.
+
+| route (admin) | what |
+|---|---|
+| `GET /push/schedules` | waiting ones soonest first, then the last 100 others newest first |
+| `POST /push/schedule` | `{ name?, title, message, sendAt, test, dry }` → `{ success, schedule }`, or 400 `{ error, message }` |
+| `PUT /push/schedule/:id` | same body; 409 once it is no longer `scheduled` |
+| `POST /push/schedule/:id/cancel` | 409 once it is no longer `scheduled` |
+
+- **`sendAt` needs a zone**: ISO with `Z` or an offset, or epoch ms. A bare
+  `2026-11-27T10:00` is refused (it would be read in the server's zone, the
+  discount form's one-hour bug). At least a minute ahead, at most 90 days.
+  Title 1–50, message 1–178 characters, the dashboard's own limits.
+- **Unsent broadcasts never touch `push_messages`.** The stats read its
+  `createdAt` as the send moment. When a row is due the cron calls
+  `Push.broadcastNotification` (which now returns the `push_messages` id),
+  and the schedule row keeps that id as `pushMessageId`.
+- **The cron**: every minute, on the cluster primary of the main server only,
+  started by `Server.startCluster()` (`startCron()`, never by the routes, so a
+  test that builds the app starts no timer). A Redis lock plus a conditional
+  claim (`scheduled` → `sending` by `updateMany`) mean a row never goes twice.
+- **In development the cron runs too, but every send is a dry run** (logged,
+  and the row is stored `dry`): the dev database is on the production RDS
+  server and may hold real phones' tokens.
+- **More than two hours late** (the server was down over the send time) a row
+  is marked `missed` and not sent: "ends tonight" must not arrive the next
+  morning. A missed or failed live one sends Rick a Pushover. A row left in
+  `sending` by a crash stays there; nothing retries by itself.
+- Statuses: `scheduled`, `sending`, `sent`, `cancelled`, `failed`, `missed`.
+- **A push has one text for every phone**: the app registers its token
+  without a language, and a tap opens the app without a link (qrhit-app
+  `push.service.ts`). Per-language broadcasts or a link need an app release
+  first.
+- Deploy: new table only, `prisma db push` on production before the deploy.
+
 ## Apple Music track lists: fetched until two passes agree
 
 Apple now and then answers with part of a playlist, every page a 200: on

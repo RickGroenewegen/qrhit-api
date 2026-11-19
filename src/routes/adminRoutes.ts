@@ -14,6 +14,7 @@ import Charts from '../charts';
 import Push from '../push';
 import WebPush from '../webPush';
 import PushStatsService from '../pushStats';
+import PushSchedule, { ScheduleResult } from '../pushSchedule';
 import Printer from '../printer';
 import Utils from '../utils';
 import Mollie from '../mollie';
@@ -244,6 +245,58 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       return await push.getMessages();
+    }
+  );
+
+  // Scheduled broadcasts (pushSchedule.ts): written now, sent by the main
+  // server's minute cron at sendAt (ISO with a zone, or epoch ms). Edit and
+  // cancel only while still waiting (409 once the scheduler took it).
+  const pushSchedule = PushSchedule.getInstance();
+  const sendScheduleResult = (reply: any, result: ScheduleResult) => {
+    if (result.ok) return { success: true, schedule: result.row };
+    reply.status(result.status);
+    return { success: false, error: result.error, message: result.message };
+  };
+
+  fastify.get(
+    '/push/schedules',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply: any) => {
+      return { success: true, schedules: await pushSchedule.list() };
+    }
+  );
+
+  fastify.post(
+    '/push/schedule',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      return sendScheduleResult(reply, await pushSchedule.create(request.body || {}));
+    }
+  );
+
+  fastify.put(
+    '/push/schedule/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id, 10);
+      if (!id) {
+        reply.status(400);
+        return { success: false, error: 'invalid_id', message: 'Invalid id' };
+      }
+      return sendScheduleResult(reply, await pushSchedule.update(id, request.body || {}));
+    }
+  );
+
+  fastify.post(
+    '/push/schedule/:id/cancel',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id, 10);
+      if (!id) {
+        reply.status(400);
+        return { success: false, error: 'invalid_id', message: 'Invalid id' };
+      }
+      return sendScheduleResult(reply, await pushSchedule.cancel(id));
     }
   );
 

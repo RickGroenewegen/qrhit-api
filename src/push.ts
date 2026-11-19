@@ -77,7 +77,7 @@ class Push {
     message: string,
     test: boolean,
     dry: boolean
-  ): Promise<void> {
+  ): Promise<number> {
     const tokens = await this.prisma.pushToken.findMany({
       where: test ? { test, valid: true } : { valid: true },
     });
@@ -108,8 +108,9 @@ class Push {
       }
     });
 
-    // Create the pushMessage in the database
-    await this.prisma.pushMessage.create({
+    // Create the pushMessage in the database; its id goes back to a scheduled
+    // broadcast (pushSchedule.ts)
+    const row = await this.prisma.pushMessage.create({
       data: {
         title,
         message,
@@ -147,6 +148,7 @@ class Push {
         )
       );
     }
+    return row.id;
   }
 
   public async getMessages(): Promise<any> {
