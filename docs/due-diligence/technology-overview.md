@@ -4,7 +4,7 @@
      Mirror of the Claude Doc "QRSong! Technology Overview"
      (https://claude.ai/code/artifact/b0c45aee-9b2c-458d-b490-239466ee73bb):
      change both together. The cover takes its date from `as-of` below. -->
-<!-- as-of: 2026-10-12 -->
+<!-- as-of: 2026-11-19 -->
 
 ## About QRSong!
 
@@ -20,7 +20,7 @@ QRSong! sells printed music cards: every card carries a QR code that plays one s
 
 Development started in April 2024; the two main repositories hold about 9,300 commits.
 
-<!-- stats: 185k | lines of TypeScript ; 7,900 | automated tests ; 12 | site languages ; 20 | scheduled jobs -->
+<!-- stats: 185k | lines of TypeScript ; 7,900 | automated tests ; 12 | site languages ; 21 | scheduled jobs -->
 
 
 ## Architecture
@@ -115,7 +115,7 @@ The platform runs on AWS in Ireland (eu-west-1), with CloudFront in front of eve
 | Serving | CloudFront with a web application firewall, an application load balancer, and an EC2 auto scaling group running the API and the server-side rendering under pm2. The API runs one worker per CPU core. |
 | Data | MySQL on Amazon RDS; Redis for caching and job queues. |
 | Releases | Each release is built next to the live one and swapped in whole, then the processes restart and the CDN cache is cleared. A failed build changes nothing. |
-| Scheduled work | Twenty scheduled jobs, listed in the next section. Generating an order's QR codes and PDFs runs through a BullMQ job queue with three attempts and backoff. |
+| Scheduled work | Twenty-one scheduled jobs, listed in the next section. Generating an order's QR codes and PDFs runs through a BullMQ job queue with three attempts and backoff. |
 | Monitoring | Errors from the web app and the API go to PostHog, with source maps per release; operational alerts go to the operator by Pushover. |
 | Performance | Route chunks are preloaded on idle, critical CSS is inlined, and the tag manager starts after page load, which lifted the mobile Lighthouse score from 62 to 80. |
 
@@ -123,10 +123,11 @@ Open question: backup retention and point-in-time recovery for RDS, to be filled
 
 ## Scheduled work
 
-Twenty jobs run on a schedule, most of them hourly; the printer hand-off is the one the business depends on most. Jobs that must run once run only on a designated main server. Times are server time unless marked.
+Twenty-one jobs run on a schedule, most of them hourly; the printer hand-off is the one the business depends on most. Jobs that must run once run only on a designated main server. Times are server time unless marked.
 
 | When | Job | What it does |
 | --- | --- | --- |
+| Every minute (Amsterdam time) | Scheduled push messages | Sends app push messages written in advance at their set time, each one only once. One more than two hours late is not sent, and the owner is alerted. |
 | Every 15 minutes | Game rooms | Ends quiz and bingo rooms that have been idle for 4 hours. |
 | Hourly at :00 (Amsterdam time) | Printer hand-off | Sends paid physical orders to Print&Bind after the pre-print checks. An order that fails a check is held; an order waiting on the customer's corrections gets one reminder. |
 | Hourly at :00 | Parcel tracking | Reads the status of shipped parcels from PostNL's public track & trace and marks them delivered. Alerts the owner if PostNL stops answering. |
