@@ -2854,6 +2854,44 @@ the browser never ran the pixel.
 - No retry: a failure is logged in red and reported to PostHog
   (`Meta Conversions API: purchase not sent`).
 
+## TikTok Events API (the purchase, from the server)
+
+`src/tiktokEvents.ts`, built 2026-11-16 when TikTok ads started (run by Rick
+through the growl `tiktok` pillar, not by the agency). The same thing as the
+Meta Conversions API above, for TikTok: the webhook sends `Purchase` with the
+order number as `event_id`, `value` = `totalPrice` (incl. VAT) and `currency`
+= EUR to `POST https://business-api.tiktok.com/open_api/v1.3/event/track/`,
+so TikTok counts one order whichever of the pixel and the server arrives (it
+drops a second event with the same pixel, name and id within 48 hours).
+
+- **Only with the buyer's Advertising consent.** The checkout
+  (`PaymentService.tiktokAttribution` on the site) sends `tiktok: { consent,
+  ttclid, ttp, userAgent }` only then; `remember()` keeps it in Redis
+  (`tiktok_events:<payment row id>`, 14 days, deleted once sent), never in
+  the database. The privacy policy's "Advertising Measurement (TikTok)" item
+  says what is sent; change it with the code.
+- **What goes:** the e-mail address lowercased and SHA-256 hashed, the IP
+  (`clientIp`), the browser's own user agent, the ad's click id (`ttclid`:
+  the site keeps it in memory from the landing address,
+  `services/tiktok-click.ts`) and the pixel's `_ttp` cookie. No name or
+  address: TikTok matches on e-mail, phone and its own ids.
+- **Where it fires:** the paid branch of `processWebhook`, next to Meta's,
+  not awaited (`sendPurchase` never throws). Not for sandbox orders, free
+  orders, upgrades or Excel orders.
+- **Config:** `TIKTOK_PIXEL_CODE` (the pixel's code, not its numeric id) and
+  `TIKTOK_EVENTS_ACCESS_TOKEN` (TikTok Events Manager → the pixel → Settings
+  → Generate Access Token; it needs no developer app). Without both nothing
+  is kept or sent. Outside production only with `TIKTOK_EVENTS_TEST_CODE`
+  (Events Manager → Test Events).
+- Written from TikTok's documentation as read on 2026-11-16 and tested with
+  mocks only (`test/unit/tiktok-events.test.ts`): the first paid order after
+  the keys are set is the live test. A refusal is in the pm2 log (`TikTok
+  Events API: purchase not sent`).
+- The browser's events (`ViewContent`, `AddToCart`, `InitiateCheckout`,
+  `Purchase`) are the TikTok pixel's, a tag in the agency's GTM container on
+  the same GA4 events as the Meta pixel, behind CookieFirst's Advertising
+  consent. Not sent from app code.
+
 ## Blocked order lines
 
 `PaymentHasPlaylist.blocked` stops a line's cards from playing: a scan of

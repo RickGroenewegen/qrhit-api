@@ -33,6 +33,7 @@ import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Cache from './cache';
 import MetaConversions from './metaConversions';
+import TikTokEvents from './tiktokEvents';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
 import {
@@ -3327,6 +3328,8 @@ class Mollie {
       // gets no webhook, and no event.
       if (molliePaymentStatus !== 'paid') {
         await MetaConversions.getInstance().remember(paymentId, params.meta);
+        // the same for TikTok (src/tiktokEvents.ts)
+        await TikTokEvents.getInstance().remember(paymentId, params.tiktok);
       }
 
       // An order that needs no payment gets no webhook: switch its App
@@ -4046,6 +4049,7 @@ class Mollie {
 
     // Not awaited and never throws: Meta must not slow down the webhook.
     if (!order.sandbox) void MetaConversions.getInstance().sendPurchase(order.id);
+    if (!order.sandbox) void TikTokEvents.getInstance().sendPurchase(order.id);
   }
 
   /**
