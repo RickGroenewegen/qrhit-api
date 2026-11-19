@@ -1,0 +1,25 @@
+<meta name="type" content="bug">
+<meta name="title" content="Klant krijgt mail van Print&Bind">
+<meta name="date" content="2026-11-17">
+
+<div class="lead">Onze orders staan op <strong>blanco verzenden</strong>, en wij mailen onze klanten zelf over hun bestelling. Toch kreeg een klant van ons op 17 november <strong>rechtstreeks een e-mail van Print&amp;Bind</strong> over zijn order, met jullie opdrachtnummer, een statuslink en de naam van jullie medewerker.</div>
+
+<h2>Wat we zien</h2>
+<p>Order <strong>1544980</strong> (één inlay, werkblad 120×120, brievenbuspakje), door ons via de API geplaatst met <code>anonymous: true</code>.</p>
+<table>
+<tr><th>Wanneer</th><th>Wat</th><th>Naar</th></tr>
+<tr><td>16 nov 08:50</td><td>Order geplaatst; "Bedankt voor je bestelling bij Print&amp;Bind!"</td><td>info@qrsong.io (goed)</td></tr>
+<tr><td>17 nov 13:04</td><td>Artikel 3099995 gereed</td><td></td></tr>
+<tr><td>17 nov 13:16</td><td>Order op "Verzonden"</td><td></td></tr>
+<tr class="bad"><td>17 nov, vóór 13:42</td><td>Mail met "Jouw bestelling", opdrachtnummer, "Bekijk status", "Geholpen door Jerry", bestandsnaam en voorbeeldplaatje</td><td>het e-mailadres van de klant</td></tr>
+</table>
+<p>De klant stuurde ons om 13:42 een schermafbeelding van die mail door. Bij ons op info@qrsong.io kwam deze mail niet binnen. De regel "Geholpen door" staat niet in de orderbevestiging die wij krijgen, dus het lijkt een andere mail te zijn, waarschijnlijk die bij het verzenden.</p>
+
+<h2>Wat we nagekeken hebben</h2>
+<p>We hebben order 1544980 via jullie API opgevraagd: <code>anonymous: true</code>, status "Verzonden", de tijden hierboven. Het e-mailadres van de klant geven we bij elke order mee in het veld <code>email</code>, zodat PostNL de ontvanger kan mailen over de bezorging (zie QRSong-PB-004). We hebben dit nu bij één order gezien; of het bij elke order gebeurt, weten we niet.</p>
+
+<h2>Waarom het voor ons uitmaakt</h2>
+<p>Onze klanten bestellen bij QRSong! en krijgen van ons de bevestiging, de track &amp; trace en de uitleg. Een mail van een bedrijf dat ze niet kennen, met een ander ordernummer, roept vragen op, en die komen bij ons terecht. Deze klant zag in jullie mail een voorbeeldplaatje dat niet overeenkwam met wat hij besteld had, dacht dat zijn herdruk opnieuw fout ging en mailde ons daarover.</p>
+
+<h2>Onze vraag</h2>
+<p>Willen jullie nakijken welke mail dit was en waarom die naar het adres van de klant ging? We willen graag dat Print&amp;Bind bij onze orders <strong>geen e-mail stuurt naar het adres in <code>email</code></strong>: alle mail van Print&amp;Bind over een order naar ons eigen adres, en het adres van de klant alleen voor de bezorgberichten van PostNL. Ligt het aan een instelling in ons account of aan een veld dat wij anders moeten vullen, dan horen we graag welke.</p>
