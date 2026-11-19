@@ -266,6 +266,151 @@ describe('discount routes', () => {
     });
   });
 
+  // Order 100009977 (2026-11-19): a €100 voucher, all of it reserved by the
+  // customer's own Mollie payment she never finished. Back in the checkout the
+  // check said the code was used up, though "Pay" would have released that
+  // reservation first (supersedeOpenReservations).
+  describe("the customer's own open checkout", () => {
+    const BUYER = 'Voucher.Owner@test.qrsong.io';
+    const cart = {
+      items: [
+        {
+          playlistId: 'pl-own',
+          playlistName: 'Mix',
+          productType: 'cards',
+          type: 'digital',
+          amount: 1,
+          price: 25,
+          numberOfTracks: 100,
+        },
+      ],
+      discounts: [] as { code: string }[],
+    };
+    let seq = 0;
+
+    /** A voucher whose whole balance a payment (or no payment yet) reserved. */
+    const reservedVoucher = async (
+      code: string,
+      payment: { email: string; status?: string; paymentId?: string } | null,
+      opts: { oncePerCustomer?: boolean } = {}
+    ) => {
+      const d = await prisma().discountCode.create({
+        data: { code, amount: 100, oncePerCustomer: !!opts.oncePerCustomer },
+      });
+      let paymentRowId: number | null = null;
+      if (payment) {
+        seq += 1;
+        const user = await prisma().user.create({
+          data: {
+            userId: `own-${seq}`,
+            email: `own-${seq}@test.qrsong.io`,
+            displayName: 'Own',
+            hash: `own-hash-${seq}`,
+          },
+        });
+        const p = await prisma().payment.create({
+          data: {
+            userId: user.id,
+            paymentId: payment.paymentId ?? `tr_own${seq}`,
+            orderId: `QR95000${seq}`,
+            status: payment.status ?? 'open',
+            fullname: 'Own Checkout',
+            email: payment.email,
+            totalPrice: 13.6,
+            productPriceWithoutTax: 11.43,
+            shippingPriceWithoutTax: 0,
+            productVATPrice: 2.17,
+            shippingVATPrice: 0,
+            totalVATPrice: 2.17,
+            taxRate: 19,
+            countrycode: 'DE',
+          },
+        });
+        paymentRowId = p.id;
+      }
+      await prisma().discountCodedUses.create({
+        data: {
+          discountCodeId: d.id,
+          amount: 100,
+          paymentId: paymentRowId,
+          email: (payment?.email ?? BUYER).toLowerCase(),
+          status: 'reserved',
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+    };
+
+    const checkWith = (code: string, email: string | null) =>
+      app.inject({
+        method: 'POST',
+        url: `/discount/${code}/1`,
+        payload: { token: 'tok', cart, countrycode: 'DE', email },
+      });
+
+    it('leaves her own open payment out of the balance', async () => {
+      await reservedVoucher('OWN-OPEN-100', { email: BUYER });
+      const res = await checkWith('OWN-OPEN-100', ` ${BUYER} `);
+      expect(res.json()).toMatchObject({ success: true, kind: 'fixed', amountLeft: 100 });
+    });
+
+    it('still counts it for anyone else, and without an e-mail', async () => {
+      const other = await checkWith('OWN-OPEN-100', 'someone.else@test.qrsong.io');
+      expect(other.json()).toMatchObject({ success: false, message: 'discountCodeExhausted' });
+      const none = await checkWith('OWN-OPEN-100', null);
+      expect(none.json()).toMatchObject({ success: false, message: 'discountCodeExhausted' });
+    });
+
+    it('validates the cart the same way', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/discount/validate',
+        payload: {
+          token: 'tok',
+          countrycode: 'DE',
+          email: BUYER,
+          cart: { ...cart, discounts: [{ code: 'OWN-OPEN-100' }] },
+        },
+      });
+      expect(res.json()).toMatchObject({ success: true, ok: true });
+    });
+
+    it('answers the no-cart check (gift-card page) the same way', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/discount/OWN-OPEN-100/1',
+        payload: { token: 'tok', email: BUYER },
+      });
+      expect(res.json()).toMatchObject({ success: true, amountLeft: 100 });
+    });
+
+    it('does not count her own reservation as a use on a once-per-customer code', async () => {
+      await reservedVoucher('OWN-ONCE-100', { email: BUYER }, { oncePerCustomer: true });
+      const res = await checkWith('OWN-ONCE-100', BUYER);
+      expect(res.json()).toMatchObject({ success: true, amountLeft: 100 });
+    });
+
+    it('counts a reservation of hers that "Pay" would not release', async () => {
+      // No payment yet (a crash mid-checkout), a paid payment, and a payment
+      // that is not a Mollie one: supersedeOpenReservations leaves all three.
+      await reservedVoucher('OWN-NOPAY-100', null);
+      await reservedVoucher('OWN-PAID-100', { email: BUYER, status: 'paid' });
+      await reservedVoucher('OWN-FREE-100', { email: BUYER, paymentId: 'free_own' });
+      for (const code of ['OWN-NOPAY-100', 'OWN-PAID-100', 'OWN-FREE-100']) {
+        const res = await checkWith(code, BUYER);
+        expect(res.json(), code).toMatchObject({
+          success: false,
+          message: 'discountCodeExhausted',
+        });
+      }
+    });
+
+    it('"Pay" releases exactly what the check left out', async () => {
+      await reservedVoucher('OWN-PAY-100', { email: BUYER, paymentId: 'tr_ownpay' });
+      const released = await new Discount().supersedeOpenReservations(BUYER, ['OWN-PAY-100']);
+      expect(released.paymentIds).toEqual(['tr_ownpay']);
+    });
+  });
+
   describe('Discount.calculateVolumeDiscount', () => {
     const discount = new Discount();
     const digitalItem = (numberOfTracks: number, price: number) => ({

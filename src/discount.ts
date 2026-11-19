@@ -220,11 +220,38 @@ export function normalizeEmailForLimit(email: string | null | undefined): string
   return `${local}@${domain}`;
 }
 
-const liveUseWhere = (now: Date) => ({
+/**
+ * Uses that count against a code: paid rows and unexpired reservations.
+ * `skipPaymentIds` leaves out the reservations of those payments (the
+ * customer's own open checkouts, see `ownOpenPaymentWhere`); a reservation
+ * without a payment yet always counts.
+ */
+const liveUseWhere = (now: Date, skipPaymentIds: number[] = []) => ({
   OR: [
     { status: 'paid' },
-    { status: 'reserved', expiresAt: { gt: now } },
+    skipPaymentIds.length === 0
+      ? { status: 'reserved', expiresAt: { gt: now } }
+      : {
+          status: 'reserved',
+          expiresAt: { gt: now },
+          OR: [{ paymentId: null }, { paymentId: { notIn: skipPaymentIds } }],
+        },
   ],
+});
+
+/**
+ * A customer's own Mollie payments that are still open. "Pay" releases the
+ * reservations they hold before it reserves again (`supersedeOpenReservations`),
+ * so a code check leaves them out too: the check used to count them and told
+ * a customer back from the Mollie page that her voucher was used up, by her
+ * own unfinished checkout (order 100009977, 2026-11-19). One definition for
+ * both, so the check answers what "Pay" will do. `email` is the address as
+ * the customer typed it (trimmed), as payments.email holds it.
+ */
+const ownOpenPaymentWhere = (email: string) => ({
+  email,
+  status: { in: ['open', 'pending', 'authorized'] },
+  paymentId: { startsWith: 'tr_' },
 });
 
 class Discount {
@@ -693,15 +720,17 @@ class Discount {
 
   /**
    * Live usage of a code: EUR consumed and number of redemptions, counting
-   * paid rows and unexpired reservations only.
+   * paid rows and unexpired reservations only, without the reservations of
+   * `skipPaymentIds` (a check: `ownOpenPaymentIds`).
    */
   public async getLiveUsage(
     discountCodeId: number,
     db: DbClient = this.prisma,
-    now: Date = new Date()
+    now: Date = new Date(),
+    skipPaymentIds: number[] = []
   ): Promise<{ amountUsed: number; useCount: number }> {
     const used: any = await db.discountCodedUses.aggregate({
-      where: { discountCodeId, ...liveUseWhere(now) },
+      where: { discountCodeId, ...liveUseWhere(now, skipPaymentIds) },
       _sum: { amount: true },
       _count: { _all: true },
     });
@@ -715,11 +744,40 @@ class Discount {
     db: DbClient,
     discountCodeId: number,
     email: string,
-    now: Date
+    now: Date,
+    skipPaymentIds: number[] = []
   ): Promise<number> {
     return db.discountCodedUses.count({
-      where: { discountCodeId, email, ...liveUseWhere(now) },
+      where: { discountCodeId, email, ...liveUseWhere(now, skipPaymentIds) },
     });
+  }
+
+  /**
+   * For a check: the ids of the customer's own open payments that hold a
+   * reservation on one of `codes`, the ones "Pay" would release
+   * (`supersedeOpenReservations`). A failed lookup counts them, as before.
+   */
+  private async ownOpenPaymentIds(
+    db: DbClient,
+    email: string | null | undefined,
+    codes: string[]
+  ): Promise<number[]> {
+    const typed = String(email || '').trim();
+    if (!typed || codes.length === 0) return [];
+    try {
+      const rows = await db.payment.findMany({
+        where: {
+          ...ownOpenPaymentWhere(typed),
+          DiscountCodedUses: {
+            some: { status: 'reserved', discountCode: { code: { in: codes } } },
+          },
+        },
+        select: { id: true },
+      });
+      return (rows || []).map((r: { id: number }) => r.id);
+    } catch (error) {
+      return [];
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -932,9 +990,7 @@ class Discount {
     try {
       const stale = await this.prisma.payment.findMany({
         where: {
-          email,
-          status: { in: ['open', 'pending', 'authorized'] },
-          paymentId: { startsWith: 'tr_' },
+          ...ownOpenPaymentWhere(email),
           DiscountCodedUses: {
             some: { status: 'reserved', discountCode: { code: { in: codes } } },
           },
@@ -1187,14 +1243,26 @@ class Discount {
     let fixedDiscount = 0;
     const percentBase = round2(base.productsGross + base.addonsGross);
 
+    // A check leaves out what the customer's own open checkout reserved;
+    // "Pay" releases that first (supersedeOpenReservations), redeem sees it
+    // already released.
+    const skipPaymentIds =
+      mode === 'check'
+        ? await this.ownOpenPaymentIds(
+            db,
+            ctx.email,
+            ordered.map((d) => d.code)
+          )
+        : [];
+
     for (const d of ordered) {
-      const usage = await this.getLiveUsage(d.id, db, now);
+      const usage = await this.getLiveUsage(d.id, db, now, skipPaymentIds);
       if (d.maxUses !== null && d.maxUses !== undefined && usage.useCount >= d.maxUses) {
         failed.push({ code: d.code, message: 'discountCodeMaxUsesReached' });
         continue;
       }
       if (d.oncePerCustomer && email) {
-        const mine = await this.countLiveUsesForEmail(db, d.id, email, now);
+        const mine = await this.countLiveUsesForEmail(db, d.id, email, now, skipPaymentIds);
         if (mine > 0) {
           failed.push({
             code: d.code,
@@ -1480,7 +1548,12 @@ class Discount {
         return { success: false, message: 'discountNotActive' };
       }
 
-      const usage = await this.getLiveUsage(discount.id);
+      const usage = await this.getLiveUsage(
+        discount.id,
+        this.prisma,
+        now,
+        await this.ownOpenPaymentIds(this.prisma, opts.email, [discount.code])
+      );
       if (discount.type === 'percent') {
         if (discount.maxUses !== null && usage.useCount >= discount.maxUses) {
           return { success: false, message: 'discountCodeMaxUsesReached' };
