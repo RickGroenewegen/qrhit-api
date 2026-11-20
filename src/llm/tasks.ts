@@ -83,6 +83,15 @@ export const LLM_TASKS = {
     primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'low' },
     fallback: { provider: 'openai', model: 'gpt-5.6-luna', effort: 'none' },
   },
+  promotionalReview: {
+    kind: 'text',
+    label: 'Submitted playlist review',
+    description: 'Approves or declines a playlist a customer submitted for the catalogue, and names the languages it is for, from its songs (src/promotionalReview.ts).',
+    // A few a day, and the answer publishes a product page and mails the
+    // customer, so Sonnet rather than Haiku.
+    primary: { provider: 'anthropic', model: 'claude-sonnet-5-5', effort: 'low' },
+    fallback: { provider: 'openai', model: 'gpt-5.6-sol', effort: 'none' },
+  },
   aiSpotifyQuery: {
     kind: 'text',
     label: 'Spotify search queries',

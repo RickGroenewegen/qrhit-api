@@ -8,7 +8,7 @@ import {
 import { clearPlaylistCache, createSiteMap } from './misc';
 import { productPageLocales } from './productPageLocales';
 import { featuredLocaleWhere, normalizeFeaturedLocale } from './featuredLocale';
-import { applyRanking, getMarketRanking } from './marketRanking';
+import { WORLD, applyRanking, getMarketRanking, ownLanguages } from './marketRanking';
 import { DataDeps } from './types';
 import { productPhotoFeatured, queueProductPhoto } from '../productPhoto/triggers';
 
@@ -241,46 +241,88 @@ const DECADE_KEYS = [
   'decadePercentage1900',
 ] as const;
 
+/** Points for the same genre as the page's playlist: the strongest signal. */
+export const RELATED_GENRE_POINTS = 100;
+/** Points for sharing a language with the page's playlist. */
+export const RELATED_LANGUAGE_POINTS = 25;
 /**
- * Playlists similar to `slug`, for the "you might also like" row on a product
- * page.
- *
- * Why this exists: every product page used to be an orphan. The catalogue is
- * ~600 pages that between them had no internal links at all, reachable only
- * from the sitemap, and averaging ~13 impressions a month each. Linking
- * siblings turns the catalogue into a connected graph a crawler can walk from
- * any entry point, and gives each page inbound links from topically related
- * pages rather than none.
- *
- * It reads the same cached list `getFeaturedPlaylists` builds and ranks in
- * memory, so it costs no extra database work.
+ * Points for the first place in the visitor's country's ranking, falling with
+ * the place. Half a genre: what sells there reorders the similar lists, it
+ * does not put an unrelated best seller ahead of them.
  */
-export async function getRelatedFeaturedPlaylists(
-  deps: DataDeps,
-  locale: string,
+export const RELATED_POPULARITY_POINTS = 50;
+
+function featuredLocalesOf(value: string | null | undefined): string[] {
+  return String(value ?? '')
+    .split(',')
+    .map((l) => l.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * The playlist languages the related row may show next to the international
+ * lists: the visitor's market's own languages and the page's language, as
+ * /playlists shows them (qrhit `getVisitorLocales`), plus the languages of the
+ * page's playlist itself, so a Russian list's page still links Russian lists.
+ */
+export function relatedLocales(
+  market: string,
+  pageLocale: string,
+  sourceLocale: string | null | undefined
+): string[] {
+  return [
+    ...new Set([
+      ...ownLanguages(market),
+      String(pageLocale || '').toLowerCase(),
+      ...featuredLocalesOf(sourceLocale),
+    ]),
+  ].filter(Boolean);
+}
+
+/**
+ * The related row out of a featured list already in the visitor's market
+ * ranking (`score` = the place, 100 for the first). Pure; see
+ * getRelatedFeaturedPlaylists.
+ *
+ * - Only lists the visitor would see on /playlists: international ones (no
+ *   language, or `en`) and those in one of `locales`. Before, every list in
+ *   every language could turn up, so a Dutch visitor got Russian lists.
+ * - Then how alike they are (genre, era, language) plus how well they sell in
+ *   the visitor's country.
+ */
+export function rankRelated(
+  list: any[],
   slug: string,
-  limit: number = 6
-): Promise<any[]> {
-  const all = await getFeaturedPlaylists(deps, locale, true);
-  const source = all.find((p: any) => p.slug === slug);
+  limit: number,
+  locales: string[]
+): any[] {
+  const source = list.find((p: any) => p.slug === slug);
 
   // Most product pages are for playlists that were never featured, so the
   // source is usually absent from this list. Returning nothing there left the
   // majority of product pages with no related row at all — the opposite of the
   // point, which is to link orphaned product pages to something. With no
-  // source to compare against, every affinity term below evaluates to 0 and
-  // the ordering falls through to `score`, i.e. the most popular featured
-  // playlists. That is a reasonable row for a page we know nothing else about.
+  // source to compare against, only the popularity term counts: the best
+  // sellers in the visitor's country. That is a reasonable row for a page we
+  // know nothing else about.
   const decadeVector = (p: any): number[] =>
     DECADE_KEYS.map((k) => Number(p[k]) || 0);
   const sourceDecades = source ? decadeVector(source) : DECADE_KEYS.map(() => 0);
+  const sourceLocales = featuredLocalesOf(source?.featuredLocale);
 
-  const scored = all
-    .filter((p: any) => p.slug && p.slug !== slug)
+  const visible = (p: any): boolean => {
+    const own = featuredLocalesOf(p.featuredLocale);
+    return own.length === 0 || own.includes('en') || own.some((l) => locales.includes(l));
+  };
+
+  const scored = list
+    .filter((p: any) => p.slug && p.slug !== slug && visible(p))
     .map((p: any) => {
+      const score = Number(p.score) || 0;
+
       // Same genre is the strongest signal a listener would agree with.
       let affinity =
-        source && p.genreId && p.genreId === source.genreId ? 100 : 0;
+        source && p.genreId && p.genreId === source.genreId ? RELATED_GENRE_POINTS : 0;
 
       // Then era overlap: sum of the smaller share in each decade, so two
       // playlists that are both mostly 80s score near 100 and a 60s/2020s
@@ -291,15 +333,15 @@ export async function getRelatedFeaturedPlaylists(
         0
       );
 
-      // A nudge toward playlists in the visitor's own market.
-      if (
-        source?.featuredLocale &&
-        p.featuredLocale === source.featuredLocale
-      ) {
-        affinity += 25;
+      // A list in a language of the page's playlist ("de" next to "de,tr").
+      if (featuredLocalesOf(p.featuredLocale).some((l) => sourceLocales.includes(l))) {
+        affinity += RELATED_LANGUAGE_POINTS;
       }
 
-      return { playlist: p, affinity, score: Number(p.score) || 0 };
+      // What sells in the visitor's country.
+      affinity += (RELATED_POPULARITY_POINTS * Math.max(0, Math.min(100, score))) / 100;
+
+      return { playlist: p, affinity, score };
     }) as Array<{ playlist: any; affinity: number; score: number }>;
 
   scored.sort(
@@ -312,6 +354,32 @@ export async function getRelatedFeaturedPlaylists(
   );
 
   return scored.slice(0, limit).map((s) => s.playlist);
+}
+
+/**
+ * Playlists similar to `slug`, for the "you might also like" row on a product
+ * page, for a visitor from `market` (from `pickMarket`, as `/featured`).
+ *
+ * Why this exists: every product page used to be an orphan. The catalogue is
+ * ~600 pages that between them had no internal links at all, reachable only
+ * from the sitemap, and averaging ~13 impressions a month each. Linking
+ * siblings turns the catalogue into a connected graph a crawler can walk from
+ * any entry point, and gives each page inbound links from topically related
+ * pages rather than none.
+ *
+ * It reads the same cached list `getFeaturedPlaylists` builds and ranks it in
+ * memory with the market's stored ranking, so it costs no extra database work.
+ */
+export async function getRelatedFeaturedPlaylists(
+  deps: DataDeps,
+  locale: string,
+  slug: string,
+  limit: number = 6,
+  market: string = WORLD
+): Promise<any[]> {
+  const all = await getFeaturedPlaylistsForMarket(deps, locale, true, market);
+  const source = all.find((p: any) => p.slug === slug);
+  return rankRelated(all, slug, limit, relatedLocales(market, locale, source?.featuredLocale));
 }
 
 /**
@@ -478,6 +546,10 @@ export async function searchFeaturedPlaylists(
         preserveDescription: true,
         promotionalKeepDescription: true,
         promotionalDescriptionLocale: true,
+        featuredLocale: true,
+        promotionalReviewVerdict: true,
+        promotionalReviewReason: true,
+        promotionalReviewedAt: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -501,6 +573,13 @@ export async function searchFeaturedPlaylists(
           description: p.promotionalDescription || '',
           preserveDescription: p.preserveDescription,
           locale: p.promotionalLocale,
+          // The automatic review (src/promotionalReview.ts) sets the languages
+          // it found; what is still pending after it is a doubt, or a
+          // suggestion while PROMOTIONAL_AUTO_REVIEW=suggest.
+          featuredLocale: p.featuredLocale,
+          reviewVerdict: p.promotionalReviewVerdict,
+          reviewReason: p.promotionalReviewReason,
+          reviewedAt: p.promotionalReviewedAt,
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
           ...designFields(p),

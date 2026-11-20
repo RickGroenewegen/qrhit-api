@@ -11,7 +11,7 @@ import SpotifyApi from '../spotify_api';
 import TidalApi from '../tidal_api';
 import AppleMusicProvider from '../providers/AppleMusicProvider';
 import { CACHE_KEY_FEATURED_PLAYLISTS, CACHE_KEY_PRODUCT_PAGE_LOCALE } from '../data/featuredPlaylists';
-import { ProbeContext, axiosHttp, probeLink } from './probes';
+import { LinkProbeResult, LinkTarget, ProbeContext, axiosHttp, probeLink } from './probes';
 import {
   LINK_CHECK_RULES,
   LinkCheckDeps,
@@ -129,6 +129,16 @@ class FeaturedLinkCheck {
     } finally {
       if (!options.dryRun) await this.cache.releaseLock(LOCK).catch(() => {});
     }
+  }
+
+  /**
+   * One playlist asked once, outside the nightly run (the review of a
+   * submission, src/promotionalReview.ts). There is no control playlist here,
+   * so a refusal that could be our own access comes back `needsControl`, not
+   * gone: only a plain gone answer means the playlist is not there.
+   */
+  public async probeOne(target: LinkTarget): Promise<LinkProbeResult> {
+    return probeLink(target, this.probeContext());
   }
 
   /**

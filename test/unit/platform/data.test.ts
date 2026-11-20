@@ -278,7 +278,7 @@ describe('constructor (primary process, main server)', () => {
     h.isMainServer.mockResolvedValue(true);
   });
 
-  it('creates the sitemap, prefills the link cache, loads blocked playlists and schedules 4 cron jobs', async () => {
+  it('creates the sitemap, prefills the link cache, loads blocked playlists and schedules 5 cron jobs', async () => {
     const { data } = await makeData();
 
     expect(h.axiosCreate).toHaveBeenCalledTimes(1);
@@ -298,6 +298,7 @@ describe('constructor (primary process, main server)', () => {
       '30 1 * * *', // nightly genre translation
       '0 3 * * *', // daily featured playlist stats
       '30 3 * * *', // daily featured playlist cover repair
+      '*/15 * * * *', // automatic review of submitted playlists
     ]);
     expect(h.cronJobs.every((j) => j.started)).toBe(true);
   });
@@ -357,6 +358,7 @@ describe('constructor (primary process, main server)', () => {
         '30 1 * * *',
         '0 3 * * *',
         '30 3 * * *',
+        '*/15 * * * *',
       ]);
     } finally {
       process.env['ENVIRONMENT'] = saved;

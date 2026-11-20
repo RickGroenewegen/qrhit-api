@@ -18,6 +18,7 @@ import Shipping from '../shipping';
 import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
 import Promotional from '../promotional';
+import { PromotionalReview } from '../promotionalReview';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
 import GoogleFonts, { familyToCss } from '../googleFonts';
@@ -1322,6 +1323,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       if (!result.success) {
         reply.status(result.error === 'Unauthorized' ? 401 : 400).send(result);
         return;
+      }
+
+      // The automatic review (src/promotionalReview.ts) runs in the
+      // background; it only takes a submission still waiting and never
+      // reviewed, so later saves of the same playlist do nothing.
+      if (active !== false) {
+        PromotionalReview.getInstance().queue(request.params.playlistId);
       }
 
       return result;

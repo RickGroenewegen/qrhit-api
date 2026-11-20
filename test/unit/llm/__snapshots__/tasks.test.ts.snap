@@ -21,6 +21,7 @@ exports[`LLM_TASKS > routes every task as reviewed (update this snapshot on purp
   "orderExtract": "anthropic/claude-haiku-5-5:medium -> openai/gpt-5.6-terra:low",
   "productPhoto": "openai/gpt-image-2.5-sunburst",
   "productPhotoSongs": "anthropic/claude-haiku-5-5:low -> openai/gpt-5.6-terra:low",
+  "promotionalReview": "anthropic/claude-sonnet-5-5:low -> openai/gpt-5.6-sol:none",
   "quizQuestions": "anthropic/claude-haiku-5-5:medium -> openai/gpt-5.6-terra:low",
   "quizTrivia": "anthropic/claude-sonnet-5-5:medium -> openai/gpt-5.6-terra:medium",
   "seoTranslate": "anthropic/claude-sonnet-5-5:low -> openai/gpt-5.6-terra:none",

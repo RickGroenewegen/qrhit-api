@@ -292,16 +292,20 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   // Playlists similar to a given one, for the "you might also like" row on a
   // product page. Small on purpose: the product page renders this server-side,
-  // so it must not pull the whole catalogue down with it.
+  // so it must not pull the whole catalogue down with it. Ranked for the
+  // visitor's country like /featured (`?country=`, which the site's server
+  // always sends; see requestCountries).
   fastify.get('/featured/:locale/related/:slug', async (request: any, _reply) => {
     const limit = Math.min(
       12,
       Math.max(1, parseInt(request.query.limit, 10) || 6)
     );
+    const market = pickMarket(await requestCountries(request));
     const playlists = await data.getRelatedFeaturedPlaylists(
       request.params.locale,
       request.params.slug,
-      limit
+      limit,
+      market
     );
     return { success: true, data: playlists };
   });

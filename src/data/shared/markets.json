@@ -204,6 +204,8 @@
     { "code": "TW", "name": "Taiwan", "locales": ["cn", "en"] },
     { "code": "SG", "name": "Singapore", "locales": ["cn", "en"] },
     { "code": "NZ", "name": "New Zealand", "locales": ["en"] },
-    { "code": "ZA", "name": "South Africa", "locales": ["en"] }
+    { "code": "ZA", "name": "South Africa", "locales": ["en"] },
+    { "code": "TR", "name": "Turkey", "locales": ["tr", "en"] },
+    { "code": "RU", "name": "Russia", "locales": ["ru", "en"] }
   ]
 }

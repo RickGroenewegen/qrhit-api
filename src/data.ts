@@ -83,10 +83,21 @@ class Data {
           const playlistCoversJob = new CronJob('30 3 * * *', async () => {
             await this.repairFeaturedPlaylistCovers();
           });
+          // Submitted playlists the save's own review missed (src/promotionalReview.ts).
+          // Imported here: promotionalReview imports Data.
+          const promotionalReviewJob = new CronJob('*/15 * * * *', async () => {
+            try {
+              const { PromotionalReview } = await import('./promotionalReview');
+              await PromotionalReview.getInstance().sweep();
+            } catch (error: any) {
+              this.logger.log(color.red.bold(`Submission review sweep failed: ${error?.message || error}`));
+            }
+          });
           job.start();
           genreJob.start();
           playlistStatsJob.start();
           playlistCoversJob.start();
+          promotionalReviewJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -506,13 +517,15 @@ class Data {
   public async getRelatedFeaturedPlaylists(
     locale: string,
     slug: string,
-    limit?: number
+    limit?: number,
+    market?: string
   ): Promise<any[]> {
     return featuredPlaylistsModule.getRelatedFeaturedPlaylists(
       this.deps,
       locale,
       slug,
-      limit
+      limit,
+      market
     );
   }
 

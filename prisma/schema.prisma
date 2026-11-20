@@ -583,6 +583,12 @@ model Playlist {
   // unchanged and every other locale is translated from it. Null: the model
   // names the language, as for a description an admin chose to keep.
   promotionalDescriptionLocale String?      @db.VarChar(10)
+  // The automatic review of a submission (src/promotionalReview.ts):
+  // approve, decline or review (left for the admin), why, and when. The
+  // languages it found go straight onto featuredLocale.
+  promotionalReviewVerdict     String?      @db.VarChar(10)
+  promotionalReviewReason      String?      @db.Text
+  promotionalReviewedAt        DateTime?
   tracks                 PlaylistHasTrack[]
   Payment                PaymentHasPlaylist[]
   UserSuggestion         UserSuggestion[]

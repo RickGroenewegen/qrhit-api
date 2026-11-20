@@ -47,8 +47,12 @@ import {
   acceptPromotionalPlaylist,
   declinePromotionalPlaylist,
   getProductPageLocale,
+  getRelatedFeaturedPlaylists,
+  rankRelated,
+  relatedLocales,
   CACHE_KEY_FEATURED_PLAYLISTS,
 } from '../../../src/data/featuredPlaylists';
+import { CACHE_KEY_MARKET_RANKING, WORLD } from '../../../src/data/marketRanking';
 import { featuredLocaleWhere } from '../../../src/data/featuredLocale';
 
 const today = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -440,6 +444,11 @@ describe('searchFeaturedPlaylists', () => {
           // They want their own text on the product page, written in German.
           promotionalKeepDescription: true,
           promotionalDescriptionLocale: 'de',
+          // The automatic review left it for the admin, with the languages it found.
+          featuredLocale: 'de,nl',
+          promotionalReviewVerdict: 'review',
+          promotionalReviewReason: 'Only 12 songs.',
+          promotionalReviewedAt: new Date('2026-11-20T10:00:00Z'),
         },
       ])
       .mockResolvedValueOnce([]);
@@ -458,6 +467,10 @@ describe('searchFeaturedPlaylists', () => {
         customImage: null,
         description: 'Pending desc',
         locale: 'nl',
+        featuredLocale: 'de,nl',
+        reviewVerdict: 'review',
+        reviewReason: 'Only 12 songs.',
+        reviewedAt: new Date('2026-11-20T10:00:00Z'),
         userEmail: 'u@x',
         userDisplayName: 'U',
         // The admin sees the design itself, to judge it before accepting,
@@ -475,6 +488,10 @@ describe('searchFeaturedPlaylists', () => {
     expect(select).toMatchObject({
       promotionalKeepDescription: true,
       promotionalDescriptionLocale: true,
+      featuredLocale: true,
+      promotionalReviewVerdict: true,
+      promotionalReviewReason: true,
+      promotionalReviewedAt: true,
     });
     expect(prisma.playlist.findMany.mock.calls[1][0].select).toMatchObject({
       promotionalKeepDescription: true,
@@ -958,5 +975,133 @@ describe('acceptPromotionalPlaylist / declinePromotionalPlaylist', () => {
       error: 'Playlist not found',
     });
     expect(prisma.playlist.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('related row', () => {
+  // A featured list as the related row sees it: `score` is the place in the
+  // visitor's market ranking (100 for the first).
+  const pl = (
+    slug: string,
+    over: Record<string, any> = {}
+  ): Record<string, any> => ({
+    id: slug.length + slug.charCodeAt(0),
+    slug,
+    genreId: 1,
+    featuredLocale: null,
+    score: 50,
+    decadePercentage1980: 100,
+    ...over,
+  });
+  const slugs = (list: any[]) => list.map((p) => p.slug);
+
+  describe('relatedLocales', () => {
+    it('the market\'s own languages, the page\'s, and those of the page\'s playlist', () => {
+      expect(relatedLocales('NL', 'nl', null)).toEqual(['nl']);
+      expect(relatedLocales('DE', 'tr', 'ru')).toEqual(['de', 'tr', 'ru']);
+      expect(relatedLocales('SE', 'en', 'de,TR')).toEqual(['sv', 'no', 'en', 'de', 'tr']);
+      expect(relatedLocales(WORLD, 'ru', null)).toEqual(['ru']);
+    });
+  });
+
+  describe('rankRelated', () => {
+    it('leaves out lists in a language the visitor does not see (Russian Hits for a Dutch visitor)', () => {
+      const list = [
+        pl('source'),
+        pl('russian-hits', { featuredLocale: 'ru', score: 100 }),
+        pl('dutch', { featuredLocale: 'nl', score: 40 }),
+        pl('english-tagged', { featuredLocale: 'en', score: 30 }),
+        pl('international', { score: 20 }),
+        pl('german-turkish', { featuredLocale: 'de,tr', score: 90 }),
+      ];
+      expect(slugs(rankRelated(list, 'source', 6, relatedLocales('NL', 'nl', null)))).toEqual([
+        'dutch',
+        'english-tagged',
+        'international',
+      ]);
+      // A Turkish-speaking visitor in Germany sees the list tagged for both.
+      expect(slugs(rankRelated(list, 'source', 6, relatedLocales('DE', 'tr', null)))).toEqual([
+        'german-turkish',
+        'english-tagged',
+        'international',
+      ]);
+    });
+
+    it('keeps the language of the page\'s own playlist', () => {
+      const list = [
+        pl('russian-source', { featuredLocale: 'ru' }),
+        pl('russian-other', { featuredLocale: 'ru', score: 10 }),
+        pl('international', { score: 10 }),
+      ];
+      const locales = relatedLocales('NL', 'nl', 'ru');
+      // Same genre, era and score; the shared language puts the Russian one first.
+      expect(slugs(rankRelated(list, 'russian-source', 6, locales))).toEqual([
+        'russian-other',
+        'international',
+      ]);
+    });
+
+    it('without a featured source: the best sellers in the visitor\'s country', () => {
+      const list = [
+        pl('a', { score: 20, genreId: 2 }),
+        pl('b', { score: 90, genreId: 3 }),
+        pl('c', { score: 60, genreId: 4 }),
+      ];
+      expect(slugs(rankRelated(list, 'not-featured', 2, ['nl']))).toEqual(['b', 'c']);
+    });
+
+    it('a similar list first; among similar ones what sells in the country', () => {
+      const list = [
+        pl('source', { genreId: 1 }),
+        pl('best-seller-other-genre', { genreId: 2, score: 100 }),
+        pl('same-genre-slow', { genreId: 1, score: 10 }),
+        pl('same-genre-selling', { genreId: 1, score: 80 }),
+      ];
+      expect(slugs(rankRelated(list, 'source', 3, ['nl']))).toEqual([
+        'same-genre-selling',
+        'same-genre-slow',
+        'best-seller-other-genre',
+      ]);
+    });
+
+    it('a better seller wins over a slightly closer era, not over a very different one', () => {
+      const list = [
+        pl('source', { decadePercentage1980: 100 }),
+        pl('close-slow', { decadePercentage1980: 90, decadePercentage1990: 10, score: 10 }),
+        pl('near-selling', { decadePercentage1980: 75, decadePercentage1990: 25, score: 90 }),
+        pl('far-selling', { decadePercentage1980: 0, decadePercentage2020: 100, score: 100 }),
+      ];
+      expect(slugs(rankRelated(list, 'source', 3, ['nl']))).toEqual([
+        'near-selling',
+        'close-slow',
+        'far-selling',
+      ]);
+    });
+  });
+
+  describe('getRelatedFeaturedPlaylists', () => {
+    it('ranks with the stored ranking of the visitor\'s market', async () => {
+      const { deps, cache } = makeDeps();
+      const list = [
+        pl('source', { id: 1, genreId: 9 }),
+        pl('x', { id: 2, genreId: 2 }),
+        pl('y', { id: 3, genreId: 3 }),
+        pl('z', { id: 4, genreId: 4 }),
+      ];
+      cache.store.set(`${CACHE_KEY_FEATURED_PLAYLISTS}${today()}_nl_all`, JSON.stringify(list));
+      cache.store.set(`${CACHE_KEY_MARKET_RANKING}NL`, JSON.stringify([4, 3, 1, 2]));
+      cache.store.set(`${CACHE_KEY_MARKET_RANKING}${WORLD}`, JSON.stringify([2, 3, 4, 1]));
+
+      expect(slugs(await getRelatedFeaturedPlaylists(deps, 'nl', 'source', 3, 'NL'))).toEqual([
+        'z',
+        'y',
+        'x',
+      ]);
+      expect(slugs(await getRelatedFeaturedPlaylists(deps, 'nl', 'source', 3))).toEqual([
+        'x',
+        'y',
+        'z',
+      ]);
+    });
   });
 });

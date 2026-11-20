@@ -53,7 +53,8 @@ describe('pickMarket', () => {
   it('takes the first country given and falls back to the world', () => {
     expect(pickMarket([null, 'nl', 'DE'])).toBe('NL');
     expect(pickMarket([undefined, '', 'xyz'])).toBe(WORLD);
-    expect(pickMarket(['RU', 'NL'])).toBe(WORLD);
+    expect(pickMarket(['KZ', 'NL'])).toBe(WORLD);
+    expect(pickMarket(['tr'])).toBe('TR');
   });
 });
 
@@ -111,6 +112,14 @@ describe('rankMarket', () => {
     expect(order(playlists, buckets, 'HU')).toEqual([2, 1]);
     expect(order(playlists, buckets, WORLD)).toEqual([1, 2]);
     expect(rankMarket(playlists, buckets, 'HU', NOW)[0].ownLanguage).toBe(true);
+  });
+
+  it('only for the first language: "ru,de" is shown in Germany but not put ahead there', () => {
+    const playlists = [list(1), list(2, { featuredLocale: 'ru,de' }), list(3, { featuredLocale: 'de,tr' })];
+    const buckets = [sold(1, 'US', 12), sold(2, 'US', 11), sold(3, 'US', 10)];
+    expect(order(playlists, buckets, 'DE')).toEqual([3, 1, 2]);
+    expect(order(playlists, buckets, 'RU')).toEqual([2, 1, 3]);
+    expect(order(playlists, buckets, 'TR')).toEqual([1, 2, 3]);
   });
 
   it('ranks a new list with at least the median list\'s sales', () => {

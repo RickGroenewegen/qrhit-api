@@ -2211,8 +2211,10 @@ stats job (`calculatePlaylistScores`):
    language group (markets with the same first language: NL + BE, DE + AT +
    CH) and that with the world's: `(own + 50 × parent share) / (total + 50)`.
    A country with few sales follows the world; one with many, itself.
-4. A list in one of the market's own languages (`featuredLocale`, not `en`)
-   counts 1.5 times.
+4. A list whose first language (`featuredLocale`'s first code, the badge's;
+   not `en`) is one of the market's own counts 1.5 times. Only the first
+   (2026-11-20): "ru,de" is Russian songs also shown in Germany, where their
+   buyers are, and gets no head start there.
 5. A list under 60 days old is ranked with at least the median list's sales.
 6. In the first 12 places no genre comes three times in a row.
 
@@ -2223,9 +2225,8 @@ All of it is pure functions with constants at the top of the file
   (`featuredMarketRanking_v1_<CC>` and `…_world`), no database column. When
   the keys are missing (a new package version changes the cache prefix) the
   first request computes them. The world ranking is also written to
-  `playlists.score` (place as 0 to 100), which the feeds, the AI suggestions,
-  the related row and the admin still sort by; `downloads` stays the all-time
-  paid count.
+  `playlists.score` (place as 0 to 100), which the feeds, the AI suggestions
+  and the admin still sort by; `downloads` stays the all-time paid count.
 - **`score` in the answer is the place, not a measure**: 100 for the first,
   falling, never equal, with `rank` (1 = first). The released app (2.1.x)
   ignores the order it is given, sorts by `score` and takes its "Popular"
@@ -2242,6 +2243,23 @@ All of it is pure functions with constants at the top of the file
 - The base list is cached per language as before; the ranking is applied in
   memory per request (`getFeaturedPlaylistsForMarket`), so nothing is cached
   per market. Other callers of `getFeaturedPlaylists` get the stored order.
+- **The related row** (`GET /featured/:locale/related/:slug`, "you might
+  also like" on a product page; per market since 2026-11-20) takes the market
+  the same way; the site sends `?country=` as for `/featured`.
+  `rankRelated` (pure) only shows what the visitor would see on /playlists:
+  international lists (no language, or `en`) and lists in the market's own
+  languages, the page's language or the page's playlist's own
+  (`relatedLocales`). Before, any language could turn up, so a Dutch visitor
+  got Russian lists. Then the points: same genre 100, era overlap 0 to 100, a
+  language shared with the page's playlist 25, the place in the market's
+  ranking 0 to 50 (`RELATED_*_POINTS`). A page whose playlist is not featured
+  has only the last: the country's best sellers.
+- **Languages without a market**: `tr` and `ru` (2026-11-18) have no
+  `country` in locales.json and Turkey and Russia are not in markets.json, so
+  a visitor from there gets `world`, and no market counts `tr` or `ru` as its
+  own language: a Turkish or Russian list never gets the head start. A
+  Turkish speaker in Germany on /tr/ gets the German ranking; the page's
+  language only decides which lists are shown, not their order.
 - **Reading a ranking**: `npm run market-ranking -- --country=NL --top=25`
   prints each place with its own and world sales; `--untagged` lists the
   international lists that sell in one language group only (candidates for a
@@ -2274,6 +2292,66 @@ sweep only reports it (`gone`, in the log and the bulk action's answer) and
 changes nothing: the nightly link check (see "Featured link check") flags it
 after two nights in a row. Until 2026-11-03 the sweep unfeatured it on that
 one answer; Rick did not want one Spotify hiccup to remove a playlist.
+
+## Automatic review of submitted playlists (`src/promotionalReview.ts`)
+
+A playlist a customer submits on the promotional setup page used to wait in
+the Featured page's pending list until Rick approved it (649 of 668 until
+2026-11-20) or declined it, mostly because it was gone from its service by the
+time he looked. Since 2026-11-20 a review does that on its own:
+
+1. `POST /promotional/:paymentId/:userHash/:playlistId` (publicRoutes.ts, the
+   setup form) queues it after a successful save; the cron on the cluster primary of the main server
+   (`*/15`, data.ts) sweeps what was missed: pending, never reviewed, saved
+   more than 5 minutes ago, 5 per run. A Redis lock (`promotionalReview:<id>`)
+   keeps two workers off one playlist; only pending, never-reviewed
+   submissions are looked at (`review(id, { force: true })` reviews again).
+2. Availability is asked of the service, not the model: `FeaturedLinkCheck
+   .probeOne` (the nightly link check's probe). Gone → declined; this is the
+   only decline done without the admin. A refusal that could be our own
+   access (`needsControl`) does not count as gone.
+3. The model (LLM task `promotionalReview`, Sonnet, OpenAI fallback) gets the
+   title, description, the site language the customer submitted in and up to
+   150 songs spread over the list, and answers `verdict` (approve | decline |
+   review), a one-line `reason` and `languages`. Approve is the normal answer;
+   decline only for hateful/explicit/extremist/insulting content, spam or
+   advertising, or a list that is mostly not music; review when unsure or the
+   title cannot stand as a product name.
+4. `decideReview` (pure): an approval of a list under 20 songs becomes
+   "review". A decline by the model stays pending with verdict "decline" for
+   the admin to confirm (the calibration below had it decline a list Rick
+   approved while calling it borderline). An answer that cannot be used is stored as "review" (the admin
+   decides, the sweep does not ask again); an outage throws, stores nothing,
+   and the next sweep tries again.
+5. `featuredLocale` = the model's languages (two-letter site codes, never
+   `en`; empty = international, null) plus the customer's site language when
+   it is a taggable one and missing: a Russian list submitted on the German
+   site becomes `ru,de`, so it stays in the German feeds and indexing (as the
+   TR/RU lists were tagged by hand, 2026-11-20).
+6. Verdict, reason and time are stored on the playlist
+   (`promotionalReviewVerdict`, `promotionalReviewReason`,
+   `promotionalReviewedAt`), then approve runs
+   `Promotional.acceptPromotionalPlaylist` (the admin's Accept: SEO copy,
+   the approval mail, everything) and a gone playlist runs
+   `declinePromotionalPlaylist` (`promotionalHide`, no mail). Each decision is
+   logged and sent to Pushover.
+
+What is still pending after it shows the verdict as a badge with the reason
+in the admin's pending list (`/admin/featured/search` returns `reviewVerdict`,
+`reviewReason`, `reviewedAt` and the suggested `featuredLocale`).
+
+`PROMOTIONAL_AUTO_REVIEW` switches it: `apply` acts, `suggest` stores the
+verdict and languages and notifies but approves and declines nothing, `off`
+does nothing. Unset means `apply` in production and `off` anywhere else (the
+crons also run under ENVIRONMENT=development, where an approval would mail a
+customer from the dev database). `npm run promotional-review` asks the model
+about submissions Rick already decided (read-only production, prints only, no
+probe). Calibration 2026-11-20 on the 30 newest approved and all 19 declined:
+28 of 30 approved agreed (one left for review, one declined on a slur in a
+song title); of the declined, which Rick mostly declined because the playlist
+was gone (not probed here), one was declined on content (explicit lyrics) and
+two left for review (a first name plus "Hitster" as title). Deploy needs `prisma db push` (the three columns). Tests:
+test/unit/platform/promotional-review.test.ts.
 
 ## Removing a featured playlist ("unfeature")
 

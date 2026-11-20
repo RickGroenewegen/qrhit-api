@@ -19,7 +19,7 @@ export const SEASON_WINDOW_DAYS = 45;
 export const SEASON_WEIGHT = 0.5;
 /** Weighted sales a parent ranking is worth when blended into a child's. */
 export const BLEND_STRENGTH = 50;
-/** Head start of a list in one of the market's own languages. */
+/** Head start of a list whose first language is one of the market's own. */
 export const OWN_LANGUAGE_BOOST = 1.5;
 /** A list this young is ranked with at least the median list's sales. */
 export const NEW_LIST_DAYS = 60;
@@ -223,7 +223,10 @@ export function rankMarket(
         ((own.get(p.id) ?? 0) + BLEND_STRENGTH * groupShare) /
         (ownTotal + BLEND_STRENGTH);
     }
-    const ownLanguage = localesOf(p.featuredLocale).some((l) => languages.includes(l));
+    // Only the first language counts: the list's own (the badge's). The others
+    // say where else it is shown ("ru,de": Russian songs for the Russian
+    // speakers who buy in Germany), which is no reason to put it ahead there.
+    const ownLanguage = languages.includes(localesOf(p.featuredLocale)[0] ?? '');
     if (ownLanguage) value *= OWN_LANGUAGE_BOOST;
     return {
       id: p.id,
