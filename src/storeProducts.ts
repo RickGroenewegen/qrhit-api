@@ -54,6 +54,70 @@ export const STORE_DECK_TIERS = [
   { maxCards: MAX_CARDS, priceEur: 39 },
 ] as const;
 
+/**
+ * A temporary store price: for a while the products cost less in App Store
+ * Connect and the Play Console (Black Friday 2026: Rick, 2026-11-20). The
+ * consoles decide what the buyer pays, and nothing here changes them; this
+ * only lets the order row record that price instead of the regular one, so
+ * turnover and profit stay right. Keep it in step with the consoles: the same
+ * prices, the same days.
+ *
+ * The app shows the store's own price string and the purchase check never
+ * looks at the amount, so neither needs anything for a sale.
+ */
+export interface StoreSale {
+  /** For the logs and the docs, e.g. `BF2026`. */
+  name: string;
+  /** First and last moment of the sale price, as instants. */
+  startsAt: string;
+  endsAt: string;
+  /** EUR incl. VAT per product id: the NL storefront price during the sale. */
+  prices: Record<string, number>;
+}
+
+// Black Friday 2026, the website's BF2026 code (50% off a digital deck,
+// 27-30 November, Amsterdam time) as store prices: half of every deck.
+export const STORE_SALES: StoreSale[] = [
+  {
+    name: 'BF2026',
+    startsAt: '2026-11-27T00:00:00+01:00',
+    endsAt: '2026-11-30T23:59:59+01:00',
+    prices: {
+      'deck.500': 6.5,
+      'deck.1000': 11.5,
+      'deck.1500': 15,
+      'deck.2500': 16.5,
+      'deck.3000': 19.5,
+    },
+  },
+];
+
+/** The sale whose price applies to the product at `now`, if any. */
+export function activeStoreSale(
+  productId: string,
+  now: number = Date.now(),
+  sales: StoreSale[] = STORE_SALES
+): StoreSale | null {
+  return (
+    sales.find(
+      (sale) =>
+        typeof sale.prices[productId] === 'number' &&
+        now >= Date.parse(sale.startsAt) &&
+        now <= Date.parse(sale.endsAt)
+    ) ?? null
+  );
+}
+
+/** What the product costs in the NL storefront at `now`, EUR incl. VAT. */
+export function storePrice(
+  product: StoreProduct,
+  now: number = Date.now(),
+  sales: StoreSale[] = STORE_SALES
+): number {
+  const sale = activeStoreSale(product.id, now, sales);
+  return sale ? sale.prices[product.id] : product.priceEur;
+}
+
 export const STORE_GAMES_PRICE = QRGAMES_UPGRADE_PRICE;
 export const STORE_APP_DESIGN_PRICE = APP_DESIGN_PRICE;
 
@@ -145,15 +209,22 @@ export function storeCartRefusal(cart: any): string | null {
  * Turns `calculateOrder`'s answer for a store cart into the store price, so
  * the order row is written from what the buyer paid: the deck line takes the
  * product price minus the add-ons at their store prices (it keeps the extra
- * cent of the .99 rounding), and nothing else is charged.
+ * cent of the .99 rounding), and nothing else is charged. During a store
+ * sale (`STORE_SALES`) the price is the sale price.
  */
-export function applyStorePrice(calc: any, item: any, product: StoreProduct): void {
+export function applyStorePrice(
+  calc: any,
+  item: any,
+  product: StoreProduct,
+  now: number = Date.now()
+): void {
   const taxRate = Number(calc.taxRate) || 0;
+  const total = storePrice(product, now);
   const gamesFee = product.games ? STORE_GAMES_PRICE : 0;
   const appDesignFee = product.appDesign ? STORE_APP_DESIGN_PRICE : 0;
-  const deckGross = Math.round((product.priceEur - gamesFee - appDesignFee) * 100) / 100;
+  const deckGross = Math.round((total - gamesFee - appDesignFee) * 100) / 100;
   item.price = deckGross;
-  calc.total = product.priceEur;
+  calc.total = total;
   calc.price = (deckGross / (1 + taxRate / 100)).toFixed(2);
   calc.gamesFee = gamesFee;
   calc.appDesignFee = appDesignFee;

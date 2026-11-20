@@ -3171,6 +3171,23 @@ the main server only and never in development, under a Redis lock.
   lists them as `storeProducts`, `games` / `appDesign` always false.
 - A price changed here must change in App Store Connect and the Play
   Console too.
+- **Sales** (`STORE_SALES`, Rick 2026-11-20): a discount code may not
+  unlock a deck bought in the app, so a web offer on digital decks (Black
+  Friday's BF2026, 50%) reaches the app as a temporary price in both
+  consoles on the same five products: no new products, no app update (the
+  app shows the store's price string, the purchase check never looks at the
+  amount). `STORE_SALES` mirrors that price per product with its first and
+  last moment, so `applyStorePrice` (`storePrice`) records what the buyer
+  paid and turnover and profit follow; outside a sale it is the regular
+  price. BF2026: 27-30 November 2026, Amsterdam time, half of every deck
+  (€6.50 / €11.50 / €15 / €16.50 / €19.50). In App Store Connect the end
+  date is the first day the sale price no longer applies (1 December), and
+  Apple switches per storefront at its own local time. In the Play Console
+  the price is changed by hand at the start and the end: a scheduled Play
+  discount offer is untested, since the app buys without an offer token.
+  An order placed in the hours where the console and `STORE_SALES` differ
+  records the other price; Apple's JWS still gives the paid amount in
+  `totalPricePresentment`.
 - Open `store_` orders older than `STORE_OPEN_KEEP_DAYS` (30) go with the
   nightly cleanup. The abandoned-payment mail only looks at `tr_` orders.
 
