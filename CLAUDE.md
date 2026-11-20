@@ -734,7 +734,12 @@ already has (Disney, Schlager, Eurovision, all Taylor Swift songs).
   nothing about the content. The catalogue is the first part of the prompt and
   the same all day (Redis, ordered by score then id), so OpenAI's prompt cache
   covers it on an OpenAI route; on Haiku it stays under the 100K-token line
-  where the price goes up 5x.
+  where the price goes up 5x. On Anthropic the system prompt is sent with
+  `cache: '1h'` (2026-11-20): ~9 calls a day, mostly more than 5 minutes
+  apart, so the 5-minute cache would cost more than none; with the hour more
+  than half the calls read the ~57K tokens from the cache (cheaper and
+  faster). Keep anything that differs per request out of the system prompt,
+  or the cache never hits.
 - The catalogue line uses `description_en`, the page copy, not the customer's
   blurb that `/featured` serves for promotional lists: it names genre, years
   and artists. Descriptions are cut **by character**; half an emoji is a lone

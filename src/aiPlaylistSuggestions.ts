@@ -24,6 +24,14 @@ import { llm, LlmOutputError } from './llm';
  * war das nochmal?"). The catalogue is the start of the prompt and the same
  * for every request that day; OpenAI caches such a prefix on its own. The
  * model is the aiSuggestFeatured route in src/llm/tasks.ts.
+ *
+ * On Anthropic the system prompt (instructions + catalogue, ~57K tokens on
+ * Haiku) is cached for an hour (2026-11-20). From the ledger, 2026-10-21 to
+ * 2026-11-20: 267 calls, of which 52 came within 5 minutes of the one before,
+ * 98 within the hour and 117 later. With the 5-minute cache that costs more
+ * than no cache ($1.58 against $1.54 a month: almost every call writes); with
+ * the hour 150 of 267 read it (about $1.43), and a read skips reading the 57K
+ * tokens again, which the progress page waits for (3.7 s on average).
  */
 
 const MAX_SUGGESTIONS = 3;
@@ -246,10 +254,13 @@ class AIPlaylistSuggestions {
       playlistIds?: unknown;
     };
     const answer = await llm.json<MatchAnswer>('aiSuggestFeatured', {
-      messages: [
+      // Cached for an hour on Anthropic: the calls come ~9 a day, mostly more
+      // than 5 minutes apart, so the default 5-minute cache would expire
+      // before the next request. See the header for the numbers.
+      system: [
         {
-          role: 'system',
-          content:
+          cache: '1h',
+          text:
             'You match what a customer wants in a music playlist against a catalogue of ready-made playlists.\n\n' +
             `Return the ids of the playlists that give the customer what they describe: the same artist, genre, era, country, language or occasion. At most ${MAX_MATCHES}, best match first.\n\n` +
             'Be strict. A playlist matches only when someone who asked for this theme would say "yes, that is what I meant".\n' +
@@ -265,6 +276,8 @@ class AIPlaylistSuggestions {
             'Catalogue, one playlist per line (id | name | size | main decades | genre | market | description):\n' +
             playlists.map(catalogueLine).join('\n'),
         },
+      ],
+      messages: [
         {
           role: 'user',
           content: `What the customer wants:\n${theme}`,

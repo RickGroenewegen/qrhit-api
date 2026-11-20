@@ -190,6 +190,22 @@ describe('suggest', () => {
     expect(schema.properties.promptLanguage.enum).toEqual(['en', 'nl', 'de', 'fr', 'other']);
   });
 
+  it('asks for the instructions and catalogue to be cached for an hour', async () => {
+    const { llm } = await import('../../../src/llm');
+    const spy = vi.spyOn(llm, 'json');
+    h.createMock.mockResolvedValueOnce(answer([14]));
+
+    await suggestions.suggest('80s rock', 'en');
+
+    const req = spy.mock.calls[0][1];
+    spy.mockRestore();
+    expect(req.system).toEqual([
+      { cache: '1h', text: expect.stringContaining('10 | 80s Hits | 100 tracks | 80s | international') },
+    ]);
+    // Only the theme follows the cached prefix.
+    expect(req.messages).toEqual([{ role: 'user', content: 'What the customer wants:\n80s rock' }]);
+  });
+
   it('drops playlists made for another market', async () => {
     h.createMock.mockResolvedValueOnce(answer([11, 10, 12, 14]));
     expect(await suggestions.suggest('80s hits', 'en')).toEqual([card(10), card(14)]);
