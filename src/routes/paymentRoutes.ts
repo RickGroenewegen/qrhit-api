@@ -37,6 +37,7 @@ import { isSignedRenderRequest } from '../renderSignature';
 import { limitProgressData } from '../progressPrivacy';
 import CardPreviews from '../cardPreview';
 import { showcaseView } from '../productPhoto/cards';
+import { plainCardTracks } from '../cardText';
 import {
   SUPPORTED_CURRENCIES,
   isSupportedCurrency,
@@ -595,7 +596,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       cardDesignIndexes?: number[];
     }
   ): Promise<void> {
-    const { payment, user, playlist, php, tracks, subdir, eco, emptyPages, startIndex, itemIndex } = page;
+    const { payment, user, playlist, php, subdir, eco, emptyPages, startIndex, itemIndex } = page;
+    const tracks = plainCardTracks(page.tracks);
 
     // Construct batch number with item index if provided
     let batchNumber = php.paymentHasPlaylistId.toString();

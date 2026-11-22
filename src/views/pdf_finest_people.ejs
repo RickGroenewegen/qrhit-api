@@ -170,7 +170,7 @@
             <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraNameAttribute %></div>
                 <% } %>
             </div>
         </div>
