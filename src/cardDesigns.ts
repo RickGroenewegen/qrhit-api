@@ -209,6 +209,21 @@ export function sanitizeCardDesign(input: unknown): CardDesign {
 }
 
 /**
+ * An order line as the card pages print it. Its own font (design 1) is
+ * stored as the corrections page, the account redesign and checkout send it,
+ * and views/partials/font-import-inline.ejs writes it into a <style> block
+ * unescaped. A font outside FONT_FAMILY prints in Arial, as
+ * sanitizeCardDesign stores it for designs 2..N; a line whose font passes
+ * (or has none) comes back as the same object.
+ */
+export function printableFont<T extends { selectedFont?: unknown }>(php: T): T {
+  const font = php.selectedFont;
+  if (font === null || font === undefined || font === '') return php;
+  if (typeof font === 'string' && FONT_FAMILY.test(font)) return php;
+  return { ...php, selectedFont: 'Arial, sans-serif' };
+}
+
+/**
  * Designs 2..N from a request body: an array of at most MAX_EXTRA_DESIGNS
  * objects, each sanitised. Anything that is not an array means none.
  */

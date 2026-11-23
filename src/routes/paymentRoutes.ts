@@ -21,6 +21,7 @@ import {
   deckDesigns,
   designIndexForCard,
   getExtraDesigns,
+  printableFont,
 } from '../cardDesigns';
 import { maxCardsFor } from '../config/constants';
 import { scanClient } from '../scanClient';
@@ -596,7 +597,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       cardDesignIndexes?: number[];
     }
   ): Promise<void> {
-    const { payment, user, playlist, php, subdir, eco, emptyPages, startIndex, itemIndex } = page;
+    const { payment, user, playlist, subdir, eco, emptyPages, startIndex, itemIndex } = page;
+    const php = printableFont(page.php);
     const tracks = plainCardTracks(page.tracks);
 
     // Construct batch number with item index if provided

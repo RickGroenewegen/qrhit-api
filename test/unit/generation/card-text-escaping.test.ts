@@ -9,7 +9,9 @@ import path from 'path';
  * Card text is typed by customers (the corrections page) and, with auto_mode
  * on, printed without anybody looking. Every pdf_*.ejs card template is
  * rendered through the real sendCardPages (/qr/pdf-showcase stands in for an
- * order) and has to print it as text. No database, no Redis.
+ * order) and has to print it as text. The same goes for the line's font,
+ * which partials/font-import-inline.ejs writes into a <style> block
+ * unescaped. No database, no Redis.
  */
 
 const h = vi.hoisted(() => ({ view: null as any }));
@@ -38,6 +40,7 @@ vi.mock('../../../src/renderSignature', () => ({ isSignedRenderRequest: () => tr
 
 import paymentRoutes from '../../../src/routes/paymentRoutes';
 import { plainCardTracks } from '../../../src/cardText';
+import { printableFont } from '../../../src/cardDesigns';
 
 const VIEWS = path.resolve('src/views');
 // the bingo sheets and the box insert print no card text
@@ -45,6 +48,9 @@ const TEMPLATES = readdirSync(VIEWS)
   .filter((file) => /^pdf_.*\.ejs$/.test(file))
   .filter((file) => readFileSync(path.join(VIEWS, file), 'utf-8').includes('extraNameAttribute'))
   .map((file) => file.replace(/^pdf_|\.ejs$/g, ''));
+const FONT_TEMPLATES = TEMPLATES.filter((template) =>
+  readFileSync(path.join(VIEWS, `pdf_${template}.ejs`), 'utf-8').includes('font-import-inline')
+);
 
 const php = {
   paymentHasPlaylistId: 55,
@@ -76,12 +82,16 @@ describe('customer text on the cards', () => {
     await app.close();
   });
 
-  async function page(template: string, track: Record<string, unknown>): Promise<string> {
+  async function page(
+    template: string,
+    track: Record<string, unknown>,
+    line: Record<string, unknown> = {}
+  ): Promise<string> {
     h.view = {
       payment: null,
       user: null,
       playlist: { name: '<img src=x onerror=p()>' },
-      php,
+      php: { ...php, ...line },
       extraDesigns: [],
       eco: false,
       requestedTemplate: template,
@@ -97,6 +107,8 @@ describe('customer text on the cards', () => {
   it('finds every card template', () => {
     expect(TEMPLATES).toContain('printer');
     expect(TEMPLATES.length).toBeGreaterThanOrEqual(25);
+    expect(FONT_TEMPLATES).toContain('printer');
+    expect(FONT_TEMPLATES.length).toBeGreaterThanOrEqual(15);
   });
 
   it.each(TEMPLATES)('pdf_%s escapes what the customer typed', async (template) => {
@@ -113,6 +125,35 @@ describe('customer text on the cards', () => {
   it.each(TEMPLATES)('pdf_%s keeps the hard space of the 2025 voter names', async (template) => {
     const html = await page(template, { extraNameAttribute: 'Ann&nbsp;B.&nbsp;C & Cas <3' });
     expect(html).toContain('Ann B. C &amp; Cas &lt;3');
+  });
+
+  it.each(FONT_TEMPLATES)('pdf_%s prints a font that is no font list in Arial', async (template) => {
+    const html = await page(template, {}, {
+      selectedFont: "Arial</style><img src=x onerror=f()><style>",
+    });
+    expect(html).not.toContain('onerror=f()');
+    expect(html).toContain('font-family: Arial, sans-serif !important;');
+  });
+
+  it.each(FONT_TEMPLATES)('pdf_%s still loads a font from the designer', async (template) => {
+    const html = await page(template, {}, { selectedFont: 'Pacifico, Arial, cursive' });
+    expect(html).toContain('family=Pacifico:wght@400');
+    expect(html).toContain("font-family: 'Pacifico',  Arial, cursive, Arial, sans-serif !important;");
+  });
+
+  it('keeps every stored kind of font list and the line itself', () => {
+    for (const font of ["'Fira Sans', sans-serif", '"Rubik Dirt", Arial, cursive', 'M PLUS 1p, Arial, sans-serif']) {
+      const line = { selectedFont: font };
+      expect(printableFont(line)).toBe(line);
+    }
+    for (const line of [{ selectedFont: null }, { selectedFont: '' }, {}]) {
+      expect(printableFont(line)).toBe(line);
+    }
+    for (const font of ['Arial;}body{display:none', "Arial')", 'Arial<', 'x'.repeat(121), 7]) {
+      const line = { selectedFont: font, id: 1 };
+      expect(printableFont(line)).toEqual({ selectedFont: 'Arial, sans-serif', id: 1 });
+      expect(line.selectedFont).toBe(font);
+    }
   });
 
   it('decodes nothing but &nbsp;, and only in extraNameAttribute', () => {
