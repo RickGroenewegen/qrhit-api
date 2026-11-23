@@ -51,6 +51,7 @@ describe('updateCompany', () => {
       name: 'Renamed',
       followUp: true,
       excludeFromMailing: true,
+      workingAgreements: 'Alle mail over een order alleen naar studio@',
       evilField: 'drop me',
       test: true,
       id: 666,
@@ -60,7 +61,13 @@ describe('updateCompany', () => {
     expect(res.data.company.name).toBe('Renamed');
     expect(h.prisma.company.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { name: 'Renamed', followUp: true, excludeFromMailing: true, address: 'Street' },
+      data: {
+        name: 'Renamed',
+        followUp: true,
+        excludeFromMailing: true,
+        workingAgreements: 'Alle mail over een order alleen naar studio@',
+        address: 'Street',
+      },
     });
     expect(h.prisma.companyList.updateMany).toHaveBeenCalledWith({
       where: { companyId: 1, status: 'new' },

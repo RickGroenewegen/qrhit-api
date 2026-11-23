@@ -534,6 +534,9 @@ This is a **Node.js/Fastify API** for a music playlist and QR code service calle
 - **User groups**: admin, companyadmin, users
 - **Company-scoped permissions** for business features
 - **Token middleware** on protected routes
+- **Internal company fields**: `Company.workingAgreements` ("Werkwijze": how the company wants us to work, e.g. who
+  gets the mail and who stays out of CC) is staff-only. `getState` (`/business/state/:listId`, also served to the
+  company's own users) omits it unless `includeOrderBoard` (admin); Rick's skills toolkit shows it on mail drafts.
 
 #### File Structure
 - `src/` - Main application code

@@ -534,7 +534,10 @@ class Business {
           buttonBackgroundColor: true,
           buttonTextColor: true,
           qrvote: true,
-          Company: true,
+          // The company's working agreements are internal: staff only.
+          Company: options.includeOrderBoard
+            ? true
+            : { omit: { workingAgreements: true } },
           downloadLink: true,
           reviewLink: true,
           hideCircle: true,
@@ -772,6 +775,7 @@ class Business {
         'contactphone',
         'locale',
         'message',
+        'workingAgreements',
         'calculation',
         'calculationTromp',
         'calculationSchneider',
@@ -916,6 +920,7 @@ class Business {
     contactphone?: string;
     locale?: string;
     message?: string;
+    workingAgreements?: string;
   }): Promise<any> {
     try {
       if (!companyData.name || companyData.name.trim() === '') {
@@ -949,6 +954,7 @@ class Business {
           contactphone: companyData.contactphone,
           locale: companyData.locale || 'nl',
           message: companyData.message,
+          workingAgreements: companyData.workingAgreements,
         },
       });
 

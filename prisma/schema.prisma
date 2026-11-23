@@ -1237,6 +1237,11 @@ model Company {
   deliveryPhone        String?
   locale               String?        @default("nl")
   message              String?        @db.Text
+  // Internal: how this company wants us to work with them (who gets the
+  // mail, who stays out of CC, where invoices go). The toolkit shows it on
+  // every mail draft to them; never sent to the company's own users
+  // (getState omits it).
+  workingAgreements    String?        @db.Text
   calculation          String?        @db.Text
   calculationTromp     String?        @db.Text
   calculationSchneider String?        @db.Text

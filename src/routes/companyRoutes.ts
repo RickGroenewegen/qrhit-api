@@ -518,6 +518,7 @@ export default async function companyRoutes(
         contactphone,
         locale,
         message,
+        workingAgreements,
       } = request.body;
 
       if (isNaN(companyId)) {
@@ -545,6 +546,7 @@ export default async function companyRoutes(
         contactphone,
         locale,
         message,
+        workingAgreements,
         // Only the delivery fields that are in the body; others stay as they are.
         ...pickDeliveryFields(request.body || {}),
       });
@@ -2089,6 +2091,7 @@ export default async function companyRoutes(
           contactphone,
           locale,
           message,
+          workingAgreements,
         } = request.body;
 
         if (!name) {
@@ -2110,6 +2113,7 @@ export default async function companyRoutes(
           contactphone,
           locale,
           message,
+          workingAgreements,
         });
 
         if (!result.success) {
@@ -2152,7 +2156,8 @@ export default async function companyRoutes(
       try {
         const listId = parseInt(request.params.listId);
 
-        // The Order status board's fields (the note is internal) are for staff only.
+        // The Order status board's fields (the note is internal) and the company's
+        // working agreements are for staff only.
         const result = await business.getState(listId, {
           includeOrderBoard: !!request.user?.userGroups?.includes('admin'),
         });

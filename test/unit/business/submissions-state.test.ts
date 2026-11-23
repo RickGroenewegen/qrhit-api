@@ -306,6 +306,17 @@ describe('getState', () => {
     expect(adminRead.orderNote).toBe(true);
   });
 
+  it("leaves the company's working agreements out for anyone but an admin", async () => {
+    h.prisma.companyList.findUnique.mockResolvedValue(null);
+    await business.getState(5);
+    await business.getState(5, { includeOrderBoard: true });
+    const [publicRead, adminRead] = h.prisma.companyList.findUnique.mock.calls.map(
+      (call: any[]) => call[0].select
+    );
+    expect(publicRead.Company).toEqual({ omit: { workingAgreements: true } });
+    expect(adminRead.Company).toBe(true);
+  });
+
   it('assembles questions, submissions and locale descriptions', async () => {
     const stateList: any = {
       id: 5,

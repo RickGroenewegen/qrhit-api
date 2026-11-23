@@ -87,6 +87,15 @@ describe('createCompany', () => {
     );
   });
 
+  it('stores the working agreements', async () => {
+    h.prisma.company.findFirst.mockResolvedValue(null);
+    h.prisma.company.create.mockResolvedValue({ id: 12, name: 'Staat' });
+    await business.createCompany({ name: 'Staat', workingAgreements: 'Mail via de traffic' });
+    expect(h.prisma.company.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ workingAgreements: 'Mail via de traffic' }),
+    });
+  });
+
   it('skips contact user creation when the user already exists', async () => {
     h.prisma.company.findFirst.mockResolvedValue(null);
     h.prisma.company.create.mockResolvedValue({ id: 12, name: 'X' });
