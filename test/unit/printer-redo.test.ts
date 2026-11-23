@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { printerResetRefusal, rebuildRefusal, type PrinterRowState } from '../../src/printerRedo';
+import { printerResetRefusal, rebuildRefusal, takeBackDecision, type PrinterRowState } from '../../src/printerRedo';
 
 // Esther Brauhardt, 100009410: cancelled at Print&Bind as 1541189 and put on hold, our row still "at the printer"
 const row = (extra: Partial<PrinterRowState & { finalized: boolean }> = {}) => ({
@@ -54,5 +54,41 @@ describe('rebuild-printer-pdfs: when the PDFs may be rebuilt', () => {
     expect(rebuildRefusal(row({ ...reset, printerHold: false }))).toMatch(/printer hold first/);
     expect(rebuildRefusal(row({ ...reset, finalized: false }))).toMatch(/not finalized/);
     expect(rebuildRefusal(row({ ...reset, status: 'open' }))).toMatch(/not paid/);
+  });
+});
+
+// 100010037: Judged switched off in the dashboard while the order was at Print&Bind, the corrections page stayed shut
+describe('Judged off: taking a line back from the printer', () => {
+  const atPrinter = row({ printerHold: false });
+
+  it('has nothing to do for a digital line or an order that was never sent', () => {
+    expect(takeBackDecision('digital', atPrinter, '')).toEqual({ action: 'none' });
+    expect(takeBackDecision('physical', row({ sentToPrinter: false, printApiOrderId: '' }), '')).toEqual({ action: 'none' });
+  });
+
+  it('resets once the cancelled Print&Bind order is confirmed, without asking for the hold it sets itself', () => {
+    expect(takeBackDecision('physical', atPrinter, '1541189')).toEqual({ action: 'reset' });
+  });
+
+  it('refuses without the confirmed number, with another number, and after shipping', () => {
+    expect(takeBackDecision('physical', atPrinter, '')).toMatchObject({
+      action: 'refuse',
+      reason: expect.stringMatching(/at Print&Bind as 1541189: cancel it there first/),
+    });
+    expect(takeBackDecision('physical', atPrinter, '1541190')).toMatchObject({
+      action: 'refuse',
+      reason: expect.stringMatching(/not 1541190/),
+    });
+    expect(takeBackDecision('physical', row({ printApiShipped: true }), '1541189')).toMatchObject({
+      action: 'refuse',
+      reason: expect.stringMatching(/has shipped/),
+    });
+  });
+
+  it('refuses a row marked as sent that has no Print&Bind number to confirm', () => {
+    expect(takeBackDecision('physical', row({ printApiOrderId: '' }), '')).toMatchObject({
+      action: 'refuse',
+      reason: expect.stringMatching(/without a Print&Bind order number/),
+    });
   });
 });

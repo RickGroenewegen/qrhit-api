@@ -139,3 +139,58 @@ export async function resetPrinterState(paymentId: string, cancelledOrderId: str
   const after = shown(await printerRow(paymentId));
   return { applied: true, orderId: String(row.orderId), cancelled: cancelledOrderId, before, after };
 }
+
+/**
+ * "Judged" switched off in the dashboard for a printed line whose order is at Print&Bind (first: 100010037,
+ * 2026-11-23). Taking the approval back did not open the corrections page, which stays shut for as long as the
+ * row says "at the printer", and the button gave no hint why. Now the same click does the whole redo, once the
+ * admin has confirmed the Print&Bind order they cancelled there: the order goes on printer hold (so the hourly
+ * pass does not place it again while the customer is still correcting) and the printer state is reset as
+ * `printer-reset` does, with its refusals: the number must match, and a shipped order stays shut.
+ *
+ * Returns false when there was nothing at the printer to take back (a digital line, or an order not sent yet).
+ */
+/** What switching "Judged" off has to do about the printer: nothing, the reset, or why it cannot. */
+export function takeBackDecision(
+  lineType: string,
+  state: PrinterRowState,
+  cancelledOrderId: string
+): { action: 'none' } | { action: 'reset' } | { action: 'refuse'; reason: string } {
+  if (lineType !== 'physical') return { action: 'none' };
+  if (!state.sentToPrinter && !state.printApiOrderId) return { action: 'none' };
+  if (!state.printApiOrderId) {
+    return {
+      action: 'refuse',
+      reason: `order ${state.orderId} is marked as sent to the printer without a Print&Bind order number: it cannot be reopened from here`,
+    };
+  }
+  if (!cancelledOrderId) {
+    return {
+      action: 'refuse',
+      reason: `order ${state.orderId} is at Print&Bind as ${state.printApiOrderId}: cancel it there first, then confirm that number here`,
+    };
+  }
+  // The hold is ours to set, so it is not a reason to refuse
+  const refusal = printerResetRefusal({ ...state, printerHold: true }, cancelledOrderId);
+  return refusal ? { action: 'refuse', reason: refusal } : { action: 'reset' };
+}
+
+export async function takeLineBackFromPrinter(paymentHasPlaylistId: number, cancelledOrderId: string): Promise<boolean> {
+  const prisma = PrismaInstance.getInstance();
+  const line = await prisma.paymentHasPlaylist.findUnique({
+    where: { id: paymentHasPlaylistId },
+    select: { type: true, payment: { select: { paymentId: true } } },
+  });
+  if (!line) throw new PrinterRedoError('PaymentHasPlaylist not found', 404);
+
+  const row = await printerRow(line.payment.paymentId);
+  const decision = takeBackDecision(line.type, rowState(row), cancelledOrderId);
+  if (decision.action === 'none') return false;
+  if (decision.action === 'refuse') throw new PrinterRedoError(decision.reason, 409);
+
+  if (!row.printerHold) {
+    await prisma.payment.update({ where: { id: row.id }, data: { printerHold: true } });
+  }
+  await resetPrinterState(line.payment.paymentId, cancelledOrderId, true);
+  return true;
+}

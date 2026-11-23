@@ -33,6 +33,7 @@ import Cache from '../cache';
 import GoogleFonts from '../googleFonts';
 import { sendCatalogue } from '../http-cache';
 import PrismaInstance from '../prisma';
+import { PrinterRedoError, takeLineBackFromPrinter } from '../printerRedo';
 import Designer from '../designer';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
@@ -1513,12 +1514,29 @@ export default async function adminRoutes(
         return;
       }
 
+      // A printed line whose order is at Print&Bind: the corrections page
+      // only opens once the row says "not at the printer" again, so the
+      // admin confirms the order they cancelled there (src/printerRedo.ts).
+      let printerReset = false;
+      try {
+        printerReset = await takeLineBackFromPrinter(
+          parseInt(paymentHasPlaylistId, 10),
+          String(request.body?.cancelledPrintApiOrderId ?? '').trim()
+        );
+      } catch (error: any) {
+        if (error instanceof PrinterRedoError) {
+          reply.status(error.status).send({ success: false, error: error.message });
+          return;
+        }
+        throw error;
+      }
+
       const result = await data.resetJudgedStatus(
         parseInt(paymentHasPlaylistId, 10)
       );
 
       if (result.success) {
-        reply.send({ success: true });
+        reply.send({ success: true, printerReset });
       } else {
         reply.status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500).send({
           success: false,
