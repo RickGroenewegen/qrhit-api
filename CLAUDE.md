@@ -303,7 +303,8 @@ what the form holds.
   rounded to cents when `number` is above 1, so lines do not add up to the
   total; the form shows the unit price and "total minus delivery".
 - The print files are made by `node _scripts/build-supplies-artwork.mjs`
-  into `src/supplies/` (committed, the build copies `src/` along) and copied
+  into `src/supplies/` (committed; the build copies `src/` into the build root,
+  so the code looks in `APP_ROOT/supplies` first, not next to itself) and copied
   to `PUBLIC_DIR/supplies` when the form opens or an order is placed, since
   Print&Bind fetches them by URL.
 - Any product can be priced with `POST /orders/calculate` without a file;

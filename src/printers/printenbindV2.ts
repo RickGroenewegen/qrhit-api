@@ -338,7 +338,23 @@ class PrintEnBindV2 {
    * src/supplies; they are copied again when the shipped one is newer.
    */
   private async suppliesFileUrls(): Promise<{ band: string; sticker: string }> {
-    const sourceDir = path.join(__dirname, '..', 'supplies');
+    // The build copies src/ into the build root while tsc puts this file in
+    // build/src/printers, so the folder is not always next to the code:
+    // APP_ROOT first (src locally, the build root in production).
+    const candidates = [
+      ...(process.env['APP_ROOT']
+        ? [path.join(process.env['APP_ROOT'], 'supplies')]
+        : []),
+      path.join(__dirname, '..', 'supplies'),
+      path.join(__dirname, '..', '..', 'supplies'),
+    ];
+    let sourceDir = candidates[0];
+    for (const candidate of candidates) {
+      if (await fs.stat(candidate).catch(() => null)) {
+        sourceDir = candidate;
+        break;
+      }
+    }
     const targetDir = path.join(process.env['PUBLIC_DIR'] as string, 'supplies');
     await fs.mkdir(targetDir, { recursive: true });
     for (const file of Object.values(SUPPLIES_FILES)) {
