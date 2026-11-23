@@ -13,6 +13,7 @@ import { ApiResult } from '../interfaces/ApiResult';
 import { color } from 'console-log-colors';
 import Mail from '../mail';
 import fs from 'fs/promises';
+import path from 'path';
 import Data from '../data';
 import PDF from '../pdf';
 import PushoverClient from '../pushover';
@@ -43,6 +44,13 @@ import {
   gameCardsArticle,
   toPbArticle,
 } from './printenbindV2Request';
+import {
+  SUPPLIES_FILES,
+  SuppliesQuantities,
+  SuppliesQuote,
+  suppliesArticles,
+  suppliesQuote,
+} from './printenbindSupplies';
 
 interface PriceResult {
   totalPrice: number;
@@ -317,6 +325,142 @@ class PrintEnBindV2 {
       parts.push(data.slice(0, 200));
     }
     return parts.join(' | ');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Packing supplies (bands and stickers for our own use): one order that
+  // has nothing to do with a customer order. See printenbindSupplies.ts.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Puts the print files where Print&Bind can fetch them
+   * (PUBLIC_DIR/supplies) and answers their public URLs. The files ship in
+   * src/supplies; they are copied again when the shipped one is newer.
+   */
+  private async suppliesFileUrls(): Promise<{ band: string; sticker: string }> {
+    const sourceDir = path.join(__dirname, '..', 'supplies');
+    const targetDir = path.join(process.env['PUBLIC_DIR'] as string, 'supplies');
+    await fs.mkdir(targetDir, { recursive: true });
+    for (const file of Object.values(SUPPLIES_FILES)) {
+      const name = path.basename(file);
+      const source = path.join(sourceDir, name);
+      const target = path.join(targetDir, name);
+      const sourceStat = await fs.stat(source);
+      const targetStat = await fs.stat(target).catch(() => null);
+      if (
+        !targetStat ||
+        targetStat.size !== sourceStat.size ||
+        targetStat.mtimeMs < sourceStat.mtimeMs
+      ) {
+        await fs.copyFile(source, target);
+      }
+    }
+    const base = `${process.env['API_URI']}/public`;
+    return {
+      band: `${base}/${SUPPLIES_FILES.band}`,
+      sticker: `${base}/${SUPPLIES_FILES.sticker}`,
+    };
+  }
+
+  /**
+   * The previews the order form shows, as paths on this API (the form puts
+   * its own API address in front, so they load without API_URI being
+   * reachable from the browser).
+   */
+  public async suppliesPreviewPaths(): Promise<{ band: string; sticker: string }> {
+    await this.suppliesFileUrls();
+    return {
+      band: `/public/${SUPPLIES_FILES.bandPreview}`,
+      sticker: `/public/${SUPPLIES_FILES.stickerPreview}`,
+    };
+  }
+
+  /**
+   * Prices a supplies order (`place` false: POST /orders/calculate, which
+   * creates nothing) or places it (POST /orders, which checks out at once).
+   * Placing follows mayPlaceOrders(): development pointed at the live API
+   * only calculates and answers `placed: false`.
+   */
+  private async suppliesRequest(
+    address: PbCustomerInfo,
+    quantities: SuppliesQuantities,
+    place: boolean
+  ): Promise<{
+    success: boolean;
+    placed: boolean;
+    orderId?: string;
+    quote?: SuppliesQuote;
+    error?: string;
+  }> {
+    const placeOrder = place && this.mayPlaceOrders();
+    const articles = suppliesArticles(
+      quantities,
+      placeOrder ? await this.suppliesFileUrls() : undefined
+    );
+    const request = buildOrderRequest(
+      address,
+      articles.map((entry) => entry.article),
+      {
+        fast: false,
+        orderComment: '',
+        ...(placeOrder ? { reference: 'supplies' } : {}),
+      }
+    );
+    // Our own delivery: no need to hide Print&Bind on the package
+    request['anonymous'] = false;
+
+    const result = await this.pbFetch(
+      'POST',
+      placeOrder ? '/orders' : '/orders/calculate',
+      request,
+      undefined,
+      placeOrder ? 120000 : 30000
+    );
+    if (!result.ok) {
+      const error = this.describePbError(result);
+      this.logger.log(
+        color.red.bold(
+          `Print&Bind supplies ${placeOrder ? 'order' : 'calculation'} failed: ${color.white.bold(error)}`
+        )
+      );
+      return { success: false, placed: false, error };
+    }
+
+    const order = result.data?.data;
+    const quote = suppliesQuote(order, articles);
+    if (placeOrder) {
+      this.logger.log(
+        color.blue.bold(
+          `Placed supplies order ${color.white.bold(
+            String(order?.id)
+          )} at Print&Bind: ${color.white.bold(
+            String(quantities.bands)
+          )} bands, ${color.white.bold(
+            String(quantities.stickers)
+          )} stickers for ${color.white.bold(quote.total.toFixed(2))} ex VAT`
+        )
+      );
+    }
+    return {
+      success: true,
+      placed: placeOrder,
+      ...(placeOrder ? { orderId: String(order?.id) } : {}),
+      quote,
+    };
+  }
+
+  public async calculateSupplies(
+    address: PbCustomerInfo,
+    quantities: SuppliesQuantities
+  ) {
+    return this.suppliesRequest(address, quantities, false);
+  }
+
+  public async orderSupplies(
+    address: PbCustomerInfo,
+    quantities: SuppliesQuantities
+  ) {
+    return this.suppliesRequest(address, quantities, true);
   }
 
   /** GET /orders/{id}; returns the order resource, or null when that fails. */

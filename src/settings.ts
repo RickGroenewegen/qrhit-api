@@ -15,7 +15,8 @@ export type SettingKey =
   | 'tidal_refresh_token_obtained_at' // When the current refresh token was issued (ms)
   | 'auto_mode' // Admin toggle: resolve undecidable years and approve customer corrections automatically
   | 'captcha_required' // Admin toggle: playlist loads need a reCAPTCHA (plugins/playlistGuardPlugin.ts)
-  | 'printenbind_api_version'; // Admin toggle: 'v1' (legacy JSON API) or 'v2' (REST API); see printers/printenbind.ts
+  | 'printenbind_api_version' // Admin toggle: 'v1' (legacy JSON API) or 'v2' (REST API); see printers/printenbind.ts
+  | 'supplies_last_order'; // JSON of the last bands and stickers order placed at Print&Bind (printers/printenbindSupplies.ts)
 
 class Settings {
   private static instance: Settings;

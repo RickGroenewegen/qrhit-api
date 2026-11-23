@@ -51,6 +51,12 @@ import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProvider
 import { TidalProvider } from '../providers';
 import CalendarService from '../calendarService';
 import Settings from '../settings';
+import {
+  BANDS_PER_SHEET,
+  suppliesAddressError,
+  suppliesDefaultAddress,
+  suppliesQuantitiesError,
+} from '../printers/printenbindSupplies';
 import SeoDescriptions from '../seoDescriptions';
 import PaymentTurnover, { PaymentTurnoverError } from '../paymentTurnover';
 import { parseSalesSegment } from '../businessSales';
@@ -3385,6 +3391,122 @@ export default async function adminRoutes(
         success: true,
         message: 'Updated all payments with printApiOrderId',
       });
+    }
+  );
+
+  // Packing supplies (bulk actions, "Order bands & stickers"): bands and
+  // closing stickers for our own use, one Print&Bind order through the REST
+  // API whatever the v1/v2 toggle says. Nothing here touches a customer
+  // order. See printers/printenbindSupplies.ts.
+  const suppliesInput = (body: any) => {
+    const quantities = {
+      bands: body?.bands,
+      stickers: body?.stickers,
+    };
+    const address = {
+      ...suppliesDefaultAddress(),
+      ...(body?.address && typeof body.address === 'object'
+        ? body.address
+        : {}),
+    };
+    return {
+      quantities,
+      address,
+      error:
+        suppliesQuantitiesError(quantities) || suppliesAddressError(address),
+    };
+  };
+
+  fastify.get(
+    '/admin/printenbind/supplies',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const PrintEnBindV2 = (await import('../printers/printenbindV2'))
+          .default;
+        const lastOrder = await Settings.getInstance().getSetting(
+          'supplies_last_order'
+        );
+        reply.send({
+          success: true,
+          address: suppliesDefaultAddress(),
+          previews: await PrintEnBindV2.getInstance().suppliesPreviewPaths(),
+          bandsPerSheet: BANDS_PER_SHEET,
+          lastOrder: lastOrder ? JSON.parse(lastOrder) : null,
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to load the supplies form',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/printenbind/supplies/calculate',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { quantities, address, error } = suppliesInput(request.body);
+      if (error) {
+        return reply.status(400).send({ success: false, error });
+      }
+      try {
+        const PrintEnBindV2 = (await import('../printers/printenbindV2'))
+          .default;
+        const result = await PrintEnBindV2.getInstance().calculateSupplies(
+          address,
+          quantities
+        );
+        reply.status(result.success ? 200 : 502).send(result);
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to calculate the supplies order',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/printenbind/supplies/order',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { quantities, address, error } = suppliesInput(request.body);
+      if (error) {
+        return reply.status(400).send({ success: false, error });
+      }
+      try {
+        const PrintEnBindV2 = (await import('../printers/printenbindV2'))
+          .default;
+        const result = await PrintEnBindV2.getInstance().orderSupplies(
+          address,
+          quantities
+        );
+        let lastOrder = null;
+        if (result.success && result.placed) {
+          lastOrder = {
+            orderId: result.orderId,
+            placedAt: new Date().toISOString(),
+            bands: quantities.bands,
+            stickers: quantities.stickers,
+            total: result.quote?.total,
+            totalInclVat: result.quote?.totalInclVat,
+          };
+          await Settings.getInstance().setSetting(
+            'supplies_last_order',
+            JSON.stringify(lastOrder)
+          );
+        }
+        reply
+          .status(result.success ? 200 : 502)
+          .send({ ...result, lastOrder });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to place the supplies order',
+        });
+      }
     }
   );
 

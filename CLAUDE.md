@@ -278,6 +278,43 @@ poll cannot see orders placed on the other API.
     where v2 had booked a separate box order. v1's `createBoxUpgradeOrder`
     still books no `extraPrintCost` of its own.
 
+### Packing supplies: bands and stickers (2026-11-23)
+
+Bands and closing stickers for packing stacks of cards ourselves (returned
+parcels that go out again) are one Print&Bind order, apart from every
+customer order: no Payment, no printer pass. Bulk actions, "Order bands &
+stickers", asks the price first and places the order on a price for exactly
+what the form holds.
+
+- `src/printers/printenbindSupplies.ts` (pure, tested in
+  `test/unit/fulfillment/printenbindSupplies.test.ts`): the two articles, the
+  quantity and address checks, and `suppliesQuote`. `PrintEnBindV2`
+  `calculateSupplies` / `orderSupplies` send them; always the REST API,
+  whatever the v1/v2 toggle says. Routes: `GET /admin/printenbind/supplies`,
+  `POST .../supplies/calculate`, `POST .../supplies/order`. The last order is
+  the app setting `supplies_last_order`.
+- **Bands**: `product: 'flyer'`, A4, `mc_170`, single sided, borderless. Six
+  bands of 35 x 297 mm per sheet, cut by us. Print&Bind prints no strip
+  narrower than 50 mm (`losbladig` on `mc_170`) or 60 mm (other paper,
+  `flyer-eigen-formaat`), which is why the bands are not ordered as strips.
+  **Stickers**: `product: 'sticker-rond'`, `o30`, `sticker_paper`,
+  `cutting: 'sheet'`; 30 mm is the smallest.
+- An article's `amount` in the order resource is the price **per piece**
+  rounded to cents when `number` is above 1, so lines do not add up to the
+  total; the form shows the unit price and "total minus delivery".
+- The print files are made by `node _scripts/build-supplies-artwork.mjs`
+  into `src/supplies/` (committed, the build copies `src/` along) and copied
+  to `PUBLIC_DIR/supplies` when the form opens or an order is placed, since
+  Print&Bind fetches them by URL.
+- Any product can be priced with `POST /orders/calculate` without a file;
+  `GET /products` and `GET /products/{id}` list the products and their
+  fields (rules included). The docs at `/api/docs` are markdown.
+- Not tried: stickers as `number: 1, copies: N` calculate much cheaper
+  (500 for €10.68 instead of €25), but it is unknown whether Print&Bind
+  accepts that with a one-page file.
+- Outside production the order call only calculates (`mayPlaceOrders`) and
+  answers `placed: false`.
+
 ### Print&Bind test harness (`scripts/pnb-harness`)
 
 Built 2026-10-29 to chase the intermittent live 500s that sent production
