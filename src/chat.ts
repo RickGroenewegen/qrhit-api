@@ -12,6 +12,7 @@ import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS, APP_DESIGN_PRICE } from '
 import { SITE_LOCALES } from './data/shared/shared-data.generated';
 import { formatCostUsd, llm } from './llm';
 import type { LlmMessage } from './llm';
+import { buildPriceQuote } from './chatPriceQuote';
 
 interface RequiredDataItem {
   name: string;
@@ -21,7 +22,13 @@ interface RequiredDataItem {
 
 interface Tool {
   name: string;
+  /** Without all of these the tool does not run and the chat asks for them. */
   requiredData: RequiredDataItem[];
+  /**
+   * Pulled out of the conversation as well, but the tool runs without them
+   * and says itself what to ask next (the price quote: format, country).
+   */
+  optionalData?: RequiredDataItem[];
 }
 
 interface KnowledgeItem {
@@ -426,6 +433,7 @@ Your job is to identify which knowledge topics are relevant to answer the user's
 Analyze the question and select the most relevant topics from the available list.
 Select 1-5 topics maximum. Only select topics that are directly relevant.
 A question about buying many copies, sets or boxes (dozens or more, e.g. "350 exemplaren", "200 sets"), or about ordering for a company, staff, clients or an event, always includes "business". The number of cards or songs in one set ("a set of 100 cards") is not that.
+A question about what cards, a playlist or an order cost always includes "costs". So does a reply to the assistant asking for a number of cards, a format or a country in order to give a price (a bare "200", "digital", "to Germany").
 If the question is a greeting or general chat, return an empty array.`,
         },
         {
@@ -497,7 +505,7 @@ If the question is a greeting or general chat, return an empty array.`,
 Data to extract: ${requiredData.map(d => `${d.name} (${d.description})`).join(', ')}
 
 Return a JSON object with the data names as keys and extracted values (or null if not found).
-Only extract data that was clearly provided by the user.`,
+Only extract data that was clearly provided by the user. When the user changed their mind during the conversation, the latest value counts.`,
         },
         {
           role: 'user',
@@ -663,6 +671,13 @@ Only extract data that was clearly provided by the user.`,
         return this.getShippingStatus(data['orderNumber'], data['email']);
       case 'getShippingTimes':
         return this.getShippingTimes(data['countryCode']);
+      case 'getPriceQuote':
+        try {
+          return await buildPriceQuote(data);
+        } catch (error) {
+          this.logger.log(color.red(`[getPriceQuote] Error: ${error}`));
+          return 'Unable to calculate a price at the moment. Tell the customer the exact price is shown on the website as soon as they add their playlist.';
+        }
       default:
         return `Unknown tool: ${toolName}`;
     }
@@ -700,7 +715,7 @@ Only extract data that was clearly provided by the user.`,
 
           // Extract required data from conversation
           const extractedData = await this.extractRequiredData(
-            tool.requiredData,
+            [...tool.requiredData, ...(tool.optionalData || [])],
             chatHistory,
             question
           );
@@ -718,19 +733,23 @@ Only extract data that was clearly provided by the user.`,
           if (missing.length > 0) {
             missingData = missing.map((d) => d.userPrompt || d.description);
             this.logger.log(color.yellow.bold(`[processToolsForContext] `) + color.yellow(`Missing data: `) + color.white.bold(missingData.join(', ')));
-            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d}`).join('\n')}\n\nPolitely ask the user to provide this information in a natural, friendly way.`;
+            toolContext += `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d}`).join('\n')}\n\nPolitely ask the user to provide this information in a natural, friendly way.`;
           } else {
             // All data present - execute tool
             this.logger.log(color.green.bold(`[processToolsForContext] `) + color.green(`Executing tool: `) + color.white.bold(`${tool.name}`));
 
+            // Only what was found goes in: an optional field the customer
+            // has not given yet is simply absent.
             const toolResult = await this.executeTool(
               tool.name,
-              mergedData as { [key: string]: string }
+              Object.fromEntries(
+                Object.entries(mergedData).filter(([, value]) => value !== null && value !== '')
+              ) as { [key: string]: string }
             );
 
             this.logger.log(color.green.bold(`[processToolsForContext] `) + color.green(`Tool result: `) + color.white.bold(toolResult.substring(0, 100)));
 
-            toolContext = `\n\nTOOL RESULT (use this information to answer the user):\n${toolResult}`;
+            toolContext += `\n\nTOOL RESULT (use this information to answer the user):\n${toolResult}`;
           }
         }
       }
@@ -772,10 +791,12 @@ IMPORTANT INSTRUCTIONS:
 - Use markdown formatting for better readability
 - Be friendly and conversational
 - If the user greets you, greet them back warmly and ask how you can help
+- PRICES: name an amount only when it is in the provided context (a PRICE QUOTE or the knowledge). Never calculate, estimate, round or convert a price yourself. When a PRICE QUOTE says what is still unknown, ask the customer for exactly that; when it shows that more songs fit at the same price, present that as an advantage.
+- Never take back or 'correct' something you said earlier in this conversation only because it is not in the context this time: the context changes with each question. Correct yourself only when the context now contradicts it.
 - BUSINESS LEADS: someone who asks about a large quantity (dozens or hundreds of sets, boxes or copies), or about ordering for a company, organisation, staff, clients or an event, may be an important business customer. Tell them warmly about our business offer and invite them to request a free mockup of their box and a quotation on our business page, as a markdown link to ${businessPage}. Do not send them to info@qrsong.io and do not add [SHOW_SUPPORT_BUTTON] for this. Fewer than 100 sets is possible too, through the normal order flow on the site. The number of cards or songs in one set ("a set of 100 cards") is a normal order, not a business lead: then say nothing about the business offer. Only when a number could mean either ("350 copies") cover both briefly, the business offer first; one set of that many cards is simply a playlist with that many songs, ordered on the site.
 - CONTACT FORM: If the user appears frustrated, confused, repeats questions, expresses dissatisfaction, seems unhappy with answers, asks about something you cannot help with, or generally is not getting their question answered properly, let them know they can reach us at info@qrsong.io and add the marker [SHOW_SUPPORT_BUTTON] at the END of your response. This shows them a button to go to the contact form.
 
-${this.localizeLinks(knowledgeContext, locale)}${toolContext}`,
+${this.localizeLinks(knowledgeContext + toolContext, locale)}`,
       },
     ];
 

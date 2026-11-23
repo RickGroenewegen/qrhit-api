@@ -3710,6 +3710,36 @@ four minutes later, and each failed one had left an empty playlist behind.
 - The connect link asks for `playlist-modify-public` only, so a playlist we
   make must be public: a private one gets 403 "Insufficient client scope".
 
+## Support chat: tools and the price quote
+
+A knowledge item in `src/_data/chat.json` can carry `tools`; when the topic
+picker selects the item, `ChatService.processToolsForContext` pulls each
+tool's data out of the conversation (`chatExtract`) and puts the result in the
+answer's system prompt. `requiredData` must all be there or the chat asks for
+it; `optionalData` (2026-11-23) is extracted too, but the tool runs without it
+and says itself what to ask next. Several tools in one answer add up.
+
+`getPriceQuote` (on the `costs` item, `src/chatPriceQuote.ts`) was added after
+chat 663, where the bot answered "I cannot name prices" to "what do 50 or 100
+digital cards cost?".
+
+- The amounts come from `cardPrice` and `Order.calculateOrder`, checkout's own
+  calculators: shipping, the digital volume discount, free shipping from two
+  playlists, box tiers, QRGames. Never type a price into `chat.json` or the
+  prompt for it.
+- Everything is optional: with no number of cards it tells the model to ask
+  for it (and the format); with a size but no format it quotes all three and
+  asks; printed without a country is quoted "plus shipping" and it asks for
+  the country. A complete quote ends with the order link (`/[lang]/generate`;
+  tool results go through `localizeLinks` too).
+- `samePriceUpTo` finds the biggest deck at the same price (digital: every
+  deck up to 500 cards), so the bot can say "add up to 450 more songs at no
+  extra cost". Rick asked for this to be brought as an advantage.
+- The topic picker's prompt names `costs` for price questions and for a bare
+  reply ("200", "digital", "Germany") to the bot's own price question;
+  without it the follow-up loses the tool.
+- EUR including VAT; the chat does not know the visitor's currency.
+
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
   - Account/auth routes → `accountRoutes.ts`

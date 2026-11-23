@@ -127,7 +127,7 @@ export const LLM_TASKS = {
   chatExtract: {
     kind: 'text',
     label: 'Chat data extraction',
-    description: 'Pulls an order number, e-mail or country out of the conversation.',
+    description: 'Pulls an order number, e-mail, country or what a price quote needs out of the conversation.',
     primary: { provider: 'anthropic', model: 'claude-haiku-5-5', effort: 'none' },
     fallback: { provider: 'openai', model: 'gpt-5.6-luna', effort: 'none' },
     timeoutMs: 30_000,

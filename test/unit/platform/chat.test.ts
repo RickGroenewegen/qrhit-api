@@ -28,6 +28,7 @@ const {
   cacheStore,
   cacheMock,
   shippingMock,
+  priceQuoteMock,
   cronCtor,
 } = vi.hoisted(() => {
   const store = new Map<string, string>();
@@ -66,6 +67,7 @@ const {
       getTrackingInfo: vi.fn(),
       getShippingInfoByCountry: vi.fn(),
     },
+    priceQuoteMock: vi.fn(),
     cronCtor: vi.fn(),
   };
 });
@@ -110,6 +112,8 @@ vi.mock('../../../src/translation', () => ({
 vi.mock('../../../src/shipping', () => ({
   default: { getInstance: () => shippingMock },
 }));
+
+vi.mock('../../../src/chatPriceQuote', () => ({ buildPriceQuote: priceQuoteMock }));
 
 vi.mock('cron', () => ({ CronJob: cronCtor }));
 
@@ -165,6 +169,23 @@ const KNOWLEDGE = [
     tags: ['price'],
   },
   {
+    slug: 'costs',
+    title: 'What does it cost?',
+    description: 'Depends on the cards.',
+    tags: ['cost'],
+    tools: [
+      {
+        name: 'getPriceQuote',
+        requiredData: [],
+        optionalData: [
+          { name: 'numberOfCards', description: 'how many cards' },
+          { name: 'productType', description: 'the format' },
+          { name: 'countryCode', description: 'two-letter country code' },
+        ],
+      },
+    ],
+  },
+  {
     slug: 'business',
     title: 'Business',
     description: 'Fill in the form on https://www.qrsong.io/[lang]/business.',
@@ -213,6 +234,7 @@ beforeEach(() => {
   prismaMock.chatMessage.updateMany.mockReset();
   prismaMock.payment.findFirst.mockReset();
   prismaMock.payment.findUnique.mockReset();
+  priceQuoteMock.mockReset();
   shippingMock.getTrackingInfo.mockReset();
   shippingMock.getShippingInfoByCountry.mockReset();
   cacheMock.get.mockClear();
@@ -1175,6 +1197,38 @@ describe('processToolsForContext', () => {
     );
   });
 
+  it('runs a tool with only optional data on whatever was found, and adds up several tools', async () => {
+    createMock
+      // the shipping times' extraction (first in the knowledge file): nothing
+      .mockResolvedValueOnce(textResponse('{}'))
+      // the price quote's extraction: no format yet
+      .mockResolvedValueOnce(textResponse('{"numberOfCards":"50,100","productType":null,"countryCode":""}'));
+    priceQuoteMock.mockResolvedValueOnce('PRICE QUOTE\n- Digital: €13');
+
+    const result = await service.processToolsForContext('What do 50 or 100 cards cost?', ['costs', 'shipping-times']);
+
+    // The optional fields are asked of the extractor too.
+    const extraction = createMock.mock.calls[1][0].messages[0].content;
+    expect(extraction).toContain('numberOfCards (how many cards), productType (the format), countryCode (two-letter country code)');
+    // Empty and null values are left out, so the quote sees only what is known.
+    expect(priceQuoteMock).toHaveBeenCalledExactlyOnceWith({ numberOfCards: '50,100' });
+    // Both tools' contexts reach the answer, in knowledge order.
+    expect(result.toolContext).toBe(
+      "\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n" +
+        '- two-letter country code\n\n' +
+        'Politely ask the user to provide this information in a natural, friendly way.' +
+        '\n\nTOOL RESULT (use this information to answer the user):\nPRICE QUOTE\n- Digital: €13'
+    );
+  });
+
+  it('answers with a pointer to the website when the price quote fails', async () => {
+    createMock.mockResolvedValueOnce(textResponse('{"numberOfCards":"80"}'));
+    priceQuoteMock.mockRejectedValueOnce(new Error('down'));
+
+    const result = await service.processToolsForContext('Price of 80 cards?', ['costs']);
+    expect(result.toolContext).toContain('Unable to calculate a price at the moment.');
+  });
+
   it('treats empty-string extractions as missing data', async () => {
     createMock.mockResolvedValueOnce(
       textResponse('{"orderNumber":"","email":"a@b.com"}')
@@ -1280,6 +1334,19 @@ describe('answerQuestion', () => {
     expect(system).toContain('BUSINESS LEADS');
     expect(system).toContain('markdown link to https://www.qrsong.io/nl/business');
     expect(system).not.toContain('[lang]');
+  });
+
+  it("puts the chat's language into links in a tool result too", async () => {
+    createMock
+      .mockResolvedValueOnce(textResponse('{"numberOfCards":"80","productType":"digital"}'))
+      .mockResolvedValueOnce(streamOf('€13'));
+    priceQuoteMock.mockResolvedValueOnce('PRICE QUOTE\nOrder on https://www.qrsong.io/[lang]/generate');
+
+    await service.answerQuestion('Price of 80 digital cards?', ['costs'], [], () => {}, 'de');
+
+    const system = createMock.mock.calls[1][0].messages[0].content;
+    expect(system).toContain('Order on https://www.qrsong.io/de/generate');
+    expect(system).toContain('- PRICES: name an amount only when it is in the provided context');
   });
 
   it('falls back to the unprefixed link without a known language', async () => {

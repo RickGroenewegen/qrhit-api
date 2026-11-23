@@ -377,13 +377,52 @@
         {
             "slug": "costs",
             "title": "What does it cost?",
-            "description": "The cost depends on whether you choose digital PDF cards or physical printed cards, and how many tracks are in your playlist. Volume discounts are available for digital orders of multiple playlists.",
+            "description": "QRSong! is a one-time purchase, no subscription. The price depends on the format (a digital PDF to print yourself, printed A4 sheets you cut yourself, or printed and cut cards) and on how many songs are in the playlist (one card per song). Printed formats have shipping on top, which depends on the country. Optional extras: a gift box (printed formats only), QRGames and App Designer. Several digital playlists in one order get a volume discount automatically. The exact amounts come from the price quote; the price table for every size is on https://www.qrsong.io/[lang]/pricing and an order starts on https://www.qrsong.io/[lang]/generate.",
             "tags": [
                 "cost",
                 "price",
+                "how much",
+                "quote",
                 "digital",
                 "physical",
+                "sheets",
                 "volume discount"
+            ],
+            "tools": [
+                {
+                    "name": "getPriceQuote",
+                    "requiredData": [],
+                    "optionalData": [
+                        {
+                            "name": "numberOfCards",
+                            "description": "How many songs or cards the playlist the user asks a price for has, as digits. Several sizes they want to compare or combine: comma separated, e.g. '50,100'. Null when no number of songs or cards was given. A number of sets, copies, boxes, games or people ('150 sets for our staff') is never this: that leaves it null."
+                        },
+                        {
+                            "name": "productType",
+                            "description": "The format the user wants: 'digital' (a PDF, print it yourself, download), 'sheets' (printed by us on sheets the customer cuts) or 'physical' (printed and cut cards, real cards, delivered). Null when they did not say."
+                        },
+                        {
+                            "name": "countryCode",
+                            "description": "The 2-letter ISO country code the order ships to (e.g. NL, DE, FR, US, GB), only when the user named a country. Convert a country name in any language to its ISO code. Do not derive it from the language they write in."
+                        },
+                        {
+                            "name": "sameOrder",
+                            "description": "'yes' when the user gave several sizes and wants them as separate playlists in one order ('one of 50 and one of 100'). 'no' when they are comparing options ('50 or 100') or gave one size."
+                        },
+                        {
+                            "name": "sets",
+                            "description": "How many copies of the same playlist the user wants, as digits. Null when they did not say."
+                        },
+                        {
+                            "name": "giftBox",
+                            "description": "'yes' when the user wants the gift box included in the price, otherwise null."
+                        },
+                        {
+                            "name": "games",
+                            "description": "'yes' when the user wants QRGames (quiz, bingo, timeline) included in the price, otherwise null."
+                        }
+                    ]
+                }
             ]
         },
         {
