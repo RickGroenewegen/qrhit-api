@@ -13,7 +13,7 @@
  * not survive gets a new version in the URI.
  */
 
-export const WIDGET_URI = 'ui://widget/qrsong-playlists-v1.html';
+export const WIDGET_URI = 'ui://widget/qrsong-playlists-v2.html';
 export const WIDGET_MIME = 'text/html;profile=mcp-app';
 
 /** Where the cover images come from; everything else is refused by the CSP. */
@@ -32,9 +32,10 @@ const STYLE = `
 :root{color-scheme:light dark;--bg:transparent;--card:#ffffff;--line:#e7ddd4;--text:#16302f;--muted:#5d6f6e;--brand:#18565e;--brand-text:#ffffff;--tile:#feefe5}
 :root[data-theme=dark]{--card:#12292c;--line:#24474b;--text:#f3ece6;--muted:#a9bcbb;--brand:#7fd1c6;--brand-text:#0b2c31;--tile:#0f3a40}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;padding:0;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{position:relative;padding:2px 0 6px}
-.list{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.list{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.list::-webkit-scrollbar{display:none}
 .card{flex:0 0 188px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
 .one .card{flex-basis:100%;max-width:420px;flex-direction:row}
 .art{aspect-ratio:1/1;width:100%;background:var(--tile);display:block;object-fit:cover}
@@ -44,6 +45,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.
 .body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .name{font-weight:650;font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
 .one .name{min-height:0}
+.own{border-style:dashed}
+.own .name{min-height:0}
+.hint{color:var(--muted);font-size:13px}
 .meta{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .price{color:var(--text);font-weight:650}
 .go{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 10px;border-radius:999px;background:var(--brand);color:var(--brand-text);font-weight:650;font-size:13px;text-decoration:none;text-align:center;border:0;cursor:pointer}
@@ -58,11 +62,12 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.
 
 const SCRIPT = `
 (function(){
-  var labels={cards:'cards',cta:'Make these cards'};
+  var labels={cards:'cards',cta:'Make these cards',ownTitle:'',ownBody:''};
   var list=document.getElementById('list'),wrap=document.getElementById('wrap');
   var prev=document.getElementById('prev'),next=document.getElementById('next');
   var shown='',seq=0,initId=null;
   var NOTE='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 3v10.6A3.5 3.5 0 1 0 11 17V7h6V3z"/></svg>';
+  var LINK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.5l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.1-.5l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7"/></svg>';
   var OUT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
 
   function post(m){try{window.parent.postMessage(m,'*')}catch(e){}}
@@ -101,12 +106,17 @@ const SCRIPT = `
     if(meta&&meta.labels){
       if(meta.labels.cards)labels.cards=meta.labels.cards;
       if(meta.labels.cta)labels.cta=meta.labels.cta;
+      if(meta.labels.ownTitle)labels.ownTitle=meta.labels.ownTitle;
+      if(meta.labels.ownBody)labels.ownBody=meta.labels.ownBody;
     }
+    var own=data&&Array.isArray(data.playlists)&&labels.ownTitle?
+      '<article class="card own"><div class="art tile">'+LINK+'</div><div class="body"><div class="name">'+esc(labels.ownTitle)+'</div><div class="hint">'+esc(labels.ownBody)+'</div></div></article>':'';
     var rows=items(data).filter(function(p){return p&&p.name&&safeUrl(p.url)});
     var key=JSON.stringify([rows,labels]);
     if(key===shown)return;
     shown=key;
     wrap.hidden=rows.length===0;
+    if(rows.length===0)own='';
     list.className='list'+(rows.length===1?' one':'');
     list.innerHTML=rows.map(function(p){
       var cover=safeUrl(p.cover);
@@ -118,7 +128,7 @@ const SCRIPT = `
         '<div class="body"><div class="name">'+esc(p.name)+'</div>'+
         '<div class="meta">'+meta.join(' &middot; ')+'</div>'+
         '<a class="go" target="_blank" rel="noopener noreferrer" href="'+esc(safeUrl(p.url))+'">'+esc(labels.cta)+OUT+'</a></div></article>';
-    }).join('');
+    }).join('')+own;
     Array.prototype.forEach.call(list.querySelectorAll('img.art'),function(img){
       img.addEventListener('error',function(){
         var d=document.createElement('div');d.className='art tile';d.innerHTML=NOTE;img.replaceWith(d);
@@ -186,7 +196,8 @@ export const WIDGET_HTML =
 
 const WIDGET_DESCRIPTION =
   'Shows each playlist as a card with its cover, the number of cards, the price of the printed cards and a button that opens its page on qrsong.io. ' +
-  'The customer already sees these, so do not list them again: add one or two sentences at most.';
+  'After the ready-made playlists a last card says the customer can paste the link of their own playlist. ' +
+  'The customer already sees these, so do not list them again: add one or two sentences at most, and say they can also paste their own playlist link.';
 
 /** What the host needs to know to frame the widget. */
 function widgetMeta(): Record<string, unknown> {

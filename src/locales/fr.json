@@ -638,5 +638,7 @@
   "countdown.androidAppWhy": "Notre appli Android ne peut pas se connecter à Spotify pour la lecture cachée en ce moment. Les deux autres modes de lecture de l'appli fonctionnent. La version 2.1.1 corrige la lecture cachée et attend la validation de Google, alors garde un œil sur le Play Store pour la mise à jour.",
   "countdown.androidAppHelp": "Tu veux la lecture cachée dans l'appli tout de suite ? Contacte-nous et on t'aide à la connecter à Spotify.",
   "countdown.contactUs": "Contacte-nous",
-  "mcp.makeCards": "Crée ces cartes"
+  "mcp.makeCards": "Crée ces cartes",
+  "mcp.ownPlaylistTitle": "Ta propre playlist ?",
+  "mcp.ownPlaylistBody": "Colle son lien dans le chat : Spotify, YouTube Music, Apple Music, Deezer ou Tidal."
 }

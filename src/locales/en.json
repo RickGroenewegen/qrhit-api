@@ -636,5 +636,7 @@
 	"mail.appDesignTrackingLink": "See App Designer",
 	"mail.giftBoxIncluded": "Gift Box",
 	"mail.giftBoxIncludedPrinter": "Your order also includes a custom Gift Box that will be printed and shipped together with your cards.",
-	"mcp.makeCards": "Make these cards"
+	"mcp.makeCards": "Make these cards",
+	"mcp.ownPlaylistTitle": "Your own playlist?",
+	"mcp.ownPlaylistBody": "Paste its link in the chat: Spotify, YouTube Music, Apple Music, Deezer or Tidal."
 }

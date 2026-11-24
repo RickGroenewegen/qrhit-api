@@ -638,5 +638,7 @@
   "countdown.androidAppWhy": "Onze Android-app kan op dit moment geen verbinding maken met Spotify voor verborgen afspelen. De twee andere afspeelmodi van de app werken wel. Versie 2.1.1 lost verborgen afspelen op en wacht op goedkeuring van Google, dus hou de Play Store in de gaten voor de update.",
   "countdown.androidAppHelp": "Wil je meteen verborgen afspelen in de app? Neem contact met ons op, dan helpen we je het aan Spotify te koppelen.",
   "countdown.contactUs": "Neem contact op",
-  "mcp.makeCards": "Maak deze kaarten"
+  "mcp.makeCards": "Maak deze kaarten",
+  "mcp.ownPlaylistTitle": "Je eigen playlist?",
+  "mcp.ownPlaylistBody": "Plak de link in de chat: Spotify, YouTube Music, Apple Music, Deezer of Tidal."
 }

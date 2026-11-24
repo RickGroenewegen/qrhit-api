@@ -246,7 +246,11 @@ export async function searchFeaturedPlaylists(
   let matched = textWanted.length > 0 ? rows.filter((r) => r.score > 0) : rows;
   const exact = matched.length > 0;
   if (!exact) matched = rows;
-  matched.sort((a, b) => b.score - a.score || a.rank - b.rank);
+  // Asked for a decade: the playlist with most of it first, so "80s" opens
+  // with the 80s playlist and not with a film list that happens to pass.
+  const share = (r: { row: FeaturedRow }) =>
+    decade !== null ? Number(r.row[`decadePercentage${decade}`] || 0) : 0;
+  matched.sort((a, b) => b.score - a.score || share(b) - share(a) || a.rank - b.rank);
 
   const playlists = await Promise.all(
     matched.slice(0, limit).map(async ({ row }) => {
@@ -264,7 +268,7 @@ export async function searchFeaturedPlaylists(
   );
 
   const note = exact
-    ? 'Prices are for the printed cards, one card per song, VAT included, shipping not included. The customer designs the cards and pays on qrsong.io through the url.'
+    ? 'Prices are for the printed cards, one card per song, VAT included, shipping not included. The customer designs the cards and pays on qrsong.io through the url. Tell the customer they can also paste the link of their own playlist (Spotify, YouTube Music, Apple Music, Deezer or Tidal) in this chat.'
     : 'Nothing in the ready-made playlists matched closely; these are the most popular ones. The customer can also use their own playlist: ask for its link and call get_playlist.';
   return { playlists, note };
 }

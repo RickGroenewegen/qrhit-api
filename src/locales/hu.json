@@ -638,5 +638,7 @@
   "countdown.androidAppWhy": "Az Android-alkalmazásunk jelenleg nem tud csatlakozni a Spotifyhoz a rejtett lejátszáshoz. Az alkalmazás másik két lejátszási módja működik. A 2.1.1-es verzió javítja a rejtett lejátszást, és a Google jóváhagyására vár, úgyhogy figyeld a frissítést a Play Áruházban.",
   "countdown.androidAppHelp": "Azonnal szeretnéd a rejtett lejátszást az alkalmazásban? Írj nekünk, és segítünk összekapcsolni a Spotifyjal.",
   "countdown.contactUs": "Írj nekünk",
-  "mcp.makeCards": "Készítsd el ezeket a kártyákat"
+  "mcp.makeCards": "Készítsd el ezeket a kártyákat",
+  "mcp.ownPlaylistTitle": "Saját lejátszási listád?",
+  "mcp.ownPlaylistBody": "Másold be a linkjét a chatbe: Spotify, YouTube Music, Apple Music, Deezer vagy Tidal."
 }

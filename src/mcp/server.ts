@@ -36,6 +36,7 @@ const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const INSTRUCTIONS = [
   'QRSong! turns a playlist into a music card game: one printed card per song, with a QR code on the front and the artist, title and year on the back. Players scan a card, hear the song and guess.',
   'A customer starts in one of two ways: a ready-made playlist (search_featured_playlists) or their own playlist on Spotify, YouTube Music, Apple Music, Deezer or Tidal (get_playlist with its share link).',
+  'Always make clear that their own playlist works too: whenever you show ready-made playlists, say they can paste the link of their own playlist in this chat instead.',
   'Nothing is ordered or paid in this conversation. Every playlist result has a url: give it to the customer as the next step. On that page they design the cards and pay.',
   'Only quote amounts and delivery times these tools returned, exactly as returned. Do not calculate prices yourself and do not mention discounts.',
   'Only printed cards are offered here. Do not offer other formats.',
@@ -186,15 +187,20 @@ export function listTools(): Record<string, unknown>[] {
   }));
 }
 
-const WIDGET_LABELS_EN = { cards: 'cards', cta: 'Make these cards' };
+const WIDGET_LABELS_EN = {
+  cards: 'cards',
+  cta: 'Make these cards',
+  ownTitle: 'Your own playlist?',
+  ownBody: 'Paste its link in the chat: Spotify, YouTube Music, Apple Music, Deezer or Tidal.',
+};
 let translation: Translation | null = null;
 
 /**
- * The two words on a playlist card, in the language of the conversation.
+ * The words on the playlist cards, in the language of the conversation.
  * They travel in the result's `_meta`, which only the widget sees. English
  * when a language has no translation yet (i18n then hands back the key).
  */
-export function widgetLabels(locale: unknown): { cards: string; cta: string } {
+export function widgetLabels(locale: unknown): typeof WIDGET_LABELS_EN {
   try {
     translation = translation || new Translation();
     const lang = siteLocale(typeof locale === 'string' ? locale : undefined);
@@ -205,6 +211,8 @@ export function widgetLabels(locale: unknown): { cards: string; cta: string } {
     return {
       cards: pick('merchant.cards', WIDGET_LABELS_EN.cards),
       cta: pick('mcp.makeCards', WIDGET_LABELS_EN.cta),
+      ownTitle: pick('mcp.ownPlaylistTitle', WIDGET_LABELS_EN.ownTitle),
+      ownBody: pick('mcp.ownPlaylistBody', WIDGET_LABELS_EN.ownBody),
     };
   } catch {
     return WIDGET_LABELS_EN;

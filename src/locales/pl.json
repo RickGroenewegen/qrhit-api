@@ -638,5 +638,7 @@
   "countdown.androidAppWhy": "Nasza aplikacja na Androida nie może teraz połączyć się ze Spotify w celu ukrytego odtwarzania. Dwa pozostałe tryby odtwarzania w aplikacji działają. Wersja 2.1.1 naprawia ukryte odtwarzanie i czeka na zatwierdzenie przez Google, więc wypatruj aktualizacji w Sklepie Play.",
   "countdown.androidAppHelp": "Chcesz od razu korzystać z ukrytego odtwarzania w aplikacji? Napisz do nas, a pomożemy Ci połączyć je ze Spotify.",
   "countdown.contactUs": "Napisz do nas",
-  "mcp.makeCards": "Stwórz te karty"
+  "mcp.makeCards": "Stwórz te karty",
+  "mcp.ownPlaylistTitle": "Twoja własna playlista?",
+  "mcp.ownPlaylistBody": "Wklej jej link na czacie: Spotify, YouTube Music, Apple Music, Deezer lub Tidal."
 }

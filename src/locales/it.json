@@ -638,5 +638,7 @@
   "countdown.androidAppWhy": "Al momento la nostra app Android non riesce a collegarsi a Spotify per la riproduzione nascosta. Le altre due modalità di riproduzione dell'app funzionano. La versione 2.1.1 risolve la riproduzione nascosta ed è in attesa dell'approvazione di Google, quindi tieni d'occhio il Play Store per l'aggiornamento.",
   "countdown.androidAppHelp": "Vuoi subito la riproduzione nascosta nell'app? Contattaci e ti aiutiamo a collegarla a Spotify.",
   "countdown.contactUs": "Contattaci",
-  "mcp.makeCards": "Crea queste carte"
+  "mcp.makeCards": "Crea queste carte",
+  "mcp.ownPlaylistTitle": "La tua playlist?",
+  "mcp.ownPlaylistBody": "Incolla il link nella chat: Spotify, YouTube Music, Apple Music, Deezer o Tidal."
 }

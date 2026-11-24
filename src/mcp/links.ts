@@ -30,7 +30,10 @@ function siteBase(): string {
   return (process.env['FRONTEND_URI'] || 'https://www.qrsong.io').replace(/\/+$/, '');
 }
 
-const HANDOFF_QUERY = `orderType=physical&src=${MCP_SOURCE}`;
+// `src` is ours (the order's source); the utm values are what analytics reads.
+// ChatGPT adds utm_source=chatgpt.com to a link in its text but not to one a
+// widget opens, so the link carries them itself, with that same source.
+const HANDOFF_QUERY = `orderType=physical&src=${MCP_SOURCE}&utm_source=chatgpt.com&utm_medium=referral&utm_campaign=plugin`;
 
 /** The product page of a ready-made playlist. */
 export function featuredLink(locale: string, slug: string): string {

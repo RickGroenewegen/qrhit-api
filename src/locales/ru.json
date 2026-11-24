@@ -636,5 +636,7 @@
   "mail.appDesignTrackingLink": "Открыть дизайнер приложения",
   "mail.giftBoxIncluded": "Подарочная коробка",
   "mail.giftBoxIncludedPrinter": "В твой заказ также входит персональная подарочная коробка — мы напечатаем её и отправим вместе с карточками.",
-  "mcp.makeCards": "Создай эти карточки"
+  "mcp.makeCards": "Создай эти карточки",
+  "mcp.ownPlaylistTitle": "Свой плейлист?",
+  "mcp.ownPlaylistBody": "Вставь ссылку на него в чат: Spotify, YouTube Music, Apple Music, Deezer или Tidal."
 }

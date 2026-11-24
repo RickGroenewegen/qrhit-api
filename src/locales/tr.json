@@ -636,5 +636,7 @@
   "mail.appDesignTrackingLink": "Uygulama Tasarımcısına Göz At",
   "mail.giftBoxIncluded": "Hediye Kutusu",
   "mail.giftBoxIncludedPrinter": "Siparişinde ayrıca kişiye özel bir hediye kutusu da var; kartlarınla birlikte basılıp gönderilecek.",
-  "mcp.makeCards": "Bu kartları oluştur"
+  "mcp.makeCards": "Bu kartları oluştur",
+  "mcp.ownPlaylistTitle": "Kendi çalma listen mi?",
+  "mcp.ownPlaylistBody": "Bağlantısını sohbete yapıştır: Spotify, YouTube Music, Apple Music, Deezer veya Tidal."
 }

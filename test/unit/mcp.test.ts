@@ -66,13 +66,13 @@ const deps = (over: Partial<McpToolDeps> = {}): McpToolDeps => ({
 describe('hand-off links', () => {
   it('opens a featured playlist on printed cards, marked as from ChatGPT', () => {
     expect(featuredLink('nl', 'top-100')).toMatch(
-      /\/nl\/product\/top-100\?orderType=physical&src=chatgpt$/
+      /\/nl\/product\/top-100\?orderType=physical&src=chatgpt&utm_source=chatgpt\.com&utm_medium=referral&utm_campaign=plugin$/
     );
   });
 
   it('opens an own playlist on the summary route with the service as the enum writes it', () => {
     expect(playlistLink('de', ServiceType.APPLE_MUSIC, 'pl.abc')).toMatch(
-      /\/de\/generate\/summary\/pl\.abc\/0\/1\/apple_music\?orderType=physical&src=chatgpt$/
+      /\/de\/generate\/summary\/pl\.abc\/0\/1\/apple_music\?orderType=physical&src=chatgpt&utm_source=chatgpt\.com&utm_medium=referral&utm_campaign=plugin$/
     );
   });
 
@@ -113,7 +113,7 @@ describe('get_playlist', () => {
   it('returns the cards, the price and the link', async () => {
     const result = await getPlaylist({ url: 'https://music.apple.com/x', locale: 'nl' }, deps());
     expect(result).toMatchObject({ found: true, cards: 80, service: 'apple_music' });
-    expect(result['url']).toMatch(/apple_music\?orderType=physical&src=chatgpt$/);
+    expect(result['url']).toMatch(/apple_music\?orderType=physical&src=chatgpt&utm_source=chatgpt\.com&utm_medium=referral&utm_campaign=plugin$/);
   });
 
   it('does not look up something that is not a link', async () => {
@@ -303,6 +303,6 @@ describe('the playlist cards widget', () => {
   });
 
   it('gives the card labels in English when asked for an unknown language', () => {
-    expect(widgetLabels('xx')).toEqual({ cards: 'cards', cta: 'Make these cards' });
+    expect(widgetLabels('xx')).toMatchObject({ cards: 'cards', cta: 'Make these cards', ownTitle: 'Your own playlist?' });
   });
 });
