@@ -88,6 +88,10 @@ export interface McpToolDeps {
   ) => Promise<{ amount: number; currency: string }>;
   playlistFromUrl: (url: string) => Promise<PlaylistLookup>;
   shippingInfo: () => Promise<ShippingInfo>;
+  /** The product photo of a ready-made playlist, or null (mcp/photo.ts). */
+  featuredPhoto: (slug: string) => Promise<string | null>;
+  /** The URL of a customer's own playlist's photo, started now, or null. */
+  ownPhoto: (service: string, playlistId: string) => Promise<string | null>;
 }
 
 export const defaultDeps: McpToolDeps = {
@@ -114,6 +118,16 @@ export const defaultDeps: McpToolDeps = {
   shippingInfo: async () => {
     const { default: Shipping } = await import('../shipping');
     return Shipping.getInstance().getShippingInfoByCountry();
+  },
+  featuredPhoto: async (slug) => {
+    const { featuredPhotoUrl } = await import('./photo');
+    return featuredPhotoUrl(slug);
+  },
+  ownPhoto: async (service, playlistId) => {
+    const photo = await import('./photo');
+    const url = photo.ownPhotoUrl(service, playlistId);
+    if (url) photo.warmOwnPhoto(service, playlistId);
+    return url;
   },
 };
 
@@ -213,6 +227,8 @@ export interface FeaturedResult {
   cards: number;
   price: Money | null;
   cover: string;
+  /** The photo of the playlist's cards, when it has one: what the card shows. */
+  photo: string | null;
   url: string;
 }
 
@@ -262,6 +278,7 @@ export async function searchFeaturedPlaylists(
         cards: row.numberOfTracks,
         price: eur ? await money(eur, country, deps) : null,
         cover: featuredCover(row.slug as string),
+        photo: await deps.featuredPhoto(row.slug as string).catch(() => null),
         url: featuredLink(locale, row.slug as string),
       };
     })
@@ -327,6 +344,10 @@ export async function getPlaylist(
   const eur = await deps.priceOfDeck(trackCount);
   return {
     ...base,
+    // a photo of five of its songs as cards; it takes a few seconds to make,
+    // so the card shows the cover until it is there
+    photo: await deps.ownPhoto(result.serviceType, id).catch(() => null),
+    photoPending: true,
     cards: trackCount,
     price: eur ? await money(eur, country, deps) : null,
     note:

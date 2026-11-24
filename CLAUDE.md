@@ -3770,7 +3770,7 @@ is `docs/chatgpt-app/SUBMISSION.md`.
   POST (no stream, no session; GET and DELETE answer 405).
 - **Playlist answers show as cards** (`src/mcp/widget.ts`, 2026-11-24): one
   self-contained HTML document served as the MCP Apps resource
-  `ui://widget/qrsong-playlists-v2.html` (`resources/list`, `resources/read`,
+  `ui://widget/qrsong-playlists-v3.html` (`resources/list`, `resources/read`,
   mime `text/html;profile=mcp-app`); the two playlist tools point at it with
   `_meta.ui.resourceUri`. It loads nothing but cover images (its CSP lists
   our API and Spotify's image hosts; another service's cover falls back to a
@@ -3779,6 +3779,16 @@ is `docs/chatgpt-app/SUBMISSION.md`.
   `mcp.makeCards`) travel in the result's `_meta.labels`, which only the
   widget sees. A change an old result would not survive needs a new version
   in the URI: ChatGPT caches the template by URI.
+- **A card shows the photo of the playlist's cards** (`src/mcp/photo.ts`,
+  Rick 2026-11-24): a ready-made playlist's product photo (720 px WebP), and
+  for a customer's own playlist a photo made on the server the way the
+  abandoned-payment mail's is (`productPhoto/orderPhoto.ts`: five songs by the
+  rule, the standard design, scene-1). That one costs a Lambda render, so its
+  URL (`GET /mcp/photo/:service/:playlistId/<signature>.webp`) is signed with
+  `JWT_SECRET`, the file is kept 30 days under `PUBLIC_DIR/mcp_photos`, one is
+  made at a time and at most 60 an hour; past that it answers 404 and the
+  card keeps the cover. `get_playlist` starts it when it answers
+  (`photoPending`), the card shows the cover and swaps when the photo loads.
 - **Do not put OpenAI's addresses in `TRUSTED_IPS`**: that switches Mollie to
   the test client. The tools call the functions directly, so the playlist
   guard and the captcha never see them.

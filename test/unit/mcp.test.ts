@@ -29,6 +29,8 @@ const featured = [
 ];
 
 const deps = (over: Partial<McpToolDeps> = {}): McpToolDeps => ({
+  featuredPhoto: async (slug) => `https://api.example/photo/${slug}-720.webp`,
+  ownPhoto: async (service, id) => `https://api.example/mcp/photo/${service}/${id}/sig.webp`,
   featured: async () => featured,
   priceOfDeck: async (cards) => 20 + cards / 10,
   calculateOrder: async (params: any) => {

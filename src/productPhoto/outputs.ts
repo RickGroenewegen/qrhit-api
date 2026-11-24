@@ -121,6 +121,17 @@ export async function photoOutputs(master: Buffer, name: string): Promise<PhotoF
 }
 
 /**
+ * The photo `width` px wide as a transparent WebP, the product page's
+ * smallest size: the playlist cards in ChatGPT (mcp/photo.ts).
+ */
+export async function webPhoto(master: Buffer, width: number): Promise<Buffer> {
+  const base = await cleanShadow(
+    sharp(master).resize({ width: PHOTO_WIDTH, kernel: 'lanczos3' }).sharpen({ sigma: 0.5 })
+  );
+  return sharp(base).resize({ width, kernel: 'lanczos3' }).webp({ quality: 84, alphaQuality: 90 }).toBuffer();
+}
+
+/**
  * A photo for a mail: the cards without the empty margin, on `ground` (the
  * mail's panel), `width` px wide, as a JPEG. Mail clients cannot be trusted
  * with transparency, so the soft shadow is laid onto the panel here.

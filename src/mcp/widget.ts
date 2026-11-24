@@ -13,7 +13,7 @@
  * not survive gets a new version in the URI.
  */
 
-export const WIDGET_URI = 'ui://widget/qrsong-playlists-v2.html';
+export const WIDGET_URI = 'ui://widget/qrsong-playlists-v3.html';
 export const WIDGET_MIME = 'text/html;profile=mcp-app';
 
 /** Where the cover images come from; everything else is refused by the CSP. */
@@ -36,10 +36,11 @@ html,body{margin:0;padding:0;overflow:hidden;background:var(--bg);color:var(--te
 .wrap{position:relative;padding:2px 0 6px}
 .list{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .list::-webkit-scrollbar{display:none}
-.card{flex:0 0 188px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-.one .card{flex-basis:100%;max-width:420px;flex-direction:row}
-.art{aspect-ratio:1/1;width:100%;background:var(--tile);display:block;object-fit:cover}
-.one .art{width:132px;flex:0 0 132px}
+.card{flex:0 0 208px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.one .card{flex-basis:100%;max-width:380px}
+.art{aspect-ratio:4/3;width:100%;background:var(--tile);display:block;object-fit:cover}
+.art.photo{object-fit:contain;padding:6px 4px 2px}
+.one .art{aspect-ratio:16/10}
 .tile{display:flex;align-items:center;justify-content:center;color:var(--brand)}
 .tile svg{width:44%;height:44%}
 .body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
@@ -53,7 +54,7 @@ html,body{margin:0;padding:0;overflow:hidden;background:var(--bg);color:var(--te
 .go{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 10px;border-radius:999px;background:var(--brand);color:var(--brand-text);font-weight:650;font-size:13px;text-decoration:none;text-align:center;border:0;cursor:pointer}
 .go:focus-visible,.nav:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .go svg{width:13px;height:13px;flex:0 0 13px}
-.nav{position:absolute;top:78px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.nav{position:absolute;top:62px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 .nav svg{width:14px;height:14px}
 .nav.prev{left:-4px}.nav.next{right:-4px}
 @media (hover:hover){.wrap.scrolls .nav{display:flex}.nav[disabled]{display:none!important}}
@@ -77,7 +78,7 @@ const SCRIPT = `
   function items(d){
     if(!d||typeof d!=='object')return[];
     if(Array.isArray(d.playlists))return d.playlists;
-    if(d.found&&d.url)return[{name:d.name,cards:d.cards||d.songs,price:d.price,cover:d.cover,url:d.url}];
+    if(d.found&&d.url)return[{name:d.name,cards:d.cards||d.songs,price:d.price,cover:d.cover,photo:d.photo,photoPending:d.photoPending,url:d.url}];
     return[];
   }
 
@@ -119,25 +120,36 @@ const SCRIPT = `
     if(rows.length===0)own='';
     list.className='list'+(rows.length===1?' one':'');
     list.innerHTML=rows.map(function(p){
-      var cover=safeUrl(p.cover);
+      var cover=safeUrl(p.cover),photo=safeUrl(p.photo);
+      var first=photo&&!p.photoPending?photo:cover;
       var meta=[];
       if(p.cards)meta.push(esc(p.cards)+' '+esc(labels.cards));
       if(p.price&&p.price.text)meta.push('<span class="price">'+esc(p.price.text)+'</span>');
       return '<article class="card">'+
-        (cover?'<img class="art" loading="lazy" alt="" src="'+esc(cover)+'">':'<div class="art tile">'+NOTE+'</div>')+
+        (first?'<img class="art'+(first===photo?' photo':'')+'" alt="" src="'+esc(first)+'" data-cover="'+esc(cover)+'" data-photo="'+esc(photo&&first!==photo?photo:'')+'">':'<div class="art tile">'+NOTE+'</div>')+
         '<div class="body"><div class="name">'+esc(p.name)+'</div>'+
         '<div class="meta">'+meta.join(' &middot; ')+'</div>'+
         '<a class="go" target="_blank" rel="noopener noreferrer" href="'+esc(safeUrl(p.url))+'">'+esc(labels.cta)+OUT+'</a></div></article>';
     }).join('')+own;
     Array.prototype.forEach.call(list.querySelectorAll('img.art'),function(img){
       img.addEventListener('error',function(){
+        var cover=img.getAttribute('data-cover');
+        if(cover&&img.getAttribute('src')!==cover){img.className='art';img.src=cover;return}
         var d=document.createElement('div');d.className='art tile';d.innerHTML=NOTE;img.replaceWith(d);
       });
       img.addEventListener('load',size);
+      var later=img.getAttribute('data-photo');
+      if(later)swap(img,later,0);
     });
     arrows();size();
   }
 
+  function swap(img,url,tries){
+    var probe=new Image();
+    probe.onload=function(){if(img.isConnected){img.className='art photo';img.src=url}};
+    probe.onerror=function(){if(tries<3&&img.isConnected)setTimeout(function(){swap(img,url+(tries?'':'?r=1'),tries+1)},6000)};
+    probe.src=url;
+  }
   list.addEventListener('click',function(e){
     var a=e.target&&e.target.closest?e.target.closest('a.go'):null;
     if(a&&open(a.href))e.preventDefault();

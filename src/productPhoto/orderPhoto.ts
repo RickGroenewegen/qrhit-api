@@ -120,7 +120,7 @@ async function orderSongs(
  * service's list (cached: the order flow fetched it), with our year where we
  * know the track and its release year otherwise.
  */
-async function listedSongs(
+export async function listedSongs(
   playlist: { playlistId: string; serviceType: string | null },
   allowDuplicates: boolean
 ): Promise<OrderSong[]> {
