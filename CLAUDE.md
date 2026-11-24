@@ -3743,6 +3743,46 @@ digital cards cost?".
   without it the follow-up loses the tool.
 - EUR including VAT; the chat does not know the visitor's currency.
 
+## QRSong! in ChatGPT (the MCP endpoint)
+
+Built 2026-11-24 after Sunny Cars' ChatGPT app (Rick: choose in the chat,
+finish on the site; no playlist generator). `POST /mcp`
+(`src/routes/mcpRoutes.ts`, `src/mcp/`) is an MCP server ChatGPT lists as a
+plugin: a customer finds a ready-made playlist or gives their own playlist
+link, hears the price and delivery time, and gets a link to the site. Nothing
+is ordered, and no personal data is asked, in the chat. The listing material
+is `docs/chatgpt-app/SUBMISSION.md`.
+
+- **Five tools, all read-only, no login** (`src/mcp/server.ts`, logic in
+  `tools.ts`): `search_featured_playlists` (the market's ranking, filtered on
+  words, genre and decade), `get_playlist` (name and song count from the
+  service, never the track list: that is the heavy call and the site makes it
+  on arrival), `get_price`, `get_delivery_time`, `get_support_contact`. Every
+  tool sets `readOnlyHint` / `destructiveHint` / `openWorldHint` and
+  `securitySchemes: noauth`; OpenAI's review requires them explicit.
+- **Printed cards only.** OpenAI lets a plugin sell physical goods and nothing
+  digital, so no tool text, description or link offers the PDF or the sheets
+  (the unit test checks the descriptions). No discounts or promotions either.
+- **Amounts come from checkout's calculators** (`cardPrice`,
+  `Order.calculateOrder`) converted by `Fx.tryConvert` into the country's
+  currency: the chat may never name another price than the site.
+- **The transport is hand-written JSON-RPC**, stateless, one JSON answer per
+  POST (no stream, no session; GET and DELETE answer 405). A widget would add
+  `resources/*`; switch to `@modelcontextprotocol/sdk` then.
+- **Do not put OpenAI's addresses in `TRUSTED_IPS`**: that switches Mollie to
+  the test client. The tools call the functions directly, so the playlist
+  guard and the captcha never see them.
+- **The hand-off link** (`src/mcp/links.ts`) is the product page or the
+  summary route with `?orderType=physical&src=chatgpt`. The site keeps `src`
+  for the visit and sends it with the payment as `source`;
+  `parseOrderSource` (`src/orderSource.ts`) stores only a known value in
+  `payments.source`. It is not a channel: the order stays a website order in
+  the Website / App reports, and the order list shows a "ChatGPT" pill.
+- `/.well-known/openai-apps-challenge` serves `OPENAI_APPS_CHALLENGE` from
+  `.env` as plain text, 404 while it is unset.
+- Tests: `test/unit/mcp.test.ts` (links, the tools on stubbed data, the
+  protocol).
+
 ## Common Development Tasks
 - Adding new routes: Add to appropriate route file in `src/routes/` directory
   - Account/auth routes → `accountRoutes.ts`

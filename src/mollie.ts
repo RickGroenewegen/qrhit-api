@@ -87,6 +87,7 @@ import {
   ledgerChannelSql,
   paymentChannelWhere,
 } from './salesChannel';
+import { parseOrderSource } from './orderSource';
 import {
   STORE_GAMES_PRICE,
   STORE_PAYMENT_METHOD,
@@ -2100,6 +2101,8 @@ class Mollie {
         // list can mark the ones it paid through Mollie, and which app
         channel: true,
         appPlatform: true,
+        // 'chatgpt' for an order that started there (orderSource.ts)
+        source: true,
         // The discount codes on the order, with what each took off (incl.
         // VAT). A released use belongs to a checkout that was never paid.
         discount: true,
@@ -2548,6 +2551,9 @@ class Mollie {
       const appPlatform: AppPlatform | null = placedInApp
         ? storePlatform ?? requestPlatform
         : null;
+      // Where the visit started when its link said so (QRSong! in ChatGPT);
+      // stored on the row, the order stays a website order (orderSource.ts)
+      const orderSource = parseOrderSource(params.source);
       // Where Mollie sends the buyer back: the site, or the scan app's return
       // page, an app link (appPaymentReturn.ts)
       const returnUrl = (molliePaymentRef?: string) => {
@@ -3222,6 +3228,7 @@ class Mollie {
             : {}),
           ...(placedInApp ? { channel: APP_CHANNEL } : {}),
           ...(appPlatform ? { appPlatform } : {}),
+          ...(orderSource ? { source: orderSource } : {}),
           PaymentHasPlaylist: { create: playlists },
         },
       });
@@ -4428,6 +4435,7 @@ class Mollie {
         storeEnvironment: true,
         channel: true,
         appPlatform: true,
+        source: true,
         printApiOrderId: true,
         locale: true,
         productPriceWithoutTax: true,

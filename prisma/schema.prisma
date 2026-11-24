@@ -199,6 +199,11 @@ model Payment {
   // website and for app orders from before 2026-11-09; a store order's
   // method (appstore / googleplay) says it anyway.
   appPlatform              String?              @db.VarChar(8)
+  // Where the visit that led to the order started, when a link said so with
+  // `?src=`: "chatgpt" for QRSong! in ChatGPT (src/mcp, src/orderSource.ts).
+  // Not a channel: such an order is paid on the website and stays a website
+  // order in the reports. Null for every other order.
+  source                   String?              @db.VarChar(16)
   productPriceWithoutTax   Float
   shippingPriceWithoutTax  Float
   productVATPrice          Float

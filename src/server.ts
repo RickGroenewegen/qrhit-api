@@ -38,6 +38,7 @@ import ProgressWebSocketServer from './progress-websocket';
 import GeneratorQueue from './generatorQueue';
 import ExcelQueue from './excelQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
+import mcpRoutes from './routes/mcpRoutes';
 import businessRoutes from './routes/businessRoutes';
 import toolkitRoutes from './routes/toolkitRoutes';
 import cardTemplateRoutes from './routes/cardTemplateRoutes';
@@ -203,6 +204,9 @@ class Server {
 
     // Register AI playlist routes
     await aiPlaylistRoutes(this.fastify);
+
+    // QRSong! in ChatGPT: the MCP endpoint
+    await mcpRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {
