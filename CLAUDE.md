@@ -3770,7 +3770,7 @@ is `docs/chatgpt-app/SUBMISSION.md`.
   POST (no stream, no session; GET and DELETE answer 405).
 - **Playlist answers show as cards** (`src/mcp/widget.ts`, 2026-11-24): one
   self-contained HTML document served as the MCP Apps resource
-  `ui://widget/qrsong-playlists-v3.html` (`resources/list`, `resources/read`,
+  `ui://widget/qrsong-playlists-v4.html` (`resources/list`, `resources/read`,
   mime `text/html;profile=mcp-app`); the two playlist tools point at it with
   `_meta.ui.resourceUri`. It loads nothing but cover images (its CSP lists
   our API and Spotify's image hosts; another service's cover falls back to a

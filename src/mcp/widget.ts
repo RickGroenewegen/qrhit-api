@@ -8,12 +8,14 @@
  * bridge (JSON-RPC over postMessage, `ui/notifications/tool-result`) and
  * ChatGPT's own `window.openai.toolOutput`. A card's button opens the page on
  * the site where the customer designs the cards and orders.
+ * It opens without ChatGPT's `redirectUrl`, which would put the address of
+ * the customer's conversation in our URL.
  *
  * The URI is a cache key: a change to the HTML that an old tool result would
  * not survive gets a new version in the URI.
  */
 
-export const WIDGET_URI = 'ui://widget/qrsong-playlists-v3.html';
+export const WIDGET_URI = 'ui://widget/qrsong-playlists-v4.html';
 export const WIDGET_MIME = 'text/html;profile=mcp-app';
 
 /** Where the cover images come from; everything else is refused by the CSP. */
@@ -98,7 +100,7 @@ const SCRIPT = `
   }
 
   function open(url){
-    try{if(window.openai&&window.openai.openExternal){window.openai.openExternal({href:url});return true}}catch(e){}
+    try{if(window.openai&&window.openai.openExternal){window.openai.openExternal({href:url,redirectUrl:false});return true}}catch(e){}
     if(initId!==null){post({jsonrpc:'2.0',id:++seq,method:'ui/open-link',params:{url:url}});return true}
     return false;
   }
