@@ -637,5 +637,6 @@
   "countdown.androidAppHeading": "¿Y la app?",
   "countdown.androidAppWhy": "Ahora mismo nuestra app de Android no puede conectarse a Spotify para la reproducción oculta. Los otros dos modos de reproducción de la app sí funcionan. La versión 2.1.1 arregla la reproducción oculta y está pendiente de aprobación por Google, así que estate atento a la actualización en Play Store.",
   "countdown.androidAppHelp": "¿Quieres la reproducción oculta en la app ya mismo? Escríbenos y te ayudamos a conectarla con Spotify.",
-  "countdown.contactUs": "Escríbenos"
+  "countdown.contactUs": "Escríbenos",
+  "mcp.makeCards": "Crea estas cartas"
 }

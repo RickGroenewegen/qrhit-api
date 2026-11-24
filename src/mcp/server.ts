@@ -1,4 +1,11 @@
 import { SITE_LOCALES } from '../data/shared/shared-data.generated';
+import Translation from '../translation';
+import { siteLocale } from './links';
+import {
+  listWidgetResources,
+  readWidgetResource,
+  widgetToolMeta,
+} from './widget';
 import {
   getDeliveryTime,
   getPlaylist,
@@ -16,6 +23,9 @@ import {
  * Stateless JSON-RPC over HTTP (MCP "streamable HTTP" without a stream or a
  * session): every tool is a read-only lookup, so one request gets one JSON
  * answer. No login: the tools give out nothing that is not on the site.
+ *
+ * A playlist answer also carries cards for ChatGPT to show (widget.ts): the
+ * two playlist tools point at one `ui://` resource, served by resources/read.
  */
 
 export const MCP_SERVER_INFO = { name: 'qrsong', title: 'QRSong!', version: '1.0.0' };
@@ -55,6 +65,8 @@ interface ToolDefinition {
   inputSchema: Record<string, unknown>;
   /** True when the tool reaches outside our own data (a music service). */
   openWorld: boolean;
+  /** True when the answer is playlists, which the widget shows as cards. */
+  widget?: boolean;
   run: (args: Record<string, any>) => Promise<unknown> | unknown;
 }
 
@@ -78,6 +90,7 @@ const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
     openWorld: false,
+    widget: true,
     run: (args) => searchFeaturedPlaylists(args),
   },
   {
@@ -97,6 +110,7 @@ const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
     openWorld: true,
+    widget: true,
     run: (args) => getPlaylist(args as { url: string }),
   },
   {
@@ -165,8 +179,36 @@ export function listTools(): Record<string, unknown>[] {
       openWorldHint: tool.openWorld,
     },
     securitySchemes: [{ type: 'noauth' }],
-    _meta: { securitySchemes: [{ type: 'noauth' }] },
+    _meta: {
+      securitySchemes: [{ type: 'noauth' }],
+      ...(tool.widget ? widgetToolMeta() : {}),
+    },
   }));
+}
+
+const WIDGET_LABELS_EN = { cards: 'cards', cta: 'Make these cards' };
+let translation: Translation | null = null;
+
+/**
+ * The two words on a playlist card, in the language of the conversation.
+ * They travel in the result's `_meta`, which only the widget sees. English
+ * when a language has no translation yet (i18n then hands back the key).
+ */
+export function widgetLabels(locale: unknown): { cards: string; cta: string } {
+  try {
+    translation = translation || new Translation();
+    const lang = siteLocale(typeof locale === 'string' ? locale : undefined);
+    const pick = (key: string, fallback: string) => {
+      const text = translation!.translate(key, lang);
+      return text && text !== key ? text : fallback;
+    };
+    return {
+      cards: pick('merchant.cards', WIDGET_LABELS_EN.cards),
+      cta: pick('mcp.makeCards', WIDGET_LABELS_EN.cta),
+    };
+  } catch {
+    return WIDGET_LABELS_EN;
+  }
 }
 
 interface JsonRpcRequest {
@@ -200,6 +242,7 @@ async function callTool(params: Record<string, any> | undefined, log?: McpCallLo
     return {
       content: [{ type: 'text', text: JSON.stringify(data) }],
       structuredContent: data,
+      ...(tool.widget ? { _meta: { labels: widgetLabels(args['locale']) } } : {}),
     };
   } catch (error) {
     log?.(tool.name, args, false, Date.now() - started);
@@ -239,7 +282,10 @@ export async function handleMcpMessage(
           id,
           result: {
             protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
-            capabilities: { tools: { listChanged: false } },
+            capabilities: {
+              tools: { listChanged: false },
+              resources: { listChanged: false, subscribe: false },
+            },
             serverInfo: MCP_SERVER_INFO,
             instructions: INSTRUCTIONS,
           },
@@ -251,6 +297,15 @@ export async function handleMcpMessage(
         return { jsonrpc: '2.0', id, result: { tools: listTools() } };
       case 'tools/call':
         return { jsonrpc: '2.0', id, result: await callTool(message.params, log) };
+      case 'resources/list':
+        return { jsonrpc: '2.0', id, result: { resources: listWidgetResources() } };
+      case 'resources/templates/list':
+        return { jsonrpc: '2.0', id, result: { resourceTemplates: [] } };
+      case 'resources/read': {
+        const resource = readWidgetResource(message.params?.['uri']);
+        if (!resource) return failure(id, -32002, 'Resource not found');
+        return { jsonrpc: '2.0', id, result: resource };
+      }
       default:
         return failure(id, -32601, `Method not found: ${message.method}`);
     }

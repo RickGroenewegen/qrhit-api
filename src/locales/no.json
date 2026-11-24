@@ -637,5 +637,6 @@
   "countdown.androidAppHeading": "Hva med appen?",
   "countdown.androidAppWhy": "Android-appen vår får ikke koblet til Spotify for skjult avspilling akkurat nå. Appens to andre avspillingsmoduser fungerer. Versjon 2.1.1 fikser skjult avspilling og venter på godkjenning fra Google, så følg med i Play Butikk for oppdateringen.",
   "countdown.androidAppHelp": "Vil du ha skjult avspilling i appen med en gang? Ta kontakt, så hjelper vi deg med å koble den til Spotify.",
-  "countdown.contactUs": "Kontakt oss"
+  "countdown.contactUs": "Kontakt oss",
+  "mcp.makeCards": "Lag disse kortene"
 }

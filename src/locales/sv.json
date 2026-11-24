@@ -637,5 +637,6 @@
   "countdown.androidAppHeading": "Och appen då?",
   "countdown.androidAppWhy": "Vår Android-app kan just nu inte ansluta till Spotify för dold uppspelning. Appens två andra uppspelningslägen fungerar. Version 2.1.1 fixar dold uppspelning och väntar på godkännande från Google, så håll koll på Play Butik efter uppdateringen.",
   "countdown.androidAppHelp": "Vill du ha dold uppspelning i appen direkt? Hör av dig så hjälper vi dig att koppla den till Spotify.",
-  "countdown.contactUs": "Kontakta oss"
+  "countdown.contactUs": "Kontakta oss",
+  "mcp.makeCards": "Skapa de här korten"
 }

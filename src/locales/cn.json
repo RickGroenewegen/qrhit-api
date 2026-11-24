@@ -637,5 +637,6 @@
   "countdown.androidAppHeading": "那应用呢？",
   "countdown.androidAppWhy": "我们的安卓应用目前无法连接 Spotify 进行隐藏播放。应用的另外两种播放模式可以正常使用。2.1.1 版本修复了隐藏播放，正在等待 Google 审核，请留意 Play 商店的更新。",
   "countdown.androidAppHelp": "想马上在应用里使用隐藏播放？联系我们，我们会帮你把它连接到 Spotify。",
-  "countdown.contactUs": "联系我们"
+  "countdown.contactUs": "联系我们",
+  "mcp.makeCards": "制作这些卡片"
 }

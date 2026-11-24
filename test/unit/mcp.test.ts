@@ -15,7 +15,8 @@ import {
   parseDecade,
   searchFeaturedPlaylists,
 } from '../../src/mcp/tools';
-import { handleMcpBody, listTools } from '../../src/mcp/server';
+import { handleMcpBody, listTools, widgetLabels } from '../../src/mcp/server';
+import { WIDGET_HTML, WIDGET_MIME, WIDGET_URI } from '../../src/mcp/widget';
 import { parseOrderSource } from '../../src/orderSource';
 import { ServiceType } from '../../src/enums/ServiceType';
 
@@ -239,7 +240,7 @@ describe('the MCP endpoint', () => {
   });
 
   it('rejects an unknown method and an unknown tool', async () => {
-    const method: any = await handleMcpBody({ jsonrpc: '2.0', id: 3, method: 'resources/list' });
+    const method: any = await handleMcpBody({ jsonrpc: '2.0', id: 3, method: 'prompts/list' });
     expect(method.error.code).toBe(-32601);
     const tool: any = await handleMcpBody({
       jsonrpc: '2.0',
@@ -248,5 +249,60 @@ describe('the MCP endpoint', () => {
       params: { name: 'place_order' },
     });
     expect(tool.error.code).toBe(-32602);
+  });
+});
+
+describe('the playlist cards widget', () => {
+  it('is linked from the two playlist tools only', () => {
+    const linked = listTools()
+      .filter((tool: any) => tool._meta?.ui?.resourceUri)
+      .map((tool: any) => tool.name);
+    expect(linked).toEqual(['search_featured_playlists', 'get_playlist']);
+    const tool: any = listTools()[0];
+    expect(tool._meta.ui.resourceUri).toBe(WIDGET_URI);
+    expect(tool._meta['openai/outputTemplate']).toBe(WIDGET_URI);
+  });
+
+  it('is listed and read as an MCP Apps resource', async () => {
+    const list: any = await handleMcpBody({ jsonrpc: '2.0', id: 1, method: 'resources/list' });
+    expect(list.result.resources).toHaveLength(1);
+    expect(list.result.resources[0]).toMatchObject({ uri: WIDGET_URI, mimeType: WIDGET_MIME });
+
+    const read: any = await handleMcpBody({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'resources/read',
+      params: { uri: WIDGET_URI },
+    });
+    const [content] = read.result.contents;
+    expect(content.mimeType).toBe('text/html;profile=mcp-app');
+    expect(content.text).toContain('<!doctype html>');
+    expect(content._meta.ui.csp.connectDomains).toEqual([]);
+    expect(content._meta.ui.csp.resourceDomains).toContain('https://i.scdn.co');
+    expect(content._meta.ui.csp.resourceDomains.every((d: string) => /^https?:\/\/[^/]+$/.test(d))).toBe(true);
+
+    const missing: any = await handleMcpBody({
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'resources/read',
+      params: { uri: 'ui://widget/other.html' },
+    });
+    expect(missing.error.code).toBe(-32002);
+  });
+
+  it('loads nothing but images: no script, style or frame from elsewhere', () => {
+    expect(WIDGET_HTML).not.toMatch(/<script[^>]+src=/i);
+    expect(WIDGET_HTML).not.toMatch(/<link\b/i);
+    expect(WIDGET_HTML).not.toMatch(/<iframe\b/i);
+    expect(WIDGET_HTML).not.toMatch(/\bfetch\(|XMLHttpRequest/);
+  });
+
+  it('has its script parse', () => {
+    const script = WIDGET_HTML.match(/<script>([\s\S]*)<\/script>/)![1];
+    expect(() => new Function(script)).not.toThrow();
+  });
+
+  it('gives the card labels in English when asked for an unknown language', () => {
+    expect(widgetLabels('xx')).toEqual({ cards: 'cards', cta: 'Make these cards' });
   });
 });

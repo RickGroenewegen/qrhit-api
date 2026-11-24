@@ -1,0 +1,104 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "qrsong",
+  "version": "1.0.2",
+  "description": "Turn a playlist into a printed music card game: find a ready-made playlist or read your own playlist link, see the price and delivery time, and continue on qrsong.io.",
+  "author": {
+    "name": "Groenewegen Solutions B.V.",
+    "email": "info@qrsong.io",
+    "url": "https://www.qrsong.io"
+  },
+  "homepage": "https://www.qrsong.io",
+  "keywords": ["music", "card game", "playlist", "gift", "party"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "QRSong!",
+        "shortDescription": "Music card game from playlists",
+        "longDescription": "QRSong! turns a playlist into a music card game. Every song becomes a printed card with a QR code: scan it, hear the song, and guess the artist, the title and the year.\n\nIn ChatGPT you can find a ready-made playlist by decade, genre or theme, or give the link of your own playlist on Spotify, YouTube Music, Apple Music, Deezer or Tidal. You see how many cards it makes, and you can ask about delivery to your country. When you have chosen, a link takes you to qrsong.io, where you design the cards and place the order.",
+        "developerName": "Groenewegen Solutions B.V.",
+        "category": "Entertainment",
+        "capabilities": [
+          "Find ready-made playlists",
+          "Read a playlist link",
+          "Price of printed cards",
+          "Delivery time per country"
+        ],
+        "websiteURL": "https://www.qrsong.io",
+        "supportURL": "https://www.qrsong.io/en/contact",
+        "privacyPolicyURL": "https://www.qrsong.io/en/privacy-policy",
+        "termsOfServiceURL": "https://www.qrsong.io/en/terms-and-conditions",
+        "defaultPrompt": [
+          "Find a music card game with 80s hits.",
+          "Can you make a card game from my playlist?",
+          "How long does delivery of the cards take?"
+        ],
+        "brandColor": "#18565E",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Find a ready-made playlist by decade",
+              "prompt": "I'm looking for a music game with 80s hits.",
+              "tools_triggered": "search_featured_playlists",
+              "expected_behavior": "Returns ready-made playlists with mostly 80s songs, each with its number of cards, the price of the printed cards and a link to its page on qrsong.io."
+            },
+            {
+              "description": "Read the customer's own playlist link",
+              "prompt": "Can you make cards from this playlist? https://open.spotify.com/playlist/5ABHKGoOzxkaa28ttQV9sE",
+              "tools_triggered": "get_playlist",
+              "expected_behavior": "Returns the playlist's name, that it makes 100 cards, the price of the printed cards, and a link to qrsong.io where the customer designs the cards and orders."
+            },
+            {
+              "description": "Price with a gift box and shipping",
+              "prompt": "What do 150 cards cost with a gift box, sent to Belgium?",
+              "tools_triggered": "get_price",
+              "expected_behavior": "Returns the price of 150 printed cards, the gift box, the shipping to Belgium and the total, in EUR."
+            },
+            {
+              "description": "Price in the customer's own currency",
+              "prompt": "I live in Norway. What do two sets of 100 cards cost?",
+              "tools_triggered": "get_price",
+              "expected_behavior": "Returns the price of two sets of 100 printed cards with shipping to Norway, in NOK."
+            },
+            {
+              "description": "Delivery time to a country",
+              "prompt": "How long does delivery to Germany take?",
+              "tools_triggered": "get_delivery_time",
+              "expected_behavior": "Returns the production time and the delivery time to Germany in working days."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Placing an order or taking payment: no tool can order or charge. The answer gives the link and says the order is placed on qrsong.io.",
+              "prompt": "Order the 80s set for me and charge my card."
+            },
+            {
+              "description": "Looking up an existing order: there is no order lookup. The answer points to customer support.",
+              "prompt": "Where is my order 100012345?"
+            },
+            {
+              "description": "A link that is not a playlist: an album link cannot be read. The answer asks for a playlist link.",
+              "prompt": "Make cards from this album: https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy"
+            }
+          ]
+        },
+        "commerce": true,
+        "commerce_description": "Physical goods only: printed music cards, shipped to the customer. The plugin shows playlists, prices and delivery times and links to the product page on www.qrsong.io, where the customer designs the cards and completes the purchase. Nothing is ordered or paid inside ChatGPT, and the digital version of the product is not offered through the plugin."
+      },
+      "publication": {
+        "countries": ["NL", "BE"],
+        "release_notes": "First version: find a ready-made playlist, read a playlist link, price and delivery time for printed cards, link to qrsong.io to design and order.",
+        "translations": {
+          "nl-NL": {
+            "subtitle": "Muziekspel van je playlist",
+            "description": "QRSong! maakt van een playlist een muziekspel. Elk nummer wordt een gedrukte kaart met een QR-code: scan de kaart, luister naar het nummer en raad de artiest, de titel en het jaar.\n\nIn ChatGPT zoek je een kant-en-klare playlist op decennium, genre of thema, of geef je de link van je eigen playlist op Spotify, YouTube Music, Apple Music, Deezer of Tidal. Je ziet hoeveel kaarten het worden en je kunt vragen naar de levering in jouw land. Heb je gekozen, dan brengt een link je naar qrsong.io, waar je de kaarten ontwerpt en bestelt."
+          }
+        }
+      }
+    }
+  }
+}

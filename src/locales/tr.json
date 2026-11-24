@@ -635,5 +635,6 @@
   "mail.appDesignTrackingLine": "Beklerken: ücretsiz QRSong! uygulaması, ilk kart tarandığı anda senin renklerine, fotoğrafına ve logona bürünebilir.",
   "mail.appDesignTrackingLink": "Uygulama Tasarımcısına Göz At",
   "mail.giftBoxIncluded": "Hediye Kutusu",
-  "mail.giftBoxIncludedPrinter": "Siparişinde ayrıca kişiye özel bir hediye kutusu da var; kartlarınla birlikte basılıp gönderilecek."
+  "mail.giftBoxIncludedPrinter": "Siparişinde ayrıca kişiye özel bir hediye kutusu da var; kartlarınla birlikte basılıp gönderilecek.",
+  "mcp.makeCards": "Bu kartları oluştur"
 }

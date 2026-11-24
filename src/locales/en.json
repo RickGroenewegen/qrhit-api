@@ -635,5 +635,6 @@
 	"mail.appDesignTrackingLine": "While you wait: the free QRSong! app can wear your colours, photo and logo as soon as the first card is scanned.",
 	"mail.appDesignTrackingLink": "See App Designer",
 	"mail.giftBoxIncluded": "Gift Box",
-	"mail.giftBoxIncludedPrinter": "Your order also includes a custom Gift Box that will be printed and shipped together with your cards."
+	"mail.giftBoxIncludedPrinter": "Your order also includes a custom Gift Box that will be printed and shipped together with your cards.",
+	"mcp.makeCards": "Make these cards"
 }

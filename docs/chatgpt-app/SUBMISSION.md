@@ -4,6 +4,28 @@ What to enter in the OpenAI Platform dashboard when submitting the plugin.
 The rules were read on developers.openai.com on 2026-11-23; check the limits
 in the form itself, they change.
 
+## How the submission works (platform.openai.com/plugins, read 2026-11-24)
+
+The dashboard takes a **plugin ZIP**, not form fields. The package is
+`plugin/` in this folder (`plugin.json` in the Agent Plugins format with the
+listing, test cases, commerce declaration, countries and the Dutch
+translation; `mcp.json` with the server URL; `assets/`). Build the ZIP with
+`cd plugin && zip -qr ../qrsong-plugin.zip . -x '.*'`. A change to the listing
+or the test cases is a new `version` and a new ZIP; a change to the tools on
+the server needs only a Rescan.
+
+Upload → choose the verified developer identity → Metadata checks → MCPs →
+Connect (the domain challenge token appears there) → tool scan → review
+details (the demo video URL) → Submit for review → Publish once approved.
+
+`category` must be one of: Productivity, Creativity, Developer Tools,
+Business & Operations, Data & Analytics, Communication, Education & Research,
+Security, Finance, Healthcare, Travel, Entertainment, Other (the
+submission-errors page; there is no Shopping). We use Entertainment.
+
+Still open in the package: `review.demo_recording_url` is not set until the
+video exists.
+
 ## Before submitting
 
 1. Deploy the API (the `/mcp` endpoint) and the site (the `src` capture).

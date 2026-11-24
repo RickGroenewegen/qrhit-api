@@ -3767,8 +3767,18 @@ is `docs/chatgpt-app/SUBMISSION.md`.
   `Order.calculateOrder`) converted by `Fx.tryConvert` into the country's
   currency: the chat may never name another price than the site.
 - **The transport is hand-written JSON-RPC**, stateless, one JSON answer per
-  POST (no stream, no session; GET and DELETE answer 405). A widget would add
-  `resources/*`; switch to `@modelcontextprotocol/sdk` then.
+  POST (no stream, no session; GET and DELETE answer 405).
+- **Playlist answers show as cards** (`src/mcp/widget.ts`, 2026-11-24): one
+  self-contained HTML document served as the MCP Apps resource
+  `ui://widget/qrsong-playlists-v1.html` (`resources/list`, `resources/read`,
+  mime `text/html;profile=mcp-app`); the two playlist tools point at it with
+  `_meta.ui.resourceUri`. It loads nothing but cover images (its CSP lists
+  our API and Spotify's image hosts; another service's cover falls back to a
+  note tile). It reads the result from the MCP Apps bridge and from
+  ChatGPT's `window.openai`. The two words on a card (`merchant.cards`,
+  `mcp.makeCards`) travel in the result's `_meta.labels`, which only the
+  widget sees. A change an old result would not survive needs a new version
+  in the URI: ChatGPT caches the template by URI.
 - **Do not put OpenAI's addresses in `TRUSTED_IPS`**: that switches Mollie to
   the test client. The tools call the functions directly, so the playlist
   guard and the captcha never see them.
